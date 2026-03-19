@@ -46,6 +46,12 @@ export async function updateStoredVaultPath(vaultPath: string): Promise<UpdateCo
     };
   } catch (error) {
     await saveConfig(storedConfig);
+
+    if (storedConfig.vaultPath !== normalizedVaultPath) {
+      await configUpdateDeps.indexVault(storedConfig.vaultPath);
+      await configUpdateDeps.restartWatcher(storedConfig.vaultPath);
+    }
+
     throw error;
   }
 }

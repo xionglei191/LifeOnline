@@ -282,6 +282,68 @@ test('updating config rolls back persisted vault path when reindex fails', async
   }
 });
 
+test('updating config restores original watcher state when restart fails', async () => {
+  const env = await createTestEnv('lifeos-config-restart-rollback-');
+  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const replacementVaultPath = path.join(env.rootDir, 'restart-rollback-vault');
+  const replacementNotePath = path.join(replacementVaultPath, '新库.md');
+  const originalRestartWatcher = configUpdateDeps.restartWatcher;
+
+  await fs.mkdir(replacementVaultPath, { recursive: true });
+  await fs.writeFile(path.join(replacementVaultPath, 'seed.md'), '# restart rollback\n');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+
+    let shouldFailRestart = true;
+    configUpdateDeps.restartWatcher = async (vaultPath: string) => {
+      if (shouldFailRestart && vaultPath === replacementVaultPath) {
+        shouldFailRestart = false;
+        throw new Error('restart failed');
+      }
+      await originalRestartWatcher(vaultPath);
+    };
+
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    await assert.rejects(
+      api(baseUrl, '/api/config', {
+        method: 'POST',
+        body: JSON.stringify({ vaultPath: replacementVaultPath }),
+      }),
+      /\/api\/config failed: 500/,
+    );
+
+    const storedConfig = await loadStoredConfig();
+    assert.equal(storedConfig.vaultPath, env.vaultPath);
+
+    await fs.writeFile(path.join(env.vaultPath, 'still-watching.md'), '# original\n');
+
+    await waitFor(async () => {
+      const notes = await api<Array<{ file_path: string }>>(baseUrl, '/api/notes');
+      const originalNoteDetected = notes.some((note) => note.file_path === path.join(env.vaultPath, 'still-watching.md'));
+      const replacementNoteDetected = notes.some((note) => note.file_path === replacementNotePath);
+      return originalNoteDetected && !replacementNoteDetected;
+    });
+  } finally {
+    configUpdateDeps.restartWatcher = originalRestartWatcher;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];
