@@ -458,10 +458,10 @@
 
     <details class="settings-card legacy-collapse">
       <summary class="legacy-summary">
-        <h3>Legacy / 手动工具</h3>
-        <span class="legacy-badge">兼容层</span>
+        <h3>手动任务入口</h3>
+        <span class="legacy-badge">补充入口</span>
       </summary>
-      <p class="hint" style="margin-top:12px;margin-bottom:16px">前端主入口已切换到 worker task；以下仅保留兼容说明，不再直接展示同步 AI 结果。</p>
+      <p class="hint" style="margin-top:12px;margin-bottom:16px">主入口已统一走 worker task；这里保留一个手动创建 Inbox 整理任务的快捷入口。</p>
       <div class="action-row">
         <button @click="handleClassifyInbox" :disabled="classifying" class="btn-ai">
           {{ classifying ? '创建中...' : '手动整理 Inbox（创建任务）' }}
