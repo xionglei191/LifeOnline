@@ -146,7 +146,7 @@ LifeOS 后端已经掌握 Vault 写入、索引、WebSocket、前端刷新与审
 
 ### 首个试点
 - 新增 `worker_tasks` 表与 `/api/worker-tasks*` API。
-- 首版先用 `collect_trending_news` 验证链路，后续已升级为通用 `openclaw_task`。
+- 首版先用早期专用 OpenClaw 任务验证链路，后续已升级为通用 `openclaw_task`。
 - 所有由 OpenClaw 结果生成的笔记统一写 `source: openclaw`，并复用 LifeOS 既有 `Vault → index queue → SQLite → WebSocket` 闭环。
 
 ### 影响
@@ -162,10 +162,10 @@ LifeOS 后端已经掌握 Vault 写入、索引、WebSocket、前端刷新与审
 **状态**: 已采纳 ✅
 
 ### 背景
-定时任务调度器当时支持 `collect_trending_news`（现已升级为 `openclaw_task`）和 `summarize_note` 两种任务类型。但 `summarize_note` 需要指定 `noteId`，而定时任务无法预知要摘要哪篇笔记，创建后必定失败。
+定时任务调度器当时支持早期专用 OpenClaw 任务（现已升级为 `openclaw_task`）和 `summarize_note` 两种任务类型。但 `summarize_note` 需要指定 `noteId`，而定时任务无法预知要摘要哪篇笔记，创建后必定失败。
 
 ### 决策
-定时任务创建表单中隐藏 `summarize_note` 选项，仅保留当时的 `collect_trending_news`（当前已演进为通用 `openclaw_task`）。`summarize_note` 保留为手动触发（通过外部执行任务入口）。
+定时任务创建表单中隐藏 `summarize_note` 选项，仅保留当时的早期专用 OpenClaw 任务（当前已演进为通用 `openclaw_task`）。`summarize_note` 保留为手动触发（通过外部执行任务入口）。
 
 ### 理由
 - 定时任务适合无状态、可重复执行的任务类型
@@ -198,7 +198,7 @@ LifeOS 后端新增 3 种 worker task 类型，全部由 LifeOS 直接调用 Cla
 ### 理由
 - LifeOS 已有 `callClaude()`、`classifyNote()`、`extractTasks()` 等完整 AI 基础设施
 - 直接调用避免了 LifeOS → OpenClaw → Vault 的间接路径，减少延迟和故障点
-- OpenClaw 的核心价值在于外部集成（早期以 `collect_trending_news` 为代表，当前已升级为通用 `openclaw_task`），而非 Vault 内部操作
+- OpenClaw 的核心价值在于外部集成（早期先以专用任务形态验证，当前已统一为 `openclaw_task`），而非 Vault 内部操作
 - 统一在 LifeOS 内完成，便于调试、监控和前端展示
 
 ### 影响
