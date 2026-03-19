@@ -47,7 +47,9 @@ LifeOnline/
 
 ```bash
 cd LifeOS
-pnpm install
+nvm use
+pnpm install --frozen-lockfile
+pnpm check
 pnpm dev
 ```
 

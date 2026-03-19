@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { WebSocket } from 'ws';
+import type { CreateWorkerTaskResponse, TaskSchedule, WorkerTaskStatus } from '@lifeos/shared';
+import type { WsEvent } from '../src/websocket/wsServer.js';
 import { createTestEnv } from '../test/helpers/testEnv.js';
 import { startServer, stopServer } from '../src/index.js';
 
@@ -27,9 +30,74 @@ async function api<T>(baseUrl: string, pathname: string, init?: RequestInit): Pr
   return response.json() as Promise<T>;
 }
 
+async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for WebSocket event'));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(timer);
+      socket.off('message', onMessage);
+      socket.off('error', onError);
+    }
+
+    function onError(error: Error) {
+      cleanup();
+      reject(error);
+    }
+
+    function onMessage(raw: string | Buffer | ArrayBuffer | Buffer[]) {
+      try {
+        const text = Array.isArray(raw)
+          ? Buffer.concat(raw).toString()
+          : Buffer.isBuffer(raw)
+            ? raw.toString()
+            : raw instanceof ArrayBuffer
+              ? Buffer.from(raw).toString()
+              : raw;
+        const payload = JSON.parse(text) as T;
+        if (!predicate(payload)) {
+          return;
+        }
+        cleanup();
+        resolve(payload);
+      } catch {
+        // Ignore non-JSON frames.
+      }
+    }
+
+    socket.on('message', onMessage);
+    socket.on('error', onError);
+  });
+}
+
+async function openWebSocket(url: string, timeoutMs = 10000): Promise<WebSocket> {
+  return new Promise<WebSocket>((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const timer = setTimeout(() => {
+      socket.terminate();
+      reject(new Error('Timed out connecting to WebSocket server'));
+    }, timeoutMs);
+
+    socket.once('open', () => {
+      clearTimeout(timer);
+      resolve(socket);
+    });
+
+    socket.once('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
 async function main(): Promise<void> {
   const env = await createTestEnv('lifeos-smoke-');
   const baseUrl = `http://127.0.0.1:${env.port}`;
+  const wsUrl = `ws://127.0.0.1:${env.port}/ws`;
+  let socket: WebSocket | null = null;
 
   try {
     await startServer();
@@ -42,6 +110,8 @@ async function main(): Promise<void> {
         return false;
       }
     });
+
+    socket = await openWebSocket(wsUrl);
 
     const config = await api<{ vaultPath: string; port: number }>(baseUrl, '/api/config');
     assert.equal(config.vaultPath, env.vaultPath);
@@ -57,17 +127,28 @@ async function main(): Promise<void> {
     const notes = await api<unknown[]>(baseUrl, '/api/notes');
     assert.ok(Array.isArray(notes));
 
-    const workerTaskResponse = await api<{ task: { id: string } }>(baseUrl, '/api/worker-tasks', {
+    const workerTaskEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'worker-task-updated',
+    );
+
+    const workerTaskResponse = await api<CreateWorkerTaskResponse>(baseUrl, '/api/worker-tasks', {
       method: 'POST',
       body: JSON.stringify({ taskType: 'extract_tasks', input: { noteId: 'missing-note' } }),
     });
 
+    const workerTaskEvent = await workerTaskEventPromise;
+    const workerTaskEventData = workerTaskEvent.data as CreateWorkerTaskResponse['task'] | undefined;
+    assert.equal(workerTaskEventData?.id, workerTaskResponse.task.id);
+    assert.equal(workerTaskEventData?.taskType, 'extract_tasks');
+    assert.equal(workerTaskEventData?.status, 'pending');
+
     await waitFor(async () => {
-      const task = await api<{ task: { status: string } }>(baseUrl, `/api/worker-tasks/${workerTaskResponse.task.id}`);
+      const task = await api<{ task: { status: WorkerTaskStatus } }>(baseUrl, `/api/worker-tasks/${workerTaskResponse.task.id}`);
       return ['failed', 'succeeded', 'cancelled'].includes(task.task.status);
     });
 
-    const scheduleResponse = await api<{ schedule: { id: string } }>(baseUrl, '/api/schedules', {
+    const scheduleResponse = await api<{ schedule: TaskSchedule }>(baseUrl, '/api/schedules', {
       method: 'POST',
       body: JSON.stringify({
         taskType: 'extract_tasks',
@@ -77,14 +158,14 @@ async function main(): Promise<void> {
       }),
     });
 
-    const schedules = await api<{ schedules: Array<{ id: string }> }>(baseUrl, '/api/schedules');
+    const schedules = await api<{ schedules: TaskSchedule[] }>(baseUrl, '/api/schedules');
     assert.ok(schedules.schedules.some((schedule) => schedule.id === scheduleResponse.schedule.id));
 
     const health = await api<{ total: number; active: number }>(baseUrl, '/api/schedules/health');
     assert.ok(health.total >= 1);
     assert.ok(health.active >= 1);
 
-    const rerun = await api<{ schedule: { lastTaskId?: string | null } }>(baseUrl, `/api/schedules/${scheduleResponse.schedule.id}/run`, {
+    const rerun = await api<{ schedule: Pick<TaskSchedule, 'lastTaskId'> }>(baseUrl, `/api/schedules/${scheduleResponse.schedule.id}/run`, {
       method: 'POST',
     });
     assert.ok(rerun.schedule.lastTaskId);
@@ -93,6 +174,14 @@ async function main(): Promise<void> {
 
     console.log('✓ Smoke check passed');
   } finally {
+    if (socket) {
+      const activeSocket = socket;
+      activeSocket.removeAllListeners('error');
+      await new Promise<void>((resolve) => {
+        activeSocket.once('close', () => resolve());
+        activeSocket.close();
+      }).catch(() => {});
+    }
     await stopServer().catch(() => {});
     await env.cleanup();
   }

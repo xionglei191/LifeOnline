@@ -1,0 +1,40 @@
+name: LifeOS check
+
+on:
+  push:
+    paths:
+      - 'LifeOS/**'
+      - '.github/workflows/lifeos-check.yml'
+  pull_request:
+    paths:
+      - 'LifeOS/**'
+      - '.github/workflows/lifeos-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: LifeOS
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: LifeOS/.nvmrc
+          cache: pnpm
+          cache-dependency-path: LifeOS/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run check
+        run: pnpm check

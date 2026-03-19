@@ -76,14 +76,25 @@ SQLite 索引层   LifeOS Web      OpenClaw
 ## 本地开发
 
 ### 前置要求
-- Node.js 18+
-- pnpm
+- Node.js 20.x（建议通过 `nvm use` 读取仓库内 `.nvmrc`）
+- pnpm 10.32.1
+- `better-sqlite3` 需要与当前 Node 版本 ABI 匹配；切换 Node 版本后如果出现 native binding 问题，需要重新安装依赖
 
 ### 安装依赖
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
+
+### 标准验收链
+
+```bash
+pnpm check
+```
+
+说明：
+- `pnpm check` 会顺序执行 `pnpm build`、`pnpm test`、`pnpm smoke`
+- 当前 `smoke` 同时覆盖核心 HTTP API 与 `/ws` 最小实时链路
 
 ### 启动开发环境
 
