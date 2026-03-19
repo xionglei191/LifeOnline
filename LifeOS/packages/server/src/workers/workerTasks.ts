@@ -66,6 +66,71 @@ function throwWorkerTaskValidationError(message: string): never {
   throw new WorkerTaskValidationError(message);
 }
 
+type WorkerTaskDefinition<T extends WorkerTaskType> = {
+  worker: WorkerName;
+  normalizeInput: (input: Partial<WorkerTaskInputMap[T]> | undefined) => WorkerTaskInputMap[T];
+};
+
+type WorkerTaskDefinitionMap = {
+  [T in WorkerTaskType]: WorkerTaskDefinition<T>;
+};
+
+const workerTaskDefinitions: WorkerTaskDefinitionMap = {
+  openclaw_task: {
+    worker: 'openclaw',
+    normalizeInput: (input) => {
+      if (!input?.instruction?.trim()) throwWorkerTaskValidationError('openclaw_task requires instruction');
+      return {
+        instruction: input.instruction.trim(),
+        outputDimension: input.outputDimension?.trim() || 'learning',
+      };
+    },
+  },
+  summarize_note: {
+    worker: 'lifeos',
+    normalizeInput: (input) => {
+      if (!input?.noteId) throwWorkerTaskValidationError('summarize_note requires noteId');
+      return {
+        noteId: input.noteId,
+        language: input.language?.trim() || 'zh',
+        maxLength: Math.max(50, Math.min(input.maxLength || 500, 2000)),
+      };
+    },
+  },
+  classify_inbox: {
+    worker: 'lifeos',
+    normalizeInput: (input) => ({ dryRun: input?.dryRun ?? false }),
+  },
+  extract_tasks: {
+    worker: 'lifeos',
+    normalizeInput: (input) => {
+      if (!input?.noteId) throwWorkerTaskValidationError('extract_tasks requires noteId');
+      return { noteId: input.noteId };
+    },
+  },
+  daily_report: {
+    worker: 'lifeos',
+    normalizeInput: (input) => ({ date: input?.date || new Date().toISOString().split('T')[0] }),
+  },
+  weekly_report: {
+    worker: 'lifeos',
+    normalizeInput: (input) => {
+      const now = new Date();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      return { weekStart: input?.weekStart || monday.toISOString().split('T')[0] };
+    },
+  },
+};
+
+function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerTaskDefinition<T> {
+  const definition = workerTaskDefinitions[taskType];
+  if (!definition) {
+    throwWorkerTaskValidationError(`Unsupported task type: ${taskType}`);
+  }
+  return definition;
+}
+
 function buildNoteId(filePath: string): string {
   return crypto.createHash('md5').update(filePath).digest('hex');
 }
@@ -637,52 +702,11 @@ function summarizeWeeklyReportResult(result: WorkerTaskResultMap['weekly_report'
 }
 
 export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTaskInputMap[WorkerTaskType] {
-  if (request.taskType === 'openclaw_task') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['openclaw_task']>;
-    if (!input.instruction?.trim()) throwWorkerTaskValidationError('openclaw_task requires instruction');
-    return {
-      instruction: input.instruction.trim(),
-      outputDimension: input.outputDimension?.trim() || 'learning',
-    };
-  }
-  if (request.taskType === 'summarize_note') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['summarize_note']>;
-    if (!input.noteId) throwWorkerTaskValidationError('summarize_note requires noteId');
-    return {
-      noteId: input.noteId,
-      language: input.language?.trim() || 'zh',
-      maxLength: Math.max(50, Math.min(input.maxLength || 500, 2000)),
-    };
-  }
-  if (request.taskType === 'classify_inbox') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['classify_inbox']>;
-    return { dryRun: input.dryRun ?? false };
-  }
-  if (request.taskType === 'extract_tasks') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['extract_tasks']>;
-    if (!input.noteId) throwWorkerTaskValidationError('extract_tasks requires noteId');
-    return { noteId: input.noteId };
-  }
-  if (request.taskType === 'daily_report') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['daily_report']>;
-    return { date: input.date || new Date().toISOString().split('T')[0] };
-  }
-  if (request.taskType === 'weekly_report') {
-    const input = (request.input || {}) as Partial<WorkerTaskInputMap['weekly_report']>;
-    // Default to current week's Monday
-    const now = new Date();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    return { weekStart: input.weekStart || monday.toISOString().split('T')[0] };
-  }
-  throwWorkerTaskValidationError(`Unsupported task type: ${request.taskType}`);
+  return getWorkerTaskDefinition(request.taskType).normalizeInput(request.input);
 }
 
 function resolveWorker(taskType: WorkerTaskType): WorkerName {
-  if (taskType === 'openclaw_task') {
-    return 'openclaw';
-  }
-  return 'lifeos';
+  return getWorkerTaskDefinition(taskType).worker;
 }
 
 export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: string): WorkerTask {
