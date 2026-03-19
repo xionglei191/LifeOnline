@@ -65,7 +65,7 @@ export function initDatabase(): void {
   }
 
   // Migration: rebuild worker_tasks/task_schedules with latest task_type CHECK constraints
-  // Also migrate existing collect_trending_news records to openclaw_task
+  // Also migrate existing legacy external-task records to openclaw_task
   try {
     database.exec(`
       INSERT INTO worker_tasks (id, task_type, input_json, status, worker, created_at, updated_at)
