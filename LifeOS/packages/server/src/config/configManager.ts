@@ -27,7 +27,7 @@ export async function loadConfig(): Promise<Config> {
     config.vaultPath = resolveVaultPath(config.vaultPath);
     return config;
   } catch (e) {
-    const raw = process.env.VAULT_PATH || 'mock-vault';
+    const raw = process.env.VAULT_PATH || '../../mock-vault';
     return {
       vaultPath: resolveVaultPath(raw),
       port: 3000,

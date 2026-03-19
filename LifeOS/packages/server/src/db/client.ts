@@ -2,20 +2,18 @@ import Database from 'better-sqlite3';
 import { SCHEMA } from './schema.js';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-// Determine the correct database path based on current working directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SERVER_ROOT = path.resolve(__dirname, '../..');
+
 function getDbPath(): string {
   if (process.env.DB_PATH) {
     return process.env.DB_PATH;
   }
 
-  const cwd = process.cwd();
-  // If we're in the server directory, use ./data
-  if (cwd.endsWith('/packages/server') || cwd.endsWith('\\packages\\server')) {
-    return path.join(cwd, 'data/lifeos.db');
-  }
-  // Otherwise, assume we're in the project root
-  return path.join(cwd, 'packages/server/data/lifeos.db');
+  return path.join(SERVER_ROOT, 'data/lifeos.db');
 }
 
 const DB_PATH = getDbPath();
