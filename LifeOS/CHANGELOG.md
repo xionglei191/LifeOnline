@@ -1,3 +1,39 @@
+## 2026-03-20 - 拆分 websocket 队列完成事件语义
+
+### 工作内容
+
+继续收口 websocket 语义边界：把“队列已清空”和“全量索引完成并带结果”拆成两个独立事件，并同步更新前端监听逻辑，减少 `index-complete` 的语义过载。
+
+### 本次变更
+
+#### 1. 拆分共享 websocket 事件协议
+- `packages/shared/src/types.ts`
+- `index-complete` 现在必须携带 `IndexResult`
+- 新增无 payload 的 `index-queue-complete` 事件，用于表达索引队列处理完毕
+
+#### 2. server 队列广播改为显式发送 queue-complete
+- `packages/server/src/indexer/indexQueue.ts`
+- 队列处理完成后不再广播泛化的 `index-complete`
+- 改为广播 `index-queue-complete`
+- `POST /api/index` 与 `POST /api/config` 这类真正返回 `IndexResult` 的全量索引路径继续保留 `index-complete`
+
+#### 3. 前端监听统一复用 websocket helper
+- `packages/web/src/composables/useWebSocket.ts`
+- 新增：
+  - `isIndexRefreshEvent(...)`
+  - `isIndexSettledEvent(...)`
+- `App.vue`、`SettingsView.vue`、`NoteDetail.vue`、`useDashboard.ts`、`useCalendar.ts`、`useTimeline.ts`、`useDimensionNotes.ts` 统一改为复用 helper，避免散落的硬编码事件判断
+
+### 行为变化
+- `index-complete` 语义收紧为：有完整 `IndexResult` 的索引完成事件
+- `index-queue-complete` 语义明确为：增量索引队列已经处理完毕
+- 前端自动刷新行为保持不变，但事件语义更清晰
+
+### 本地验证结果
+- `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" --filter web build`
+- `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" check`
+- 结果：通过
+
 ## 2026-03-19 - 收尾 server 本地重复逻辑，统一 worker 持久化与维度元数据
 
 ### 工作内容
