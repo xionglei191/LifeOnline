@@ -1,11 +1,5 @@
 import { ref, onUnmounted } from 'vue';
-
-export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated' | 'schedule-updated';
-
-export interface WsEvent {
-  type: WsEventType;
-  data?: any;
-}
+import type { WsEvent } from '@lifeos/shared';
 
 const isConnected = ref(false);
 let ws: WebSocket | null = null;

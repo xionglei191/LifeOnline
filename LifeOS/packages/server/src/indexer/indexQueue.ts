@@ -1,5 +1,5 @@
 import { indexFile, deleteFileRecord } from './indexer.js';
-import type { WsEvent } from '../websocket/wsServer.js';
+import type { WsEvent } from '@lifeos/shared';
 
 export type IndexOperation = 'upsert' | 'delete';
 

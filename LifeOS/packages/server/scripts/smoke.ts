@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import type { CreateWorkerTaskResponse, TaskSchedule, WorkerTaskStatus } from '@lifeos/shared';
-import type { WsEvent } from '../src/websocket/wsServer.js';
+import type { CreateWorkerTaskResponse, TaskSchedule, WorkerTaskStatus, WsEvent } from '@lifeos/shared';
 import { createTestEnv } from '../test/helpers/testEnv.js';
 import { startServer, stopServer } from '../src/index.js';
 

@@ -263,6 +263,13 @@ export interface TaskSchedule {
   lastError?: string | null;
 }
 
+export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated' | 'schedule-updated';
+
+export interface WsEvent {
+  type: WsEventType;
+  data?: any;
+}
+
 export interface CreateTaskScheduleRequest {
   taskType: WorkerTaskType;
   input?: WorkerTaskInputMap[WorkerTaskType];

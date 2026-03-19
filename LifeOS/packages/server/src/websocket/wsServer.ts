@@ -1,12 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
-
-export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated' | 'schedule-updated';
-
-export interface WsEvent {
-  type: WsEventType;
-  data?: any;
-}
+import type { WsEvent } from '@lifeos/shared';
 
 let wss: WebSocketServer | null = null;
 
