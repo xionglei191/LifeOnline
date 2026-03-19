@@ -65,6 +65,33 @@ function registerCronJob(schedule: TaskSchedule): void {
   cronJobs.set(schedule.id, job);
 }
 
+function triggerScheduleTask(schedule: TaskSchedule, options?: { resetFailures?: boolean }): { taskId: string; runAt: string } {
+  const db = getDb();
+  const normalizedInput = normalizeTaskInput({
+    taskType: schedule.taskType,
+    input: schedule.input,
+  });
+
+  const task = createWorkerTask(
+    { taskType: schedule.taskType, input: normalizedInput },
+    schedule.id,
+  );
+
+  const now = new Date().toISOString();
+  if (options?.resetFailures) {
+    db.prepare('UPDATE task_schedules SET last_run_at = ?, last_task_id = ?, updated_at = ?, consecutive_failures = 0, last_error = NULL WHERE id = ?')
+      .run(now, task.id, now, schedule.id);
+  } else {
+    db.prepare('UPDATE task_schedules SET last_run_at = ?, last_task_id = ?, updated_at = ? WHERE id = ?')
+      .run(now, task.id, now, schedule.id);
+  }
+
+  startWorkerTaskExecution(task.id);
+  broadcastScheduleUpdate();
+
+  return { taskId: task.id, runAt: now };
+}
+
 function executeTick(scheduleId: string): void {
   const db = getDb();
   const row = db.prepare('SELECT * FROM task_schedules WHERE id = ?').get(scheduleId) as ScheduleRow | undefined;
@@ -79,24 +106,8 @@ function executeTick(scheduleId: string): void {
   const schedule = rowToSchedule(row);
 
   try {
-    const normalizedInput = normalizeTaskInput({
-      taskType: schedule.taskType,
-      input: schedule.input,
-    });
-
-    const task = createWorkerTask(
-      { taskType: schedule.taskType, input: normalizedInput },
-      schedule.id,
-    );
-
-    const now = new Date().toISOString();
-    db.prepare('UPDATE task_schedules SET last_run_at = ?, last_task_id = ?, updated_at = ?, consecutive_failures = 0, last_error = NULL WHERE id = ?')
-      .run(now, task.id, now, scheduleId);
-
-    startWorkerTaskExecution(task.id);
-    broadcastScheduleUpdate();
-
-    console.log(`TaskScheduler: executed schedule "${schedule.label}" → task ${task.id}`);
+    const { taskId } = triggerScheduleTask(schedule, { resetFailures: true });
+    console.log(`TaskScheduler: executed schedule "${schedule.label}" → task ${taskId}`);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     const now = new Date().toISOString();
@@ -114,25 +125,9 @@ export function runScheduleNow(id: string): TaskSchedule {
   if (!row) throw new Error('Schedule not found');
 
   const schedule = rowToSchedule(row);
+  const { taskId } = triggerScheduleTask(schedule);
 
-  const normalizedInput = normalizeTaskInput({
-    taskType: schedule.taskType,
-    input: schedule.input,
-  });
-
-  const task = createWorkerTask(
-    { taskType: schedule.taskType, input: normalizedInput },
-    schedule.id,
-  );
-
-  const now = new Date().toISOString();
-  db.prepare('UPDATE task_schedules SET last_run_at = ?, last_task_id = ?, updated_at = ? WHERE id = ?')
-    .run(now, task.id, now, id);
-
-  startWorkerTaskExecution(task.id);
-  broadcastScheduleUpdate();
-
-  console.log(`TaskScheduler: manual run schedule "${schedule.label}" → task ${task.id}`);
+  console.log(`TaskScheduler: manual run schedule "${schedule.label}" → task ${taskId}`);
   return getSchedule(id)!;
 }
 

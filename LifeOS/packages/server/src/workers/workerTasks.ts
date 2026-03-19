@@ -8,17 +8,17 @@ import matter from 'gray-matter';
 // - 按 taskType 路由到本地 LifeOS 或外部 OpenClaw 执行
 // - 将最终业务结果尽量写回 Vault，再通过索引同步到 SQLite
 // 这里是刻意集中而非通用插件框架；后续 taskType 明显增多时再拆分 repository / executor / persistence。
-import type {
-  CreateWorkerTaskRequest,
-  WorkerTask,
-  WorkerTaskInputMap,
-  WorkerTaskListFilters,
-  WorkerTaskOutputNote,
-  WorkerTaskResultMap,
-  WorkerTaskStatus,
-  WorkerTaskType,
-  WorkerName,
+import {
   SUPPORTED_WORKER_TASK_TYPES,
+  type CreateWorkerTaskRequest,
+  type WorkerTask,
+  type WorkerTaskInputMap,
+  type WorkerTaskListFilters,
+  type WorkerTaskOutputNote,
+  type WorkerTaskResultMap,
+  type WorkerTaskStatus,
+  type WorkerTaskType,
+  type WorkerName,
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import { loadConfig } from '../config/configManager.js';
@@ -50,15 +50,6 @@ interface WorkerTaskRow {
 }
 
 const runningTaskControllers = new Map<string, AbortController>();
-
-export const SUPPORTED_WORKER_TASK_TYPES = [
-  'openclaw_task',
-  'summarize_note',
-  'classify_inbox',
-  'extract_tasks',
-  'daily_report',
-  'weekly_report',
-] as const satisfies readonly WorkerTaskType[];
 
 export class WorkerTaskValidationError extends Error {
   constructor(message: string) {
@@ -878,6 +869,49 @@ export function startWorkerTaskExecution(taskId: string): void {
   });
 }
 
+type WorkerTaskExecutionRegistryEntry<T extends WorkerTaskType> = {
+  run: (task: WorkerTask<T>, signal: AbortSignal) => Promise<WorkerTaskResultMap[T]>;
+  summarize: (result: WorkerTaskResultMap[T]) => string;
+  getOutputNotePaths: (task: WorkerTask<T>, result: WorkerTaskResultMap[T]) => Promise<string[]>;
+};
+
+type WorkerTaskExecutionRegistry = {
+  [T in WorkerTaskType]: WorkerTaskExecutionRegistryEntry<T>;
+};
+
+const workerTaskExecutionRegistry: WorkerTaskExecutionRegistry = {
+  openclaw_task: {
+    run: (task, signal) => runOpenClawTask(task.input, { signal }),
+    summarize: summarizeOpenClawResult,
+    getOutputNotePaths: (task, result) => persistOpenClawResult(task, result),
+  },
+  summarize_note: {
+    run: (task) => runSummarizeNoteDirect(task),
+    summarize: summarizeSummarizeNoteResult,
+    getOutputNotePaths: (task, result) => persistSummarizeNoteResult(task, result),
+  },
+  classify_inbox: {
+    run: (task) => runClassifyInbox(task),
+    summarize: summarizeClassifyInboxResult,
+    getOutputNotePaths: (task, result) => persistClassifyInboxResult(task, result),
+  },
+  extract_tasks: {
+    run: (task) => runExtractTasks(task),
+    summarize: summarizeExtractTasksResult,
+    getOutputNotePaths: async (_task, result) => result.items.map((item) => item.filePath),
+  },
+  daily_report: {
+    run: (task) => runDailyReport(task),
+    summarize: summarizeDailyReportResult,
+    getOutputNotePaths: (task, result) => persistDailyReportResult(task, result),
+  },
+  weekly_report: {
+    run: (task) => runWeeklyReport(task),
+    summarize: summarizeWeeklyReportResult,
+    getOutputNotePaths: (task, result) => persistWeeklyReportResult(task, result),
+  },
+};
+
 export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
   const task = getWorkerTask(taskId);
   if (!task) throw new Error('Worker task not found');
@@ -889,88 +923,23 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
   updateTaskStatus(taskId, { status: 'running', startedAt, finishedAt: null, error: null });
 
   try {
-    const signal = controller.signal;
-
-    if (task.taskType === 'openclaw_task') {
-      const result = await runOpenClawTask(task.input as WorkerTaskInputMap['openclaw_task'], { signal });
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      const outputNotePaths = await persistOpenClawResult(task as WorkerTask<'openclaw_task'>, result);
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeOpenClawResult(result),
-        outputNotePaths,
-        error: null,
-      });
-    } else if (task.taskType === 'summarize_note') {
-      const result = await runSummarizeNoteDirect(task as WorkerTask<'summarize_note'>);
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      const outputNotePaths = await persistSummarizeNoteResult(task as WorkerTask<'summarize_note'>, result);
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeSummarizeNoteResult(result),
-        outputNotePaths,
-        error: null,
-      });
-    } else if (task.taskType === 'classify_inbox') {
-      const result = await runClassifyInbox(task as WorkerTask<'classify_inbox'>);
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      const outputNotePaths = await persistClassifyInboxResult(task as WorkerTask<'classify_inbox'>, result);
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeClassifyInboxResult(result),
-        outputNotePaths,
-        error: null,
-      });
-    } else if (task.taskType === 'extract_tasks') {
-      const result = await runExtractTasks(task as WorkerTask<'extract_tasks'>);
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeExtractTasksResult(result),
-        outputNotePaths: result.items.map((item) => item.filePath),
-        error: null,
-      });
-    } else if (task.taskType === 'daily_report') {
-      const result = await runDailyReport(task as WorkerTask<'daily_report'>);
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      const outputNotePaths = await persistDailyReportResult(task as WorkerTask<'daily_report'>, result);
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeDailyReportResult(result),
-        outputNotePaths,
-        error: null,
-      });
-    } else if (task.taskType === 'weekly_report') {
-      const result = await runWeeklyReport(task as WorkerTask<'weekly_report'>);
-
-      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
-
-      const outputNotePaths = await persistWeeklyReportResult(task as WorkerTask<'weekly_report'>, result);
-      updateTaskStatus(taskId, {
-        status: 'succeeded',
-        finishedAt: new Date().toISOString(),
-        resultSummary: summarizeWeeklyReportResult(result),
-        outputNotePaths,
-        error: null,
-      });
-    } else {
+    const handler = workerTaskExecutionRegistry[task.taskType];
+    if (!handler) {
       throw new Error(`Unsupported worker task type: ${task.taskType}`);
     }
+
+    const result = await handler.run(task as never, controller.signal);
+
+    if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
+
+    const outputNotePaths = await handler.getOutputNotePaths(task as never, result as never);
+    updateTaskStatus(taskId, {
+      status: 'succeeded',
+      finishedAt: new Date().toISOString(),
+      resultSummary: handler.summarize(result as never),
+      outputNotePaths,
+      error: null,
+    });
   } catch (error: any) {
     const latest = getWorkerTask(taskId);
     if (!latest) throw new Error('Worker task disappeared');

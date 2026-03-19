@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { SCHEMA, SUPPORTED_WORKER_TASK_TYPES_SQL } from './schema.js';
+import { SCHEMA, WORKER_TASK_TABLE_COLUMNS_SQL, WORKER_TASK_INDEXES_SQL, TASK_SCHEDULE_TABLE_COLUMNS_SQL, TASK_SCHEDULE_INDEXES_SQL } from './schema.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -17,6 +17,60 @@ function getDbPath(): string {
 }
 
 const DB_PATH = getDbPath();
+
+function ensureTaskTypeConstraint(tableName: 'worker_tasks' | 'task_schedules', insertSql: string): string {
+  return `
+      INSERT INTO ${tableName} ${insertSql}
+    `;
+}
+
+function normalizeLegacyTaskTypeSql(columnName = 'task_type'): string {
+  return `CASE WHEN ${columnName} = 'collect_trending_news' THEN 'openclaw_task' ELSE ${columnName} END`;
+}
+
+function rebuildTableWithNormalizedTaskType(options: {
+  tableName: 'worker_tasks' | 'task_schedules';
+  createTableSql: string;
+  selectColumnsSql: string;
+  recreateIndexesSql: string;
+}): string {
+  const nextTableName = `${options.tableName}_new`;
+  return `
+      CREATE TABLE ${nextTableName} (
+${options.createTableSql}
+      );
+      INSERT INTO ${nextTableName} SELECT
+${options.selectColumnsSql}
+      FROM ${options.tableName};
+      DROP TABLE ${options.tableName};
+      ALTER TABLE ${nextTableName} RENAME TO ${options.tableName};
+${options.recreateIndexesSql}
+    `;
+}
+
+function ensureTaskTableConstraintOrRebuild(database: Database.Database, options: {
+  tableName: 'worker_tasks' | 'task_schedules';
+  insertSql: string;
+  createTableSql: string;
+  selectColumnsSql: string;
+  recreateIndexesSql: string;
+  rebuildingLog: string;
+  rebuiltLog: string;
+}): void {
+  try {
+    database.exec(ensureTaskTypeConstraint(options.tableName, options.insertSql));
+    database.exec(`DELETE FROM ${options.tableName} WHERE id = '__migration_test__'`);
+  } catch {
+    console.log(options.rebuildingLog);
+    database.exec(rebuildTableWithNormalizedTaskType({
+      tableName: options.tableName,
+      createTableSql: options.createTableSql,
+      selectColumnsSql: options.selectColumnsSql,
+      recreateIndexesSql: options.recreateIndexesSql,
+    }));
+    console.log(options.rebuiltLog);
+  }
+}
 
 let db: Database.Database | null = null;
 
@@ -66,82 +120,31 @@ export function initDatabase(): void {
 
   // Migration: rebuild worker_tasks/task_schedules with latest task_type CHECK constraints
   // Also migrate existing legacy external-task records to openclaw_task
-  try {
-    database.exec(`
-      INSERT INTO worker_tasks (id, task_type, input_json, status, worker, created_at, updated_at)
-      VALUES ('__migration_test__', 'extract_tasks', '{}', 'pending', 'lifeos', '', '')
-    `);
-    database.exec("DELETE FROM worker_tasks WHERE id = '__migration_test__'");
-  } catch {
-    console.log('Migration: rebuilding worker_tasks table with latest task_type CHECK constraint...');
-    database.exec(`
-      CREATE TABLE worker_tasks_new (
-        id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
-        input_json TEXT NOT NULL,
-        status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
-        worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        started_at TEXT,
-        finished_at TEXT,
-        error TEXT,
-        result_summary TEXT,
-        source_note_id TEXT,
-        output_note_paths TEXT,
-        schedule_id TEXT
-      );
-      INSERT INTO worker_tasks_new SELECT
-        id,
-        CASE WHEN task_type = 'collect_trending_news' THEN 'openclaw_task' ELSE task_type END,
+  ensureTaskTableConstraintOrRebuild(database, {
+    tableName: 'worker_tasks',
+    insertSql: "(id, task_type, input_json, status, worker, created_at, updated_at) VALUES ('__migration_test__', 'extract_tasks', '{}', 'pending', 'lifeos', '', '')",
+    createTableSql: WORKER_TASK_TABLE_COLUMNS_SQL,
+    selectColumnsSql: `        id,
+        ${normalizeLegacyTaskTypeSql()},
         input_json, status, worker, created_at, updated_at,
-        started_at, finished_at, error, result_summary, source_note_id, output_note_paths, schedule_id
-      FROM worker_tasks;
-      DROP TABLE worker_tasks;
-      ALTER TABLE worker_tasks_new RENAME TO worker_tasks;
-      CREATE INDEX IF NOT EXISTS idx_worker_tasks_status ON worker_tasks(status);
-      CREATE INDEX IF NOT EXISTS idx_worker_tasks_type ON worker_tasks(task_type);
-      CREATE INDEX IF NOT EXISTS idx_worker_tasks_created_at ON worker_tasks(created_at);
-      CREATE INDEX IF NOT EXISTS idx_worker_tasks_source_note_id ON worker_tasks(source_note_id);
-    `);
-    console.log('Migration: worker_tasks table rebuilt with latest task types');
-  }
+        started_at, finished_at, error, result_summary, source_note_id, output_note_paths, schedule_id`,
+    recreateIndexesSql: WORKER_TASK_INDEXES_SQL,
+    rebuildingLog: 'Migration: rebuilding worker_tasks table with latest task_type CHECK constraint...',
+    rebuiltLog: 'Migration: worker_tasks table rebuilt with latest task types',
+  });
 
-  try {
-    database.exec(`
-      INSERT INTO task_schedules (id, task_type, input_json, cron_expression, label, enabled, created_at, updated_at)
-      VALUES ('__migration_test__', 'extract_tasks', '{}', '0 9 * * *', 'test', 1, '', '')
-    `);
-    database.exec("DELETE FROM task_schedules WHERE id = '__migration_test__'");
-  } catch {
-    console.log('Migration: rebuilding task_schedules table with latest task_type CHECK constraint...');
-    database.exec(`
-      CREATE TABLE task_schedules_new (
-        id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
-        input_json TEXT NOT NULL,
-        cron_expression TEXT NOT NULL,
-        label TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        last_run_at TEXT,
-        last_task_id TEXT,
-        consecutive_failures INTEGER DEFAULT 0,
-        last_error TEXT
-      );
-      INSERT INTO task_schedules_new SELECT
-        id,
-        CASE WHEN task_type = 'collect_trending_news' THEN 'openclaw_task' ELSE task_type END,
+  ensureTaskTableConstraintOrRebuild(database, {
+    tableName: 'task_schedules',
+    insertSql: "(id, task_type, input_json, cron_expression, label, enabled, created_at, updated_at) VALUES ('__migration_test__', 'extract_tasks', '{}', '0 9 * * *', 'test', 1, '', '')",
+    createTableSql: TASK_SCHEDULE_TABLE_COLUMNS_SQL,
+    selectColumnsSql: `        id,
+        ${normalizeLegacyTaskTypeSql()},
         input_json, cron_expression, label, enabled, created_at, updated_at,
-        last_run_at, last_task_id, consecutive_failures, last_error
-      FROM task_schedules;
-      DROP TABLE task_schedules;
-      ALTER TABLE task_schedules_new RENAME TO task_schedules;
-      CREATE INDEX IF NOT EXISTS idx_task_schedules_enabled ON task_schedules(enabled);
-    `);
-    console.log('Migration: task_schedules table rebuilt with latest task types');
-  }
+        last_run_at, last_task_id, consecutive_failures, last_error`,
+    recreateIndexesSql: TASK_SCHEDULE_INDEXES_SQL,
+    rebuildingLog: 'Migration: rebuilding task_schedules table with latest task_type CHECK constraint...',
+    rebuiltLog: 'Migration: task_schedules table rebuilt with latest task types',
+  });
 
   // Migration: add notes column to ai_prompts if missing
   const promptCols = database.prepare("PRAGMA table_info(ai_prompts)").all() as Array<{ name: string }>;

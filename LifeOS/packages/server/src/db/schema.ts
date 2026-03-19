@@ -2,6 +2,41 @@ import { SUPPORTED_WORKER_TASK_TYPES } from '@lifeos/shared';
 
 export const SUPPORTED_WORKER_TASK_TYPES_SQL = SUPPORTED_WORKER_TASK_TYPES.map((taskType) => `'${taskType}'`).join(', ');
 
+export const WORKER_TASK_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
+  input_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
+  worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT,
+  error TEXT,
+  result_summary TEXT,
+  source_note_id TEXT,
+  output_note_paths TEXT,
+  schedule_id TEXT`;
+
+export const WORKER_TASK_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_worker_tasks_status ON worker_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_worker_tasks_type ON worker_tasks(task_type);
+CREATE INDEX IF NOT EXISTS idx_worker_tasks_created_at ON worker_tasks(created_at);
+CREATE INDEX IF NOT EXISTS idx_worker_tasks_source_note_id ON worker_tasks(source_note_id);`;
+
+export const TASK_SCHEDULE_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
+  input_json TEXT NOT NULL,
+  cron_expression TEXT NOT NULL,
+  label TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_run_at TEXT,
+  last_task_id TEXT,
+  consecutive_failures INTEGER DEFAULT 0,
+  last_error TEXT`;
+
+export const TASK_SCHEDULE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_task_schedules_enabled ON task_schedules(enabled);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -43,43 +78,16 @@ CREATE INDEX IF NOT EXISTS idx_notes_date ON notes(date);
 CREATE INDEX IF NOT EXISTS idx_notes_due ON notes(due);
 
 CREATE TABLE IF NOT EXISTS worker_tasks (
-  id TEXT PRIMARY KEY,
-  task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
-  input_json TEXT NOT NULL,
-  status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
-  worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  started_at TEXT,
-  finished_at TEXT,
-  error TEXT,
-  result_summary TEXT,
-  source_note_id TEXT,
-  output_note_paths TEXT,
-  schedule_id TEXT
+${WORKER_TASK_TABLE_COLUMNS_SQL}
 );
 
-CREATE INDEX IF NOT EXISTS idx_worker_tasks_status ON worker_tasks(status);
-CREATE INDEX IF NOT EXISTS idx_worker_tasks_type ON worker_tasks(task_type);
-CREATE INDEX IF NOT EXISTS idx_worker_tasks_created_at ON worker_tasks(created_at);
-CREATE INDEX IF NOT EXISTS idx_worker_tasks_source_note_id ON worker_tasks(source_note_id);
+${WORKER_TASK_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS task_schedules (
-  id TEXT PRIMARY KEY,
-  task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
-  input_json TEXT NOT NULL,
-  cron_expression TEXT NOT NULL,
-  label TEXT NOT NULL,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  last_run_at TEXT,
-  last_task_id TEXT,
-  consecutive_failures INTEGER DEFAULT 0,
-  last_error TEXT
+${TASK_SCHEDULE_TABLE_COLUMNS_SQL}
 );
 
-CREATE INDEX IF NOT EXISTS idx_task_schedules_enabled ON task_schedules(enabled);
+${TASK_SCHEDULE_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS ai_prompts (
   key TEXT PRIMARY KEY,

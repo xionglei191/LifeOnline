@@ -5,7 +5,15 @@ export type Priority = 'high' | 'medium' | 'low';
 export type Privacy = 'public' | 'private' | 'sensitive';
 export type Source = 'lingguang' | 'desktop' | 'webclipper' | 'openclaw' | 'web' | 'auto';
 export type WorkerName = 'openclaw' | 'lifeos';
-export type WorkerTaskType = 'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'extract_tasks' | 'daily_report' | 'weekly_report';
+export const SUPPORTED_WORKER_TASK_TYPES = [
+  'openclaw_task',
+  'summarize_note',
+  'classify_inbox',
+  'extract_tasks',
+  'daily_report',
+  'weekly_report',
+] as const;
+export type WorkerTaskType = typeof SUPPORTED_WORKER_TASK_TYPES[number];
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 export type PromptKey = 'classify' | 'extract_tasks' | 'summarize_note' | 'daily_report' | 'weekly_report';
 
