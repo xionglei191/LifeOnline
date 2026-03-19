@@ -3,7 +3,7 @@
 > **签发**: LifeOnline 架构组
 > **接收**: 灵光 App 开发组
 > **日期**: 2026-03-17
-> **关联**: [LifeOnline 统一 Frontmatter 协议](/home/xionglei/LifeOnline/protocols/frontmatter.md)
+> **关联**: [LifeOnline 统一 Frontmatter 协议](../protocols/frontmatter.md)
 
 ---
 

@@ -155,7 +155,7 @@ priority: medium
 2. Frontmatter 使用 `---` 包裹
 3. 正文内容在 Frontmatter 之后
 
-**参考文档**: `/home/xionglei/LifeOnline/protocols/frontmatter.md`
+**参考文档**: `../protocols/frontmatter.md`
 
 ---
 

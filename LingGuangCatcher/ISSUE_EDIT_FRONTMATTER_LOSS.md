@@ -269,7 +269,7 @@ created: [必需]
 
 **编辑操作不得破坏 Frontmatter**。
 
-**参考文档**: `/home/xionglei/LifeOnline/protocols/frontmatter.md`
+**参考文档**: `../protocols/frontmatter.md`
 
 ---
 
