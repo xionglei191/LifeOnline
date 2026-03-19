@@ -91,7 +91,7 @@ class AppSettings private constructor(context: Context) {
 
     /** 默认文件夹 */
     var defaultFolder: String
-        get() = prefs.getString(KEY_DEFAULT_FOLDER, "00_Inbox") ?: "00_Inbox"
+        get() = prefs.getString(KEY_DEFAULT_FOLDER, "_Inbox") ?: "_Inbox"
         set(value) = prefs.edit().putString(KEY_DEFAULT_FOLDER, value).apply()
 
     /** 文件命名格式 */

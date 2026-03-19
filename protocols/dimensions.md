@@ -135,8 +135,8 @@
 `_inbox` 不是正式维度，而是临时暂存区：
 
 - 所有初始输入默认放入 `_inbox`
-- OpenClaw 自动分类后修改为正式维度
-- LifeOS 看板的 AI 整理功能也可手动分类
+- 后续由 LifeOS worker task 链路分类并修改为正式维度
+- LifeOS 看板可对 `_inbox` 内容执行后续处理
 - `_inbox` 中的内容在看板上以特殊样式显示
 
 ---

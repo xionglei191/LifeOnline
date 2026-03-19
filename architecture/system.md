@@ -23,16 +23,14 @@ graph TB
         DAILY[_Daily/ _Weekly/]
     end
 
-    subgraph 处理层 [处理层 - 智能管家]
-        OC[OpenClaw<br/>本机 Agent]
-        AI_CLS[AI 分类]
-        AI_EXT[行动项提取]
-        AI_RPT[日报/周报生成]
-        AI_EXEC[自动执行]
+    subgraph 处理层 [处理层 - 编排与外部执行]
+        LOS[LifeOS Backend<br/>控制核心]
+        WT[Worker Task<br/>统一执行单元]
+        OC[OpenClaw<br/>外部执行器]
+        IDX[索引服务<br/>chokidar + SQLite]
     end
 
     subgraph 展示层 [展示层 - 看板]
-        IDX[索引服务<br/>chokidar + SQLite]
         WEB[LifeOS Web<br/>Vue 3]
         WS[WebSocket<br/>实时推送]
     end
@@ -44,14 +42,12 @@ graph TB
     DIM --> VAULT
     DAILY --> VAULT
 
-    OC --> AI_CLS
-    OC --> AI_EXT
-    OC --> AI_RPT
-    OC --> AI_EXEC
-    AI_CLS -->|分类归档| VAULT
-    AI_EXT -->|创建任务| VAULT
-    AI_RPT -->|写入报告| DAILY
-    AI_EXEC -->|执行结果| VAULT
+    VAULT -->|文件变更 / 手动触发 / schedule| LOS
+    LOS --> WT
+    WT -->|内部执行| VAULT
+    WT -->|按需调用| OC
+    OC -->|结构化结果| LOS
+    LOS -->|写回标准笔记 / 更新任务状态| VAULT
 
     VAULT -->|文件变更| IDX
     IDX --> WEB
@@ -73,7 +69,7 @@ end
 ### 3. 离线优先
 - 灵光 App: 离线队列 + WorkManager 后台同步
 - Vault: 本地文件系统，不依赖网络
-- LifeOS: 本机部署，局域网访问
+- LifeOS: backend 作为控制核心，当前运行在 `192.168.31.246`，新电脑负责开发与测试
 
 ### 4. 职责分离
 
@@ -81,8 +77,8 @@ end
 |----|------|------|
 | 输入层 | 采集、STT、结构化整理 | 不做维度分类 |
 | 存储层 | 持久化、同步、版本控制 | 不做数据处理 |
-| 处理层 | 分类、提取、分析、执行 | 不做数据展示 |
-| 展示层 | 读取展示、轻量操作 | 不做深度分析和自动执行 |
+| 处理层 | 由 LifeOS 编排任务，内部执行或调用 OpenClaw | 不做数据展示 |
+| 展示层 | 读取展示、轻量操作 | 不做主编排与外部执行决策 |
 
 ---
 
@@ -90,7 +86,7 @@ end
 
 ```
 Vault_OS/
-├── _Inbox/              # 未分类，等待 OpenClaw 整理
+├── _Inbox/              # 未分类输入，后续由 LifeOS worker task 统一处理
 ├── _Daily/              # 每日自动生成的日报
 ├── _Weekly/             # 每周自动生成的周报
 ├── _Templates/          # Frontmatter 模板
@@ -112,7 +108,7 @@ Vault_OS/
 source: lingguang    # 灵光 App
 source: desktop      # 电脑直写
 source: webclipper   # 浏览器剪藏
-source: openclaw     # OpenClaw 自动生成
+source: openclaw     # OpenClaw 外部执行结果
 ```
 
 ---
@@ -124,10 +120,10 @@ source: openclaw     # OpenClaw 自动生成
 - 目标: `Vault_OS/_Inbox/`
 - 格式: 标准 Frontmatter Markdown
 
-### Vault_OS ↔ OpenClaw
-- 方式: 文件系统读写
-- 输入: 扫描 `_Inbox/` 中的待处理文件
-- 输出: 分类后移入对应维度目录，或写入 `_Daily/`、`_Weekly/`
+### LifeOS ↔ OpenClaw
+- 方式: LifeOS worker task 按需调用 OpenClaw
+- 输入: 明确的外部执行任务请求
+- 输出: 结构化结果返回 LifeOS，再由 LifeOS 写回 Vault
 
 ### Vault_OS → LifeOS
 - 方式: chokidar 文件监听 → SQLite 索引 → WebSocket 推送
@@ -161,7 +157,7 @@ source: openclaw     # OpenClaw 自动生成
 |------|--------|
 | 灵光 App | Kotlin, CameraX, Room, WorkManager, Material Design 3 |
 | Obsidian | Markdown, YAML Frontmatter, 插件生态 |
-| OpenClaw | 本机 Agent, Python/Node.js, Claude/Gemini API |
+| OpenClaw | 外部执行器, Python/Node.js, Claude/Gemini API |
 | LifeOS 后端 | Node.js, TypeScript, Express, SQLite, WebSocket |
 | LifeOS 前端 | Vue 3, TypeScript, Vite, ECharts |
 | 同步 | Syncthing（推荐） |

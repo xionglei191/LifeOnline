@@ -1,100 +1,136 @@
-# LifeOS - Phase 1
+# LifeOS
 
-Personal life management system built with TypeScript, Express, Vue 3, and SQLite.
+LifeOS 是 LifeOnline monorepo 中的控制核心，负责：
 
-This project now lives inside the LifeOnline monorepo at `LifeOnline/LifeOS`.
+- 以 Vault 为事实源进行索引与查询
+- 提供 Web 控制台所需 API 与实时推送
+- 管理 worker tasks / schedules / AI provider
+- 按需调用 OpenClaw 作为外部执行节点
+- 将自动化结果统一写回 Vault
 
-## Project Structure
+当前真实运行基线：
+- 正式运行代码路径：`/home/xionglei/LifeOnline/LifeOS`
+- 主 Vault：`/home/xionglei/Vault_OS`
+- 运行主机：`192.168.31.246`
+- 开发机：当前这台新电脑
 
-```
+## 项目结构
+
+```text
 LifeOS/
 ├── packages/
-│   ├── shared/          # Shared TypeScript types
-│   ├── server/          # Express backend + SQLite indexer
-│   └── web/             # Vue 3 frontend
-└── mock-vault/          # Sample Obsidian vault data
+│   ├── shared/          # 协议层：共享类型与任务/调度/AI 配置契约
+│   ├── server/          # 控制核心：API、索引、watcher、worker、schedule
+│   └── web/             # 控制台：Dashboard / Timeline / Stats / Settings
+└── mock-vault/          # 本地开发用示例数据，不是正式主 Vault
 ```
 
-## Quick Start
+## 核心架构
 
-### Prerequisites
+```text
+LingGuangCatcher / 其他输入端
+            ↓
+        Vault_OS
+            ↓
+   LifeOS Backend（控制核心）
+            ↓
+   ┌───────────────┬───────────────┐
+   │               │               │
+SQLite 索引层   LifeOS Web      OpenClaw
+运行态存储      控制台           外部执行器
+```
+
+关键原则：
+- Vault 是唯一事实源
+- LifeOS backend 是控制核心
+- OpenClaw 是按需调用的外部执行器，不是主编排器
+- SQLite 是索引与运行态数据库，不是最终业务真相
+
+## 本地开发
+
+### 前置要求
 - Node.js 18+
 - pnpm
 
-### Installation
+### 安装依赖
 
 ```bash
 pnpm install
 ```
 
-### Initialize Database
-
-```bash
-pnpm db:init
-```
-
-### Index Mock Vault
-
-```bash
-pnpm index
-```
-
-### Development
-
-Start both server and web frontend:
+### 启动开发环境
 
 ```bash
 pnpm dev
 ```
 
+默认本地开发端口：
 - Server: http://localhost:3000
 - Frontend: http://localhost:5173
 
-### Individual Commands
+### 单独启动
 
 ```bash
-# Start server only
 pnpm --filter server dev
-
-# Start web only
 pnpm --filter web dev
+```
 
-# Re-index vault
+### 本地辅助命令
+
+```bash
+pnpm build
+pnpm db:init
 pnpm index
 ```
 
-## API Endpoints
+说明：
+- `mock-vault/` 仅用于本地开发和演示
+- 当前正式运行环境使用远端主 Vault，而不是本地 `mock-vault`
 
-- `GET /api/dashboard` - Get dashboard data (today's todos, weekly highlights, dimension stats)
-- `GET /api/notes?dimension=health&status=pending` - Query notes with filters
-- `POST /api/index` - Trigger manual re-indexing
+## 运行与部署现实
 
-## Features
+当前推荐工作模型：
 
-✅ Vault indexing service (scans markdown files with frontmatter)
-✅ SQLite database with full schema
-✅ REST API for dashboard data
-✅ Vue 3 dashboard with:
-  - Today's todos
-  - Weekly highlights
-  - Eight-dimension health cards
+### 开发机（新电脑）
+- 改代码
+- 构建测试
+- 通过 SSH / rsync 同步到远端
 
-## Mock Vault
+### 运行主机（`192.168.31.246`）
+- 持有主 Vault：`/home/xionglei/Vault_OS`
+- 运行 LifeOS backend / web
+- 运行 OpenClaw
+- 作为手机同步锚点
 
-The `mock-vault/` directory contains 25 sample markdown files across 8 life dimensions:
-- 健康 (Health)
-- 事业 (Career)
-- 财务 (Finance)
-- 学习 (Learning)
-- 关系 (Relationship)
-- 生活 (Life)
-- 兴趣 (Hobby)
-- 成长 (Growth)
+## 重要规则
 
-## Next Steps
+- 不迁移主 Vault 到新电脑
+- 不把 `.claude/` 作为跨机器同步内容
+- 不再从旧路径 `/home/xionglei/LifeOS` 启动正式服务
+- 新自动化能力优先进入 worker task 模型
+- 最终业务结果必须回到 Vault
 
-- Connect to real Obsidian vault (set `VAULT_PATH` environment variable)
-- Add authentication
-- Implement note editing
-- Add search functionality
-- Mobile responsive design
+## 主要功能
+
+- Vault 索引与查询
+- Dashboard / Timeline / Calendar / Stats / Search
+- Worker task 统一任务模型
+- Schedules 定时触发
+- OpenClaw 外部任务执行
+- WebSocket 实时更新
+- 笔记创建、更新、追加备注、快捷完成
+
+## API 概览
+
+主要分类如下：
+
+- 数据读取：`/api/dashboard`、`/api/notes`、`/api/timeline`、`/api/calendar`、`/api/search`、`/api/stats/*`
+- 配置与索引：`/api/config`、`/api/index`、`/api/index/status`
+- Worker tasks：`/api/worker-tasks/*`
+- Schedules：`/api/schedules/*`
+- 旧手动 AI 工具：`/api/ai/*`
+
+说明：
+- `worker-tasks` 是自动化主路径
+- `/api/ai/*` 目前保留为旧手动工具入口，不应再被视为主架构中心
+

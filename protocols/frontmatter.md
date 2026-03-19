@@ -89,7 +89,7 @@ updated: 2026-03-17T15:30
 | `lingguang` | 灵光 App 采集 |
 | `desktop` | 电脑端 Obsidian 直写 |
 | `webclipper` | 浏览器剪藏工具 |
-| `openclaw` | OpenClaw 自动生成 |
+| `openclaw` | OpenClaw 外部执行结果 |
 | `web` | LifeOS 看板创建 |
 
 ### privacy — 隐私级别
@@ -149,7 +149,7 @@ created: 2026-03-17T11:00
 刚才走路的时候想到一个关于 LifeOnline 的功能...
 ```
 
-### OpenClaw 整理后
+### 自动化处理后示例
 
 ```markdown
 ---
