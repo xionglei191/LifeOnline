@@ -82,7 +82,7 @@
 ### 本次变更
 
 #### 1. 新增 worker task 一等模型
-- `packages/shared/src/types.ts` 新增 `WorkerTask`、`WorkerTaskStatus`、`collect_trending_news` 输入/输出类型
+- `packages/shared/src/types.ts` 新增 `WorkerTask`、`WorkerTaskStatus` 与首批 worker task 输入/输出类型
 - `packages/server/src/db/schema.ts` 新增 `worker_tasks` 表与相关索引
 - 任何 OpenClaw 结果都必须先关联到一条 LifeOS 持有的任务记录
 
@@ -103,7 +103,7 @@
 - `GET /api/worker-tasks/:id`
 - `POST /api/worker-tasks/:id/retry`
 - `POST /api/worker-tasks/:id/cancel`
-- 首个试点任务：`collect_trending_news`
+- 首个试点任务：OpenClaw 通用任务（后续收敛为 `openclaw_task`）
 - 支持 `pending/running/succeeded/failed/cancelled` 状态流转
 
 #### 5. 前端主入口改造
@@ -117,13 +117,13 @@
 ### 行为变化
 - OpenClaw 不再是默认的持续自治整理主流程
 - 没有 task record，不允许产出最终结果笔记
-- 历史 `/api/ai/classify-inbox`、`/api/ai/extract-tasks` 继续保留，但不再代表未来主架构
+- 历史同步 AI 路由曾短期保留兼容层；当前已移除，统一走 worker task API
 
 ## 2026-03-18 - 笔记删除能力与启动配置修复完成
 
 ### 工作内容
 
-为 LifeOS 看板补全笔记删除能力，并完成一次本地端到端验证；同时修复 server 配置文件路径依赖 `process.cwd()` 的问题，确保根目录启动开发环境时也能正确读取配置。
+为 LifeOS 看板补全笔记删除能力，并完成一次本地端到端验证；同时修复 server 配置文件路径依赖旧工作目录推断逻辑的问题，确保根目录启动开发环境时也能正确读取配置。
 
 ### 本次变更
 
@@ -366,15 +366,18 @@
 **现象**: 使用 `chokidar.watch('${vaultPath}/**/*.md')` 监听，但 `getWatched()` 返回空对象 `{}`，无法检测文件变更
 
 **根本原因**:
-1. 相对路径 `../../mock-vault` 在项目根目录运行时无法正确解析
+1. 相对路径 `../../mock-vault` 在旧实现里会受启动目录影响
 2. `path.join()` 生成的路径在 chokidar glob 模式中不可靠
 
 **解决方案**:
 1. 在 `configManager.ts` 中添加 `resolveVaultPath()` 函数，将相对路径转换为绝对路径
    ```typescript
    function resolveVaultPath(vaultPath: string): string {
+     if (vaultPath.startsWith('~')) {
+       return path.join(process.env.HOME || '', vaultPath.slice(1));
+     }
      if (path.isAbsolute(vaultPath)) return vaultPath;
-     return path.resolve(process.cwd(), vaultPath);
+     return path.resolve(SERVER_ROOT, vaultPath);
    }
    ```
 2. 在 `FileWatcher` 构造函数中使用 `path.resolve()` 确保路径为绝对路径
@@ -1525,19 +1528,22 @@ const toSqlValue = (val: any) => {
 
 #### 问题 4: 数据库路径解析
 **现象**:
-- 从 root 运行: 路径为 `packages/server/data/lifeos.db`
-- 从 server 运行: 路径为 `packages/server/packages/server/data/lifeos.db` (错误)
+- 旧实现会因为启动目录不同而指向错误的数据库位置
 
-**原因**: `process.cwd()` 返回当前工作目录，不同执行上下文不同
+**原因**: 早期实现依赖工作目录推断数据库路径，不同执行上下文会出现偏差
 
-**解决**: 动态检测
+**解决**: 改为基于模块位置固定解析 `SERVER_ROOT`
 ```typescript
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SERVER_ROOT = path.resolve(__dirname, '../..');
+
 function getDbPath(): string {
-  const cwd = process.cwd();
-  if (cwd.endsWith('/packages/server')) {
-    return path.join(cwd, 'data/lifeos.db');
+  if (process.env.DB_PATH) {
+    return process.env.DB_PATH;
   }
-  return path.join(cwd, 'packages/server/data/lifeos.db');
+
+  return path.join(SERVER_ROOT, 'data/lifeos.db');
 }
 ```
 
@@ -1555,17 +1561,16 @@ function getDbPath(): string {
 
 ```bash
 # 后端
-packages/server/src/: 7 个文件, ~500 行代码
-packages/server/scripts/: 1 个文件, ~10 行代码
+packages/server/src/: 现已扩展为多模块服务端实现
 
 # 前端
-packages/web/src/: 9 个文件, ~400 行代码
+packages/web/src/: 现已扩展为多视图与组件结构
 
 # 共享
-packages/shared/src/: 1 个文件, ~50 行代码
+packages/shared/src/: 现已包含共享类型与协议定义
 
 # Mock 数据
-mock-vault/: 25 个文件, ~300 行内容
+mock-vault/: 本地开发示例数据
 
 # 总计: ~1260 行代码
 ```
