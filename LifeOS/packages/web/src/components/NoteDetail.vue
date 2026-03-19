@@ -1389,35 +1389,4 @@ function showMsg(msg: string, type: 'success' | 'error') {
   font-weight: 600;
 }
 
-.legacy-collapse {
-  border-color: color-mix(in srgb, var(--text-muted) 18%, var(--border));
-  opacity: 0.75;
-  transition: opacity 0.2s;
-}
-
-.legacy-collapse[open] {
-  opacity: 1;
-}
-
-.legacy-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.legacy-summary::-webkit-details-marker {
-  display: none;
-}
-
-.legacy-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
-  color: var(--text-muted);
-  border: 1px solid color-mix(in srgb, var(--text-muted) 20%, var(--border));
-}
 </style>

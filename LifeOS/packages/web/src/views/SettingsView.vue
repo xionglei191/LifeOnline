@@ -456,10 +456,10 @@
       </div>
     </div>
 
-    <details class="settings-card legacy-collapse">
-      <summary class="legacy-summary">
+    <details class="settings-card manual-task-collapse">
+      <summary class="manual-task-summary">
         <h3>手动任务入口</h3>
-        <span class="legacy-badge">补充入口</span>
+        <span class="manual-task-badge">补充入口</span>
       </summary>
       <p class="hint" style="margin-top:12px;margin-bottom:16px">主入口已统一走 worker task；这里保留一个手动创建 Inbox 整理任务的快捷入口。</p>
       <div class="action-row">
@@ -2195,17 +2195,17 @@ async function handleReindex() {
   background: color-mix(in srgb, var(--danger) 20%, transparent);
 }
 
-.legacy-collapse {
+.manual-task-collapse {
   border-color: color-mix(in srgb, var(--text-muted) 18%, var(--border));
   opacity: 0.75;
   transition: opacity 0.2s;
 }
 
-.legacy-collapse[open] {
+.manual-task-collapse[open] {
   opacity: 1;
 }
 
-.legacy-summary {
+.manual-task-summary {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2214,15 +2214,15 @@ async function handleReindex() {
   user-select: none;
 }
 
-.legacy-summary::-webkit-details-marker {
+.manual-task-summary::-webkit-details-marker {
   display: none;
 }
 
-.legacy-summary h3 {
+.manual-task-summary h3 {
   margin: 0;
 }
 
-.legacy-badge {
+.manual-task-badge {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;

@@ -111,8 +111,8 @@
 - 可手动发起热门新闻采集任务，并查看最近任务状态 / 摘要 / 输出笔记
 - 成功结果从纯路径升级为可点击笔记入口，可直接打开 `NoteDetail`
 - `failed/cancelled` 任务支持重试，`pending/running` 任务支持取消
-- 原“一键整理 Inbox”降级到 `Legacy / 手动工具`
-- `NoteDetail.vue` 中的行动项提取文案同步降级为 legacy/manual
+- 原“一键整理 Inbox”调整为补充性的手动任务入口
+- `NoteDetail.vue` 中的行动项提取改为直接创建 worker task
 
 ### 行为变化
 - OpenClaw 不再是默认的持续自治整理主流程
