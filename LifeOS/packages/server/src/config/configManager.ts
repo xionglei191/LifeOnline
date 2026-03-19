@@ -24,12 +24,16 @@ function normalizeOptionalPath(value: string | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-function resolveVaultPath(vaultPath: string): string {
-  if (vaultPath.startsWith('~')) {
-    return path.join(process.env.HOME || '', vaultPath.slice(1));
+export function normalizeVaultPath(vaultPath: string): string {
+  const normalizedPath = normalizeOptionalPath(vaultPath);
+  if (!normalizedPath) {
+    return '';
   }
-  if (path.isAbsolute(vaultPath)) return vaultPath;
-  return path.resolve(SERVER_ROOT, vaultPath);
+  if (normalizedPath.startsWith('~')) {
+    return path.join(process.env.HOME || '', normalizedPath.slice(1));
+  }
+  if (path.isAbsolute(normalizedPath)) return normalizedPath;
+  return path.resolve(SERVER_ROOT, normalizedPath);
 }
 
 export async function loadStoredConfig(): Promise<Config> {
@@ -38,12 +42,12 @@ export async function loadStoredConfig(): Promise<Config> {
     const config = JSON.parse(content) as Partial<Config>;
 
     return {
-      vaultPath: resolveVaultPath(config.vaultPath || '../../mock-vault'),
+      vaultPath: normalizeVaultPath(config.vaultPath || '../../mock-vault'),
       port: typeof config.port === 'number' ? config.port : 3000,
     };
   } catch {
     return {
-      vaultPath: resolveVaultPath('../../mock-vault'),
+      vaultPath: normalizeVaultPath('../../mock-vault'),
       port: 3000,
     };
   }
@@ -55,7 +59,7 @@ export async function loadConfig(): Promise<Config> {
   const envPort = process.env.PORT;
 
   return {
-    vaultPath: resolveVaultPath(envVaultPath || storedConfig.vaultPath),
+    vaultPath: normalizeVaultPath(envVaultPath || storedConfig.vaultPath),
     port: resolvePort(envPort, storedConfig.port),
   };
 }

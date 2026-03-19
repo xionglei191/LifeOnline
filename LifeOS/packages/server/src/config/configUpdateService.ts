@@ -1,6 +1,6 @@
 import { restartWatcher } from '../index.js';
 import { indexVault } from '../indexer/indexer.js';
-import { loadStoredConfig, saveConfig, validateVaultPath } from './configManager.js';
+import { loadStoredConfig, normalizeVaultPath, saveConfig, validateVaultPath } from './configManager.js';
 
 export class InvalidVaultPathError extends Error {
   constructor() {
@@ -14,25 +14,26 @@ export interface UpdateConfigResult {
 }
 
 export async function updateStoredVaultPath(vaultPath: string): Promise<UpdateConfigResult> {
+  const normalizedVaultPath = normalizeVaultPath(vaultPath);
   const storedConfig = await loadStoredConfig();
-  if (storedConfig.vaultPath === vaultPath) {
+  if (storedConfig.vaultPath === normalizedVaultPath) {
     return {
       indexResult: null,
     };
   }
 
-  const isValid = await validateVaultPath(vaultPath);
+  const isValid = await validateVaultPath(normalizedVaultPath);
   if (!isValid) {
     throw new InvalidVaultPathError();
   }
 
   await saveConfig({
     ...storedConfig,
-    vaultPath,
+    vaultPath: normalizedVaultPath,
   });
 
-  const indexResult = await indexVault(vaultPath);
-  await restartWatcher(vaultPath);
+  const indexResult = await indexVault(normalizedVaultPath);
+  await restartWatcher(normalizedVaultPath);
 
   return {
     indexResult,

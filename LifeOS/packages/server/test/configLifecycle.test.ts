@@ -198,6 +198,43 @@ test('updating config persists vault path, emits index-complete, and rebinds wat
   }
 });
 
+test('updating config treats equivalent vault paths as unchanged after normalization', async () => {
+  const env = await createTestEnv('lifeos-config-normalize-');
+  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const serverRoot = path.dirname(configFile);
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const relativeVaultPath = path.relative(serverRoot, env.vaultPath);
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const response = await api<{ success: boolean; indexResult: unknown | null }>(baseUrl, '/api/config', {
+      method: 'POST',
+      body: JSON.stringify({ vaultPath: `  ${relativeVaultPath}  ` }),
+    });
+
+    assert.equal(response.indexResult, null);
+
+    const storedConfig = await loadStoredConfig();
+    assert.equal(storedConfig.vaultPath, env.vaultPath);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];
