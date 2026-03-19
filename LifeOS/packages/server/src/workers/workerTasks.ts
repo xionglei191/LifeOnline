@@ -365,7 +365,7 @@ async function persistClassifyInboxResult(
     dimension: 'growth',
     type: 'review',
     date,
-    tags: ['lifeos', 'classify-inbox'],
+    tags: ['lifeos', 'classify_inbox'],
     taskId: task.id,
     source: 'auto',
     worker: 'lifeos',
