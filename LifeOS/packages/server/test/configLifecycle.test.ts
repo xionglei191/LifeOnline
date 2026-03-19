@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { WebSocket } from 'ws';
 import { createTestEnv } from './helpers/testEnv.js';
-import { startServer, stopServer } from '../src/index.js';
+import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
@@ -36,19 +36,72 @@ async function openWebSocket(url: string, timeoutMs = 10000): Promise<WebSocket>
   return new Promise<WebSocket>((resolve, reject) => {
     const socket = new WebSocket(url);
     const timer = setTimeout(() => {
-      socket.terminate();
+      cleanup();
+      socket.close();
       reject(new Error('Timed out connecting to WebSocket server'));
     }, timeoutMs);
 
-    socket.once('open', () => {
+    function cleanup() {
       clearTimeout(timer);
-      resolve(socket);
-    });
+      socket.removeListener('open', onOpen);
+      socket.removeListener('error', onError);
+    }
 
-    socket.once('error', (error) => {
-      clearTimeout(timer);
+    function onOpen() {
+      cleanup();
+      resolve(socket);
+    }
+
+    function onError(error: Error) {
+      cleanup();
       reject(error);
-    });
+    }
+
+    socket.once('open', onOpen);
+    socket.once('error', onError);
+  });
+}
+
+async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for websocket event'));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(timer);
+      socket.removeListener('message', onMessage);
+      socket.removeListener('error', onError);
+    }
+
+    function onError(error: Error) {
+      cleanup();
+      reject(error);
+    }
+
+    function onMessage(raw: string | Buffer | ArrayBuffer | Buffer[]) {
+      try {
+        const text = Array.isArray(raw)
+          ? Buffer.concat(raw).toString()
+          : Buffer.isBuffer(raw)
+            ? raw.toString()
+            : raw instanceof ArrayBuffer
+              ? Buffer.from(raw).toString()
+              : raw;
+        const payload = JSON.parse(text) as T;
+        if (!predicate(payload)) {
+          return;
+        }
+        cleanup();
+        resolve(payload);
+      } catch {
+        // Ignore non-JSON frames.
+      }
+    }
+
+    socket.on('message', onMessage);
+    socket.once('error', onError);
   });
 }
 
@@ -79,12 +132,13 @@ test('loadStoredConfig keeps persisted values separate from env overrides', asyn
   }
 });
 
-test('updating config persists vault path and rebinds watcher to the new vault', async () => {
+test('updating config persists vault path, emits index-complete, and rebinds watcher to the new vault', async () => {
   const env = await createTestEnv('lifeos-config-update-');
   const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'replacement-vault');
   const replacementNotePath = path.join(replacementVaultPath, '切换后.md');
+  let socket: WebSocket | null = null;
 
   await fs.mkdir(replacementVaultPath, { recursive: true });
   await fs.writeFile(path.join(replacementVaultPath, 'seed.md'), '# seed\n');
@@ -103,6 +157,7 @@ test('updating config persists vault path and rebinds watcher to the new vault',
       }
     });
 
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
     process.env.VAULT_PATH = env.vaultPath;
 
     const unchanged = await api<{ success: boolean; indexResult: unknown | null }>(baseUrl, '/api/config', {
@@ -111,10 +166,19 @@ test('updating config persists vault path and rebinds watcher to the new vault',
     });
     assert.equal(unchanged.indexResult, null);
 
-    await api<{ success: boolean }>(baseUrl, '/api/config', {
+    const responsePromise = api<{ success: boolean; indexResult: unknown }>(baseUrl, '/api/config', {
       method: 'POST',
       body: JSON.stringify({ vaultPath: replacementVaultPath }),
     });
+    const eventPromise = waitForWebSocketEvent<{ type: string; data?: unknown }>(
+      socket,
+      (event) => event.type === 'index-complete',
+    );
+
+    const [response, event] = await Promise.all([responsePromise, eventPromise]);
+
+    assert.equal(event.type, 'index-complete');
+    assert.deepEqual(event.data, response.indexResult);
 
     const storedConfig = await loadStoredConfig();
     assert.equal(storedConfig.vaultPath, replacementVaultPath);
@@ -126,8 +190,26 @@ test('updating config persists vault path and rebinds watcher to the new vault',
       return notes.some((note) => note.file_path === replacementNotePath);
     });
   } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
+  }
+});
+
+test('broadcastUpdate is silent when websocket server is unavailable', async () => {
+  const originalConsoleLog = console.log;
+  const calls: unknown[][] = [];
+  console.log = (...args: unknown[]) => {
+    calls.push(args);
+  };
+
+  try {
+    broadcastUpdate({ type: 'index-complete', data: { total: 1 } });
+    assert.deepEqual(calls, []);
+  } finally {
+    console.log = originalConsoleLog;
   }
 });
 

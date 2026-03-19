@@ -3,8 +3,9 @@ import matter from 'gray-matter';
 import { validate as cronValidate } from 'node-cron';
 import { getDb } from '../db/client.js';
 import { indexVault, indexFile } from '../indexer/indexer.js';
-import { loadConfig, loadStoredConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
-import { broadcastUpdate, getIndexQueue, restartWatcher } from '../index.js';
+import { loadConfig } from '../config/configManager.js';
+import { updateStoredVaultPath, InvalidVaultPathError } from '../config/configUpdateService.js';
+import { broadcastUpdate, getIndexQueue } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
@@ -293,31 +294,17 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const isValid = await validateVaultPath(vaultPath);
-    if (!isValid) {
-      res.status(400).json({ error: 'Invalid vault path: directory does not exist or contains no .md files' });
-      return;
+    const result = await updateStoredVaultPath(vaultPath);
+    if (result.indexResult) {
+      broadcastUpdate({ type: 'index-complete', data: result.indexResult });
     }
 
-    const storedConfig = await loadStoredConfig();
-    if (storedConfig.vaultPath === vaultPath) {
-      res.json({ success: true, indexResult: null });
-      return;
-    }
-
-    const nextConfig = {
-      ...storedConfig,
-      vaultPath,
-    };
-    await saveConfig(nextConfig);
-
-    // Re-index with new vault path before rebinding the watcher.
-    const result = await indexVault(vaultPath);
-    await restartWatcher(vaultPath);
-    broadcastUpdate({ type: 'index-complete', data: result });
-
-    res.json({ success: true, indexResult: result });
+    res.json({ success: true, indexResult: result.indexResult });
   } catch (error) {
+    if (error instanceof InvalidVaultPathError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
     console.error('Update config error:', error);
     res.status(500).json({ error: 'Failed to update config' });
   }

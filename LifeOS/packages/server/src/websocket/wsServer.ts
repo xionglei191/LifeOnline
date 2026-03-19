@@ -63,8 +63,7 @@ export function initWebSocket(server: Server) {
 }
 
 export function broadcastUpdate(event: WsEvent) {
-  if (!wss) {
-    console.log('WebSocket: cannot broadcast, wss not initialized');
+  if (!wss || wss.clients.size === 0) {
     return;
   }
   const message = JSON.stringify(event);
