@@ -6,7 +6,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "db:init": "tsx scripts/init-db.ts",
-    "index": "tsx -e \"import('./src/indexer/indexer.js').then(m => m.indexVault(process.env.VAULT_PATH || '../../mock-vault'))\""
+    "index": "tsx -e \"import('./src/indexer/indexer.js').then(m => m.indexVault(process.env.VAULT_PATH || '../../mock-vault'))\"",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

@@ -6,7 +6,10 @@
     "dev": "pnpm --parallel --filter server --filter web dev",
     "build": "pnpm -r build",
     "db:init": "pnpm --filter server db:init",
-    "index": "pnpm --filter server index"
+    "index": "pnpm --filter server index",
+    "test": "pnpm --filter server test",
+    "smoke": "pnpm --filter server smoke",
+    "check": "pnpm build && pnpm test && pnpm smoke"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

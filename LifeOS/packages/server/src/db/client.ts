@@ -16,7 +16,6 @@ function getDbPath(): string {
   return path.join(SERVER_ROOT, 'data/lifeos.db');
 }
 
-const DB_PATH = getDbPath();
 
 function ensureTaskTypeConstraint(tableName: 'worker_tasks' | 'task_schedules', insertSql: string): string {
   return `
@@ -57,6 +56,19 @@ function ensureTaskTableConstraintOrRebuild(database: Database.Database, options
   rebuildingLog: string;
   rebuiltLog: string;
 }): void {
+  const legacyRows = database.prepare(`SELECT COUNT(*) as total FROM ${options.tableName} WHERE task_type = 'collect_trending_news'`).get() as { total: number };
+  if (legacyRows.total > 0) {
+    console.log(options.rebuildingLog);
+    database.exec(rebuildTableWithNormalizedTaskType({
+      tableName: options.tableName,
+      createTableSql: options.createTableSql,
+      selectColumnsSql: options.selectColumnsSql,
+      recreateIndexesSql: options.recreateIndexesSql,
+    }));
+    console.log(options.rebuiltLog);
+    return;
+  }
+
   try {
     database.exec(ensureTaskTypeConstraint(options.tableName, options.insertSql));
     database.exec(`DELETE FROM ${options.tableName} WHERE id = '__migration_test__'`);
@@ -76,12 +88,13 @@ let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
   if (!db) {
-    const dbDir = path.dirname(DB_PATH);
+    const dbPath = getDbPath();
+    const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    db = new Database(DB_PATH);
+    db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = NORMAL');
     db.pragma('cache_size = -64000'); // 64MB cache
@@ -167,7 +180,7 @@ export function initDatabase(): void {
   `);
 
   console.log('Database initialized successfully');
-  console.log('Database path:', DB_PATH);
+  console.log('Database path:', getDbPath());
 }
 
 export function closeDb(): void {

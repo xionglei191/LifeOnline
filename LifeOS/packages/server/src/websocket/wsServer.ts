@@ -11,6 +11,9 @@ export interface WsEvent {
 let wss: WebSocketServer | null = null;
 
 export function initWebSocket(server: Server) {
+  if (wss) {
+    wss.close();
+  }
   wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', (ws) => {
@@ -35,5 +38,22 @@ export function broadcastUpdate(event: WsEvent) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
     }
+  });
+}
+
+export async function closeWebSocket(): Promise<void> {
+  if (!wss) return;
+
+  const server = wss;
+  wss = null;
+
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
   });
 }

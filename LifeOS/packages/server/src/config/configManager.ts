@@ -12,6 +12,18 @@ const __dirname = path.dirname(__filename);
 const SERVER_ROOT = path.resolve(__dirname, '../..');
 const CONFIG_FILE = path.join(SERVER_ROOT, 'config.json');
 
+function resolvePort(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeOptionalPath(value: string | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function resolveVaultPath(vaultPath: string): string {
   if (vaultPath.startsWith('~')) {
     return path.join(process.env.HOME || '', vaultPath.slice(1));
@@ -21,16 +33,22 @@ function resolveVaultPath(vaultPath: string): string {
 }
 
 export async function loadConfig(): Promise<Config> {
+  const envVaultPath = normalizeOptionalPath(process.env.VAULT_PATH);
+  const envPort = process.env.PORT;
+
   try {
     const content = await fs.readFile(CONFIG_FILE, 'utf-8');
-    const config = JSON.parse(content);
-    config.vaultPath = resolveVaultPath(config.vaultPath);
-    return config;
-  } catch (e) {
-    const raw = process.env.VAULT_PATH || '../../mock-vault';
+    const config = JSON.parse(content) as Partial<Config>;
+    const fallbackPort = typeof config.port === 'number' ? config.port : 3000;
+
     return {
-      vaultPath: resolveVaultPath(raw),
-      port: 3000,
+      vaultPath: resolveVaultPath(envVaultPath || config.vaultPath || '../../mock-vault'),
+      port: resolvePort(envPort, fallbackPort),
+    };
+  } catch {
+    return {
+      vaultPath: resolveVaultPath(envVaultPath || '../../mock-vault'),
+      port: resolvePort(envPort, 3000),
     };
   }
 }
