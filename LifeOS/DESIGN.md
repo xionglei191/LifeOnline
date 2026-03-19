@@ -1221,14 +1221,14 @@ packages/web/vite.config.ts: +4 行
 ### 测试日志示例
 
 ```
-FileWatcher: resolved vault path = /home/xionglei/LifeOS/mock-vault
-FileWatcher: watching directory: /home/xionglei/LifeOS/mock-vault
+FileWatcher: resolved vault path = /home/xionglei/LifeOnline/LifeOS/mock-vault
+FileWatcher: watching directory: /home/xionglei/LifeOnline/LifeOS/mock-vault
 FileWatcher: ready and watching for changes
 FileWatcher: number of watched directories: 11
 
-File changed: /home/xionglei/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
+File changed: /home/xionglei/LifeOnline/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
 WebSocket: broadcasting file-changed to 0 client(s)
-Indexed file: /home/xionglei/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
+Indexed file: /home/xionglei/LifeOnline/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
 WebSocket: broadcasting index-complete to 0 client(s)
 ```
 

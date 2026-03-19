@@ -89,7 +89,7 @@
 ✅ **后端服务**
 - 地址: http://localhost:3000
 - 状态: 运行中
-- 数据库: /home/xionglei/LifeOS/packages/server/data/lifeos.db
+- 数据库: /home/xionglei/LifeOnline/LifeOS/packages/server/data/lifeos.db
 - 索引文件: 44 个
 
 ✅ **前端服务**
@@ -98,7 +98,7 @@
 - 构建工具: Vite 5.4.21
 
 ✅ **文件监听**
-- 监听目录: /home/xionglei/LifeOS/mock-vault
+- 监听目录: /home/xionglei/LifeOnline/LifeOS/mock-vault
 - 监听数量: 11 个目录
 - 状态: 正常工作
 
