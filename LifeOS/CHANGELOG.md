@@ -442,78 +442,12 @@ proxy: {
 | 前端 CustomEvent 分发 | <5ms | document.dispatchEvent() |
 | 前端自动刷新 | ~50ms | API 请求 + 渲染 |
 
-### 代码统计
+### 变更摘要
 
-```bash
-# 后端新增
-packages/server/src/websocket/wsServer.ts: +34 行
-packages/server/src/indexer/indexQueue.ts: +95 行
-
-# 后端修改
-packages/server/src/watcher/fileWatcher.ts: 重写（+75 行）
-packages/server/src/index.ts: 重构（+15 行）
-packages/server/src/api/handlers.ts: +20 行
-packages/server/src/api/routes.ts: +3 行
-
-# 前端新增
-packages/web/src/composables/useWebSocket.ts: +73 行
-
-# 前端修改
-packages/web/src/composables/useDashboard.ts: +15 行
-packages/web/src/composables/useTimeline.ts: +20 行
-packages/web/src/composables/useCalendar.ts: +20 行
-packages/web/src/composables/useDimensionNotes.ts: +15 行
-packages/web/src/App.vue: +50 行
-packages/web/src/views/SettingsView.vue: +80 行
-packages/web/src/api/client.ts: +30 行
-packages/web/vite.config.ts: +4 行
-
-# WebSocket 与索引队列总计: ~550 行代码
-```
-
-### Git 提交
-
-```
-commit 57b04bf
-feat: implement WebSocket, IndexQueue, error recovery, manual reindex
-
-- Add WebSocket server (ws) for real-time push to frontend
-- Add IndexQueue with 300ms debounce, 3x retry, error tracking
-- Refactor FileWatcher to use IndexQueue + auto-restart on error (5x exponential backoff)
-- Add ws-update event listeners to all composables for auto-refresh
-- Add index status/error API endpoints (GET /api/index/status, /api/index/errors)
-- Update App.vue with WS init, indexing indicator, offline badge
-- Update SettingsView with manual reindex button, error log, WS status
-- Update Vite proxy for /ws path
-- Update API client with fetchIndexStatus, fetchIndexErrors, typed triggerIndex
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **WebSocket 架构**: 单例模式 + CustomEvent 分发，解耦清晰
-2. **索引队列**: 去抖 + 重试 + 错误记录，健壮性大幅提升
-3. **错误恢复**: FileWatcher 和 WebSocket 都支持自动重启/重连
-4. **用户体验**: 实时推送 + 自动刷新，无需手动刷新页面
-
-#### 可以改进的地方
-1. **WebSocket 心跳**: 当前没有心跳机制，长时间空闲可能被中间件断开
-2. **索引队列优先级**: 当前 FIFO，未来可考虑优先级队列
-3. **错误日志持久化**: 当前只在内存中，服务器重启后丢失
-4. **前端离线提示**: 当前只显示"离线"徽章，可以更友好
-
-#### 技术选型反思
-- ws 库简单稳定，适合小规模应用
-- 原生 WebSocket API 足够用，无需引入 socket.io
-- CustomEvent 分发事件是个好模式，避免了 composable 耦合
-- 索引队列的去抖时间 300ms 是个不错的平衡点
-
-### 参考资料
-
-- [ws GitHub](https://github.com/websockets/ws)
-- [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
-- [CustomEvent](https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent)
-- [Vite Proxy](https://vitejs.dev/config/server-options.html#server-proxy)
+- 引入 WebSocket 推送与 IndexQueue，统一实时刷新链路
+- 增强 watcher / 索引恢复能力，并补充手动 reindex 入口
+- 前端各视图接入自动刷新与索引状态展示
+- 补齐 `/ws` 代理与相关 API 支撑
 
 ---
 
@@ -525,85 +459,12 @@ feat: implement WebSocket, IndexQueue, error recovery, manual reindex
 
 **耗时**: 约 2 小时
 
-### 实现清单
+### 变更摘要
 
-#### 实时文件监听系统
-- [x] 安装 chokidar 文件监听库
-- [x] 创建 FileWatcher 服务
-  - 监听 vault 目录的 .md 文件
-  - 处理 add/change/unlink 事件
-  - 触发增量索引
-  - 支持优雅关闭
-- [x] 集成到服务器启动流程
-  - 服务器启动时自动开始监听
-  - SIGINT/SIGTERM 信号处理
-
-#### 增量索引
-- [x] 重构 indexer.ts
-  - `indexFile(filePath)` — 单文件索引
-  - `deleteFileRecord(filePath)` — 删除文件记录
-  - `upsertNote()` — 辅助函数，复用插入逻辑
-- [x] 全量索引复用 upsertNote
-
-#### 配置管理
-- [x] 创建 configManager.ts
-  - `loadConfig()` — 从 config.json 加载
-  - `saveConfig()` — 保存到 config.json
-  - `validateVaultPath()` — 验证路径有效性
-- [x] 默认配置回退机制
-
-#### 配置 API
-- [x] `GET /api/config` — 获取当前配置
-- [x] `POST /api/config` — 更新 vault 路径
-  - 验证路径有效性
-  - 保存配置
-  - 重新索引
-  - 返回索引结果
-
-#### 设置页面
-- [x] SettingsView.vue — 配置页面
-  - Vault 路径输入框
-  - 保存并重新索引按钮
-  - 路径验证反馈
-  - 索引结果展示
-  - 系统信息显示
-- [x] 添加配置 API 客户端函数
-- [x] 更新路由（/settings）
-- [x] 导航栏添加设置链接
-
-#### 类型定义
-- [x] 创建 sql.js.d.ts — sql.js 类型声明
-- [x] 修复 chokidar 类型导入
-
-#### 构建优化
-- [x] 修复 tsconfig.json（移除 scripts 目录）
-- [x] 服务器编译通过
-- [x] 前端构建成功
-
-### 技术决策
-
-#### 1. 文件监听：chokidar v5
-- **原因**: 比 Node.js 原生 fs.watch 更稳定，跨平台兼容性好
-- **配置**:
-  - `ignored: /(^|[\/\\])\../` — 忽略隐藏文件
-  - `ignoreInitial: true` — 不触发已有文件的 add 事件
-  - `persistent: true` — 保持进程运行
-- **性能**: 轻量级，资源占用低
-
-#### 2. 配置存储：JSON 文件
-- **原因**: 简单直观，易于编辑
-- **位置**: `packages/server/config.json`
-- **格式**: `{ vaultPath: string, port: number }`
-- **备选**: 也可以使用 .env 文件或数据库
-
-#### 3. 增量索引策略
-- **单文件索引**: 解析 → upsert → saveDb（<50ms）
-- **删除记录**: 按 file_path 删除 → saveDb（<10ms）
-- **性能**: 远快于全量索引（200ms）
-
-#### 4. 类型声明
-- **sql.js**: 创建自定义 .d.ts 文件，定义 Database 和 Statement 接口
-- **chokidar**: 使用 `type FSWatcher as ChokidarWatcher` 导入类型
+- 增加实时文件监听、Vault 配置管理与设置页入口
+- 让增量索引从全量流程中拆出，支持单文件更新与删除同步
+- 补齐配置 API、路径校验和重新索引能力
+- 为后续实时刷新和任务系统演进打下基础
 
 ### 遇到的问题与解决
 
@@ -663,50 +524,12 @@ packages/web/src/api/client.ts: +20 行
 packages/web/src/router.ts: +1 行
 packages/web/src/App.vue: +1 行
 
-# 实时索引与 Vault 配置总计: ~450 行代码
-```
+### 变更摘要
 
-### Git 提交
-
-```
-commit 410ed78
-feat: implement real-time indexing and vault configuration
-
-- Add chokidar file watcher for real-time vault monitoring
-- Refactor indexer to support single-file operations
-- Add config management (loadConfig, saveConfig, validateVaultPath)
-- Add config API endpoints (GET/POST /api/config)
-- Create SettingsView page for vault path configuration
-- Integrate FileWatcher into server startup with graceful shutdown
-- Add sql.js type declarations for clean TypeScript build
-- Update navigation to include settings link
-- Support vault path persistence via config.json
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **增量索引**: 单文件操作性能优秀（<50ms），远快于全量索引
-2. **配置管理**: JSON 文件简单直观，易于调试和手动编辑
-3. **类型安全**: 自定义 .d.ts 文件解决第三方库类型缺失问题
-4. **优雅关闭**: SIGINT/SIGTERM 信号处理，确保文件监听正确停止
-
-#### 可以改进的地方
-1. **WebSocket 通知**: 当前文件变更后前端不会自动刷新，需要手动刷新页面
-2. **多 Vault 支持**: 当前只支持单个 vault，未来可扩展为多 vault 切换
-3. **索引队列**: 大量文件同时变更时可能导致并发索引，应该使用队列
-4. **错误处理**: 文件监听异常时应该自动重启，而不是静默失败
-
-#### 技术选型反思
-- chokidar v5 稳定可靠，API 简洁，是文件监听的最佳选择
-- JSON 配置文件适合小型项目，如果配置项增多可考虑迁移到数据库
-- 增量索引策略正确，性能提升明显
-
-### 参考资料
-
-- [chokidar GitHub](https://github.com/paulmillr/chokidar)
-- [Node.js Signal Events](https://nodejs.org/api/process.html#signal-events)
-- [TypeScript Declaration Files](https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html)
+- 增加实时文件监听、Vault 配置管理与设置页入口
+- 让增量索引从全量流程中拆出，支持单文件更新与删除同步
+- 补齐配置 API、路径校验和重新索引能力
+- 为后续实时刷新和任务系统演进打下基础
 
 ---
 
@@ -821,63 +644,11 @@ if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
 | 快捷键响应 | <5ms | 原生监听 |
 | 历史读取 | <5ms | localStorage |
 
-### 代码统计
+### 变更摘要
 
-```bash
-# 后端新增
-packages/server/src/api/handlers.ts: +25 行
-packages/server/src/api/routes.ts: +2 行
-
-# 前端新增
-packages/web/src/views/SearchView.vue: +100 行
-packages/web/src/components/SearchBar.vue: +150 行
-packages/web/src/composables/useSearchHistory.ts: +60 行
-packages/web/src/api/client.ts: +10 行
-packages/web/src/App.vue: +2 行
-packages/web/src/router.ts: +1 行
-
-# 搜索功能总计: ~350 行代码
-```
-
-### Git 提交
-
-```
-commit [待提交]
-feat: implement full-text search with keyboard shortcuts
-
-- Add search API endpoint (SQLite LIKE query)
-- Add SearchBar component with history dropdown
-- Add SearchView page for search results
-- Add useSearchHistory composable (localStorage)
-- Add Ctrl/Cmd+K keyboard shortcut
-- Update navigation bar with search box
-- Support search history (max 10 items)
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **搜索实现简洁**: SQLite LIKE 查询足够快，无需复杂方案
-2. **快捷键体验**: Ctrl/Cmd+K 符合用户习惯，响应迅速
-3. **搜索历史**: localStorage 存储简单有效，无需后端
-4. **组件复用**: SearchView 复用 NoteList，代码简洁
-
-#### 可以改进的地方
-1. **搜索结果高亮**: 未实现关键词高亮，用户体验可提升
-2. **搜索建议**: 未实现自动补全，可参考 Google 搜索
-3. **高级搜索**: 未支持多关键词、字段搜索等高级功能
-4. **搜索性能**: 数据量大时（>1000 条），LIKE 查询可能变慢
-
-#### 技术选型反思
-- SQLite LIKE 适合小数据量（<1000 条），如果未来数据量增大，需要升级到 FTS5
-- localStorage 存储搜索历史简单有效，但无法跨设备同步
-- 原生快捷键实现简洁，但功能有限，如需复杂快捷键可考虑 hotkeys.js
-
-### 参考资料
-
-- [SQLite LIKE Operator](https://www.sqlite.org/lang_expr.html#like)
-- [localStorage API](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
-- [KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent)
+- 增加全文搜索、搜索历史与快捷键入口
+- 补齐搜索结果页并复用现有笔记列表能力
+- 以轻量 SQLite LIKE 方案完成首版搜索闭环
 
 ---
 
@@ -1000,60 +771,11 @@ emit('update:filters', filters.value);
 | 排序操作 | <10ms | computed 缓存 |
 | 路由跳转 | ~100ms | 懒加载 + 渲染 |
 
-### 代码统计
+### 变更摘要
 
-```bash
-# 前端新增
-packages/web/src/views/DimensionView.vue: +60 行
-packages/web/src/components/FilterBar.vue: +180 行
-packages/web/src/components/NoteList.vue: +150 行
-packages/web/src/components/DimensionStats.vue: +140 行
-packages/web/src/composables/useDimensionNotes.ts: +80 行
-packages/web/src/router.ts: +1 行
-packages/web/src/components/DimensionHealth.vue: +5 行
-
-# 维度详情页功能总计: ~620 行代码
-```
-
-### Git 提交
-
-```
-commit [待提交]
-feat: implement dimension detail pages with filtering
-
-- Add DimensionView page with dynamic routing
-- Add FilterBar component (type/status/priority filters + sorting)
-- Add NoteList component (card grid layout)
-- Add DimensionStats component (circular progress + stats)
-- Add useDimensionNotes composable for data management
-- Update dashboard dimension cards with click navigation
-- Support all 8 dimensions with consistent UI
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **组件设计**: FilterBar、NoteList、DimensionStats 高度解耦，易于复用
-2. **性能优化**: 使用 computed 缓存筛选结果，交互流畅
-3. **用户体验**: 筛选和排序即时响应，无需等待 API
-4. **代码简洁**: 圆形进度条用纯 CSS 实现，无需引入图表库
-
-#### 可以改进的地方
-1. **筛选持久化**: 筛选条件未保存到 URL，刷新页面会丢失
-2. **分页功能**: 当笔记数量很多时（>100 条），应该添加分页
-3. **搜索功能**: 缺少全文搜索，只能通过筛选查找
-4. **空状态优化**: 空状态提示可以更友好，提供操作建议
-
-#### 技术选型反思
-- 客户端筛选适合小数据量，如果未来笔记数量增长，需要改为服务端筛选
-- CSS Grid 自动响应式非常好用，比 flexbox 方案简洁很多
-- conic-gradient 实现圆形进度条效果不错，但兼容性需要注意（IE 不支持）
-
-### 参考资料
-
-- [CSS conic-gradient](https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/conic-gradient)
-- [CSS Grid 布局](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout)
-- [Vue Computed Properties](https://vuejs.org/guide/essentials/computed.html)
+- 增加统一的维度详情页与筛选/排序能力
+- 补齐可复用的列表、筛选栏和维度统计组件
+- 让仪表盘中的维度入口能直接进入对应详情视图
 
 ---
 
@@ -1116,7 +838,7 @@ feat: implement dimension detail pages with filtering
 - [x] fetchCalendar(year, month)
 - [x] fetchNoteById(id)
 
-#### Mock 数据扩展
+#### 示例数据补充
 - [x] 新增 8 个 2026-02 月文件（健康/事业/学习/生活/兴趣/财务/关系/成长）
 - [x] 新增 8 个 2026-04 月文件（关系/成长/生活/健康/学习/财务/兴趣/事业）
 - [x] 总计 41 个文件，覆盖 3 个月（Feb, Mar, Apr）
@@ -1205,68 +927,12 @@ Local: http://localhost:5174/
 | 日历渲染 (31 天) | ~50ms | 31 个 DOM 节点 |
 | 路由切换 | ~100ms | 懒加载 + 渲染 |
 
-### 代码统计
+### 变更摘要
 
-```bash
-# 后端新增
-packages/server/src/api/handlers.ts: +120 行（3 个新 handler）
-packages/server/src/api/routes.ts: +3 行（3 个新路由）
-
-# 前端新增
-packages/web/src/router.ts: +12 行（新文件）
-packages/web/src/views/: +200 行（3 个新视图）
-packages/web/src/components/: +350 行（3 个新组件）
-packages/web/src/composables/: +50 行（2 个新 composable）
-packages/web/src/api/client.ts: +20 行（3 个新函数）
-packages/web/src/App.vue: +30 行（导航栏）
-
-# 共享类型
-packages/shared/src/types.ts: +25 行（4 个新接口）
-
-# 示例数据
-本地开发示例 Vault：+16 个文件（~200 行内容）
-
-# 时间线与日历功能总计: ~1000 行代码
-```
-
-### Git 提交
-
-```
-commit [待提交]
-feat: implement timeline, calendar views and navigation
-
-- Add timeline view with 8-track horizontal scrolling
-- Add calendar view with monthly grid and note counts
-- Add note detail modal popup
-- Add vue-router navigation (dashboard/timeline/calendar)
-- Extend mock data to Feb and Apr 2026 (41 files total)
-- Fix date comparison bug in calendar API
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **组件复用**: TimelineTrack 和 CalendarGrid 高度解耦，易于维护
-2. **类型安全**: 全程 TypeScript，API 接口类型定义清晰
-3. **用户体验**: 笔记详情弹窗交互流畅，ESC 键关闭符合习惯
-4. **性能优化**: 日期比较在后端完成，前端只负责渲染
-
-#### 可以改进的地方
-1. **日期处理**: 应该在数据库层面统一日期格式，避免前后端转换
-2. **错误边界**: 缺少 Vue ErrorBoundary，组件错误会导致整个页面崩溃
-3. **加载状态**: 当前只有简单的 "加载中..."，应该使用骨架屏
-4. **响应式设计**: 时间线在小屏幕上体验不佳，需要适配移动端
-
-#### 技术选型反思
-- vue-router 懒加载效果明显，首屏加载时间缩短 ~30%
-- Teleport 解决了模态弹窗的 z-index 问题，比传统方案更优雅
-- CSS Grid 布局日历非常简洁，比 flexbox 方案代码量少 ~40%
-
-### 参考资料
-
-- [vue-router 文档](https://router.vuejs.org/)
-- [Vue Teleport](https://vuejs.org/guide/built-ins/teleport.html)
-- [CSS Grid 布局](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout)
+- 新增时间线与日历视图，以及对应导航入口
+- 新增笔记详情弹窗，补齐多视图下的浏览路径
+- 修复日历接口中的日期比较问题
+- 同步补充本地示例数据用于开发验证
 
 ---
 
@@ -1308,7 +974,7 @@ feat: implement timeline, calendar views and navigation
 - [x] DashboardOverview 容器组件
 - [x] App.vue 主布局
 
-#### Mock 数据
+#### 示例数据
 - [x] 创建 8 个维度目录
 - [x] 编写 25 个示例 markdown 文件
   - 健康: 3 个 (体检/晨跑/饮食)
@@ -1438,55 +1104,9 @@ function getDbPath(): string {
 | Dashboard API | ~50ms | 包含 3 个查询 + 8 个维度统计 |
 | 前端首屏加载 | ~1s | 包含 API 请求 |
 
-### 代码统计
+### 变更摘要
 
-```bash
-# 后端
-packages/server/src/: 现已扩展为多模块服务端实现
-
-# 前端
-packages/web/src/: 现已扩展为多视图与组件结构
-
-# 共享
-packages/shared/src/: 现已包含共享类型与协议定义
-
-# 示例数据
-本地开发示例 Vault
-
-# 总计: ~1260 行代码
-```
-
-### Git 提交
-
-```
-commit 4d529a6
-feat: implement LifeOS indexer service and dashboard
-
-57 files changed, 3452 insertions(+)
-```
-
-### 经验总结
-
-#### 做得好的地方
-1. **类型安全**: 全程 TypeScript，避免了很多低级错误
-2. **Monorepo 结构**: 代码组织清晰，类型共享方便
-3. **Mock 数据**: 25 个文件覆盖全面，验证充分
-4. **增量索引**: 对比 mtime 跳过未变更文件，性能优化到位
-
-#### 可以改进的地方
-1. **错误处理**: 当前只是 console.error，应该有统一的错误处理机制
-2. **测试覆盖**: 没有单元测试，后续应该补充
-3. **配置管理**: 环境变量硬编码，应该使用 .env 文件
-4. **日志系统**: 应该使用结构化日志 (如 pino)
-
-#### 技术选型反思
-- sql.js 虽然解决了编译问题,但性能确实不如 better-sqlite3
-- 如果后续数据量增大 (>1000 个文件)，可能需要重新评估
-- 考虑在后续数据库稳定窗口迁移回 better-sqlite3 (等 Node.js 生态稳定)
-
-### 参考资料
-
-- [sql.js 文档](https://sql.js.org/)
-- [gray-matter GitHub](https://github.com/jonschlinkert/gray-matter)
-- [Vue 3 文档](https://vuejs.org/)
-- [pnpm workspaces](https://pnpm.io/workspaces)
+- 初始化 LifeOS monorepo 与 shared/server/web 三层结构
+- 落地最早期索引服务、Dashboard API 和前端总览界面
+- 用示例 Vault 数据完成首轮端到端验证
+- 作为后续索引、调度和自动化能力扩展的起点
