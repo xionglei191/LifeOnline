@@ -103,12 +103,12 @@
 - `GET /api/worker-tasks/:id`
 - `POST /api/worker-tasks/:id/retry`
 - `POST /api/worker-tasks/:id/cancel`
-- 首个试点任务：OpenClaw 通用任务（后续收敛为 `openclaw_task`）
+- 首版先用早期专用 OpenClaw 任务作为试点，后续收敛为 `openclaw_task`
 - 支持 `pending/running/succeeded/failed/cancelled` 状态流转
 
 #### 5. 前端主入口改造
 - `packages/web/src/views/SettingsView.vue` 主入口改为“外部执行任务”
-- 可手动发起热门新闻采集任务，并查看最近任务状态 / 摘要 / 输出笔记
+- 可手动发起外部执行任务，并查看最近任务状态 / 摘要 / 输出笔记
 - 成功结果从纯路径升级为可点击笔记入口，可直接打开 `NoteDetail`
 - `failed/cancelled` 任务支持重试，`pending/running` 任务支持取消
 - 原“一键整理 Inbox”调整为补充性的手动任务入口
@@ -238,21 +238,21 @@
 - 执行 `pnpm --filter @lifeos/web build`
 - 结果：构建通过
 
-### 下一步建议
+### 后续方向
 
 - 统一空状态 / 加载态 / 错误态细节
 - 做移动端适配与触摸交互打磨
 - 视需要继续做更细粒度懒加载与交互性能优化
 
-## 2026-03-17 - 前端视觉升级方案归档
+## 2026-03-17 - 前端视觉设计说明归档
 
 ### 工作内容
 
-补充 LifeOS 前端“科技感 / 人生控制台”视觉升级方案，并归档为历史设计说明。
+补充 LifeOS 前端视觉设计说明，并归档为历史设计文档。
 
 ### 变更摘要
 
-- 补充当时的前端视觉升级说明
+- 补充当时的前端视觉设计说明
 - 明确产品视觉方向为 `LifeOS Mission Control`
 - 补充当前前端视觉问题分析
 - 定义全局视觉系统、信息架构升级方向、八维度视觉协议
@@ -272,7 +272,7 @@
 - 无代码逻辑改动
 - 无 API / 数据结构改动
 
-### 下一步建议
+### 后续方向
 
 - 优先重构 `App Shell + Dashboard`
 - 再推进 `Timeline + Stats`

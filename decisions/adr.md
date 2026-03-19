@@ -91,7 +91,7 @@ LifeOS 已内置 AI 分类和行动项提取功能，OpenClaw 也计划做类似
 - 避免两个系统做重复的 AI 调用
 
 ### 影响
-- 当时的 `classify-inbox` 和 `extract-tasks` 仍存在手动触发入口
+- 当时的 `classify_inbox` 和 `extract_tasks` 仍存在手动触发入口
 - OpenClaw 承担定时/自动触发的职责
 - 两者通过 Vault 文件系统解耦，不需要直接 API 通信
 
@@ -142,7 +142,7 @@ LifeOS 后端已经掌握 Vault 写入、索引、WebSocket、前端刷新与审
 - **LifeOS** 成为控制核心 / orchestration layer，负责判断是否需要外部执行、创建任务请求、跟踪状态、校验结果、落地笔记并触发既有索引闭环。
 - **OpenClaw** 只负责执行明确、有限、可描述的任务，并返回结构化结果。
 - 没有 LifeOS 持有的任务记录，不允许系统凭空生成最终结果笔记。
-- `classify-inbox`、`extract-tasks` 等旧 `/api/ai/*` 能力已退出主入口，当前统一走 worker task 触发。
+- `classify_inbox`、`extract_tasks` 等旧 `/api/ai/*` 能力已退出主入口，当前统一走 worker task 触发。
 
 ### 首个试点
 - 新增 `worker_tasks` 表与 `/api/worker-tasks*` API。
