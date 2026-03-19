@@ -1,6 +1,6 @@
 import { ref, onUnmounted } from 'vue';
 
-export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated';
+export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated' | 'schedule-updated';
 
 export interface WsEvent {
   type: WsEventType;
