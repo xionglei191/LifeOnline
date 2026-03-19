@@ -18,6 +18,7 @@ import type {
   WorkerTaskStatus,
   WorkerTaskType,
   WorkerName,
+  SUPPORTED_WORKER_TASK_TYPES,
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import { loadConfig } from '../config/configManager.js';
@@ -59,8 +60,19 @@ export const SUPPORTED_WORKER_TASK_TYPES = [
   'weekly_report',
 ] as const satisfies readonly WorkerTaskType[];
 
+export class WorkerTaskValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorkerTaskValidationError';
+  }
+}
+
 export function isSupportedWorkerTaskType(value: unknown): value is WorkerTaskType {
   return typeof value === 'string' && SUPPORTED_WORKER_TASK_TYPES.includes(value as WorkerTaskType);
+}
+
+function throwWorkerTaskValidationError(message: string): never {
+  throw new WorkerTaskValidationError(message);
 }
 
 function buildNoteId(filePath: string): string {
@@ -636,7 +648,7 @@ function summarizeWeeklyReportResult(result: WorkerTaskResultMap['weekly_report'
 export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTaskInputMap[WorkerTaskType] {
   if (request.taskType === 'openclaw_task') {
     const input = (request.input || {}) as Partial<WorkerTaskInputMap['openclaw_task']>;
-    if (!input.instruction?.trim()) throw new Error('openclaw_task requires instruction');
+    if (!input.instruction?.trim()) throwWorkerTaskValidationError('openclaw_task requires instruction');
     return {
       instruction: input.instruction.trim(),
       outputDimension: input.outputDimension?.trim() || 'learning',
@@ -644,7 +656,7 @@ export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTask
   }
   if (request.taskType === 'summarize_note') {
     const input = (request.input || {}) as Partial<WorkerTaskInputMap['summarize_note']>;
-    if (!input.noteId) throw new Error('summarize_note requires noteId');
+    if (!input.noteId) throwWorkerTaskValidationError('summarize_note requires noteId');
     return {
       noteId: input.noteId,
       language: input.language?.trim() || 'zh',
@@ -657,7 +669,7 @@ export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTask
   }
   if (request.taskType === 'extract_tasks') {
     const input = (request.input || {}) as Partial<WorkerTaskInputMap['extract_tasks']>;
-    if (!input.noteId) throw new Error('extract_tasks requires noteId');
+    if (!input.noteId) throwWorkerTaskValidationError('extract_tasks requires noteId');
     return { noteId: input.noteId };
   }
   if (request.taskType === 'daily_report') {
@@ -672,7 +684,7 @@ export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTask
     monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     return { weekStart: input.weekStart || monday.toISOString().split('T')[0] };
   }
-  throw new Error(`Unsupported task type: ${request.taskType}`);
+  throwWorkerTaskValidationError(`Unsupported task type: ${request.taskType}`);
 }
 
 function resolveWorker(taskType: WorkerTaskType): WorkerName {

@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { SCHEMA } from './schema.js';
+import { SCHEMA, SUPPORTED_WORKER_TASK_TYPES_SQL } from './schema.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -77,7 +77,7 @@ export function initDatabase(): void {
     database.exec(`
       CREATE TABLE worker_tasks_new (
         id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
+        task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
         input_json TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
         worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
@@ -118,7 +118,7 @@ export function initDatabase(): void {
     database.exec(`
       CREATE TABLE task_schedules_new (
         id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
+        task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
         input_json TEXT NOT NULL,
         cron_expression TEXT NOT NULL,
         label TEXT NOT NULL,

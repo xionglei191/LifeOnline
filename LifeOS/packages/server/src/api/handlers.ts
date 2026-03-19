@@ -6,7 +6,7 @@ import { indexVault, indexFile } from '../indexer/indexer.js';
 import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
 import { broadcastUpdate, getIndexQueue } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
-import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, normalizeTaskInput } from '../workers/workerTasks.js';
+import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, normalizeTaskInput, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
@@ -157,8 +157,7 @@ function parseWorkerName(value: unknown): WorkerName | undefined {
 }
 
 function isTaskInputValidationError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  return error.message.includes('requires') || error.message.startsWith('Unsupported task type:');
+  return error instanceof WorkerTaskValidationError;
 }
 
 function parseNote(row: any): Note {
