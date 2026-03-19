@@ -3,8 +3,8 @@ import matter from 'gray-matter';
 import { validate as cronValidate } from 'node-cron';
 import { getDb } from '../db/client.js';
 import { indexVault, indexFile } from '../indexer/indexer.js';
-import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
-import { broadcastUpdate, getIndexQueue } from '../index.js';
+import { loadConfig, loadStoredConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
+import { broadcastUpdate, getIndexQueue, restartWatcher } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
@@ -299,12 +299,21 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const config = await loadConfig();
-    config.vaultPath = vaultPath;
-    await saveConfig(config);
+    const storedConfig = await loadStoredConfig();
+    if (storedConfig.vaultPath === vaultPath) {
+      res.json({ success: true, indexResult: null });
+      return;
+    }
 
-    // Re-index with new vault path
+    const nextConfig = {
+      ...storedConfig,
+      vaultPath,
+    };
+    await saveConfig(nextConfig);
+
+    // Re-index with new vault path before rebinding the watcher.
     const result = await indexVault(vaultPath);
+    await restartWatcher(vaultPath);
     broadcastUpdate({ type: 'index-complete', data: result });
 
     res.json({ success: true, indexResult: result });

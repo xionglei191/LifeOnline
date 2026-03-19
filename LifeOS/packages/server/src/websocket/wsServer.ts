@@ -10,9 +10,45 @@ export interface WsEvent {
 
 let wss: WebSocketServer | null = null;
 
+async function closeWebSocketServer(server: WebSocketServer): Promise<void> {
+  const clients = Array.from(server.clients);
+
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN || client.readyState === WebSocket.CONNECTING) {
+      client.close();
+    }
+  }
+
+  await Promise.all(clients.map((client) => new Promise<void>((resolve) => {
+    if (client.readyState === WebSocket.CLOSED) {
+      resolve();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      client.terminate();
+    }, 1000);
+
+    client.once('close', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  })));
+
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 export function initWebSocket(server: Server) {
   if (wss) {
-    wss.close();
+    throw new Error('WebSocket server already initialized');
   }
   wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -47,13 +83,5 @@ export async function closeWebSocket(): Promise<void> {
   const server = wss;
   wss = null;
 
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
+  await closeWebSocketServer(server);
 }

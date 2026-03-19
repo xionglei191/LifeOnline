@@ -32,25 +32,32 @@ function resolveVaultPath(vaultPath: string): string {
   return path.resolve(SERVER_ROOT, vaultPath);
 }
 
-export async function loadConfig(): Promise<Config> {
-  const envVaultPath = normalizeOptionalPath(process.env.VAULT_PATH);
-  const envPort = process.env.PORT;
-
+export async function loadStoredConfig(): Promise<Config> {
   try {
     const content = await fs.readFile(CONFIG_FILE, 'utf-8');
     const config = JSON.parse(content) as Partial<Config>;
-    const fallbackPort = typeof config.port === 'number' ? config.port : 3000;
 
     return {
-      vaultPath: resolveVaultPath(envVaultPath || config.vaultPath || '../../mock-vault'),
-      port: resolvePort(envPort, fallbackPort),
+      vaultPath: resolveVaultPath(config.vaultPath || '../../mock-vault'),
+      port: typeof config.port === 'number' ? config.port : 3000,
     };
   } catch {
     return {
-      vaultPath: resolveVaultPath(envVaultPath || '../../mock-vault'),
-      port: resolvePort(envPort, 3000),
+      vaultPath: resolveVaultPath('../../mock-vault'),
+      port: 3000,
     };
   }
+}
+
+export async function loadConfig(): Promise<Config> {
+  const storedConfig = await loadStoredConfig();
+  const envVaultPath = normalizeOptionalPath(process.env.VAULT_PATH);
+  const envPort = process.env.PORT;
+
+  return {
+    vaultPath: resolveVaultPath(envVaultPath || storedConfig.vaultPath),
+    port: resolvePort(envPort, storedConfig.port),
+  };
 }
 
 export async function saveConfig(config: Config): Promise<void> {
