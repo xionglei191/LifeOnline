@@ -173,11 +173,6 @@
 - ✅ 定时任务表单支持配置 OpenClaw 通用任务
 - ✅ 历史数据库记录自动迁移：早期 `collect_trending_news` → 当前 `openclaw_task`
 
-- ✅ 双向操作（状态更新、追加备注、创建笔记）
-- ✅ 快捷操作（一键完成、浮动创建）
-- ✅ Mission Control 视觉重构
-- ✅ 隐私管理（隐私模式 + PIN 锁）
-- ✅ `_inbox` 维度支持（索引 + Dashboard 提醒横幅）
 - ✅ configManager 支持 `~/Vault_OS` 路径
 
 **Phase 0 完成项（2026-03-17）**:
