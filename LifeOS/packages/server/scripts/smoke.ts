@@ -137,10 +137,12 @@ async function main(): Promise<void> {
     });
 
     const workerTaskEvent = await workerTaskEventPromise;
-    const workerTaskEventData = workerTaskEvent.data as CreateWorkerTaskResponse['task'] | undefined;
-    assert.equal(workerTaskEventData?.id, workerTaskResponse.task.id);
-    assert.equal(workerTaskEventData?.taskType, 'extract_tasks');
-    assert.equal(workerTaskEventData?.status, 'pending');
+    if (workerTaskEvent.type !== 'worker-task-updated') {
+      throw new Error(`Unexpected websocket event: ${workerTaskEvent.type}`);
+    }
+    assert.equal(workerTaskEvent.data.id, workerTaskResponse.task.id);
+    assert.equal(workerTaskEvent.data.taskType, 'extract_tasks');
+    assert.equal(workerTaskEvent.data.status, 'pending');
 
     await waitFor(async () => {
       const task = await api<{ task: { status: WorkerTaskStatus } }>(baseUrl, `/api/worker-tasks/${workerTaskResponse.task.id}`);

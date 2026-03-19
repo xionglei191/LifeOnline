@@ -113,7 +113,7 @@ function handleNoteCreated() {
 }
 
 function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent).detail;
+  const wsEvent = (event as CustomEvent<import('@lifeos/shared').WsEvent>).detail;
   if (wsEvent.type === 'file-changed') {
     indexing.value = true;
   } else if (wsEvent.type === 'index-complete' || wsEvent.type === 'index-error') {

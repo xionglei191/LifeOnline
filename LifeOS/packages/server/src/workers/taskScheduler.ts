@@ -45,7 +45,7 @@ function rowToSchedule(row: ScheduleRow): TaskSchedule {
 }
 
 function broadcastScheduleUpdate() {
-  broadcastUpdate({ type: 'schedule-updated', data: {} });
+  broadcastUpdate({ type: 'schedule-updated' });
 }
 
 function normalizeScheduleLabel(label: string): string {

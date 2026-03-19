@@ -171,7 +171,7 @@ test('updating config persists vault path, emits index-complete, and rebinds wat
       method: 'POST',
       body: JSON.stringify({ vaultPath: replacementVaultPath }),
     });
-    const eventPromise = waitForWebSocketEvent<{ type: string; data?: unknown }>(
+    const eventPromise = waitForWebSocketEvent<import('@lifeos/shared').WsEvent>(
       socket,
       (event) => event.type === 'index-complete',
     );
@@ -352,7 +352,7 @@ test('broadcastUpdate is silent when websocket server is unavailable', async () 
   };
 
   try {
-    broadcastUpdate({ type: 'index-complete', data: { total: 1 } });
+    broadcastUpdate({ type: 'index-complete', data: { total: 1, indexed: 1, skipped: 0, deleted: 0, errors: [] } });
     assert.deepEqual(calls, []);
   } finally {
     console.log = originalConsoleLog;

@@ -4,14 +4,7 @@ import crypto from 'crypto';
 import { scanVault } from './scanner.js';
 import { parseMarkdownFile } from './parser.js';
 import { getDb } from '../db/client.js';
-
-export interface IndexResult {
-  total: number;
-  indexed: number;
-  skipped: number;
-  deleted: number;
-  errors: string[];
-}
+import type { IndexResult } from '@lifeos/shared';
 
 // Encryption key for sensitive content (32 bytes for AES-256)
 // In production, set LIFEOS_ENCRYPTION_KEY environment variable

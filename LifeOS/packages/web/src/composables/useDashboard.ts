@@ -1,6 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { fetchDashboard } from '../api/client';
-import type { DashboardData } from '@lifeos/shared';
+import type { DashboardData, WsEvent } from '@lifeos/shared';
 
 export function useDashboard() {
   const data = ref<DashboardData | null>(null);
@@ -20,7 +20,7 @@ export function useDashboard() {
   }
 
   function handleWsUpdate(event: Event) {
-    const customEvent = event as CustomEvent;
+    const customEvent = event as CustomEvent<WsEvent>;
     const wsEvent = customEvent.detail;
     if (wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete') {
       load();

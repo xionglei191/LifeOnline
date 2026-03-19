@@ -263,12 +263,31 @@ export interface TaskSchedule {
   lastError?: string | null;
 }
 
-export type WsEventType = 'file-changed' | 'index-complete' | 'index-error' | 'worker-task-updated' | 'schedule-updated';
-
-export interface WsEvent {
-  type: WsEventType;
-  data?: any;
+export interface IndexResult {
+  total: number;
+  indexed: number;
+  skipped: number;
+  deleted: number;
+  errors: string[];
 }
+
+export type IndexOperation = 'upsert' | 'delete';
+
+export interface IndexErrorEventData {
+  filePath: string;
+  operation: IndexOperation;
+  error: string;
+  timestamp: string;
+}
+
+export type WsEvent =
+  | { type: 'file-changed'; data: { filePath: string; operation: IndexOperation } }
+  | { type: 'index-complete'; data?: IndexResult }
+  | { type: 'index-error'; data: IndexErrorEventData }
+  | { type: 'worker-task-updated'; data: WorkerTask }
+  | { type: 'schedule-updated' };
+
+export type WsEventType = WsEvent['type'];
 
 export interface CreateTaskScheduleRequest {
   taskType: WorkerTaskType;

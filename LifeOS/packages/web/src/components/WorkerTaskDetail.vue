@@ -213,9 +213,9 @@ function openSourceNote(noteId: string) {
 }
 
 function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent).detail;
+  const wsEvent = (event as CustomEvent<import('@lifeos/shared').WsEvent>).detail;
   if (!props.taskId) return;
-  if (wsEvent?.type === 'worker-task-updated' && wsEvent?.data?.id === props.taskId) {
+  if (wsEvent.type === 'worker-task-updated' && wsEvent.data.id === props.taskId) {
     loadTask();
   }
 }

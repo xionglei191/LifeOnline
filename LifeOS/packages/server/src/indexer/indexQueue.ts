@@ -1,19 +1,11 @@
 import { indexFile, deleteFileRecord } from './indexer.js';
-import type { WsEvent } from '@lifeos/shared';
-
-export type IndexOperation = 'upsert' | 'delete';
+import type { WsEvent, IndexOperation, IndexErrorEventData } from '@lifeos/shared';
 
 interface QueueItem {
   filePath: string;
   operation: IndexOperation;
 }
 
-interface IndexError {
-  filePath: string;
-  operation: IndexOperation;
-  error: string;
-  timestamp: string;
-}
 
 const MAX_ERRORS = 100;
 const MAX_RETRIES = 3;
@@ -24,7 +16,7 @@ export class IndexQueue {
   private queue = new Map<string, QueueItem>();
   private processing = false;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private errors: IndexError[] = [];
+  private errors: IndexErrorEventData[] = [];
   private processingFile: string | null = null;
   private broadcast: (event: WsEvent) => void;
 
@@ -83,7 +75,7 @@ export class IndexQueue {
       }
 
       if (!success) {
-        const err: IndexError = {
+        const err: IndexErrorEventData = {
           filePath,
           operation: item.operation,
           error: `Failed after ${MAX_RETRIES} retries`,
