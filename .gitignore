@@ -31,6 +31,7 @@ components/pending_queries.json
 .vscode/
 .idea/
 .claude/
+**/.claude/
 *.swp
 *.swo
 *~
