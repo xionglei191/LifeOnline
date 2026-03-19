@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, aiClassifyNote, aiClassifyInbox, aiExtractTasks, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler } from './handlers.js';
+import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler } from './handlers.js';
 
 export const router = Router();
 
@@ -14,9 +14,6 @@ router.post('/config', updateConfig);
 router.post('/index', triggerIndex);
 router.get('/index/status', getIndexStatus);
 router.get('/index/errors', getIndexErrors);
-router.post('/ai/classify', aiClassifyNote);
-router.post('/ai/classify-inbox', aiClassifyInbox);
-router.post('/ai/extract-tasks', aiExtractTasks);
 router.get('/ai/prompts', listAiPrompts);
 router.patch('/ai/prompts/:key', updateAiPrompt);
 router.delete('/ai/prompts/:key', resetAiPrompt);

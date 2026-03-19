@@ -7,10 +7,7 @@ import { getDb } from '../db/client.js';
 import { indexVault, indexFile } from '../indexer/indexer.js';
 import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
 import { broadcastUpdate, getIndexQueue } from '../index.js';
-import { classifyNote } from '../ai/classifier.js';
-import { extractTasks } from '../ai/taskExtractor.js';
-import { buildClassifiedFrontmatter, buildTaskFrontmatter } from '../vault/frontmatterBuilder.js';
-import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath, deleteFile } from '../vault/fileManager.js';
+import { deleteFile } from '../vault/fileManager.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
@@ -311,134 +308,6 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('Update config error:', error);
     res.status(500).json({ error: 'Failed to update config' });
-  }
-}
-
-// POST /api/ai/classify
-export async function aiClassifyNote(req: Request, res: Response): Promise<void> {
-  try {
-    const { noteId } = req.body;
-    if (!noteId) { res.status(400).json({ error: 'noteId is required' }); return; }
-
-    const db = getDb();
-    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any;
-    if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
-
-    const content = note.content || '';
-    const classification = await classifyNote(content);
-
-    // Update frontmatter in file
-    const raw = await readFileContent(note.file_path);
-    const parsed = matter(raw);
-    const newData = buildClassifiedFrontmatter(parsed.data, classification);
-    const newContent = matter.stringify(parsed.content, newData);
-
-    // Determine target path
-    const config = await loadConfig();
-    const date = (note.date || new Date().toISOString()).split('T')[0];
-    const targetPath = buildTargetPath(config.vaultPath, classification.dimension, classification.title, date);
-
-    if (targetPath !== note.file_path) {
-      await fs.writeFile(note.file_path, newContent, 'utf-8');
-      await moveFile(note.file_path, targetPath);
-    } else {
-      await fs.writeFile(note.file_path, newContent, 'utf-8');
-    }
-
-    // Re-index
-    const queue = getIndexQueue();
-    queue?.enqueue(targetPath, 'upsert');
-
-    res.json({ success: true, classification, targetPath });
-  } catch (error) {
-    console.error('AI classify error:', error);
-    res.status(500).json({ error: String(error) });
-  }
-}
-
-// POST /api/ai/classify-inbox
-export async function aiClassifyInbox(req: Request, res: Response): Promise<void> {
-  try {
-    const config = await loadConfig();
-    const inboxPath = path.join(config.vaultPath, '_Inbox');
-
-    let files: string[];
-    try {
-      const entries = await fs.readdir(inboxPath);
-      files = entries.filter(f => f.endsWith('.md')).map(f => path.join(inboxPath, f));
-    } catch {
-      res.json({ success: true, processed: 0, results: [] });
-      return;
-    }
-
-    const results = [];
-    const queue = getIndexQueue();
-
-    for (const filePath of files) {
-      try {
-        const raw = await readFileContent(filePath);
-        const parsed = matter(raw);
-        const content = parsed.content || raw;
-        const classification = await classifyNote(content);
-
-        const newData = buildClassifiedFrontmatter(parsed.data, classification);
-        const newFileContent = matter.stringify(parsed.content, newData);
-
-        const date = new Date().toISOString().split('T')[0];
-        const targetPath = buildTargetPath(config.vaultPath, classification.dimension, classification.title, date);
-
-        await fs.writeFile(filePath, newFileContent, 'utf-8');
-        if (targetPath !== filePath) {
-          await moveFile(filePath, targetPath);
-        }
-        queue?.enqueue(targetPath, 'upsert');
-
-        results.push({ file: path.basename(filePath), success: true, classification, targetPath });
-      } catch (err) {
-        results.push({ file: path.basename(filePath), success: false, error: String(err) });
-      }
-    }
-
-    res.json({ success: true, processed: files.length, results });
-  } catch (error) {
-    console.error('AI classify inbox error:', error);
-    res.status(500).json({ error: String(error) });
-  }
-}
-
-// POST /api/ai/extract-tasks
-export async function aiExtractTasks(req: Request, res: Response): Promise<void> {
-  try {
-    const { noteId } = req.body;
-    if (!noteId) { res.status(400).json({ error: 'noteId is required' }); return; }
-
-    const db = getDb();
-    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any;
-    if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
-
-    const tasks = await extractTasks(note.content || '');
-    if (!tasks.length) {
-      res.json({ success: true, created: 0, tasks: [] });
-      return;
-    }
-
-    const config = await loadConfig();
-    const queue = getIndexQueue();
-    const date = new Date().toISOString().split('T')[0];
-    const created = [];
-
-    for (const task of tasks) {
-      const filePath = buildTaskFilePath(config.vaultPath, task.dimension, task.title, date);
-      const fileContent = buildTaskFrontmatter(task, date);
-      await fs.writeFile(filePath, fileContent, 'utf-8');
-      queue?.enqueue(filePath, 'upsert');
-      created.push({ title: task.title, filePath });
-    }
-
-    res.json({ success: true, created: created.length, tasks: created });
-  } catch (error) {
-    console.error('AI extract tasks error:', error);
-    res.status(500).json({ error: String(error) });
   }
 }
 
