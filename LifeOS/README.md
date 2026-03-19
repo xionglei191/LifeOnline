@@ -135,7 +135,6 @@ pnpm index
 
 - 不迁移主 Vault 到新电脑
 - 不把 `.claude/` 作为跨机器同步内容
-- 正式运行路径固定为 `/home/xionglei/LifeOnline/LifeOS`
 - 新自动化能力优先进入 worker task 模型
 - 最终业务结果必须回到 Vault
 
