@@ -10,7 +10,7 @@
 
 | 属性 | 值 |
 |------|-----|
-| **路径** | `/home/xionglei/LingGuangCatcher` |
+| **路径** | `/home/xionglei/LifeOnline/LingGuangCatcher` |
 | **版本** | V1.56 |
 | **状态** | ✅ 可用（Phase 3 已完成 + UX 优化 + 编辑功能修复 + 原文保留增强） |
 | **技术栈** | Kotlin, Android, CameraX, Room, WorkManager |
@@ -104,7 +104,7 @@
 
 | 属性 | 值 |
 |------|-----|
-| **路径** | `/home/xionglei/LifeOS` |
+| **路径** | `/home/xionglei/LifeOnline/LifeOS` |
 | **版本** | Phase 12 + Phase 5 + Phase 5.1 + Phase 6 + Phase 6.1 + OpenClaw 通用任务改造完成 |
 | **状态** | ✅ 可用（后端接替 OpenClaw 自动化职责完成） |
 | **技术栈** | Node.js, TypeScript, Express, Vue 3, SQLite |
@@ -192,4 +192,4 @@
 - ⬜ 移动端适配
 
 **API**:
-- 详见 [LifeOS API 列表](file:///home/xionglei/LifeOS/STATUS.md)
+- 详见 [LifeOS API 列表](../LifeOS/STATUS.md)
