@@ -91,7 +91,7 @@ LifeOS 已内置 AI 分类和行动项提取功能，OpenClaw 也计划做类似
 - 避免两个系统做重复的 AI 调用
 
 ### 影响
-- 当时的 `classify-inbox` 和 `extract-tasks` 仍存在手动入口
+- 当时的 `classify-inbox` 和 `extract-tasks` 仍存在手动触发入口
 - OpenClaw 承担定时/自动触发的职责
 - 两者通过 Vault 文件系统解耦，不需要直接 API 通信
 
