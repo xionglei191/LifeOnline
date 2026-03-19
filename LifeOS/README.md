@@ -22,8 +22,10 @@ LifeOS/
 │   ├── shared/          # 协议层：共享类型与任务/调度/AI 配置契约
 │   ├── server/          # 控制核心：API、索引、watcher、worker、schedule
 │   └── web/             # 控制台：Dashboard / Timeline / Stats / Settings
-└── mock-vault/          # 本地开发用示例数据，不是正式主 Vault
+└── mock-vault/          # 本地开发示例数据
 ```
+
+说明：`mock-vault/` 只用于本地开发与演示，不是正式主 Vault。
 
 ## 核心架构
 
@@ -111,7 +113,7 @@ pnpm index
 ```
 
 说明：
-- `mock-vault/` 仅用于本地开发和演示
+- 本地开发可使用 `mock-vault/`
 - 当前正式运行环境使用远端主 Vault，而不是本地 `mock-vault`
 
 ## 运行与部署现实
@@ -133,7 +135,7 @@ pnpm index
 
 - 不迁移主 Vault 到新电脑
 - 不把 `.claude/` 作为跨机器同步内容
-- 不再从旧路径 `/home/xionglei/LifeOS` 启动正式服务
+- 正式运行路径固定为 `/home/xionglei/LifeOnline/LifeOS`
 - 新自动化能力优先进入 worker task 模型
 - 最终业务结果必须回到 Vault
 

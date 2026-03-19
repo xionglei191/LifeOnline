@@ -155,7 +155,7 @@
 #### 5. 启动配置路径修复
 - `packages/server/src/config/configManager.ts`
 - 改为基于 `import.meta.url` 解析 `SERVER_ROOT`
-- 消除 server 在根目录 `pnpm dev` 下读取错误 `mock-vault` 的问题
+- 消除 server 在根目录 `pnpm dev` 下读取错误本地开发示例 Vault 的问题
 - 现在根目录和 `packages/server` 目录启动都能指向同一个 `packages/server/config.json`
 
 ### 本地验证结果
@@ -366,7 +366,7 @@
 **现象**: 使用 `chokidar.watch('${vaultPath}/**/*.md')` 监听，但 `getWatched()` 返回空对象 `{}`，无法检测文件变更
 
 **根本原因**:
-1. 相对路径 `../../mock-vault` 在早期实现里会受启动目录影响
+1. 早期实现中的相对示例 Vault 路径会受启动目录影响
 2. `path.join()` 生成的路径在 chokidar glob 模式中不可靠
 
 **解决方案**:
@@ -387,15 +387,15 @@
 
 **影响**: 文件监听正常工作，成功监听 11 个目录
 
-**测试日志**:
+示例日志：
 ```
-FileWatcher: resolved vault path = /home/xionglei/LifeOnline/LifeOS/mock-vault
-FileWatcher: watching directory: /home/xionglei/LifeOnline/LifeOS/mock-vault
+FileWatcher: resolved vault path = <local-dev-vault>
+FileWatcher: watching directory: <local-dev-vault>
 FileWatcher: ready and watching for changes
 FileWatcher: number of watched directories: 11
 
-File changed: /home/xionglei/LifeOnline/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
-Indexed file: /home/xionglei/LifeOnline/LifeOS/mock-vault/健康/2026-03-16-测试WebSocket.md
+File changed: <local-dev-vault>/健康/2026-03-16-测试WebSocket.md
+Indexed file: <local-dev-vault>/健康/2026-03-16-测试WebSocket.md
 ```
 
 #### 问题 2: chokidar error 事件类型错误
@@ -1223,8 +1223,8 @@ packages/web/src/App.vue: +30 行（导航栏）
 # 共享类型
 packages/shared/src/types.ts: +25 行（4 个新接口）
 
-# Mock 数据
-mock-vault/: +16 个文件（~200 行内容）
+# 示例数据
+本地开发示例 Vault：+16 个文件（~200 行内容）
 
 # 时间线与日历功能总计: ~1000 行代码
 ```
@@ -1450,8 +1450,8 @@ packages/web/src/: 现已扩展为多视图与组件结构
 # 共享
 packages/shared/src/: 现已包含共享类型与协议定义
 
-# Mock 数据
-mock-vault/: 本地开发示例数据
+# 示例数据
+本地开发示例 Vault
 
 # 总计: ~1260 行代码
 ```
