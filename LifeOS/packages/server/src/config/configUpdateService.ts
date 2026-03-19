@@ -2,6 +2,11 @@ import { restartWatcher } from '../index.js';
 import { indexVault } from '../indexer/indexer.js';
 import { loadStoredConfig, normalizeVaultPath, saveConfig, validateVaultPath } from './configManager.js';
 
+export const configUpdateDeps = {
+  indexVault,
+  restartWatcher,
+};
+
 export class InvalidVaultPathError extends Error {
   constructor() {
     super('Invalid vault path: directory does not exist or contains no .md files');
@@ -32,10 +37,15 @@ export async function updateStoredVaultPath(vaultPath: string): Promise<UpdateCo
     vaultPath: normalizedVaultPath,
   });
 
-  const indexResult = await indexVault(normalizedVaultPath);
-  await restartWatcher(normalizedVaultPath);
+  try {
+    const indexResult = await configUpdateDeps.indexVault(normalizedVaultPath);
+    await configUpdateDeps.restartWatcher(normalizedVaultPath);
 
-  return {
-    indexResult,
-  };
+    return {
+      indexResult,
+    };
+  } catch (error) {
+    await saveConfig(storedConfig);
+    throw error;
+  }
 }

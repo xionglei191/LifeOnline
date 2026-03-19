@@ -6,6 +6,7 @@ import { WebSocket } from 'ws';
 import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
+import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
@@ -229,6 +230,52 @@ test('updating config treats equivalent vault paths as unchanged after normaliza
     const storedConfig = await loadStoredConfig();
     assert.equal(storedConfig.vaultPath, env.vaultPath);
   } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('updating config rolls back persisted vault path when reindex fails', async () => {
+  const env = await createTestEnv('lifeos-config-rollback-');
+  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const replacementVaultPath = path.join(env.rootDir, 'rollback-vault');
+  const originalIndexVault = configUpdateDeps.indexVault;
+
+  await fs.mkdir(replacementVaultPath, { recursive: true });
+  await fs.writeFile(path.join(replacementVaultPath, 'seed.md'), '# rollback\n');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    configUpdateDeps.indexVault = async () => {
+      throw new Error('index failed');
+    };
+
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    await assert.rejects(
+      api(baseUrl, '/api/config', {
+        method: 'POST',
+        body: JSON.stringify({ vaultPath: replacementVaultPath }),
+      }),
+      /\/api\/config failed: 500/,
+    );
+
+    const storedConfig = await loadStoredConfig();
+    assert.equal(storedConfig.vaultPath, env.vaultPath);
+  } finally {
+    configUpdateDeps.indexVault = originalIndexVault;
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
