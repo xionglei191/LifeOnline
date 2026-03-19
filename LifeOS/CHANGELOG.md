@@ -278,11 +278,11 @@
 - 再推进 `Timeline + Stats`
 - 最后统一维度页、动效和响应式体验
 
-## 2026-03-16 - Phase 4.5 完成
+## 2026-03-16 - WebSocket 与索引队列完成
 
 ### 工作内容
 
-完成 LifeOS Phase 4.5：WebSocket + 索引队列 + 错误恢复 + 手动重索引
+完成 LifeOS WebSocket + 索引队列 + 错误恢复 + 手动重索引
 
 **耗时**: 约 2 小时
 
@@ -468,14 +468,14 @@ packages/web/src/views/SettingsView.vue: +80 行
 packages/web/src/api/client.ts: +30 行
 packages/web/vite.config.ts: +4 行
 
-# Phase 4.5 总计: ~550 行代码
+# WebSocket 与索引队列总计: ~550 行代码
 ```
 
 ### Git 提交
 
 ```
 commit 57b04bf
-feat: implement Phase 4.5 - WebSocket, IndexQueue, error recovery, manual reindex
+feat: implement WebSocket, IndexQueue, error recovery, manual reindex
 
 - Add WebSocket server (ws) for real-time push to frontend
 - Add IndexQueue with 300ms debounce, 3x retry, error tracking
@@ -487,32 +487,6 @@ feat: implement Phase 4.5 - WebSocket, IndexQueue, error recovery, manual reinde
 - Update Vite proxy for /ws path
 - Update API client with fetchIndexStatus, fetchIndexErrors, typed triggerIndex
 ```
-
-### 下一步计划
-
-#### Phase 5 目标: OpenClaw 集成（智能化）
-
-**优先级 P0 (核心能力)**:
-- [ ] L1 能力：自动整理归档
-  - 识别 _Inbox 中的笔记
-  - 根据 frontmatter 自动分类到对应维度目录
-  - 自动打标签
-- [ ] L2 能力：提取行动项
-  - 从笔记正文中识别待办事项
-  - 自动创建 task 类型文件
-  - 设置提醒和截止日期
-
-**优先级 P1 (功能增强)**:
-- [ ] 多 Vault 支持（切换不同 vault）
-- [ ] 数据可视化（ECharts 图表）
-- [ ] 双向操作（看板写回 vault）
-
-**优先级 P2 (体验优化)**:
-- [ ] L3 能力：主动建议
-  - 分析日程密度，提醒休息
-  - 分析目标进展，给出建议
-- [ ] 高级搜索（多关键词、字段搜索）
-- [ ] 主题切换（亮色/暗色）
 
 ### 经验总结
 
@@ -543,11 +517,11 @@ feat: implement Phase 4.5 - WebSocket, IndexQueue, error recovery, manual reinde
 
 ---
 
-## 2026-03-16 - Phase 4 完成
+## 2026-03-16 - 实时索引与 Vault 配置完成
 
 ### 工作内容
 
-完成 LifeOS Phase 4：实时索引 + Vault 配置 + 文件监听
+完成 LifeOS 实时索引 + Vault 配置 + 文件监听
 
 **耗时**: 约 2 小时
 
@@ -689,14 +663,14 @@ packages/web/src/api/client.ts: +20 行
 packages/web/src/router.ts: +1 行
 packages/web/src/App.vue: +1 行
 
-# Phase 4 总计: ~450 行代码
+# 实时索引与 Vault 配置总计: ~450 行代码
 ```
 
 ### Git 提交
 
 ```
 commit 410ed78
-feat: implement Phase 4 - real-time indexing and vault configuration
+feat: implement real-time indexing and vault configuration
 
 - Add chokidar file watcher for real-time vault monitoring
 - Refactor indexer to support single-file operations
@@ -708,32 +682,6 @@ feat: implement Phase 4 - real-time indexing and vault configuration
 - Update navigation to include settings link
 - Support vault path persistence via config.json
 ```
-
-### 下一步计划
-
-#### Phase 5 目标: OpenClaw 集成（智能化）
-
-**优先级 P0 (核心能力)**:
-- [ ] L1 能力：自动整理归档
-  - 识别 _Inbox 中的笔记
-  - 根据 frontmatter 自动分类到对应维度目录
-  - 自动打标签
-- [ ] L2 能力：提取行动项
-  - 从笔记正文中识别待办事项
-  - 自动创建 task 类型文件
-  - 设置提醒和截止日期
-
-**优先级 P1 (功能增强)**:
-- [ ] WebSocket 实时通知（文件变更推送到前端）
-- [ ] 多 Vault 支持（切换不同 vault）
-- [ ] 数据可视化（ECharts 图表）
-
-**优先级 P2 (体验优化)**:
-- [ ] L3 能力：主动建议
-  - 分析日程密度，提醒休息
-  - 分析目标进展，给出建议
-- [ ] 索引队列（处理大量文件变更）
-- [ ] 错误恢复（文件监听异常重启）
 
 ### 经验总结
 
@@ -762,11 +710,11 @@ feat: implement Phase 4 - real-time indexing and vault configuration
 
 ---
 
-## 2026-03-16 - Phase 3.5 完成
+## 2026-03-16 - 全文搜索能力完成
 
 ### 工作内容
 
-完成 LifeOS Phase 3.5：全文搜索 + 快捷键 + 搜索历史
+完成 LifeOS 全文搜索：全文搜索 + 快捷键 + 搜索历史
 
 **耗时**: 约 1 小时
 
@@ -888,14 +836,14 @@ packages/web/src/api/client.ts: +10 行
 packages/web/src/App.vue: +2 行
 packages/web/src/router.ts: +1 行
 
-# Phase 3.5 总计: ~350 行代码
+# 搜索功能总计: ~350 行代码
 ```
 
 ### Git 提交
 
 ```
 commit [待提交]
-feat: implement Phase 3.5 - full-text search with keyboard shortcuts
+feat: implement full-text search with keyboard shortcuts
 
 - Add search API endpoint (SQLite LIKE query)
 - Add SearchBar component with history dropdown
@@ -905,28 +853,6 @@ feat: implement Phase 3.5 - full-text search with keyboard shortcuts
 - Update navigation bar with search box
 - Support search history (max 10 items)
 ```
-
-### 下一步计划
-
-#### Phase 4 目标: 实时索引 + 真实 Vault 连接
-
-**优先级 P0 (核心功能)**:
-- [ ] 实时索引（文件监听）
-  - 使用 chokidar 监听文件变更
-  - 增量更新数据库
-  - WebSocket 推送更新通知
-- [ ] 连接真实 Obsidian Vault
-  - 配置页面（设置 vault 路径）
-  - 验证路径有效性
-  - 支持多 vault 切换
-
-**优先级 P1 (OpenClaw 集成)**:
-- [ ] L1 能力：自动整理归档
-- [ ] L2 能力：提取行动项
-
-**优先级 P2 (功能增强)**:
-- [ ] 数据可视化（ECharts 图表）
-- [ ] 高级搜索（多关键词、字段搜索）
 
 ### 经验总结
 
@@ -955,11 +881,11 @@ feat: implement Phase 3.5 - full-text search with keyboard shortcuts
 
 ---
 
-## 2026-03-16 - Phase 3 完成
+## 2026-03-16 - 维度详情页与筛选完成
 
 ### 工作内容
 
-完成 LifeOS Phase 3：各维度详情页 + 筛选排序功能
+完成 LifeOS 各维度详情页 + 筛选排序功能
 
 **耗时**: 约 1.5 小时
 
@@ -1007,7 +933,7 @@ feat: implement Phase 3.5 - full-text search with keyboard shortcuts
 - [x] 笔记详情弹窗正常
 - [x] 浏览器后退按钮正常
 - [x] URL 直接访问正常
-- [x] 与 Phase 1/2 功能无回归
+- [x] 与早期仪表盘 / 时间线基础功能无回归
 
 ### 技术决策
 
@@ -1086,14 +1012,14 @@ packages/web/src/composables/useDimensionNotes.ts: +80 行
 packages/web/src/router.ts: +1 行
 packages/web/src/components/DimensionHealth.vue: +5 行
 
-# Phase 3 总计: ~620 行代码
+# 维度详情页功能总计: ~620 行代码
 ```
 
 ### Git 提交
 
 ```
 commit [待提交]
-feat: implement Phase 3 - dimension detail pages with filtering
+feat: implement dimension detail pages with filtering
 
 - Add DimensionView page with dynamic routing
 - Add FilterBar component (type/status/priority filters + sorting)
@@ -1103,31 +1029,6 @@ feat: implement Phase 3 - dimension detail pages with filtering
 - Update dashboard dimension cards with click navigation
 - Support all 8 dimensions with consistent UI
 ```
-
-### 下一步计划
-
-#### Phase 4 目标: OpenClaw 集成（智能化）
-
-**优先级 P0 (核心能力)**:
-- [ ] L1 能力：自动整理归档
-  - 识别 _Inbox 中的笔记
-  - 根据 frontmatter 自动分类到对应维度目录
-  - 自动打标签
-- [ ] L2 能力：提取行动项
-  - 从笔记正文中识别待办事项
-  - 自动创建 task 类型文件
-  - 设置提醒和截止日期
-
-**优先级 P1 (体验优化)**:
-- [ ] 实时索引（监听 vault 文件变更）
-- [ ] 连接真实 Obsidian Vault
-- [ ] 全文搜索功能
-
-**优先级 P2 (功能增强)**:
-- [ ] L3 能力：主动建议
-  - 分析日程密度，提醒休息
-  - 分析目标进展，给出建议
-- [ ] 数据可视化（ECharts 图表）
 
 ### 经验总结
 
@@ -1156,11 +1057,11 @@ feat: implement Phase 3 - dimension detail pages with filtering
 
 ---
 
-## 2026-03-16 - Phase 2 完成
+## 2026-03-16 - 时间线与日历视图完成
 
 ### 工作内容
 
-完成 LifeOS Phase 2：时间线 + 日历视图 + 路由导航
+完成 LifeOS 时间线 + 日历视图 + 路由导航
 
 **耗时**: 约 2 小时
 
@@ -1225,7 +1126,7 @@ feat: implement Phase 3 - dimension detail pages with filtering
 - [x] Calendar API 正常响应（按日期分组 + 计数）
 - [x] Note Detail API 正常响应（完整笔记内容）
 - [x] 导航栏正常切换三个页面
-- [x] 仪表盘页面功能与 Phase 1 一致（无回归）
+- [x] 仪表盘页面功能与最初仪表盘版本一致（无回归）
 - [x] 时间线页面：8 条维度轨道正确显示，横向滚动正常
 - [x] 时间线：切换日期范围后数据正确刷新
 - [x] 日历页面：月历网格正确显示，有数据的日期高亮
@@ -1325,14 +1226,14 @@ packages/shared/src/types.ts: +25 行（4 个新接口）
 # Mock 数据
 mock-vault/: +16 个文件（~200 行内容）
 
-# Phase 2 总计: ~1000 行代码
+# 时间线与日历功能总计: ~1000 行代码
 ```
 
 ### Git 提交
 
 ```
 commit [待提交]
-feat: implement Phase 2 - timeline, calendar views and navigation
+feat: implement timeline, calendar views and navigation
 
 - Add timeline view with 8-track horizontal scrolling
 - Add calendar view with monthly grid and note counts
@@ -1341,26 +1242,6 @@ feat: implement Phase 2 - timeline, calendar views and navigation
 - Extend mock data to Feb and Apr 2026 (41 files total)
 - Fix date comparison bug in calendar API
 ```
-
-### 下一步计划
-
-#### Phase 3 目标: 各维度详情页
-
-**优先级 P0 (核心功能)**:
-- [ ] 健康维度详情页（运动记录、体检报告、健康趋势图）
-- [ ] 事业维度详情页（项目进展、任务列表、技能树）
-- [ ] 财务维度详情页（收支统计、资产分布、投资趋势）
-- [ ] 学习维度详情页（阅读进度、课程列表、知识图谱）
-
-**优先级 P1 (体验优化)**:
-- [ ] 筛选和搜索功能（全文搜索 + 多维度筛选）
-- [ ] 实时索引（监听 vault 文件变更）
-- [ ] 加载状态优化（骨架屏 + 进度条）
-
-**优先级 P2 (功能增强)**:
-- [ ] 数据可视化（ECharts 图表）
-- [ ] 导出功能（PDF/CSV）
-- [ ] 主题切换（亮色/暗色）
 
 ### 经验总结
 
@@ -1389,11 +1270,11 @@ feat: implement Phase 2 - timeline, calendar views and navigation
 
 ---
 
-## 2026-03-16 - Phase 1 完成
+## 2026-03-16 - 仪表盘最小版本完成
 
 ### 工作内容
 
-完成 LifeOS Phase 1 最小可用版本：索引服务 + 仪表盘
+完成 LifeOS 最小可用版本：索引服务 + 仪表盘
 
 **耗时**: 约 3 小时
 
@@ -1485,7 +1366,7 @@ error: #error "C++20 or later required."
 
 **解决**: 切换到 sql.js (纯 JS 实现)
 
-**影响**: 性能略有下降，但对 Phase 1 的数据量 (25 个文件) 无感知
+**影响**: 性能略有下降，但对最初版本的数据量 (25 个文件) 无感知
 
 #### 问题 2: sql.js API 差异
 **现象**:
@@ -1579,34 +1460,10 @@ mock-vault/: 本地开发示例数据
 
 ```
 commit 4d529a6
-feat: implement Phase 1 - LifeOS indexer service and dashboard
+feat: implement LifeOS indexer service and dashboard
 
 57 files changed, 3452 insertions(+)
 ```
-
-### 下一步计划
-
-#### Phase 2 目标: 时间线 + 日程模块
-
-**优先级 P0 (核心功能)**:
-- [ ] 时间线组件 (横向滚动，多轨道)
-- [ ] 日历视图 (月视图)
-- [ ] 笔记详情弹窗 (点击卡片查看完整内容)
-
-**优先级 P1 (体验优化)**:
-- [ ] 实时索引 (监听 vault 文件变更)
-- [ ] 加载状态优化 (骨架屏)
-- [ ] 错误处理 (Toast 提示)
-
-**优先级 P2 (功能增强)**:
-- [ ] 搜索功能 (全文搜索)
-- [ ] 筛选器 (按维度/状态/类型)
-- [ ] 排序功能 (按日期/优先级)
-
-**技术债务**:
-- [ ] 考虑迁移回 better-sqlite3 (等 Node.js 稳定版本)
-- [ ] 添加单元测试
-- [ ] API 错误处理标准化
 
 ### 经验总结
 
@@ -1625,7 +1482,7 @@ feat: implement Phase 1 - LifeOS indexer service and dashboard
 #### 技术选型反思
 - sql.js 虽然解决了编译问题,但性能确实不如 better-sqlite3
 - 如果后续数据量增大 (>1000 个文件)，可能需要重新评估
-- 考虑在 Phase 3 或 Phase 4 迁移回 better-sqlite3 (等 Node.js 生态稳定)
+- 考虑在后续数据库稳定窗口迁移回 better-sqlite3 (等 Node.js 生态稳定)
 
 ### 参考资料
 
