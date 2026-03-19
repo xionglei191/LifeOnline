@@ -319,7 +319,7 @@ export async function fetchAISuggestions(): Promise<AISuggestion[]> {
   return res.json();
 }
 
-// Phase 6: write-back API
+// Note write-back API
 export async function updateNote(id: string, updates: { status?: string; priority?: string; tags?: string[]; approval_status?: string }): Promise<void> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
     method: 'PATCH',
