@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+ROOT = Path(__file__).resolve().parent.parent
+COMPONENTS_DIR = ROOT / "components"
 VAULT = Path("/home/xionglei/Vault_OS")
 INBOX = VAULT / "_Inbox"
 LOG_DIR = Path.home() / ".openclaw" / "logs" / "lifeonline"
@@ -19,11 +21,11 @@ LOG_FILE = LOG_DIR / "lifeonline.log"
 ERR_FILE = LOG_DIR / "error.log"
 STATE_FILE = LOG_DIR / "state.json"
 EXEC_LOG_FILE = LOG_DIR / "exec.log"
-AUTO_SOURCES_FILE = Path("/home/xionglei/LifeOnline/components/auto_sources.json")
-TRIGGER_ALIASES_FILE = Path("/home/xionglei/LifeOnline/components/trigger_aliases.json")
-PENDING_QUERIES_FILE = Path("/home/xionglei/LifeOnline/components/pending_queries.json")
-WHATSAPP_RETRY_FILE = Path("/home/xionglei/LifeOnline/components/whatsapp_retry_queue.json")
-TASK_ROUTER_FILE = Path("/home/xionglei/LifeOnline/components/task_router.py")
+AUTO_SOURCES_FILE = COMPONENTS_DIR / "auto_sources.json"
+TRIGGER_ALIASES_FILE = COMPONENTS_DIR / "trigger_aliases.json"
+PENDING_QUERIES_FILE = COMPONENTS_DIR / "pending_queries.json"
+WHATSAPP_RETRY_FILE = COMPONENTS_DIR / "whatsapp_retry_queue.json"
+TASK_ROUTER_FILE = COMPONENTS_DIR / "task_router.py"
 QUERY_LOG_FILE = LOG_DIR / "query_followup.log"
 APPROVAL_PREFIX = "openclaw_approval_"
 OWNER_WHATSAPP = "+447354918289"

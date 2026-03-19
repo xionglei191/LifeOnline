@@ -11,7 +11,9 @@ from typing import Dict, List, Tuple
 
 VAULT = Path('/home/xionglei/Vault_OS')
 INBOX = VAULT / '_Inbox'
-SKILL_MAP = Path('/home/xionglei/LifeOnline/components/skill_map.json')
+ROOT = Path(__file__).resolve().parent.parent
+COMPONENTS_DIR = ROOT / 'components'
+SKILL_MAP = COMPONENTS_DIR / 'skill_map.json'
 APPROVAL_PREFIX = 'openclaw_approval_'
 SEMANTIC_LOG = Path.home() / '.openclaw' / 'logs' / 'lifeonline' / 'semantic_gate.log'
 

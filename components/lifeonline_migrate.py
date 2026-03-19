@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-ROOT = Path('/home/xionglei/LifeOnline')
+ROOT = Path(__file__).resolve().parent.parent
 COMP = ROOT / 'components'
 LOG_DIR = Path.home() / '.openclaw' / 'logs' / 'lifeonline'
 
