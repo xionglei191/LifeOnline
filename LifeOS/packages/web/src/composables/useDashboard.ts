@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { fetchDashboard } from '../api/client';
+import { isIndexRefreshEvent } from './useWebSocket';
 import type { DashboardData, WsEvent } from '@lifeos/shared';
 
 export function useDashboard() {
@@ -22,7 +23,7 @@ export function useDashboard() {
   function handleWsUpdate(event: Event) {
     const customEvent = event as CustomEvent<WsEvent>;
     const wsEvent = customEvent.detail;
-    if (wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete') {
+    if (isIndexRefreshEvent(wsEvent)) {
       load();
     }
   }

@@ -1,6 +1,14 @@
 import { ref, onUnmounted } from 'vue';
 import type { WsEvent } from '@lifeos/shared';
 
+export function isIndexRefreshEvent(wsEvent: WsEvent) {
+  return wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete' || wsEvent.type === 'index-queue-complete';
+}
+
+export function isIndexSettledEvent(wsEvent: WsEvent) {
+  return wsEvent.type === 'index-complete' || wsEvent.type === 'index-queue-complete' || wsEvent.type === 'index-error';
+}
+
 const isConnected = ref(false);
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;

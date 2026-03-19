@@ -1,6 +1,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { fetchNotes } from '../api/client';
-import type { Note, Dimension } from '@lifeos/shared';
+import { isIndexRefreshEvent } from './useWebSocket';
+import type { Note, Dimension, WsEvent } from '@lifeos/shared';
 
 interface Filters {
   types: string[];
@@ -104,8 +105,8 @@ export function useDimensionNotes(dimension: Dimension) {
   }
 
   function handleWsUpdate(event: Event) {
-    const wsEvent = (event as CustomEvent).detail;
-    if (wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete') load();
+    const wsEvent = (event as CustomEvent<WsEvent>).detail;
+    if (isIndexRefreshEvent(wsEvent)) load();
   }
 
   onMounted(() => document.addEventListener('ws-update', handleWsUpdate));

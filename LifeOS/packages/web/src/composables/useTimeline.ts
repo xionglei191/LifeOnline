@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { fetchTimeline } from '../api/client';
-import type { TimelineData } from '@lifeos/shared';
+import { isIndexRefreshEvent } from './useWebSocket';
+import type { TimelineData, WsEvent } from '@lifeos/shared';
 
 export function useTimeline() {
   const data = ref<TimelineData | null>(null);
@@ -24,9 +25,8 @@ export function useTimeline() {
   }
 
   function handleWsUpdate(event: Event) {
-    const customEvent = event as CustomEvent;
-    const wsEvent = customEvent.detail;
-    if ((wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete') && currentStart && currentEnd) {
+    const wsEvent = (event as CustomEvent<WsEvent>).detail;
+    if (isIndexRefreshEvent(wsEvent) && currentStart && currentEnd) {
       load(currentStart, currentEnd);
     }
   }

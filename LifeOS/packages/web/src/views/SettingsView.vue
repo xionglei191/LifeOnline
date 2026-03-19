@@ -612,7 +612,7 @@ import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
-import { useWebSocket } from '../composables/useWebSocket';
+import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
 
 const router = useRouter();
@@ -1121,7 +1121,7 @@ onUnmounted(() => {
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
   loadStatus();
-  if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'index-complete' || wsEvent.type === 'file-changed') {
+  if (wsEvent.type === 'worker-task-updated' || isIndexRefreshEvent(wsEvent)) {
     loadWorkerTasks();
   }
   if (wsEvent.type === 'schedule-updated') {

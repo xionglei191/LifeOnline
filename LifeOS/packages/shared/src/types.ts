@@ -282,7 +282,8 @@ export interface IndexErrorEventData {
 
 export type WsEvent =
   | { type: 'file-changed'; data: { filePath: string; operation: IndexOperation } }
-  | { type: 'index-complete'; data?: IndexResult }
+  | { type: 'index-complete'; data: IndexResult }
+  | { type: 'index-queue-complete' }
   | { type: 'index-error'; data: IndexErrorEventData }
   | { type: 'worker-task-updated'; data: WorkerTask }
   | { type: 'schedule-updated' };

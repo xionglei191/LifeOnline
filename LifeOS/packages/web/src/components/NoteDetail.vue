@@ -260,10 +260,11 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { fetchNoteById, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
-import type { Note, WorkerTask } from '@lifeos/shared';
+import type { Note, WorkerTask, WsEvent } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
+import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
 
 const props = defineProps<{ noteId: string | null }>();
@@ -628,9 +629,9 @@ function openRelatedWorkerTaskDetail(taskId: string) {
 }
 
 function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent).detail;
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
   if (!currentNoteId.value) return;
-  if (wsEvent?.type === 'worker-task-updated' || wsEvent?.type === 'index-complete' || wsEvent?.type === 'file-changed') {
+  if (wsEvent.type === 'worker-task-updated' || isIndexRefreshEvent(wsEvent)) {
     loadRelatedWorkerTasks(currentNoteId.value);
   }
 }

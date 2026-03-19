@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { fetchCalendar } from '../api/client';
-import type { CalendarData } from '@lifeos/shared';
+import { isIndexRefreshEvent } from './useWebSocket';
+import type { CalendarData, WsEvent } from '@lifeos/shared';
 
 export function useCalendar() {
   const data = ref<CalendarData | null>(null);
@@ -26,9 +27,8 @@ export function useCalendar() {
   }
 
   function handleWsUpdate(event: Event) {
-    const customEvent = event as CustomEvent;
-    const wsEvent = customEvent.detail;
-    if ((wsEvent.type === 'file-changed' || wsEvent.type === 'index-complete') && currentYear && currentMonth) {
+    const wsEvent = (event as CustomEvent<WsEvent>).detail;
+    if (isIndexRefreshEvent(wsEvent) && currentYear && currentMonth) {
       load(currentYear, currentMonth);
     }
   }

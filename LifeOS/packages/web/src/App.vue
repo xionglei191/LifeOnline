@@ -91,7 +91,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import SearchBar from './components/SearchBar.vue';
 import CreateNoteFab from './components/CreateNoteFab.vue';
 import LockScreen from './components/LockScreen.vue';
-import { initWebSocket, useWebSocket } from './composables/useWebSocket';
+import { initWebSocket, useWebSocket, isIndexSettledEvent } from './composables/useWebSocket';
 import { useTheme } from './composables/useTheme';
 import { usePrivacy } from './composables/usePrivacy';
 
@@ -116,7 +116,7 @@ function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<import('@lifeos/shared').WsEvent>).detail;
   if (wsEvent.type === 'file-changed') {
     indexing.value = true;
-  } else if (wsEvent.type === 'index-complete' || wsEvent.type === 'index-error') {
+  } else if (isIndexSettledEvent(wsEvent)) {
     indexing.value = false;
   }
 }

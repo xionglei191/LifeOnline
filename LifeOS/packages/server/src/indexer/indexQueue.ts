@@ -91,6 +91,6 @@ export class IndexQueue {
 
     this.processingFile = null;
     this.processing = false;
-    this.broadcast({ type: 'index-complete' });
+    this.broadcast({ type: 'index-queue-complete' });
   }
 }
