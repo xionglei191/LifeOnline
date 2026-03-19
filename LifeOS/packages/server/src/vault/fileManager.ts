@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import matter from 'gray-matter';
+import { getDimensionDirectoryName } from '../utils/dimensions.js';
 
 export async function moveFile(from: string, to: string): Promise<void> {
   await fs.mkdir(path.dirname(to), { recursive: true });
@@ -44,11 +45,7 @@ export async function rewriteMarkdownContent(
 }
 
 export function buildNoteFilePath(vaultPath: string, dimension: string, title: string, date: string): string {
-  const dimensionMap: Record<string, string> = {
-    health: '健康', career: '事业', finance: '财务', learning: '学习',
-    relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-  };
-  const dir = dimensionMap[dimension] || '成长';
+  const dir = getDimensionDirectoryName(dimension) || '成长';
   const safeName = title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, 30);
   return path.join(vaultPath, dir, `${date}-${safeName}.md`);
 }

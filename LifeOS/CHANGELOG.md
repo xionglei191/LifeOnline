@@ -1,3 +1,51 @@
+## 2026-03-19 - 收尾 server 本地重复逻辑，统一 worker 持久化与维度元数据
+
+### 工作内容
+
+完成最后一轮保守收尾，把 server 内部仍然局部重复的逻辑继续收口到已有 helper，不改变 worker 行为、输出路径或调度语义。
+
+### 本次变更
+
+#### 1. 维度元数据集中化
+- 新增 `packages/server/src/utils/dimensions.ts`
+- 统一维护：
+  - dimension -> 目录名
+  - dimension -> 展示名
+  - 目录名 -> dimension
+  - report 使用的维度顺序
+- `packages/server/src/indexer/parser.ts` 改为复用共享目录反查 helper
+- `packages/server/src/vault/fileManager.ts` 改为复用共享目录映射 helper
+- `packages/server/src/workers/workerTasks.ts` 的日报/周报维度统计改为复用共享展示名与维度列表
+
+#### 2. worker 结果笔记写回流程复用
+- `packages/server/src/workers/workerTasks.ts` 新增 `persistWorkerGeneratedMarkdownNote(...)`
+- 统一复用 `buildWorkerResultFrontmatter(...)` + `matter.stringify(...)` + `persistGeneratedNote(...)`
+- 已接入：
+  - `persistOpenClawResult(...)`
+  - `persistSummarizeNoteResult(...)`
+  - `persistClassifyInboxResult(...)`
+  - `persistDailyReportResult(...)`
+  - `persistWeeklyReportResult(...)`
+
+#### 3. worker 笔记查询复用
+- `packages/server/src/workers/workerTasks.ts` 新增：
+  - `getRequiredWorkerNote(...)`
+  - `getWorkerNoteTitle(...)`
+- `runSummarizeNoteDirect(...)` 与 `runExtractTasks(...)` 不再重复同一段 SQLite 查询和标题兜底逻辑
+
+#### 4. 继续复用共享日期 helper
+- `packages/server/src/workers/workerTasks.ts` 继续统一改用 `packages/server/src/utils/date.ts` 的 `getTodayDateString()`
+- `packages/server/src/ai/taskExtractor.ts`、`packages/server/src/api/handlers.ts` 与 worker 侧日期默认值保持一致
+
+### 行为变化
+- 无新增外部能力
+- 无 API 形状变化
+- 无调度语义变化
+- worker 输出文件名、目录与现有落盘行为保持不变
+
+### 本地验证结果
+- 构建通过：`pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" --filter server build`
+
 ## 2026-03-18 - 新增 summarize_note 第二类 worker task + WorkerTaskCard 共享组件
 
 ### 工作内容

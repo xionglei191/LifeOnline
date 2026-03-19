@@ -31,6 +31,8 @@ import { extractTasks } from '../ai/taskExtractor.js';
 import { callClaude } from '../ai/aiClient.js';
 import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
+import { getTodayDateString } from '../utils/date.js';
+import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
 
 interface WorkerTaskRow {
   id: string;
@@ -126,10 +128,6 @@ function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerT
   return definition;
 }
 
-function getTodayDateString(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 function getCurrentWeekMonday(): string {
   const now = new Date();
   const monday = new Date(now);
@@ -193,6 +191,26 @@ async function persistGeneratedNote(filePath: string, markdown: string): Promise
   return [filePath];
 }
 
+async function persistWorkerGeneratedMarkdownNote(
+  filePath: string,
+  markdownContent: string,
+  frontmatterInput: Parameters<typeof buildWorkerResultFrontmatter>[0],
+): Promise<string[]> {
+  const markdown = matter.stringify(markdownContent, buildWorkerResultFrontmatter(frontmatterInput));
+  return persistGeneratedNote(filePath, markdown);
+}
+
+function getRequiredWorkerNote(noteId: string): any {
+  const db = getDb();
+  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any;
+  if (!note) throw new Error(`笔记不存在: ${noteId}`);
+  return note;
+}
+
+function getWorkerNoteTitle(note: any): string {
+  return note.title || note.file_name || '未命名笔记';
+}
+
 function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
   const latest = getWorkerTask(taskId);
   if (!latest) throw new Error('Worker task disappeared');
@@ -207,16 +225,12 @@ async function persistOpenClawResult(
   const config = await loadConfig();
   const input = task.input as WorkerTaskInputMap['openclaw_task'];
   const dimensionKey = input.outputDimension || 'learning';
-  const DIMENSION_DIR: Record<string, string> = {
-    health: '健康', career: '事业', finance: '财务', learning: '学习',
-    relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-  };
-  const dirName = DIMENSION_DIR[dimensionKey] || '学习';
-  const date = new Date().toISOString().split('T')[0];
+  const dirName = getDimensionDirectoryName(dimensionKey) || '学习';
+  const date = getTodayDateString();
   const dir = path.join(config.vaultPath, dirName);
   const fileName = `${date}-${sanitizeFileName(result.title)}.md`;
   const filePath = path.join(dir, fileName);
-  const frontmatter = buildWorkerResultFrontmatter({
+  const frontmatterInput = {
     title: result.title,
     dimension: (dimensionKey as any) || 'learning',
     type: 'note',
@@ -224,10 +238,9 @@ async function persistOpenClawResult(
     tags: ['openclaw'],
     taskId: task.id,
     sourceNoteId: task.sourceNoteId,
-  });
-  const markdown = matter.stringify(buildOpenClawMarkdown(result), frontmatter);
+  };
 
-  return persistGeneratedNote(filePath, markdown);
+  return persistWorkerGeneratedMarkdownNote(filePath, buildOpenClawMarkdown(result), frontmatterInput);
 }
 
 function buildSummarizeNoteMarkdown(result: WorkerTaskResultMap['summarize_note']): string {
@@ -249,11 +262,11 @@ async function persistSummarizeNoteResult(
   result: WorkerTaskResultMap['summarize_note']
 ): Promise<string[]> {
   const config = await loadConfig();
-  const date = new Date().toISOString().split('T')[0];
+  const date = getTodayDateString();
   const dir = path.join(config.vaultPath, '学习');
   const fileName = `${date}-${sanitizeFileName(result.title)}.md`;
   const filePath = path.join(dir, fileName);
-  const frontmatter = buildWorkerResultFrontmatter({
+  return persistWorkerGeneratedMarkdownNote(filePath, buildSummarizeNoteMarkdown(result), {
     title: result.title,
     dimension: 'learning',
     type: 'note',
@@ -265,9 +278,6 @@ async function persistSummarizeNoteResult(
     worker: 'lifeos',
     workerTaskType: 'summarize_note',
   });
-  const markdown = matter.stringify(buildSummarizeNoteMarkdown(result), frontmatter);
-
-  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeOpenClawResult(result: WorkerTaskResultMap['openclaw_task']): string {
@@ -284,12 +294,10 @@ async function runSummarizeNoteDirect(
   task: WorkerTask<'summarize_note'>
 ): Promise<WorkerTaskResultMap['summarize_note']> {
   const input = task.input as WorkerTaskInputMap['summarize_note'];
-  const db = getDb();
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(input.noteId) as any;
-  if (!note) throw new Error(`笔记不存在: ${input.noteId}`);
+  const note = getRequiredWorkerNote(input.noteId);
 
   const content = note.content || '';
-  const noteTitle = note.title || note.file_name || '未命名笔记';
+  const noteTitle = getWorkerNoteTitle(note);
 
   const prompt = getEffectivePrompt('summarize_note')
     .replace('{title}', noteTitle)
@@ -324,11 +332,6 @@ async function runSummarizeNoteDirect(
 
 // ── classify_inbox ──
 
-const DIMENSION_DIR_MAP: Record<string, string> = {
-  health: '健康', career: '事业', finance: '财务', learning: '学习',
-  relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-};
-
 async function runClassifyInbox(
   task: WorkerTask<'classify_inbox'>
 ): Promise<WorkerTaskResultMap['classify_inbox']> {
@@ -351,7 +354,7 @@ async function runClassifyInbox(
   const items: WorkerTaskResultMap['classify_inbox']['items'] = [];
   let classified = 0;
   let failed = 0;
-  const date = new Date().toISOString().split('T')[0];
+  const date = getTodayDateString();
   const db = getDb();
 
   for (const fileName of entries) {
@@ -384,9 +387,7 @@ async function runClassifyInbox(
         try {
           const tasks = await extractTasks(content);
           for (const t of tasks) {
-            const taskDir = DIMENSION_DIR_MAP[t.dimension] || '成长';
-            const safeName = t.title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, 30);
-            const taskPath = path.join(config.vaultPath, taskDir, `${date}-${safeName}.md`);
+            const taskPath = buildTaskFilePath(config.vaultPath, t.dimension, t.title, date);
             const taskContent = buildTaskFrontmatter(t, date);
             await createFile(taskPath, taskContent);
             queue?.enqueue(taskPath, 'upsert');
@@ -444,7 +445,7 @@ async function persistClassifyInboxResult(
   result: WorkerTaskResultMap['classify_inbox']
 ): Promise<string[]> {
   const config = await loadConfig();
-  const date = new Date().toISOString().split('T')[0];
+  const date = getTodayDateString();
   const dir = path.join(config.vaultPath, '_Daily');
   const fileName = `${date}-inbox-分类报告.md`;
   const filePath = path.join(dir, fileName);
@@ -462,7 +463,7 @@ async function persistClassifyInboxResult(
     lines.push('');
   }
 
-  const frontmatter = buildWorkerResultFrontmatter({
+  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
     title: result.title,
     dimension: 'growth',
     type: 'review',
@@ -473,8 +474,6 @@ async function persistClassifyInboxResult(
     worker: 'lifeos',
     workerTaskType: 'classify_inbox',
   });
-  const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeClassifyInboxResult(result: WorkerTaskResultMap['classify_inbox']): string {
@@ -487,12 +486,10 @@ async function runExtractTasks(
   task: WorkerTask<'extract_tasks'>
 ): Promise<WorkerTaskResultMap['extract_tasks']> {
   const input = task.input as WorkerTaskInputMap['extract_tasks'];
-  const db = getDb();
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(input.noteId) as any;
-  if (!note) throw new Error(`笔记不存在: ${input.noteId}`);
+  const note = getRequiredWorkerNote(input.noteId);
 
   const tasks = await extractTasks(note.content || '');
-  const sourceNoteTitle = note.title || note.file_name || '未命名笔记';
+  const sourceNoteTitle = getWorkerNoteTitle(note);
   if (!tasks.length) {
     return {
       title: `${sourceNoteTitle} 行动项提取`,
@@ -505,7 +502,7 @@ async function runExtractTasks(
 
   const config = await loadConfig();
   const queue = getIndexQueue();
-  const date = new Date().toISOString().split('T')[0];
+  const date = getTodayDateString();
   const items: WorkerTaskResultMap['extract_tasks']['items'] = [];
 
   for (const extractedTask of tasks) {
@@ -538,18 +535,13 @@ function summarizeExtractTasksResult(result: WorkerTaskResultMap['extract_tasks'
 // ── daily_report ──
 
 function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dateEnd?: string): string {
-  const dimensions = ['health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
-  const dimLabels: Record<string, string> = {
-    health: '健康', career: '事业', finance: '财务', learning: '学习',
-    relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-  };
   const lines: string[] = [];
-  for (const dim of dimensions) {
+  for (const dim of REPORT_DIMENSION_KEYS) {
     const where = dateEnd ? `dimension = ? AND date BETWEEN ? AND ?` : `dimension = ? AND date = ?`;
     const params = dateEnd ? [dim, dateFilter, dateEnd] : [dim, dateFilter];
     const row = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE ${where}`).get(...params) as any;
     if (row?.total > 0) {
-      lines.push(`- ${dimLabels[dim]}: ${row.total} 条`);
+      lines.push(`- ${getDimensionDisplayLabel(dim)}: ${row.total} 条`);
     }
   }
   return lines.length ? lines.join('\n') : '- 今日暂无记录';
@@ -606,7 +598,7 @@ async function persistDailyReportResult(
     '',
   ];
 
-  const frontmatter = buildWorkerResultFrontmatter({
+  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
     title: result.title,
     dimension: 'growth',
     type: 'review',
@@ -617,8 +609,6 @@ async function persistDailyReportResult(
     worker: 'lifeos',
     workerTaskType: 'daily_report',
   });
-  const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeDailyReportResult(result: WorkerTaskResultMap['daily_report']): string {
@@ -683,7 +673,7 @@ async function persistWeeklyReportResult(
     '',
   ];
 
-  const frontmatter = buildWorkerResultFrontmatter({
+  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
     title: result.title,
     dimension: 'growth',
     type: 'review',
@@ -694,8 +684,6 @@ async function persistWeeklyReportResult(
     worker: 'lifeos',
     workerTaskType: 'weekly_report',
   });
-  const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeWeeklyReportResult(result: WorkerTaskResultMap['weekly_report']): string {

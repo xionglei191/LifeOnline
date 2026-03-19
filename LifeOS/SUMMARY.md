@@ -72,6 +72,7 @@ LifeOS 内部执行或调用 OpenClaw
 - Schedules 定时触发
 - 笔记创建、更新、追加备注、快捷完成
 - 自动化结果统一写回 Vault
+- server 内部已统一复用共享日期 helper、维度元数据 helper、worker 结果笔记写回 helper
 
 ## 当前运行规则
 

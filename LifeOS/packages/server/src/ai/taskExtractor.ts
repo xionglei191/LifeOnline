@@ -1,5 +1,6 @@
 import { callClaude, parseJSON } from './aiClient.js';
 import { getEffectivePrompt } from './promptService.js';
+import { getTodayDateString } from '../utils/date.js';
 
 export interface ExtractedTask {
   title: string;
@@ -13,7 +14,7 @@ export interface ExtractTasksResult {
 }
 
 export async function extractTasks(content: string): Promise<ExtractedTask[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayDateString();
   const prompt = getEffectivePrompt('extract_tasks')
     .replace('{content}', content)
     .replace('{today}', today);

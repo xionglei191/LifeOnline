@@ -3,6 +3,7 @@ import path from 'path';
 import matter from 'gray-matter';
 import type { Frontmatter } from '@lifeos/shared';
 import crypto from 'crypto';
+import { getDimensionKeyForDirectory } from '../utils/dimensions.js';
 
 export interface ParseResult {
   success: boolean;
@@ -23,16 +24,9 @@ const VALID_VALUES = {
   source: ['lingguang', 'desktop', 'webclipper', 'openclaw', 'web', 'auto']
 };
 
-// Reverse map: directory name → dimension
-const DIR_TO_DIMENSION: Record<string, string> = {
-  '健康': 'health', '事业': 'career', '财务': 'finance', '学习': 'learning',
-  '关系': 'relationship', '生活': 'life', '兴趣': 'hobby', '成长': 'growth',
-  '_Inbox': '_inbox', '_Daily': 'growth', '_Weekly': 'growth',
-};
-
 function inferDimension(filePath: string): string {
   const parentDir = path.basename(path.dirname(filePath));
-  return DIR_TO_DIMENSION[parentDir] || '_inbox';
+  return getDimensionKeyForDirectory(parentDir) || '_inbox';
 }
 
 function inferSource(filePath: string): string {

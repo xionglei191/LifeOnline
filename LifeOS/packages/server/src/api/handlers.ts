@@ -12,11 +12,12 @@ import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptO
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
+import { getTodayDateString } from '../utils/date.js';
 
 export async function getDashboard(req: Request, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayDateString();
 
     const startOfWeek = new Date();
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
@@ -597,7 +598,7 @@ export async function createNote(req: Request, res: Response): Promise<void> {
     if (!title || !dimension) { res.status(400).json({ error: 'title and dimension are required' }); return; }
 
     const config = await loadConfig();
-    const date = new Date().toISOString().split('T')[0];
+    const date = getTodayDateString();
     const filePath = buildNoteFilePath(config.vaultPath, dimension, title, date);
 
     const now = new Date().toISOString();
