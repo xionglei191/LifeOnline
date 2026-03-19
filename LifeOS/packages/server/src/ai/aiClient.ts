@@ -32,8 +32,3 @@ export function parseJSON<T>(text: string): T {
   const cleaned = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
   return JSON.parse(cleaned) as T;
 }
-
-// Deprecated - kept for compatibility
-export function getAIClient() {
-  throw new Error('getAIClient is deprecated, use callClaude directly');
-}

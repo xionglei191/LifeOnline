@@ -89,7 +89,7 @@
 #### 2. OpenClaw 调用独立封装
 - 新增 `packages/server/src/integrations/openclawClient.ts`
 - 统一处理 OpenClaw 配置、超时、网络错误与返回结构校验
-- 第一版按 `POST /tasks/collect-trending-news` 约定调用外部 worker
+- 第一版按早期专用 OpenClaw task endpoint 约定调用外部 worker
 
 #### 3. 结果转笔记闭环收敛到 LifeOS
 - 新增 `packages/server/src/workers/workerTasks.ts`
