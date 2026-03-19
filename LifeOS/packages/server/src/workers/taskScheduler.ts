@@ -48,6 +48,14 @@ function broadcastScheduleUpdate() {
   broadcastUpdate({ type: 'schedule-updated', data: {} });
 }
 
+function normalizeScheduleLabel(label: string): string {
+  return label.trim();
+}
+
+function normalizeOptionalScheduleLabel(label: string | undefined): string | undefined {
+  return label === undefined ? undefined : normalizeScheduleLabel(label);
+}
+
 function registerCronJob(schedule: TaskSchedule): void {
   // Remove existing job if any
   const existing = cronJobs.get(schedule.id);
@@ -135,6 +143,7 @@ export function createSchedule(req: CreateTaskScheduleRequest): TaskSchedule {
   const db = getDb();
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
+  const normalizedLabel = normalizeScheduleLabel(req.label);
 
   const normalizedInput = normalizeTaskInput({
     taskType: req.taskType,
@@ -144,7 +153,7 @@ export function createSchedule(req: CreateTaskScheduleRequest): TaskSchedule {
   db.prepare(`
     INSERT INTO task_schedules (id, task_type, input_json, cron_expression, label, enabled, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, 1, ?, ?)
-  `).run(id, req.taskType, JSON.stringify(normalizedInput), req.cronExpression, req.label, now, now);
+  `).run(id, req.taskType, JSON.stringify(normalizedInput), req.cronExpression, normalizedLabel, now, now);
 
   const schedule = getSchedule(id)!;
   registerCronJob(schedule);
@@ -184,7 +193,7 @@ export function updateSchedule(id: string, updates: UpdateTaskScheduleRequest): 
   }
   if (updates.label !== undefined) {
     sets.push('label = ?');
-    params.push(updates.label);
+    params.push(normalizeOptionalScheduleLabel(updates.label)!);
   }
   if (updates.input !== undefined) {
     const normalizedInput = normalizeTaskInput({

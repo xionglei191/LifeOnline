@@ -1,12 +1,13 @@
-import { SUPPORTED_WORKER_TASK_TYPES } from '@lifeos/shared';
+import { SUPPORTED_WORKER_NAMES, SUPPORTED_WORKER_TASK_TYPES } from '@lifeos/shared';
 
 export const SUPPORTED_WORKER_TASK_TYPES_SQL = SUPPORTED_WORKER_TASK_TYPES.map((taskType) => `'${taskType}'`).join(', ');
+export const SUPPORTED_WORKER_NAMES_SQL = SUPPORTED_WORKER_NAMES.map((workerName) => `'${workerName}'`).join(', ');
 
 export const WORKER_TASK_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   task_type TEXT NOT NULL CHECK(task_type IN (${SUPPORTED_WORKER_TASK_TYPES_SQL})),
   input_json TEXT NOT NULL,
   status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
-  worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
+  worker TEXT NOT NULL CHECK(worker IN (${SUPPORTED_WORKER_NAMES_SQL})),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   started_at TEXT,

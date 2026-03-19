@@ -6,11 +6,12 @@ import { indexVault, indexFile } from '../indexer/indexer.js';
 import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
 import { broadcastUpdate, getIndexQueue } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
-import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, normalizeTaskInput, WorkerTaskValidationError } from '../workers/workerTasks.js';
+import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest } from '@lifeos/shared';
+import { isSupportedWorkerName } from '@lifeos/shared';
 
 export async function getDashboard(req: Request, res: Response): Promise<void> {
   try {
@@ -153,7 +154,7 @@ function parseWorkerTaskType(value: unknown): WorkerTaskType | undefined {
 function parseWorkerName(value: unknown): WorkerName | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
-  return (normalized === 'openclaw' || normalized === 'lifeos') ? normalized as WorkerName : undefined;
+  return isSupportedWorkerName(normalized) ? normalized : undefined;
 }
 
 function isTaskInputValidationError(error: unknown): boolean {
@@ -419,15 +420,9 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
       return;
     }
 
-    const normalizedInput = normalizeTaskInput({
-      ...body,
-      taskType: body.taskType,
-    });
-
     const task = createWorkerTask({
       ...body,
       taskType: body.taskType,
-      input: normalizedInput,
     });
     broadcastUpdate({ type: 'worker-task-updated', data: task });
     startWorkerTaskExecution(task.id);
@@ -725,16 +720,9 @@ export async function createScheduleHandler(req: Request, res: Response): Promis
       return;
     }
 
-    const normalizedInput = normalizeTaskInput({
-      taskType: body.taskType,
-      input: body.input,
-    });
-
     const schedule = createSchedule({
       ...body,
       taskType: body.taskType,
-      label: body.label.trim(),
-      input: normalizedInput,
     });
     res.status(201).json({ schedule });
   } catch (error) {

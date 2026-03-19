@@ -4,7 +4,11 @@ export type Status = 'pending' | 'in_progress' | 'done' | 'cancelled';
 export type Priority = 'high' | 'medium' | 'low';
 export type Privacy = 'public' | 'private' | 'sensitive';
 export type Source = 'lingguang' | 'desktop' | 'webclipper' | 'openclaw' | 'web' | 'auto';
-export type WorkerName = 'openclaw' | 'lifeos';
+export const SUPPORTED_WORKER_NAMES = ['openclaw', 'lifeos'] as const;
+export type WorkerName = typeof SUPPORTED_WORKER_NAMES[number];
+export function isSupportedWorkerName(value: unknown): value is WorkerName {
+  return typeof value === 'string' && SUPPORTED_WORKER_NAMES.includes(value as WorkerName);
+}
 export const SUPPORTED_WORKER_TASK_TYPES = [
   'openclaw_task',
   'summarize_note',

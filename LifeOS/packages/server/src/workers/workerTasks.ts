@@ -110,16 +110,11 @@ const workerTaskDefinitions: WorkerTaskDefinitionMap = {
   },
   daily_report: {
     worker: 'lifeos',
-    normalizeInput: (input) => ({ date: input?.date || new Date().toISOString().split('T')[0] }),
+    normalizeInput: (input) => ({ date: input?.date || getTodayDateString() }),
   },
   weekly_report: {
     worker: 'lifeos',
-    normalizeInput: (input) => {
-      const now = new Date();
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      return { weekStart: input?.weekStart || monday.toISOString().split('T')[0] };
-    },
+    normalizeInput: (input) => ({ weekStart: input?.weekStart || getCurrentWeekMonday() }),
   },
 };
 
@@ -129,6 +124,17 @@ function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerT
     throwWorkerTaskValidationError(`Unsupported task type: ${taskType}`);
   }
   return definition;
+}
+
+function getTodayDateString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getCurrentWeekMonday(): string {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  return monday.toISOString().split('T')[0];
 }
 
 function buildNoteId(filePath: string): string {
@@ -553,7 +559,7 @@ async function runDailyReport(
   task: WorkerTask<'daily_report'>
 ): Promise<WorkerTaskResultMap['daily_report']> {
   const input = task.input as WorkerTaskInputMap['daily_report'];
-  const date = input.date || new Date().toISOString().split('T')[0];
+  const date = input.date || getTodayDateString();
   const db = getDb();
 
   const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date = ?').get(date) as any;
@@ -625,12 +631,7 @@ async function runWeeklyReport(
   task: WorkerTask<'weekly_report'>
 ): Promise<WorkerTaskResultMap['weekly_report']> {
   const input = task.input as WorkerTaskInputMap['weekly_report'];
-  const weekStart = input.weekStart || (() => {
-    const now = new Date();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    return monday.toISOString().split('T')[0];
-  })();
+  const weekStart = input.weekStart || getCurrentWeekMonday();
   const weekStartDate = new Date(weekStart);
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setDate(weekStartDate.getDate() + 6);
