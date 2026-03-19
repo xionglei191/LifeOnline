@@ -31,7 +31,19 @@ export async function updateFrontmatter(
   await fs.writeFile(filePath, newContent, 'utf-8');
 }
 
-export function buildTaskFilePath(vaultPath: string, dimension: string, title: string, date: string): string {
+export async function rewriteMarkdownContent(
+  filePath: string,
+  transform: (content: string) => string,
+): Promise<void> {
+  const raw = await fs.readFile(filePath, 'utf-8');
+  const parsed = matter(raw);
+  const nextContent = transform(parsed.content);
+  const nextData = { ...parsed.data, updated: new Date().toISOString() };
+  const nextRaw = matter.stringify(nextContent, nextData);
+  await fs.writeFile(filePath, nextRaw, 'utf-8');
+}
+
+export function buildNoteFilePath(vaultPath: string, dimension: string, title: string, date: string): string {
   const dimensionMap: Record<string, string> = {
     health: '健康', career: '事业', finance: '财务', learning: '学习',
     relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
@@ -41,6 +53,10 @@ export function buildTaskFilePath(vaultPath: string, dimension: string, title: s
   return path.join(vaultPath, dir, `${date}-${safeName}.md`);
 }
 
+export function buildTaskFilePath(vaultPath: string, dimension: string, title: string, date: string): string {
+  return buildNoteFilePath(vaultPath, dimension, title, date);
+}
+
 export function buildTargetPath(vaultPath: string, dimension: string, title: string, date: string): string {
-  return buildTaskFilePath(vaultPath, dimension, title, date);
+  return buildNoteFilePath(vaultPath, dimension, title, date);
 }

@@ -100,6 +100,19 @@ function buildOpenClawMarkdown(result: WorkerTaskResultMap['openclaw_task']): st
   return `${lines.join('\n').trim()}\n`;
 }
 
+async function persistGeneratedNote(filePath: string, markdown: string): Promise<string[]> {
+  await createFile(filePath, markdown);
+  getIndexQueue()?.enqueue(filePath, 'upsert');
+  return [filePath];
+}
+
+function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
+  const latest = getWorkerTask(taskId);
+  if (!latest) throw new Error('Worker task disappeared');
+  if (latest.status === 'cancelled') return null;
+  return latest;
+}
+
 async function persistOpenClawResult(
   task: WorkerTask<'openclaw_task'>,
   result: WorkerTaskResultMap['openclaw_task']
@@ -127,9 +140,7 @@ async function persistOpenClawResult(
   });
   const markdown = matter.stringify(buildOpenClawMarkdown(result), frontmatter);
 
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
+  return persistGeneratedNote(filePath, markdown);
 }
 
 function buildSummarizeNoteMarkdown(result: WorkerTaskResultMap['summarize_note']): string {
@@ -169,9 +180,7 @@ async function persistSummarizeNoteResult(
   });
   const markdown = matter.stringify(buildSummarizeNoteMarkdown(result), frontmatter);
 
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
+  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeOpenClawResult(result: WorkerTaskResultMap['openclaw_task']): string {
@@ -378,9 +387,7 @@ async function persistClassifyInboxResult(
     workerTaskType: 'classify_inbox',
   });
   const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
+  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeClassifyInboxResult(result: WorkerTaskResultMap['classify_inbox']): string {
@@ -524,9 +531,7 @@ async function persistDailyReportResult(
     workerTaskType: 'daily_report',
   });
   const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
+  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeDailyReportResult(result: WorkerTaskResultMap['daily_report']): string {
@@ -608,9 +613,7 @@ async function persistWeeklyReportResult(
     workerTaskType: 'weekly_report',
   });
   const markdown = matter.stringify(`${lines.join('\n').trim()}\n`, frontmatter);
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
+  return persistGeneratedNote(filePath, markdown);
 }
 
 function summarizeWeeklyReportResult(result: WorkerTaskResultMap['weekly_report']): string {
@@ -866,9 +869,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     if (task.taskType === 'openclaw_task') {
       const result = await runOpenClawTask(task.input as WorkerTaskInputMap['openclaw_task'], { signal });
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       const outputNotePaths = await persistOpenClawResult(task as WorkerTask<'openclaw_task'>, result);
       updateTaskStatus(taskId, {
@@ -881,9 +882,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     } else if (task.taskType === 'summarize_note') {
       const result = await runSummarizeNoteDirect(task as WorkerTask<'summarize_note'>);
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       const outputNotePaths = await persistSummarizeNoteResult(task as WorkerTask<'summarize_note'>, result);
       updateTaskStatus(taskId, {
@@ -896,9 +895,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     } else if (task.taskType === 'classify_inbox') {
       const result = await runClassifyInbox(task as WorkerTask<'classify_inbox'>);
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       const outputNotePaths = await persistClassifyInboxResult(task as WorkerTask<'classify_inbox'>, result);
       updateTaskStatus(taskId, {
@@ -911,9 +908,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     } else if (task.taskType === 'extract_tasks') {
       const result = await runExtractTasks(task as WorkerTask<'extract_tasks'>);
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       updateTaskStatus(taskId, {
         status: 'succeeded',
@@ -925,9 +920,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     } else if (task.taskType === 'daily_report') {
       const result = await runDailyReport(task as WorkerTask<'daily_report'>);
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       const outputNotePaths = await persistDailyReportResult(task as WorkerTask<'daily_report'>, result);
       updateTaskStatus(taskId, {
@@ -940,9 +933,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     } else if (task.taskType === 'weekly_report') {
       const result = await runWeeklyReport(task as WorkerTask<'weekly_report'>);
 
-      const latest = getWorkerTask(taskId);
-      if (!latest) throw new Error('Worker task disappeared');
-      if (latest.status === 'cancelled') return latest;
+      if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
 
       const outputNotePaths = await persistWeeklyReportResult(task as WorkerTask<'weekly_report'>, result);
       updateTaskStatus(taskId, {

@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
-import path from 'path';
 import matter from 'gray-matter';
-import fs from 'fs/promises';
 import { validate as cronValidate } from 'node-cron';
 import { getDb } from '../db/client.js';
 import { indexVault, indexFile } from '../indexer/indexer.js';
 import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
 import { broadcastUpdate, getIndexQueue } from '../index.js';
-import { deleteFile } from '../vault/fileManager.js';
+import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
@@ -545,18 +543,13 @@ export async function updateNote(req: Request, res: Response): Promise<void> {
     const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
 
-    const raw = await fs.readFile(note.file_path, 'utf-8');
-    const parsed = matter(raw);
-
-    const updates: Record<string, unknown> = { updated: new Date().toISOString() };
+    const updates: Record<string, unknown> = {};
     if (status !== undefined) updates.status = status;
     if (priority !== undefined) updates.priority = priority;
     if (tags !== undefined) updates.tags = tags;
     if (approval_status !== undefined) updates.approval_status = approval_status;
 
-    const newData = { ...parsed.data, ...updates };
-    const newContent = matter.stringify(parsed.content, newData);
-    await fs.writeFile(note.file_path, newContent, 'utf-8');
+    await updateFrontmatter(note.file_path, updates);
 
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
@@ -577,14 +570,10 @@ export async function appendNote(req: Request, res: Response): Promise<void> {
     const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
 
-    const raw = await fs.readFile(note.file_path, 'utf-8');
-    const parsed = matter(raw);
-
     const timestamp = new Date().toLocaleString('zh-CN');
-    const appended = `${parsed.content.trimEnd()}\n\n---\n\n**备注** (${timestamp})\n\n${text}\n`;
-    const newData = { ...parsed.data, updated: new Date().toISOString() };
-    const newContent = matter.stringify(appended, newData);
-    await fs.writeFile(note.file_path, newContent, 'utf-8');
+    await rewriteMarkdownContent(note.file_path, (content) => (
+      `${content.trimEnd()}\n\n---\n\n**备注** (${timestamp})\n\n${text}\n`
+    ));
 
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
@@ -622,14 +611,8 @@ export async function createNote(req: Request, res: Response): Promise<void> {
     if (!title || !dimension) { res.status(400).json({ error: 'title and dimension are required' }); return; }
 
     const config = await loadConfig();
-    const dimensionMap: Record<string, string> = {
-      health: '健康', career: '事业', finance: '财务', learning: '学习',
-      relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-    };
-    const dir = dimensionMap[dimension] || '成长';
     const date = new Date().toISOString().split('T')[0];
-    const safeName = title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, 30);
-    const filePath = path.join(config.vaultPath, dir, `${date}-${safeName}.md`);
+    const filePath = buildNoteFilePath(config.vaultPath, dimension, title, date);
 
     const now = new Date().toISOString();
     const frontmatter: Record<string, unknown> = {
@@ -646,8 +629,7 @@ export async function createNote(req: Request, res: Response): Promise<void> {
     if (tags?.length) frontmatter.tags = tags;
 
     const fileContent = matter.stringify(`\n# ${title}\n\n${content || ''}`, frontmatter);
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, fileContent, 'utf-8');
+    await createFile(filePath, fileContent);
 
     getIndexQueue()?.enqueue(filePath, 'upsert');
     res.json({ success: true, filePath });
