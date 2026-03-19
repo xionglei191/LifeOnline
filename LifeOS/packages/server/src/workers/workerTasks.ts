@@ -2,6 +2,12 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
 import matter from 'gray-matter';
+
+// WorkerTasks 是当前任务执行内核的集中实现：
+// - 统一持久化 worker task 记录与状态流转
+// - 按 taskType 路由到本地 LifeOS 或外部 OpenClaw 执行
+// - 将最终业务结果尽量写回 Vault，再通过索引同步到 SQLite
+// 这里是刻意集中而非通用插件框架；后续 taskType 明显增多时再拆分 repository / executor / persistence。
 import type {
   CreateWorkerTaskRequest,
   WorkerTask,

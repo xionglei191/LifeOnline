@@ -45,6 +45,33 @@ SQLite 索引层   LifeOS Web      OpenClaw
 - LifeOS backend 是控制核心
 - OpenClaw 是按需调用的外部执行器，不是主编排器
 - SQLite 是索引与运行态数据库，不是最终业务真相
+- 内容类业务数据先落 Vault，再通过索引同步到 SQLite
+- 运行控制类数据（worker tasks / schedules / AI 配置）以 SQLite 为准
+- Scheduler 只负责触发，不负责实际业务执行
+- 新的后台自动化能力优先进入 worker task 模型
+
+## 架构判定（简版）
+
+### 系统角色
+- `packages/server`：中央控制器，负责 API、索引、任务编排、调度、AI 能力接入、OpenClaw 调用
+- `packages/web`：控制台 UI
+- `packages/shared`：共享类型与协议
+- `OpenClaw`：外部执行器，只承接被 LifeOS 派发的远程任务
+
+### 数据边界
+- Vault 中的 markdown / frontmatter 是内容真相
+- SQLite 中的 notes 是查询视图
+- SQLite 中的 worker_tasks / task_schedules / ai_provider_settings / ai_prompts 是运行态真相
+
+### 执行边界
+- 所有后台自动化统一抽象为 worker task
+- schedule 到点后只创建任务并触发执行
+- 本地 AI 任务优先留在 LifeOS 内执行
+- 开放式委托型任务才交给 OpenClaw
+
+### 同步语义
+- 应用内主动写文件的路径，必须主动 enqueue reindex
+- watcher 负责捕获外部文件变化和兜底同步
 
 ## 本地开发
 

@@ -86,6 +86,53 @@ LifeOS 内部执行或调用 OpenClaw
 - 本地同步脚本：`sync-lifeos`
 - 远端 `/api/config` 可作为第一检查点
 
-## 一句话总结
+## 当前待收口边界
 
-> LifeOS 是一个以 Vault 为唯一事实源、以 backend 为中央控制器、以 worker task 为统一自动化模型、以 OpenClaw 为外部执行节点、以 Web 为控制台的个人操作系统。
+### 1. 本地 AI 与 OpenClaw 的任务分界
+已确定原则：
+- 直接依赖 Vault 结构、笔记语义、系统内部 schema 的任务，优先在 LifeOS 本地执行
+- 偏开放式委托、远程外包处理、非核心领域特化任务，才交给 OpenClaw
+
+当前已符合：
+- 本地：`classify_inbox`、`extract_tasks`、`summarize_note`、`daily_report`、`weekly_report`
+- 外部：`openclaw_task`
+
+### 2. 文件写入后的同步语义
+正式规则：
+- 应用代码主动写 Vault 文件后，必须显式 `enqueue` 索引
+- watcher 仅负责外部改动捕获与兜底
+
+### 3. API handler 的职责上限
+当前允许：
+- 简单笔记写操作继续留在 handler
+
+后续升级条件：
+- 一旦流程涉及多个资源协调、任务触发、复杂分支或跨模块写入，应上提到独立 service/module
+
+## 轻量重构清单
+
+### P1：只做边界收口，不改主流程
+1. 在 `workerTasks.ts` 顶部补一段模块职责注释，明确它是“任务执行内核的集中实现”
+2. 在 `handlers.ts` 相关写文件入口旁补一句注释，明确“主动写文件必须主动 enqueue，watcher 仅兜底”
+3. 在 `openclawClient.ts` 或 worker task 创建入口旁补一句注释，明确 OpenClaw 是外部执行器，不承担编排主权
+
+### P2：低风险整理
+4. 把 `workerTasks.ts` 内的“结果落盘函数”按任务类别聚合整理，至少在文件内形成更清晰的 section 边界
+5. 把 `createNote / updateNote / appendNote / deleteNote` 的共享文件写入逻辑收束到更明确的 vault 模块接口中，但暂不强行做全量 service 化
+6. 给 worker task 新增一条开发约定：新增 taskType 时，必须同时明确 `执行宿主`、`输出位置`、`是否写回 Vault`
+
+### P3：等任务类型继续增长后再做
+7. 当 worker task 超过当前规模时，再把 `workerTasks.ts` 拆成：
+   - task repository / state
+   - task executors
+   - task result persistence
+8. 当 API 写操作继续膨胀时，再引入独立 application service
+
+## 当前建议
+- 现在不要做大规模重构
+- 优先把边界规则固定下来
+- 后续新功能按这些规则进入系统，避免继续扩散模糊地带
+
+## 一句话判定
+
+> 当前系统不需要“重做架构”，只需要把已经存在的正确边界正式写死，并在新增功能时持续遵守。

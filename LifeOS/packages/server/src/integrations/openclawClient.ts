@@ -1,5 +1,11 @@
 import type { WorkerTaskInputMap, WorkerTaskResultMap } from '@lifeos/shared';
 
+// OpenClaw 是 LifeOS 按需调用的外部执行器：
+// - 不持有编排主权
+// - 不定义系统主数据模型
+// - 只负责接收 LifeOS 派发的远程任务并返回结果
+// 任务创建、状态流转、结果落盘仍由 LifeOS 控制。
+
 const OPENCLAW_BASE_URL = process.env.OPENCLAW_BASE_URL;
 const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY;
 const DEFAULT_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS || 30000);

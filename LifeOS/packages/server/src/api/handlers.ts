@@ -535,6 +535,7 @@ export async function clearFinishedWorkerTasksHandler(_req: Request, res: Respon
 }
 
 // PATCH /api/notes/:id — update status/priority/tags in frontmatter
+// 规则：应用内主动写 Vault 文件后，必须显式 enqueue 索引；watcher 只负责外部改动捕获与兜底同步。
 export async function updateNote(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
