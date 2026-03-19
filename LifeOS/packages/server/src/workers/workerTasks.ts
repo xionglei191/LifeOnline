@@ -50,6 +50,19 @@ interface WorkerTaskRow {
 
 const runningTaskControllers = new Map<string, AbortController>();
 
+export const SUPPORTED_WORKER_TASK_TYPES = [
+  'openclaw_task',
+  'summarize_note',
+  'classify_inbox',
+  'extract_tasks',
+  'daily_report',
+  'weekly_report',
+] as const satisfies readonly WorkerTaskType[];
+
+export function isSupportedWorkerTaskType(value: unknown): value is WorkerTaskType {
+  return typeof value === 'string' && SUPPORTED_WORKER_TASK_TYPES.includes(value as WorkerTaskType);
+}
+
 function buildNoteId(filePath: string): string {
   return crypto.createHash('md5').update(filePath).digest('hex');
 }

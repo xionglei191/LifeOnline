@@ -6,7 +6,7 @@ import { indexVault, indexFile } from '../indexer/indexer.js';
 import { loadConfig, saveConfig, validateVaultPath } from '../config/configManager.js';
 import { broadcastUpdate, getIndexQueue } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
-import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from '../workers/workerTasks.js';
+import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, normalizeTaskInput } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
@@ -147,14 +147,18 @@ function parseWorkerTaskStatus(value: unknown): WorkerTaskStatus | undefined {
 function parseWorkerTaskType(value: unknown): WorkerTaskType | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
-  const valid: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report'];
-  return valid.includes(normalized as WorkerTaskType) ? normalized as WorkerTaskType : undefined;
+  return isSupportedWorkerTaskType(normalized) ? normalized : undefined;
 }
 
 function parseWorkerName(value: unknown): WorkerName | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
   return (normalized === 'openclaw' || normalized === 'lifeos') ? normalized as WorkerName : undefined;
+}
+
+function isTaskInputValidationError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('requires') || error.message.startsWith('Unsupported task type:');
 }
 
 function parseNote(row: any): Note {
@@ -411,42 +415,30 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
       return;
     }
 
-    if (body.taskType !== 'openclaw_task' && body.taskType !== 'summarize_note'
-        && body.taskType !== 'classify_inbox' && body.taskType !== 'extract_tasks' && body.taskType !== 'daily_report' && body.taskType !== 'weekly_report') {
+    if (!isSupportedWorkerTaskType(body.taskType)) {
       res.status(400).json({ error: 'Unsupported taskType' });
       return;
     }
 
-    if (body.taskType === 'openclaw_task') {
-      const input = body.input as any;
-      if (!input?.instruction?.trim()) {
-        res.status(400).json({ error: 'openclaw_task requires input.instruction' });
-        return;
-      }
-    }
+    const normalizedInput = normalizeTaskInput({
+      ...body,
+      taskType: body.taskType,
+    });
 
-    if (body.taskType === 'summarize_note') {
-      const input = body.input as any;
-      if (!input?.noteId) {
-        res.status(400).json({ error: 'summarize_note requires input.noteId' });
-        return;
-      }
-    }
-
-    if (body.taskType === 'extract_tasks') {
-      const input = body.input as any;
-      if (!input?.noteId) {
-        res.status(400).json({ error: 'extract_tasks requires input.noteId' });
-        return;
-      }
-    }
-
-    const task = createWorkerTask(body);
+    const task = createWorkerTask({
+      ...body,
+      taskType: body.taskType,
+      input: normalizedInput,
+    });
     broadcastUpdate({ type: 'worker-task-updated', data: task });
     startWorkerTaskExecution(task.id);
 
     res.status(202).json({ task });
   } catch (error) {
+    if (isTaskInputValidationError(error)) {
+      res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+      return;
+    }
     console.error('Create worker task error:', error);
     res.status(500).json({ error: String(error) });
   }
@@ -721,8 +713,7 @@ export async function getStatsTags(req: Request, res: Response): Promise<void> {
 export async function createScheduleHandler(req: Request, res: Response): Promise<void> {
   try {
     const body = req.body as CreateTaskScheduleRequest;
-    const validScheduleTypes: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report'];
-    if (!body?.taskType || !validScheduleTypes.includes(body.taskType)) {
+    if (!body?.taskType || !isSupportedWorkerTaskType(body.taskType)) {
       res.status(400).json({ error: 'Invalid or missing taskType' });
       return;
     }
@@ -734,9 +725,24 @@ export async function createScheduleHandler(req: Request, res: Response): Promis
       res.status(400).json({ error: 'label is required' });
       return;
     }
-    const schedule = createSchedule({ ...body, label: body.label.trim() });
+
+    const normalizedInput = normalizeTaskInput({
+      taskType: body.taskType,
+      input: body.input,
+    });
+
+    const schedule = createSchedule({
+      ...body,
+      taskType: body.taskType,
+      label: body.label.trim(),
+      input: normalizedInput,
+    });
     res.status(201).json({ schedule });
   } catch (error) {
+    if (isTaskInputValidationError(error)) {
+      res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+      return;
+    }
     console.error('Create schedule error:', error);
     res.status(500).json({ error: String(error) });
   }
@@ -779,6 +785,10 @@ export async function updateScheduleHandler(req: Request, res: Response): Promis
   } catch (error: any) {
     if (error?.message === 'Schedule not found') {
       res.status(404).json({ error: error.message });
+      return;
+    }
+    if (isTaskInputValidationError(error)) {
+      res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
       return;
     }
     res.status(500).json({ error: String(error) });

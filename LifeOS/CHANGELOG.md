@@ -77,7 +77,7 @@
 
 ### 工作内容
 
-完成一次架构收敛：不再把 OpenClaw 作为持续自治整理主流程，而是由 LifeOS 后端持有任务请求、调用外部 worker、校验结果并落成标准笔记。
+完成一次架构收敛：LifeOS 后端持有任务请求、调用外部 worker、校验结果并落成标准笔记。
 
 ### 本次变更
 
@@ -89,7 +89,7 @@
 #### 2. OpenClaw 调用独立封装
 - 新增 `packages/server/src/integrations/openclawClient.ts`
 - 统一处理 OpenClaw 配置、超时、网络错误与返回结构校验
-- 第一版按早期专用 OpenClaw task endpoint 约定调用外部 worker
+- 首版先用早期专用 OpenClaw endpoint 验证链路
 
 #### 3. 结果转笔记闭环收敛到 LifeOS
 - 新增 `packages/server/src/workers/workerTasks.ts`
@@ -103,7 +103,7 @@
 - `GET /api/worker-tasks/:id`
 - `POST /api/worker-tasks/:id/retry`
 - `POST /api/worker-tasks/:id/cancel`
-- 首版先用早期专用 OpenClaw 任务作为试点，后续收敛为 `openclaw_task`
+- `openclaw_task` 首先作为试点任务落地，后续继续收敛为统一类型
 - 支持 `pending/running/succeeded/failed/cancelled` 状态流转
 
 #### 5. 前端主入口改造
