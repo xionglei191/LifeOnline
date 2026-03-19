@@ -11,7 +11,21 @@ LifeOnline 现在是总仓库，统一承载两个业务子项目：
 LifeOnline/
   LifeOS/
   LingGuangCatcher/
+  architecture/
+  protocols/
+  components/
+  docs/
+  decisions/
+  roadmap/
+  tasks/
 ```
+
+## 系统文档
+
+- `architecture/`：系统架构与数据流
+- `protocols/`：Frontmatter、命名、维度协议
+- `components/`：LifeOnline 协调脚本与状态
+- `docs/`、`decisions/`、`roadmap/`、`tasks/`：补充设计与规划资料
 
 ## 开发入口
 
