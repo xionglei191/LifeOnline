@@ -142,7 +142,7 @@ LifeOS 后端已经掌握 Vault 写入、索引、WebSocket、前端刷新与审
 - **LifeOS** 成为控制核心 / orchestration layer，负责判断是否需要外部执行、创建任务请求、跟踪状态、校验结果、落地笔记并触发既有索引闭环。
 - **OpenClaw** 只负责执行明确、有限、可描述的任务，并返回结构化结果。
 - 没有 LifeOS 持有的任务记录，不允许系统凭空生成最终结果笔记。
-- `classify-inbox`、`extract-tasks` 等旧 `/api/ai/*` 能力降级为旧手动工具，不再代表主架构。
+- `classify-inbox`、`extract-tasks` 等旧 `/api/ai/*` 能力已退出主入口，当前统一走 worker task 触发。
 
 ### 首个试点
 - 新增 `worker_tasks` 表与 `/api/worker-tasks*` API。
@@ -152,7 +152,7 @@ LifeOS 后端已经掌握 Vault 写入、索引、WebSocket、前端刷新与审
 ### 影响
 - OpenClaw 不再承担 `_Inbox` 常驻自动整理主路径。
 - LifeOS 设置页主入口从“AI 智能整理”改为“外部执行任务”。
-- 历史 `source: auto` 数据继续兼容，不做批量迁移。
+- 历史 `source: auto` 数据保留原状，不做批量迁移。
 
 ---
 
