@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 捕获类型 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋 捕获类型"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupTypes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipVoice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎤 语音"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📸 拍照"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📝 文本"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipLink"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔗 链接"
+                style="@style/Widget.App.Chip.Filter" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 处理状态 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️ 处理状态"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupStatuses"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCompleted"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✅ 成功"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFailed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="❌ 失败"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipProcessing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔄 处理中"
+                style="@style/Widget.App.Chip.Filter" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPending"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏳ 待处理"
+                style="@style/Widget.App.Chip.Filter" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- 日期范围 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📅 日期范围"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/radioGroupDateRange"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radioAll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="全部时间"
+                android:checked="true" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radioToday"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="今天" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radioWeek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="本周" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/radioMonth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="本月" />
+
+        </RadioGroup>
+
+        <!-- 操作按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClearFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="清空"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.App.Button.Text" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnApplyFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="应用"
+                style="@style/Widget.App.Button" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

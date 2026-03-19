@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+    <!-- 顶部标题栏 -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.App.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="头脑风暴"
+        app:titleTextAppearance="@style/TextAppearance.App.Headline.Small"
+        app:navigationIcon="@drawable/ic_back"
+        app:navigationContentDescription="返回"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 统计信息栏 -->
+    <LinearLayout
+        android:id="@+id/layoutStats"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:gravity="center"
+        android:background="@color/surface_variant"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <TextView
+            android:id="@+id/tvSegmentCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="段数: 0"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textColor="@color/on_surface" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="16dp"
+            android:layout_marginHorizontal="@dimen/spacing_md"
+            android:background="@color/neutral_300" />
+
+        <TextView
+            android:id="@+id/tvTotalDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="总时长: 00:00"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textColor="@color/on_surface" />
+    </LinearLayout>
+
+    <!-- 录音状态 -->
+    <LinearLayout
+        android:id="@+id/layoutRecordingStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="@dimen/spacing_md"
+        android:visibility="gone"
+        android:background="@color/capture_voice_container"
+        app:layout_constraintTop_toBottomOf="@id/layoutStats">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="@dimen/icon_size_standard"
+                android:layout_height="@dimen/icon_size_standard"
+                android:src="@drawable/ic_microphone"
+                app:tint="@color/capture_voice"
+                android:contentDescription="录音中" />
+
+            <TextView
+                android:id="@+id/tvRecordingStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="录音中..."
+                android:textAppearance="@style/TextAppearance.App.Title.Medium"
+                android:textColor="@color/capture_voice"
+                android:layout_marginStart="@dimen/spacing_sm" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvCurrentDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/capture_voice"
+            android:fontFamily="monospace"
+            android:layout_marginTop="@dimen/spacing_xs" />
+    </LinearLayout>
+
+    <!-- 段落列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSegments"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingVertical="@dimen/spacing_sm"
+        app:layout_constraintTop_toBottomOf="@id/layoutRecordingStatus"
+        app:layout_constraintBottom_toTopOf="@id/tvEmptyHint" />
+
+    <!-- 空状态提示 -->
+    <TextView
+        android:id="@+id/tvEmptyHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="点击下方按钮开始录制第一段"
+        android:textAppearance="@style/TextAppearance.App.Body.Large"
+        android:textColor="@color/on_surface_variant"
+        android:gravity="center"
+        android:padding="@dimen/spacing_md"
+        app:layout_constraintBottom_toTopOf="@id/layoutButtons" />
+
+    <!-- 底部按钮 -->
+    <LinearLayout
+        android:id="@+id/layoutButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDiscard"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/spacing_xs"
+            android:text="放弃"
+            android:textAppearance="@style/TextAppearance.App.Body.Large" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRecord"
+            style="@style/Widget.App.Button"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="@dimen/spacing_xs"
+            android:text="下一段"
+            android:textAppearance="@style/TextAppearance.App.Body.Large" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnFinish"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/spacing_xs"
+            android:text="结束"
+            android:textAppearance="@style/TextAppearance.App.Body.Large"
+            android:enabled="false" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

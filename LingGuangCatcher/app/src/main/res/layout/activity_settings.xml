@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            style="@style/Widget.App.Toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="设置"
+            app:titleTextAppearance="@style/TextAppearance.App.Headline.Small"
+            app:navigationIcon="@drawable/ic_back"
+            app:navigationContentDescription="返回" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_md">
+
+            <!-- API Key 配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="API Key 配置"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <!-- DashScope -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="DashScope (阿里云)"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="API Key"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_dashscope_key"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="模型"
+                        android:layout_marginBottom="@dimen/spacing_md">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_dashscope_model"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="qwen-plus" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- OpenAI -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="OpenAI"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="API Key"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_openai_key"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Base URL"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_openai_base_url"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="https://api.openai.com/v1" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="模型"
+                        android:layout_marginBottom="@dimen/spacing_md">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_openai_model"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="gpt-4o" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Gemini -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Google Gemini"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="API Key"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_gemini_key"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="模型"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_gemini_model"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="gemini-2.0-flash-exp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- STT 配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="语音转文字 (STT)"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="4dp" />
+
+                    <!-- STT 状态提示 -->
+                    <TextView
+                        android:id="@+id/tv_stt_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="需要先配置 API Key"
+                        android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                        android:textColor="@color/warning"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggle_stt_service"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_stt_gemini"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Gemini" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_stt_whisper"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Whisper" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_stt_dashscope"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="DashScope" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- AI 处理配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AI 处理"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="4dp" />
+
+                    <!-- AI 状态提示 -->
+                    <TextView
+                        android:id="@+id/tv_ai_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="需要先配置 API Key"
+                        android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                        android:textColor="@color/warning"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggle_ai_service"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_ai_dashscope"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="DashScope" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_ai_openai"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="OpenAI" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_ai_gemini"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Gemini" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Obsidian 配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Obsidian 配置"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <TextView
+                        android:id="@+id/tv_vault_path"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="未选择 Vault 目录"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginBottom="@dimen/spacing_xs" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_select_vault"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="选择 Vault 目录"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="文件名格式（如 yyyyMMdd_HHmmss）"
+                        android:layout_marginBottom="@dimen/spacing_sm">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/et_filename_format"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="yyyyMMdd_HHmmss" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 应用配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="应用配置"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_clean"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动删除已处理的音频文件"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_smart_tag"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="根据内容自动推荐标签"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 图片配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="图片配置"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="图片质量"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="@dimen/spacing_md">
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/slider_image_quality"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:valueFrom="1"
+                            android:valueTo="100"
+                            android:value="85"
+                            android:stepSize="1" />
+
+                        <TextView
+                            android:id="@+id/tv_image_quality"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="85"
+                            android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                            android:layout_marginStart="@dimen/spacing_sm"
+                            android:minWidth="40dp"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_edge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动透视校正（文档拍照）"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="透视校正灵敏度"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/slider_edge_threshold"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:valueFrom="0.0"
+                            android:valueTo="1.0"
+                            android:value="0.7"
+                            android:stepSize="0.05" />
+
+                        <TextView
+                            android:id="@+id/tv_edge_threshold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0.70"
+                            android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                            android:layout_marginStart="@dimen/spacing_sm"
+                            android:minWidth="40dp"
+                            android:gravity="end" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 离线队列配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="离线队列"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_retry"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="网络恢复时自动重试"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_wifi_only"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="仅在 WiFi 下同步"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 日志管理 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="日志管理"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_view_logs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="查看崩溃日志"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large.Bold"
+                        style="@style/Widget.App.Button.Outlined" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 保存按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/button_height_large"
+                android:text="保存设置"
+                android:textSize="16sp"
+                style="@style/Widget.Material3.Button" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

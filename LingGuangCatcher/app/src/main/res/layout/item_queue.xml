@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.App.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/spacing_md"
+    android:layout_marginBottom="@dimen/spacing_sm">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_md">
+
+        <!-- 头部信息 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 类型图标 -->
+            <ImageView
+                android:id="@+id/tv_type_icon"
+                android:layout_width="@dimen/icon_size_large"
+                android:layout_height="@dimen/icon_size_large"
+                android:src="@drawable/ic_camera"
+                app:tint="@color/md_theme_primary"
+                android:contentDescription="类型图标" />
+
+            <!-- 标题和时间 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/spacing_md"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="图片捕获"
+                    android:textAppearance="@style/TextAppearance.App.Title.Medium"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tv_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2分钟前"
+                    android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                    android:textColor="@color/neutral_500"
+                    android:layout_marginTop="@dimen/spacing_xs" />
+
+            </LinearLayout>
+
+            <!-- 状态标签 -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_status"
+                style="@style/Widget.App.Chip.Assist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="待处理"
+                android:textAppearance="@style/TextAppearance.App.Label.Medium" />
+
+        </LinearLayout>
+
+        <!-- 错误信息 -->
+        <TextView
+            android:id="@+id/tv_error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="错误: 网络连接失败"
+            android:textAppearance="@style/TextAppearance.App.Body.Small"
+            android:textColor="@color/error"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:visibility="gone" />
+
+        <!-- 重试次数 -->
+        <TextView
+            android:id="@+id/tv_retry_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="已重试 2 次"
+            android:textAppearance="@style/TextAppearance.App.Label.Medium"
+            android:textColor="@color/neutral_500"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:visibility="gone" />
+
+        <!-- 操作按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/spacing_md">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_retry"
+                style="@style/Widget.App.Button.Text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="重试"
+                android:textAppearance="@style/TextAppearance.App.Label.Large" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_delete"
+                style="@style/Widget.App.Button.Text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="删除"
+                android:textAppearance="@style/TextAppearance.App.Label.Large"
+                android:textColor="@color/error" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

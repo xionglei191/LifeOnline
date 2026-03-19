@@ -1,0 +1,465 @@
+<template>
+  <div class="dashboard">
+    <StateDisplay v-if="loading" type="loading" message="正在同步生命信号..." />
+    <StateDisplay v-else-if="error" type="error" :message="error.message" />
+    <div v-else-if="data" class="dashboard-layout">
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Life Signals / Today</p>
+          <h2>今天的重点不是做更多，而是把生命资源投向<span>正确的轨道</span>。</h2>
+          <p class="hero-summary">
+            当前共有 {{ totalOpenItems }} 项活跃事项，已完成率 {{ completionRate }}%，
+            {{ topDimensionLabel }} 正在占据最高关注度。
+          </p>
+        </div>
+
+        <div class="hero-metrics">
+          <article class="metric-tile accent">
+            <span class="metric-label">今日待办</span>
+            <strong>{{ data.todayTodos.length }}</strong>
+            <span class="metric-meta">需要你立即处理的任务队列</span>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">系统健康</span>
+            <strong>{{ averageHealth }}</strong>
+            <span class="metric-meta">八维度平均生命信号</span>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">本周重点</span>
+            <strong>{{ data.weeklyHighlights.length }}</strong>
+            <span class="metric-meta">持续追踪的高权重事项</span>
+          </article>
+          <article class="metric-tile">
+            <span class="metric-label">失衡维度</span>
+            <strong>{{ lowestDimensionLabel }}</strong>
+            <span class="metric-meta">优先补齐的系统短板</span>
+          </article>
+        </div>
+
+        <div class="signal-band">
+          <div
+            v-for="stat in rankedStats.slice(0, 4)"
+            :key="stat.dimension"
+            class="signal-chip"
+            :style="{ '--dimension-color': dimensionColor(stat.dimension) }"
+          >
+            <span class="signal-name">{{ dimensionLabel(stat.dimension) }}</span>
+            <span class="signal-track">
+              <span class="signal-fill" :style="{ width: `${stat.health_score}%` }"></span>
+            </span>
+            <span class="signal-score">{{ stat.health_score }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="data.inboxCount > 0" class="inbox-banner" @click="$router.push('/dimension/_inbox')">
+        <span class="inbox-icon">📥</span>
+        <span class="inbox-text">_Inbox 中有 <strong>{{ data.inboxCount }}</strong> 条待整理笔记</span>
+        <span class="inbox-action">前往整理 →</span>
+      </section>
+
+      <section v-if="scheduleHealth" class="schedule-health-banner" :class="{ warning: scheduleHealth.failing > 0 }">
+        <span class="sh-icon">{{ scheduleHealth.failing > 0 ? '⚠️' : '⏱️' }}</span>
+        <span class="sh-text">
+          定时任务：<strong>{{ scheduleHealth.active }}</strong> 个活跃
+          <template v-if="scheduleHealth.failing > 0">
+            / <strong class="sh-failing">{{ scheduleHealth.failing }}</strong> 个异常
+          </template>
+        </span>
+        <span v-if="scheduleHealth.failing > 0" class="sh-detail">
+          {{ scheduleHealth.failingSchedules.map(s => s.label).join('、') }}
+        </span>
+        <span class="sh-action" @click="$router.push('/settings')">前往设置 →</span>
+      </section>
+
+      <section class="mission-grid">
+        <div class="mission-column">
+          <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" @refresh="load" />
+          <WeeklyHighlights :highlights="data.weeklyHighlights" @selectNote="selectedNoteId = $event" />
+        </div>
+
+        <div class="signal-column">
+          <DimensionHealth :stats="data.dimensionStats" />
+          <AISuggestions />
+        </div>
+      </section>
+
+      <NoteDetail :noteId="selectedNoteId" @close="selectedNoteId = null" @deleted="handleDeleted" />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, onMounted } from 'vue';
+import { useDashboard } from '../composables/useDashboard';
+import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
+import TodayTodos from './TodayTodos.vue';
+import WeeklyHighlights from './WeeklyHighlights.vue';
+import DimensionHealth from './DimensionHealth.vue';
+import AISuggestions from './AISuggestions.vue';
+import NoteDetail from './NoteDetail.vue';
+import StateDisplay from './StateDisplay.vue';
+
+const { data, loading, error, load } = useDashboard();
+const selectedNoteId = ref<string | null>(null);
+const scheduleHealth = ref<ScheduleHealth | null>(null);
+
+const labels: Record<string, string> = {
+  health: '健康',
+  career: '事业',
+  finance: '财务',
+  learning: '学习',
+  relationship: '关系',
+  life: '生活',
+  hobby: '兴趣',
+  growth: '成长',
+};
+
+const colors: Record<string, string> = {
+  health: 'var(--dim-health)',
+  career: 'var(--dim-career)',
+  finance: 'var(--dim-finance)',
+  learning: 'var(--dim-learning)',
+  relationship: 'var(--dim-relationship)',
+  life: 'var(--dim-life)',
+  hobby: 'var(--dim-hobby)',
+  growth: 'var(--dim-growth)',
+};
+
+const rankedStats = computed(() => {
+  return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
+});
+
+const averageHealth = computed(() => {
+  const stats = data.value?.dimensionStats ?? [];
+  if (!stats.length) return 0;
+  return Math.round(stats.reduce((sum, item) => sum + item.health_score, 0) / stats.length);
+});
+
+const totalOpenItems = computed(() => {
+  const stats = data.value?.dimensionStats ?? [];
+  return stats.reduce((sum, item) => sum + item.pending + item.in_progress, 0);
+});
+
+const completionRate = computed(() => {
+  const stats = data.value?.dimensionStats ?? [];
+  const done = stats.reduce((sum, item) => sum + item.done, 0);
+  const total = stats.reduce((sum, item) => sum + item.total, 0);
+  return total ? Math.round((done / total) * 100) : 0;
+});
+
+const topDimensionLabel = computed(() => {
+  if (!rankedStats.value.length) return '系统整体';
+  return dimensionLabel(rankedStats.value[0].dimension);
+});
+
+const lowestDimensionLabel = computed(() => {
+  if (!rankedStats.value.length) return '无';
+  const lowest = rankedStats.value[rankedStats.value.length - 1];
+  return dimensionLabel(lowest.dimension);
+});
+
+function dimensionLabel(dim: string) {
+  return labels[dim] || dim;
+}
+
+function dimensionColor(dim: string) {
+  return colors[dim] || 'var(--signal)';
+}
+
+async function handleDeleted() {
+  selectedNoteId.value = null;
+  await load();
+}
+
+onMounted(() => {
+  load();
+  fetchScheduleHealth().then(h => { scheduleHealth.value = h; }).catch(() => {});
+});
+</script>
+
+<style scoped>
+.dashboard {
+  padding: 8px 0 32px;
+}
+
+.dashboard-layout {
+  display: grid;
+  gap: 20px;
+}
+
+.hero-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.95fr);
+  gap: 22px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--accent-soft) 92%, transparent), transparent 18%),
+    linear-gradient(140deg, color-mix(in srgb, var(--signal-soft) 48%, transparent), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 92%, transparent), color-mix(in srgb, var(--surface) 92%, transparent));
+  box-shadow: 0 28px 80px -42px var(--shadow-strong);
+}
+
+.hero-copy {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hero-copy h2 {
+  margin: 0;
+  max-width: 18ch;
+  font-family: "Avenir Next Condensed", "DIN Alternate", "PingFang SC", sans-serif;
+  font-size: clamp(1.68rem, 1.36rem + 1.25vw, 2.52rem);
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+  font-weight: 650;
+}
+
+.hero-copy h2 span {
+  color: var(--accent-strong);
+}
+
+.hero-summary {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.8;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-tile {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
+}
+
+.metric-tile.accent {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent),
+    color-mix(in srgb, var(--surface-strong) 85%, transparent);
+}
+
+.metric-label,
+.metric-meta {
+  color: var(--text-muted);
+}
+
+.metric-label {
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.metric-tile strong {
+  font-size: clamp(1.62rem, 1.4rem + 0.8vw, 2.18rem);
+  line-height: 1;
+}
+
+.metric-meta {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.signal-band {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.signal-chip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.signal-name,
+.signal-score {
+  font-weight: 600;
+}
+
+.signal-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dimension-color) 12%, var(--surface-muted));
+}
+
+.signal-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--dimension-color) 72%, white), var(--dimension-color));
+}
+
+.inbox-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface));
+  cursor: pointer;
+  transition: background 0.18s ease;
+  animation: inbox-pulse 2s ease-in-out infinite;
+}
+
+@keyframes inbox-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inbox-banner {
+    animation: none;
+  }
+}
+
+.inbox-banner:hover {
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+}
+
+.inbox-icon {
+  font-size: 1.2rem;
+}
+
+.inbox-text {
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.inbox-text strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.inbox-action {
+  font-size: 0.88rem;
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.mission-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.95fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.mission-column,
+.signal-column {
+  display: grid;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .hero-panel,
+  .mission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .hero-panel {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .hero-copy h2 {
+    max-width: none;
+  }
+
+  .hero-metrics,
+  .signal-band,
+  .mission-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.schedule-health-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-muted) 60%, var(--surface));
+  font-size: 0.95rem;
+}
+
+.schedule-health-banner.warning {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+.sh-icon {
+  font-size: 1.2rem;
+}
+
+.sh-text {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.sh-text strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.sh-failing {
+  color: var(--danger);
+}
+
+.sh-detail {
+  font-size: 0.85rem;
+  color: var(--danger);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sh-action {
+  font-size: 0.88rem;
+  color: var(--accent-strong);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+</style>

@@ -1,0 +1,470 @@
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse } from '@lifeos/shared';
+
+export interface SearchResult {
+  notes: Note[];
+  total: number;
+  query: string;
+}
+
+export interface IndexResult {
+  total: number;
+  indexed: number;
+  skipped: number;
+  deleted: number;
+  errors: string[];
+}
+
+export interface IndexStatus {
+  queueSize: number;
+  processing: boolean;
+  processingFile: string | null;
+}
+
+export interface IndexError {
+  filePath: string;
+  operation: string;
+  error: string;
+  timestamp: string;
+}
+
+const API_BASE = '/api';
+
+export async function fetchDashboard(): Promise<DashboardData> {
+  const res = await fetch(`${API_BASE}/dashboard`);
+  if (!res.ok) throw new Error('Failed to fetch dashboard');
+  return res.json();
+}
+
+export async function fetchNotes(filters?: { dimension?: string; status?: string; type?: string }): Promise<Note[]> {
+  const params = new URLSearchParams(filters as any);
+  const res = await fetch(`${API_BASE}/notes?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch notes');
+  return res.json();
+}
+
+export async function triggerIndex(): Promise<IndexResult> {
+  const res = await fetch(`${API_BASE}/index`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to trigger index');
+  return res.json();
+}
+
+export async function fetchIndexStatus(): Promise<IndexStatus> {
+  const res = await fetch(`${API_BASE}/index/status`);
+  if (!res.ok) throw new Error('Failed to fetch index status');
+  return res.json();
+}
+
+export async function fetchIndexErrors(): Promise<IndexError[]> {
+  const res = await fetch(`${API_BASE}/index/errors`);
+  if (!res.ok) throw new Error('Failed to fetch index errors');
+  return res.json();
+}
+
+export async function fetchTimeline(start: string, end: string): Promise<TimelineData> {
+  const params = new URLSearchParams({ start, end });
+  const res = await fetch(`${API_BASE}/timeline?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch timeline');
+  return res.json();
+}
+
+export async function fetchCalendar(year: number, month: number): Promise<CalendarData> {
+  const params = new URLSearchParams({ year: String(year), month: String(month) });
+  const res = await fetch(`${API_BASE}/calendar?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch calendar');
+  return res.json();
+}
+
+export async function fetchNoteById(id: string): Promise<Note> {
+  const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error('Failed to fetch note');
+  return res.json();
+}
+
+export async function searchNotes(query: string): Promise<SearchResult> {
+  const params = new URLSearchParams({ q: query });
+  const res = await fetch(`${API_BASE}/search?${params}`);
+  if (!res.ok) throw new Error('Failed to search notes');
+  return res.json();
+}
+
+export interface Config {
+  vaultPath: string;
+  port: number;
+}
+
+export async function fetchConfig(): Promise<Config> {
+  const res = await fetch(`${API_BASE}/config`);
+  if (!res.ok) throw new Error('Failed to fetch config');
+  return res.json();
+}
+
+export async function updateConfig(vaultPath: string): Promise<{ success: boolean; indexResult: any }> {
+  const res = await fetch(`${API_BASE}/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vaultPath }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'Failed to update config');
+  }
+  return res.json();
+}
+
+// AI API types
+export interface ClassifyResult {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  results: Array<{
+    file: string;
+    success: boolean;
+    dimension?: string;
+    type?: string;
+    tags?: string[];
+    newPath?: string;
+    error?: string;
+  }>;
+}
+
+export interface ExtractTasksResult {
+  tasks: Array<{
+    title: string;
+    due?: string;
+    priority: 'high' | 'medium' | 'low';
+    created?: boolean;
+    filePath?: string;
+  }>;
+  count: number;
+}
+
+export interface AISuggestion {
+  id: string;
+  type: 'balance' | 'overload' | 'goal' | 'reminder';
+  title: string;
+  content: string;
+  dimension?: string;
+  createdAt: string;
+}
+
+export interface WorkerTaskListResponse {
+  tasks: WorkerTask[];
+}
+
+export async function fetchAiPrompts(): Promise<PromptRecord[]> {
+  const res = await fetch(`${API_BASE}/ai/prompts`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch AI prompts');
+  }
+  return data.prompts || [];
+}
+
+export async function updateAiPrompt(key: PromptKey, payload: UpdatePromptRequest): Promise<PromptRecord> {
+  const res = await fetch(`${API_BASE}/ai/prompts/${encodeURIComponent(key)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to update AI prompt');
+  }
+  return data.prompt;
+}
+
+export async function resetAiPrompt(key: PromptKey): Promise<void> {
+  const res = await fetch(`${API_BASE}/ai/prompts/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to reset AI prompt');
+  }
+}
+
+export async function fetchAiProviderSettings(): Promise<AiProviderSettings> {
+  const res = await fetch(`${API_BASE}/ai/provider`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch AI provider settings');
+  }
+  return data;
+}
+
+export async function updateAiProviderSettings(payload: UpdateAiProviderSettingsRequest): Promise<AiProviderSettings> {
+  const res = await fetch(`${API_BASE}/ai/provider`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to update AI provider settings');
+  }
+  return data;
+}
+
+export async function testAiProviderConnection(payload: TestAiProviderConnectionRequest): Promise<TestAiProviderConnectionResponse> {
+  const res = await fetch(`${API_BASE}/ai/provider/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to test AI provider connection');
+  }
+  return data;
+}
+
+export async function createWorkerTask(request: CreateWorkerTaskRequest): Promise<WorkerTask> {
+  const res = await fetch(`${API_BASE}/worker-tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to create worker task');
+  }
+  return data.task;
+}
+
+export async function fetchWorkerTasks(
+  limit = 10,
+  options?: WorkerTaskListFilters
+): Promise<WorkerTask[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (options?.sourceNoteId) {
+    params.set('sourceNoteId', options.sourceNoteId);
+  }
+  if (options?.status) {
+    params.set('status', options.status);
+  }
+  if (options?.taskType) {
+    params.set('taskType', options.taskType);
+  }
+  if (options?.worker) {
+    params.set('worker', options.worker);
+  }
+  const res = await fetch(`${API_BASE}/worker-tasks?${params}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch worker tasks');
+  }
+  return data.tasks || [];
+}
+
+export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
+  const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch worker task');
+  }
+  return data.task;
+}
+
+export async function retryWorkerTask(id: string): Promise<WorkerTask> {
+  const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/retry`, {
+    method: 'POST',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to retry worker task');
+  }
+  return data.task;
+}
+
+export async function cancelWorkerTask(id: string): Promise<WorkerTask> {
+  const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/cancel`, {
+    method: 'POST',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to cancel worker task');
+  }
+  return data.task;
+}
+
+export async function clearFinishedWorkerTasks(): Promise<number> {
+  const res = await fetch(`${API_BASE}/worker-tasks/finished`, {
+    method: 'DELETE',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to clear worker tasks');
+  }
+  return data.deleted;
+}
+
+export async function classifyInbox(): Promise<ClassifyResult> {
+  const res = await fetch(`${API_BASE}/ai/classify-inbox`, { method: 'POST' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to classify inbox');
+  }
+  return res.json();
+}
+
+export async function extractTasks(noteId: string): Promise<ExtractTasksResult> {
+  const res = await fetch(`${API_BASE}/ai/extract-tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ noteId }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to extract tasks');
+  }
+  return res.json();
+}
+
+export async function fetchAISuggestions(): Promise<AISuggestion[]> {
+  const res = await fetch(`${API_BASE}/ai/suggestions`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// Phase 6: write-back API
+export async function updateNote(id: string, updates: { status?: string; priority?: string; tags?: string[]; approval_status?: string }): Promise<void> {
+  const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to update note');
+  }
+}
+
+export async function appendNote(id: string, text: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}/append`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to append note');
+  }
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to delete note');
+  }
+}
+
+export async function createNote(data: {
+  title: string;
+  dimension: string;
+  type?: string;
+  content?: string;
+  priority?: string;
+  tags?: string[];
+}): Promise<{ filePath: string }> {
+  const res = await fetch(`${API_BASE}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error || 'Failed to create note');
+  }
+  return res.json();
+}
+
+// Stats API
+export async function fetchStatsTrend(days = 30): Promise<Array<{ day: string; total: number; done: number }>> {
+  const res = await fetch(`${API_BASE}/stats/trend?days=${days}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchStatsRadar(): Promise<Array<{ dimension: string; rate: number; total: number; done: number }>> {
+  const res = await fetch(`${API_BASE}/stats/radar`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchStatsMonthly(): Promise<Array<{ month: string; total: number; done: number }>> {
+  const res = await fetch(`${API_BASE}/stats/monthly`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function fetchStatsTags(): Promise<Array<{ tag: string; count: number }>> {
+  const res = await fetch(`${API_BASE}/stats/tags`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// Task Schedules API
+export async function createTaskSchedule(req: CreateTaskScheduleRequest): Promise<TaskSchedule> {
+  const res = await fetch(`${API_BASE}/schedules`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to create schedule');
+  return data.schedule;
+}
+
+export async function fetchTaskSchedules(): Promise<TaskSchedule[]> {
+  const res = await fetch(`${API_BASE}/schedules`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch schedules');
+  return data.schedules || [];
+}
+
+export async function updateTaskSchedule(id: string, updates: UpdateTaskScheduleRequest): Promise<TaskSchedule> {
+  const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to update schedule');
+  return data.schedule;
+}
+
+export async function deleteTaskSchedule(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to delete schedule');
+  }
+}
+
+export async function runTaskScheduleNow(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}/run`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to run schedule');
+  }
+}
+
+export interface ScheduleHealth {
+  total: number;
+  active: number;
+  failing: number;
+  failingSchedules: Array<{ id: string; label: string; consecutiveFailures: number; lastError: string | null }>;
+}
+
+export async function fetchScheduleHealth(): Promise<ScheduleHealth> {
+  const res = await fetch(`${API_BASE}/schedules/health`);
+  if (!res.ok) return { total: 0, active: 0, failing: 0, failingSchedules: [] };
+  return res.json();
+}

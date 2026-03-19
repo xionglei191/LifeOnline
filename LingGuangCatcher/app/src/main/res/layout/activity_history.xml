@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+    <!-- Header -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.App.Toolbar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:title="捕获历史"
+        app:titleTextAppearance="@style/TextAppearance.App.Headline.Small"
+        app:navigationIcon="@drawable/ic_back"
+        app:navigationContentDescription="返回"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_select_all"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height_standard"
+            android:text="全选"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:visibility="gone"
+            android:layout_gravity="end"
+            android:layout_marginEnd="@dimen/spacing_sm" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cancel_selection"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height_standard"
+            android:text="取消"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:visibility="gone"
+            android:layout_gravity="end"
+            android:layout_marginEnd="@dimen/spacing_sm" />
+
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <!-- Search Bar -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_search"
+        style="@style/Widget.App.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:layout_marginEnd="@dimen/spacing_md"
+        android:layout_marginTop="@dimen/spacing_sm"
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:startIconContentDescription="搜索"
+        app:endIconMode="clear_text"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="搜索标题、内容、标签..."
+            android:textAppearance="@style/TextAppearance.App.Body.Large"
+            android:inputType="text"
+            android:imeOptions="actionSearch" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Search History -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_search_history"
+        style="@style/Widget.App.Card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:layout_marginEnd="@dimen/spacing_md"
+        android:layout_marginTop="@dimen/spacing_xs"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/til_search"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="@dimen/spacing_md"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="搜索历史"
+                    android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                    android:textColor="@color/on_surface_variant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_clear_history"
+                    style="@style/Widget.App.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="清空"
+                    android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="@dimen/spacing_sm"
+                    android:paddingEnd="@dimen/spacing_sm"
+                    android:paddingTop="@dimen/spacing_xs"
+                    android:paddingBottom="@dimen/spacing_xs" />
+
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_search_history"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxHeight="200dp" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Filter Chips -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_filter"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:layout_marginEnd="@dimen/spacing_md"
+        android:layout_marginTop="@dimen/spacing_md"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintTop_toBottomOf="@id/card_search_history"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_all"
+            style="@style/Widget.App.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="全部"
+            android:checked="true" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_image"
+            style="@style/Widget.App.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="图片"
+            app:chipIcon="@drawable/ic_camera"
+            app:chipIconSize="@dimen/icon_size_small"
+            app:chipIconTint="@color/capture_image" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_link"
+            style="@style/Widget.App.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="链接"
+            app:chipIcon="@drawable/ic_link"
+            app:chipIconSize="@dimen/icon_size_small"
+            app:chipIconTint="@color/capture_link" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_text"
+            style="@style/Widget.App.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="文本"
+            app:chipIcon="@drawable/ic_text"
+            app:chipIconSize="@dimen/icon_size_small"
+            app:chipIconTint="@color/capture_text" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Sort and Actions Bar -->
+    <LinearLayout
+        android:id="@+id/layout_actions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:layout_marginEnd="@dimen/spacing_md"
+        android:layout_marginTop="@dimen/spacing_md"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toBottomOf="@id/chip_group_filter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tv_count"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="共 0 条记录"
+            android:textAppearance="@style/TextAppearance.App.Body.Medium"
+            android:textColor="@color/neutral_500"
+            android:minHeight="36dp"
+            android:gravity="center_vertical" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_sort"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="排序"
+            android:textAppearance="@style/TextAppearance.App.Body.Medium"
+            android:minWidth="0dp"
+            android:minHeight="36dp"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingEnd="@dimen/spacing_md" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_filter"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="筛选"
+            android:textAppearance="@style/TextAppearance.App.Body.Medium"
+            android:minWidth="0dp"
+            android:minHeight="36dp"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingEnd="@dimen/spacing_md" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_batch_delete"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="批量删除"
+            android:textAppearance="@style/TextAppearance.App.Body.Medium"
+            android:textColor="@color/error"
+            android:minWidth="0dp"
+            android:minHeight="36dp"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingEnd="@dimen/spacing_md" />
+
+    </LinearLayout>
+
+    <!-- RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_history"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/spacing_sm"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/spacing_sm"
+        android:paddingBottom="@dimen/spacing_md"
+        app:layout_constraintTop_toBottomOf="@id/layout_actions"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layout_empty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/tv_empty_icon"
+            android:layout_width="@dimen/icon_size_empty_state"
+            android:layout_height="@dimen/icon_size_empty_state"
+            android:src="@drawable/ic_history"
+            app:tint="@color/neutral_300"
+            android:contentDescription="暂无记录" />
+
+        <TextView
+            android:id="@+id/tv_empty_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="暂无捕获记录"
+            android:textAppearance="@style/TextAppearance.App.Body.Large"
+            android:textColor="@color/neutral_500"
+            android:layout_marginTop="@dimen/spacing_md" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_clear_filters"
+            style="@style/Widget.App.Button.Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="重置筛选"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:visibility="gone"
+            android:layout_marginTop="@dimen/spacing_md" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

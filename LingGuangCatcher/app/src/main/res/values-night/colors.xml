@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors (Dark Mode) -->
+    <color name="md_theme_primary">#D0C7BB</color>
+    <color name="md_theme_onPrimary">#38332D</color>
+    <color name="md_theme_primaryContainer">#514A43</color>
+    <color name="md_theme_onPrimaryContainer">#F1EBE2</color>
+
+    <!-- Secondary Colors (Dark Mode) -->
+    <color name="md_theme_secondary">#D1C8BE</color>
+    <color name="md_theme_onSecondary">#37322D</color>
+    <color name="md_theme_secondaryContainer">#4B443D</color>
+    <color name="md_theme_onSecondaryContainer">#F1EBE3</color>
+
+    <!-- Semantic Colors (Dark Mode) -->
+    <color name="success">#A9B89E</color>
+    <color name="success_container">#263126</color>
+    <color name="warning">#C4AE92</color>
+    <color name="warning_container">#372C24</color>
+    <color name="error">#C9A39D</color>
+    <color name="error_container">#392A28</color>
+
+    <!-- Tinted Neutrals (Dark Mode) -->
+    <color name="neutral_50">#201D1A</color>
+    <color name="neutral_100">#2B2724</color>
+    <color name="neutral_200">#47413B</color>
+    <color name="neutral_300">#615952</color>
+    <color name="neutral_400">#847A70</color>
+    <color name="neutral_500">#ACA397</color>
+    <color name="neutral_600">#D2CBC1</color>
+    <color name="neutral_700">#E4DDD4</color>
+    <color name="neutral_800">#F0ECE6</color>
+    <color name="neutral_900">#F7F4EF</color>
+
+    <!-- Surface Colors (Dark Mode) -->
+    <color name="surface">#181614</color>
+    <color name="surface_variant">#26221F</color>
+    <color name="surface_elevated">#2D2825</color>
+    <color name="on_surface">#ECE6DE</color>
+    <color name="on_surface_variant">#C9C0B5</color>
+
+    <!-- Camera UI (Dark Mode - same as light) -->
+    <color name="camera_background">#000000</color>
+    <color name="camera_accent">#FFD60A</color>
+    <color name="camera_text">#FFFFFF</color>
+    <color name="camera_text_secondary">#AAAAAA</color>
+
+    <!-- Floating Bubble (Dark Mode) -->
+    <color name="bubble_main_start">#78FBFCFD</color>
+    <color name="bubble_main_center">#78D8DEE2</color>
+    <color name="bubble_main_end">#78909AA3</color>
+    <color name="bubble_mini_start">#8FFEFEFE</color>
+    <color name="bubble_mini_center">#8FE3E8EB</color>
+    <color name="bubble_mini_end">#8FAAB4BC</color>
+    <color name="bubble_stroke">#06FFFFFF</color>
+    <color name="bubble_highlight">#F2FFFFFF</color>
+    <color name="bubble_icon_tint">#FFFFFF</color>
+    <color name="bubble_mini_icon_tint">#43484D</color>
+
+    <!-- Capture Type Colors (Dark Mode) -->
+    <color name="capture_image">#9FB6C3</color>
+    <color name="capture_image_container">#24313A</color>
+    <color name="capture_voice">#C7A09C</color>
+    <color name="capture_voice_container">#392A28</color>
+    <color name="capture_link">#A7B79A</color>
+    <color name="capture_link_container">#263026</color>
+    <color name="capture_text">#CAB193</color>
+    <color name="capture_text_container">#3A3026</color>
+</resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.App.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/spacing_md"
+    android:layout_marginVertical="@dimen/spacing_xs"
+    app:cardBackgroundColor="@color/surface_variant">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:gravity="center_vertical">
+
+        <!-- 序号 -->
+        <TextView
+            android:id="@+id/tvSegmentIndex"
+            android:layout_width="@dimen/icon_size_large"
+            android:layout_height="@dimen/icon_size_large"
+            android:gravity="center"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textColor="@color/md_theme_onPrimary"
+            android:background="@drawable/bg_segment_index" />
+
+        <!-- 内容区 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="@dimen/spacing_md">
+
+            <TextView
+                android:id="@+id/tvTranscription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.App.Body.Large"
+                android:textColor="@color/on_surface"
+                android:maxLines="3"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/tvDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                android:textColor="@color/on_surface_variant"
+                android:layout_marginTop="@dimen/spacing_xs" />
+        </LinearLayout>
+
+        <!-- 编辑按钮 -->
+        <ImageButton
+            android:id="@+id/btnEdit"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@android:drawable/ic_menu_edit"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/on_surface_variant"
+            android:contentDescription="编辑"
+            android:layout_marginStart="@dimen/spacing_xs" />
+
+        <!-- 删除按钮 -->
+        <ImageButton
+            android:id="@+id/btnDelete"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/error"
+            android:contentDescription="删除"
+            android:layout_marginStart="@dimen/spacing_xs" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

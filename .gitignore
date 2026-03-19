@@ -1,0 +1,32 @@
+# Node / pnpm
+**/node_modules/
+**/dist/
+**/.turbo/
+
+# SQLite
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+
+# Gradle / Android
+**/.gradle/
+**/build/
+**/local.properties
+
+# Logs
+*.log
+**/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

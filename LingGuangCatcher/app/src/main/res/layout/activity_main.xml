@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface"
+    tools:context=".ui.MainActivity">
+
+    <!-- App Title -->
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="灵光捕手"
+        android:textAppearance="@style/TextAppearance.App.Headline.Large"
+        android:letterSpacing="-0.02"
+        android:layout_marginTop="32dp"
+        android:layout_marginStart="@dimen/spacing_lg"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Icon Row -->
+    <LinearLayout
+        android:id="@+id/header_icons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|end"
+        android:layout_marginTop="@dimen/spacing_sm"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:background="@drawable/bg_segmented_group"
+        app:layout_constraintTop_toBottomOf="@id/tv_title"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_history"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="历史记录"
+            app:icon="@drawable/ic_history"
+            app:iconTint="@color/on_surface"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.IconButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_bubble"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
+            android:contentDescription="悬浮气泡"
+            app:icon="@drawable/ic_bubble"
+            app:iconTint="@color/on_surface"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.IconButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_export"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="导出"
+            app:icon="@drawable/ic_export"
+            app:iconTint="@color/on_surface"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.IconButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_settings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="设置"
+            app:icon="@drawable/ic_settings"
+            app:iconTint="@color/on_surface"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.Material3.Button.IconButton" />
+
+    </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_vault_status"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_sm"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        style="@style/Widget.App.CardView.Outlined"
+        app:cardBackgroundColor="@color/surface_elevated"
+        app:layout_constraintTop_toBottomOf="@id/header_icons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tv_vault_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="未连接 Obsidian"
+            android:textAppearance="@style/TextAppearance.App.Body.Medium"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingTop="@dimen/spacing_sm"
+            android:paddingEnd="@dimen/spacing_md"
+            android:paddingBottom="@dimen/spacing_sm" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Queue Status Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_queue_status"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_md"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        android:visibility="gone"
+        style="@style/Widget.App.CardView.Outlined"
+        app:cardBackgroundColor="@color/warning_container"
+        app:strokeColor="@color/warning"
+        app:layout_constraintTop_toBottomOf="@id/card_vault_status"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingEnd="@dimen/spacing_xs"
+            android:paddingTop="@dimen/spacing_xs"
+            android:paddingBottom="@dimen/spacing_xs">
+
+            <TextView
+                android:id="@+id/tv_queue_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0 条笔记待同步"
+                android:textAppearance="@style/TextAppearance.App.Body.Large" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_retry_queue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="重试"
+                style="@style/Widget.App.Button.Text"
+                android:minWidth="0dp"
+                android:paddingStart="@dimen/spacing_md"
+                android:paddingEnd="@dimen/spacing_md" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Action Buttons Grid -->
+    <GridLayout
+        android:id="@+id/action_buttons"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="2"
+        android:alignmentMode="alignMargins"
+        android:useDefaultMargins="false"
+        android:layout_marginTop="@dimen/spacing_lg"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        app:layout_constraintTop_toBottomOf="@id/card_queue_status"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Camera Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_camera_capture"
+            android:layout_width="0dp"
+            android:layout_height="104dp"
+            android:layout_columnWeight="1"
+            android:contentDescription="拍照捕获"
+            android:text="拍照"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textSize="17sp"
+            app:icon="@drawable/ic_camera"
+            app:iconSize="28dp"
+            app:iconGravity="textTop"
+            app:iconPadding="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:layout_marginBottom="@dimen/spacing_sm"
+            style="@style/Widget.App.Button.Outlined"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:iconTint="@color/capture_image"
+            app:strokeColor="@color/neutral_300" />
+
+        <!-- Voice Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_voice_capture"
+            android:layout_width="0dp"
+            android:layout_height="104dp"
+            android:layout_columnWeight="1"
+            android:contentDescription="语音捕获"
+            android:text="语音"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textSize="17sp"
+            app:icon="@drawable/ic_microphone"
+            app:iconSize="28dp"
+            app:iconGravity="textTop"
+            app:iconPadding="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginBottom="@dimen/spacing_sm"
+            style="@style/Widget.App.Button.Outlined"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:strokeColor="@color/neutral_300"
+            app:iconTint="@color/capture_voice" />
+
+        <!-- Link Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_link_capture"
+            android:layout_width="0dp"
+            android:layout_height="104dp"
+            android:layout_columnWeight="1"
+            android:contentDescription="链接捕获"
+            android:text="链接"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textSize="17sp"
+            app:icon="@drawable/ic_link"
+            app:iconSize="28dp"
+            app:iconGravity="textTop"
+            app:iconPadding="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            style="@style/Widget.App.Button.Outlined"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:strokeColor="@color/neutral_300"
+            app:iconTint="@color/capture_link" />
+
+        <!-- Text Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_text_capture"
+            android:layout_width="0dp"
+            android:layout_height="104dp"
+            android:layout_columnWeight="1"
+            android:contentDescription="文本捕获"
+            android:text="文本"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textSize="17sp"
+            app:icon="@drawable/ic_text"
+            app:iconSize="28dp"
+            app:iconGravity="textTop"
+            app:iconPadding="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            style="@style/Widget.App.Button.Outlined"
+            app:cornerRadius="@dimen/button_corner_radius"
+            app:strokeColor="@color/neutral_300"
+            app:iconTint="@color/capture_text" />
+
+    </GridLayout>
+
+    <LinearLayout
+        android:id="@+id/result_header"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="@dimen/spacing_xl"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        app:layout_constraintTop_toBottomOf="@id/action_buttons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tv_result_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="最近捕获"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium" />
+
+        <TextView
+            android:id="@+id/tv_result_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:text="最近一条内容会显示在这里"
+            android:textAppearance="@style/TextAppearance.App.Label.Medium"
+            android:textColor="@color/on_surface_variant" />
+
+    </LinearLayout>
+
+    <!-- Result Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_result"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/spacing_md"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        android:layout_marginBottom="@dimen/spacing_lg"
+        style="@style/Widget.App.Card"
+        app:cardBackgroundColor="@color/surface_elevated"
+        app:layout_constraintTop_toBottomOf="@id/result_header"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ScrollView
+            android:id="@+id/scroll_result"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="vertical">
+
+            <TextView
+                android:id="@+id/tv_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="点击下方按钮开始捕获"
+                android:textAppearance="@style/TextAppearance.App.Body.Medium"
+                android:textColor="@color/on_surface_variant"
+                android:lineSpacingExtra="4dp"
+                android:padding="@dimen/spacing_md" />
+
+        </ScrollView>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

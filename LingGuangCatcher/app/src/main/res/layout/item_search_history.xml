@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="@dimen/spacing_md"
+    android:gravity="center_vertical"
+    android:minHeight="@dimen/button_height_standard"
+    android:background="?attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tv_history_item"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.App.Body.Large"
+        android:textColor="@color/on_surface"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <ImageButton
+        android:id="@+id/btn_delete_history"
+        android:layout_width="@dimen/button_height_standard"
+        android:layout_height="@dimen/button_height_standard"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:tint="@color/on_surface_variant"
+        android:contentDescription="删除" />
+
+</LinearLayout>

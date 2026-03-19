@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- 取景器 / 预览图（全屏） -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:scaleType="fillCenter"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bar_viewfinder"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 网格线 -->
+    <com.lingguang.catcher.ui.GridOverlayView
+        android:id="@+id/grid_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/preview_view"
+        app:layout_constraintBottom_toBottomOf="@id/preview_view"
+        app:layout_constraintStart_toStartOf="@id/preview_view"
+        app:layout_constraintEnd_toEndOf="@id/preview_view" />
+
+    <!-- 顶部控制栏 -->
+    <LinearLayout
+        android:id="@+id/top_controls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 闪光灯按钮 -->
+        <ImageButton
+            android:id="@+id/btn_flash"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@drawable/ic_power"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/camera_text"
+            android:contentDescription="闪光灯" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- 网格线按钮 -->
+        <ImageButton
+            android:id="@+id/btn_grid"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@drawable/ic_settings"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/camera_text"
+            android:contentDescription="网格线" />
+
+        <!-- 切换摄像头按钮 -->
+        <ImageButton
+            android:id="@+id/btn_switch_camera"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@drawable/ic_camera"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/camera_text"
+            android:contentDescription="切换摄像头" />
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/iv_preview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitCenter"
+        android:background="@color/camera_background"
+        android:visibility="gone"
+        android:contentDescription="照片预览"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bar_viewfinder"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 录音说明界面 -->
+    <LinearLayout
+        android:id="@+id/layout_voice_hint"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#DD000000"
+        android:visibility="gone"
+        android:padding="@dimen/spacing_lg"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bar_viewfinder"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="@dimen/icon_size_xlarge"
+            android:layout_height="@dimen/icon_size_xlarge"
+            android:src="@drawable/ic_microphone"
+            app:tint="@color/camera_text"
+            android:contentDescription="录音" />
+
+        <TextView
+            android:id="@+id/tv_voice_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="按住录音，描述这张照片"
+            android:textColor="@color/camera_text"
+            android:textAppearance="@style/TextAppearance.App.Title.Large"
+            android:gravity="center"
+            android:layout_marginTop="@dimen/spacing_md" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="可选，松开结束"
+            android:textColor="@color/camera_text_secondary"
+            android:textAppearance="@style/TextAppearance.App.Body.Large"
+            android:gravity="center"
+            android:layout_marginTop="@dimen/spacing_sm" />
+
+    </LinearLayout>
+
+    <!-- 取景器底部控制栏 -->
+    <LinearLayout
+        android:id="@+id/bar_viewfinder"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/bottom_action_bar_height"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/camera_background"
+        android:paddingStart="@dimen/spacing_lg"
+        android:paddingEnd="@dimen/spacing_lg"
+        android:paddingTop="@dimen/spacing_md"
+        android:paddingBottom="@dimen/spacing_lg"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 取消 -->
+        <TextView
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/touch_target_min"
+            android:layout_weight="1"
+            android:text="取消"
+            android:textColor="@color/camera_text"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium"
+            android:gravity="start|center_vertical"
+            android:paddingStart="@dimen/spacing_sm"
+            android:paddingEnd="@dimen/spacing_sm"
+            android:background="?attr/selectableItemBackground" />
+
+        <!-- 快门按钮 -->
+        <FrameLayout
+            android:layout_width="@dimen/shutter_button_size"
+            android:layout_height="@dimen/shutter_button_size">
+
+            <View
+                android:layout_width="@dimen/shutter_button_size"
+                android:layout_height="@dimen/shutter_button_size"
+                android:background="@drawable/shutter_ring" />
+
+            <View
+                android:id="@+id/btn_capture"
+                android:layout_width="@dimen/shutter_inner_size"
+                android:layout_height="@dimen/shutter_inner_size"
+                android:layout_gravity="center"
+                android:background="@drawable/shutter_inner"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="拍照" />
+
+        </FrameLayout>
+
+        <!-- 占位 -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <!-- 预览确认底部控制栏 -->
+    <LinearLayout
+        android:id="@+id/bar_preview"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/bottom_action_bar_height"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/camera_background"
+        android:paddingStart="@dimen/spacing_lg"
+        android:paddingEnd="@dimen/spacing_lg"
+        android:paddingTop="@dimen/spacing_md"
+        android:paddingBottom="@dimen/spacing_lg"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/btn_retake"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/touch_target_min"
+            android:layout_weight="1"
+            android:text="重拍"
+            android:textColor="@color/camera_text"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium"
+            android:gravity="start|center_vertical"
+            android:paddingStart="@dimen/spacing_sm"
+            android:paddingEnd="@dimen/spacing_sm"
+            android:background="?attr/selectableItemBackground" />
+
+        <TextView
+            android:id="@+id/btn_confirm"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/touch_target_min"
+            android:layout_weight="1"
+            android:text="使用照片"
+            android:textColor="@color/camera_accent"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium"
+            android:gravity="end|center_vertical"
+            android:paddingStart="@dimen/spacing_sm"
+            android:paddingEnd="@dimen/spacing_sm"
+            android:background="?attr/selectableItemBackground" />
+
+    </LinearLayout>
+
+    <!-- 录音说明底部控制栏 -->
+    <LinearLayout
+        android:id="@+id/bar_voice"
+        android:layout_width="0dp"
+        android:layout_height="100dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/camera_background"
+        android:paddingStart="@dimen/spacing_xl"
+        android:paddingEnd="@dimen/spacing_xl"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/btn_skip_voice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="跳过"
+            android:textColor="@color/camera_text_secondary"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium"
+            android:gravity="start|center_vertical"
+            android:padding="@dimen/spacing_sm"
+            android:background="?attr/selectableItemBackground" />
+
+        <!-- 录音按钮 -->
+        <View
+            android:id="@+id/btn_record_voice"
+            android:layout_width="@dimen/record_button_size"
+            android:layout_height="@dimen/record_button_size"
+            android:background="@drawable/record_button"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="录音" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_processing"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="正在识别图片内容..."
+        android:textColor="@color/camera_text"
+        android:textAppearance="@style/TextAppearance.App.Body.Large"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bar_viewfinder"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

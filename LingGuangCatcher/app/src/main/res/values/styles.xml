@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================
+         TEXT APPEARANCE SCALE
+         Naming convention: TextAppearance.App.<Role>.<Size>
+         Role: Headline / Title / Body / Label
+         Size: Large / Medium / Small
+    ============================================================ -->
+
+    <!-- Headline -->
+    <style name="TextAppearance.App.Headline.Large" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:textSize">@dimen/text_headline_large</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Headline.Medium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textSize">@dimen/text_headline_medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Headline.Small" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textSize">@dimen/text_headline_small</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Title -->
+    <style name="TextAppearance.App.Title.Large" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">@dimen/text_title_large</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Title.Medium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">@dimen/text_title_medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Title.Small" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">@dimen/text_title_small</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Body -->
+    <style name="TextAppearance.App.Body.Large" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">@dimen/text_body_large</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.Body.Large.Bold">
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Body.Medium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">@dimen/text_body_medium</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.App.Body.Small" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">@dimen/text_body_small</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <!-- Label -->
+    <style name="TextAppearance.App.Label.Large" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">@dimen/text_label_large</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.App.Label.Medium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">@dimen/text_label_medium</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.App.Label.Small" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">@dimen/text_label_small</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <!-- ============================================================
+         BUTTON STYLES
+    ============================================================ -->
+
+    <style name="Widget.App.Button" parent="Widget.Material3.Button">
+        <item name="android:minHeight">@dimen/button_height_standard</item>
+        <item name="cornerRadius">@dimen/button_corner_radius</item>
+        <item name="android:textSize">@dimen/text_label_large</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="backgroundTint">@color/md_theme_primary</item>
+        <item name="android:textColor">@color/md_theme_onPrimary</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="Widget.App.Button.Large">
+        <item name="android:minHeight">@dimen/button_height_large</item>
+    </style>
+
+    <style name="Widget.App.Button.XLarge">
+        <item name="android:minHeight">@dimen/button_height_xlarge</item>
+        <item name="android:textSize">@dimen/text_title_medium</item>
+    </style>
+
+    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/button_height_standard</item>
+        <item name="cornerRadius">@dimen/button_corner_radius</item>
+        <item name="strokeColor">@color/button_outlined_stroke</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
+        <item name="backgroundTint">@color/button_outlined_background</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="rippleColor">@color/md_theme_primaryContainer</item>
+    </style>
+
+    <style name="Widget.App.Button.Segmented" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/button_height_standard</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="backgroundTint">@color/segmented_button_background</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
+        <item name="rippleColor">@color/md_theme_primaryContainer</item>
+    </style>
+
+    <style name="Widget.App.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">@dimen/button_height_standard</item>
+        <item name="android:textColor">@color/md_theme_primary</item>
+    </style>
+
+    <!-- Icon button for toolbar/header use -->
+    <style name="Widget.App.IconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">@dimen/touch_target_min</item>
+        <item name="android:minHeight">@dimen/touch_target_min</item>
+    </style>
+
+    <!-- ============================================================
+         CARD STYLES
+    ============================================================ -->
+
+    <!-- Elevated card (default) -->
+    <style name="Widget.App.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
+        <item name="cardBackgroundColor">@color/surface_elevated</item>
+    </style>
+
+    <!-- Outlined card (no elevation, with border) -->
+    <style name="Widget.App.CardView.Outlined" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/neutral_200</item>
+    </style>
+
+    <!-- Section card (for settings/form sections) -->
+    <style name="Widget.App.Card.Section" parent="Widget.App.Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">@dimen/spacing_md</item>
+    </style>
+
+    <!-- ============================================================
+         TOOLBAR STYLES
+    ============================================================ -->
+
+    <style name="Widget.App.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="titleTextAppearance">@style/TextAppearance.App.Title.Large</item>
+        <item name="android:background">@color/surface</item>
+        <item name="titleTextColor">@color/on_surface</item>
+    </style>
+
+    <!-- ============================================================
+         INPUT STYLES
+    ============================================================ -->
+
+    <style name="Widget.App.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">@dimen/card_corner_radius</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/card_corner_radius</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/card_corner_radius</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/card_corner_radius</item>
+        <item name="boxBackgroundColor">@color/surface_elevated</item>
+        <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="hintTextColor">@color/on_surface_variant</item>
+    </style>
+
+    <!-- ============================================================
+         CHIP STYLES
+    ============================================================ -->
+
+    <style name="Widget.App.Chip" parent="Widget.Material3.Chip.Assist">
+        <item name="chipCornerRadius">@dimen/chip_corner_radius</item>
+        <item name="android:textSize">@dimen/text_label_large</item>
+    </style>
+
+    <style name="Widget.App.Chip.Assist" parent="Widget.Material3.Chip.Assist">
+        <item name="chipCornerRadius">@dimen/chip_corner_radius</item>
+        <item name="android:textSize">@dimen/text_label_medium</item>
+    </style>
+
+    <style name="Widget.App.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipCornerRadius">@dimen/chip_corner_radius</item>
+        <item name="android:textSize">@dimen/text_label_large</item>
+        <item name="chipBackgroundColor">@color/chip_filter_background</item>
+        <item name="chipStrokeColor">@color/chip_filter_stroke</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/chip_filter_text</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+</resources>

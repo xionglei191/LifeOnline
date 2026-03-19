@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors -->
+    <color name="md_theme_primary">#6E6961</color>
+    <color name="md_theme_onPrimary">#F6F4F0</color>
+    <color name="md_theme_primaryContainer">#E8E2D9</color>
+    <color name="md_theme_onPrimaryContainer">#27231E</color>
+
+    <!-- Secondary Colors -->
+    <color name="md_theme_secondary">#7D756B</color>
+    <color name="md_theme_onSecondary">#F6F4F0</color>
+    <color name="md_theme_secondaryContainer">#E9E4DD</color>
+    <color name="md_theme_onSecondaryContainer">#26221D</color>
+
+    <!-- Semantic Colors -->
+    <color name="success">#5C7259</color>
+    <color name="success_container">#E6ECE2</color>
+    <color name="warning">#8A6F52</color>
+    <color name="warning_container">#F0E7DC</color>
+    <color name="error">#8B5F5A</color>
+    <color name="error_container">#F1E4E1</color>
+
+    <!-- Tinted Neutrals (warm-tinted for friendliness) -->
+    <color name="neutral_50">#F8F6F2</color>
+    <color name="neutral_100">#F2EFE9</color>
+    <color name="neutral_200">#E6E0D8</color>
+    <color name="neutral_300">#D5CEC4</color>
+    <color name="neutral_400">#B2A99E</color>
+    <color name="neutral_500">#8A8177</color>
+    <color name="neutral_600">#675F57</color>
+    <color name="neutral_700">#514A43</color>
+    <color name="neutral_800">#322E2A</color>
+    <color name="neutral_900">#201D1A</color>
+
+    <!-- Surface Colors -->
+    <color name="surface">#F6F4F0</color>
+    <color name="surface_variant">#ECE8E1</color>
+    <color name="surface_elevated">#FBF9F5</color>
+    <color name="on_surface">#201D1A</color>
+    <color name="on_surface_variant">#5D564F</color>
+
+    <!-- Basic Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Camera UI -->
+    <color name="camera_background">#000000</color>
+    <color name="camera_accent">#FFD60A</color>
+    <color name="camera_text">#FFFFFF</color>
+    <color name="camera_text_secondary">#AAAAAA</color>
+
+    <!-- Floating Bubble -->
+    <color name="bubble_main_start">#78FEFFFE</color>
+    <color name="bubble_main_center">#78F4F7F8</color>
+    <color name="bubble_main_end">#78D7DEE2</color>
+    <color name="bubble_mini_start">#8FFFFFFF</color>
+    <color name="bubble_mini_center">#8FF5F8F9</color>
+    <color name="bubble_mini_end">#8FE0E6EA</color>
+    <color name="bubble_stroke">#08FFFFFF</color>
+    <color name="bubble_highlight">#FFFFFFFF</color>
+    <color name="bubble_icon_tint">#FCFDFE</color>
+    <color name="bubble_mini_icon_tint">#4E5358</color>
+
+    <!-- Capture Type Colors (四色区分捕获类型) -->
+    <!-- 图片 → 蓝色：清晰、视觉感 -->
+    <color name="capture_image">#5F7887</color>
+    <color name="capture_image_container">#E4EBEF</color>
+    <!-- 语音 → 红色：录音、热情 -->
+    <color name="capture_voice">#8B5E5A</color>
+    <color name="capture_voice_container">#F1E5E3</color>
+    <!-- 链接 → 绿色：连接、生长 -->
+    <color name="capture_link">#66765B</color>
+    <color name="capture_link_container">#E7EDE2</color>
+    <!-- 文本 → 橙色：书写、温暖 -->
+    <color name="capture_text">#8B7358</color>
+    <color name="capture_text_container">#F2E9DE</color>
+</resources>

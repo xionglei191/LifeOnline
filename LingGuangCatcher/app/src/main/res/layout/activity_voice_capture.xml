@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface">
+
+    <!-- 顶部标题栏 -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.App.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="语音捕获"
+        app:titleTextAppearance="@style/TextAppearance.App.Headline.Small"
+        app:navigationIcon="@drawable/ic_back"
+        app:navigationContentDescription="返回"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 录音状态显示 -->
+    <ScrollView
+        android:id="@+id/scrollContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toTopOf="@id/layoutButtons"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+    <LinearLayout
+        android:id="@+id/layoutRecordingStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_lg"
+        android:gravity="center">
+
+        <!-- 录音图标 -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.App.Card"
+            android:layout_width="120dp"
+            android:layout_height="@dimen/bottom_action_bar_height"
+            android:layout_marginBottom="@dimen/spacing_lg"
+            app:cardCornerRadius="60dp"
+            app:cardElevation="@dimen/card_elevation"
+            app:cardBackgroundColor="@color/surface_variant">
+
+            <ImageView
+                android:id="@+id/ivMicrophone"
+                android:layout_width="@dimen/icon_size_xlarge"
+                android:layout_height="@dimen/icon_size_xlarge"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_microphone"
+                app:tint="@color/md_theme_primary"
+                android:contentDescription="麦克风" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 状态文字 -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="点击下方按钮开始录音"
+            android:textAppearance="@style/TextAppearance.App.Headline.Small"
+            android:textColor="@color/on_surface"
+            android:layout_marginBottom="@dimen/spacing_sm" />
+
+        <!-- 录音时长 -->
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/md_theme_primary"
+            android:fontFamily="monospace"
+            android:visibility="gone"
+            android:layout_marginBottom="@dimen/spacing_md" />
+
+        <!-- 波形可视化 -->
+        <com.lingguang.catcher.ui.WaveformView
+            android:id="@+id/waveformView"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginBottom="@dimen/spacing_sm"
+            android:visibility="gone" />
+
+        <!-- 头脑风暴入口 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBrainstorm"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:text="头脑风暴"
+            android:textAppearance="@style/TextAppearance.App.Label.Large"
+            android:textColor="@color/capture_voice"
+            android:contentDescription="头脑风暴"
+            android:paddingStart="@dimen/spacing_md"
+            android:paddingEnd="@dimen/spacing_md"
+            app:icon="@drawable/ic_brainstorm_orb"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:iconSize="28dp"
+            app:iconTint="@null"
+            app:backgroundTint="@color/surface_elevated"
+            app:strokeColor="@color/neutral_200" />
+
+        <!-- 转录结果显示 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardTranscription"
+            style="@style/Widget.App.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/surface_variant">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_sm">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size_small"
+                        android:layout_height="@dimen/icon_size_small"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/success"
+                        android:contentDescription="识别完成" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="识别结果"
+                        android:textAppearance="@style/TextAppearance.App.Label.Large"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_marginStart="@dimen/spacing_sm" />
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.App.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="识别的文字内容">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/tvTranscription"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/text_input_min_height"
+                        android:gravity="top|start"
+                        android:inputType="textMultiLine"
+                        android:textAppearance="@style/TextAppearance.App.Body.Large"
+                        android:textColor="@color/on_surface"
+                        android:lineSpacingExtra="4dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="可以编辑识别结果后再确认"
+                    android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                    android:textColor="@color/on_surface_variant"
+                    android:layout_marginTop="@dimen/spacing_sm" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 标签选择 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardNoteType"
+            style="@style/Widget.App.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/surface_variant">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_md">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size_small"
+                        android:layout_height="@dimen/icon_size_small"
+                        android:src="@drawable/ic_tag"
+                        app:tint="@color/md_theme_primary"
+                        android:contentDescription="标签" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="选择笔记类型"
+                        android:textAppearance="@style/TextAppearance.App.Label.Large"
+                        android:textColor="@color/on_surface_variant"
+                        android:layout_marginStart="@dimen/spacing_sm" />
+                </LinearLayout>
+
+                <!-- 12 种笔记类型网格 -->
+                <LinearLayout
+                    android:id="@+id/layoutNoteTypes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- 第一行 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeInspiration"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="💡 灵感"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeTask"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="📝 任务"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeSchedule"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="📅 日程"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+                    </LinearLayout>
+
+                    <!-- 第二行 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeLearning"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="📚 学习"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeThought"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="💭 随想"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeExcerpt"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="🔖 摘录"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+                    </LinearLayout>
+
+                    <!-- 第三行 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="4dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeGoal"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="🎯 目标"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeQuestion"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="❓ 问题"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeContact"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="🤝 人脉"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+                    </LinearLayout>
+
+                    <!-- 第四行 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeLife"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="🏠 生活"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeWork"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="💼 工作"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTypeBrainstorm"
+                            style="@style/Widget.App.Button.Outlined"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="🧠 风暴"
+                            android:textSize="13sp"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="不同类型会生成不同格式的笔记"
+                    android:textAppearance="@style/TextAppearance.App.Label.Medium"
+                    android:textColor="@color/on_surface_variant"
+                    android:layout_marginTop="@dimen/spacing_sm" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+    </ScrollView>
+
+    <!-- 底部按钮 -->
+    <LinearLayout
+        android:id="@+id/layoutButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- 取消按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:text="取消"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium" />
+
+        <!-- 暂停/继续按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPause"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:text="暂停"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium"
+            android:visibility="gone" />
+
+        <!-- 录音/停止按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRecord"
+            style="@style/Widget.App.Button"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height_large"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:text="开始录音"
+            android:textAppearance="@style/TextAppearance.App.Title.Medium" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

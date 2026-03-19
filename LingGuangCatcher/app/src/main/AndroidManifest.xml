@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 基础权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
+    <!-- 文件访问权限 (SAF) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+
+    <application
+        android:name=".CatcherApplication"
+        android:allowBackup="true"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LingGuangCatcher"
+        tools:targetApi="31">
+
+        <!-- 主界面 (极简配置界面) -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LingGuangCatcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 分享接收器 (Share Sheet) -->
+        <activity
+            android:name=".ui.ShareReceiverActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LingGuangCatcher.Transparent"
+            android:excludeFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- 语音录制 Activity -->
+        <activity
+            android:name=".ui.VoiceCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher.Transparent"
+            android:excludeFromRecents="true" />
+
+        <!-- 头脑风暴 Activity -->
+        <activity
+            android:name=".ui.BrainstormActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 文本/链接捕获 Activity -->
+        <activity
+            android:name=".ui.TextCaptureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.LingGuangCatcher">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- 拍照闪记 Activity -->
+        <activity
+            android:name=".ui.CameraCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait" />
+
+        <!-- 历史记录 Activity -->
+        <activity
+            android:name=".ui.HistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 编辑 Activity -->
+        <activity
+            android:name=".ui.EditActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 离线队列 Activity -->
+        <activity
+            android:name=".ui.QueueActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 数据导出 Activity -->
+        <activity
+            android:name=".ui.ExportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 设置 Activity -->
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 崩溃日志 Activity -->
+        <activity
+            android:name=".ui.CrashLogActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 透视校正 Activity -->
+        <activity
+            android:name=".ui.PerspectiveCropActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher"
+            android:screenOrientation="portrait" />
+
+        <!-- 悬浮气泡服务 -->
+        <service
+            android:name=".service.FloatingBubbleService"
+            android:exported="false" />
+
+        <!-- 快捷设置面板 Tile -->
+        <service
+            android:name=".service.LingGuangTileService"
+            android:icon="@drawable/ic_microphone"
+            android:label="灵光"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- FileProvider for sharing log files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

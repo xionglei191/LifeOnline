@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="150dp"
+    android:layout_height="150dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- 主气泡图标 (56dp)
+         容器 150x150，大气泡放在 (47, 47)，圆心在 (75, 75) -->
+    <FrameLayout
+        android:id="@+id/bubble_icon"
+        android:layout_width="@dimen/bubble_size"
+        android:layout_height="@dimen/bubble_size"
+        android:layout_marginStart="47dp"
+        android:layout_marginTop="47dp"
+        android:background="@drawable/bg_bubble_icon">
+
+    </FrameLayout>
+
+    <!-- 小气泡 36dp，半径 18dp
+         大气泡圆心 (75, 75)
+         圆心距离 50dp
+         三个方向：-45°（右上）、0°（正右）、45°（右下） -->
+
+    <!-- 拍照气泡 (右上 -45°)
+         cos(-45°) = 0.707, sin(-45°) = -0.707
+         圆心 X = 75 + 50 * 0.707 = 75 + 35 = 110
+         圆心 Y = 75 + 50 * (-0.707) = 75 - 35 = 40
+         左上角 = (110 - 18, 40 - 18) = (92, 22) -->
+    <FrameLayout
+        android:id="@+id/bubble_camera"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="92dp"
+        android:layout_marginTop="22dp"
+        android:background="@drawable/bg_bubble_button"
+        android:elevation="4dp"
+        android:visibility="gone"
+        android:scaleX="0"
+        android:scaleY="0">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_camera"
+            app:tint="@color/bubble_mini_icon_tint"
+            android:contentDescription="拍照" />
+    </FrameLayout>
+
+    <!-- 语音气泡 (正右 0°)
+         圆心 X = 75 + 50 = 125
+         圆心 Y = 75
+         左上角 = (125 - 18, 75 - 18) = (107, 57) -->
+    <FrameLayout
+        android:id="@+id/bubble_voice"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="107dp"
+        android:layout_marginTop="57dp"
+        android:background="@drawable/bg_bubble_button"
+        android:elevation="4dp"
+        android:visibility="gone"
+        android:scaleX="0"
+        android:scaleY="0">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_microphone"
+            app:tint="@color/bubble_mini_icon_tint"
+            android:contentDescription="语音" />
+    </FrameLayout>
+
+    <!-- 文本气泡 (右下 45°)
+         cos(45°) = 0.707, sin(45°) = 0.707
+         圆心 X = 75 + 50 * 0.707 = 75 + 35 = 110
+         圆心 Y = 75 + 50 * 0.707 = 75 + 35 = 110
+         左上角 = (110 - 18, 110 - 18) = (92, 92) -->
+    <FrameLayout
+        android:id="@+id/bubble_text"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="92dp"
+        android:layout_marginTop="92dp"
+        android:background="@drawable/bg_bubble_button"
+        android:elevation="4dp"
+        android:visibility="gone"
+        android:scaleX="0"
+        android:scaleY="0">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_text"
+            app:tint="@color/bubble_mini_icon_tint"
+            android:contentDescription="文本" />
+    </FrameLayout>
+
+</FrameLayout>

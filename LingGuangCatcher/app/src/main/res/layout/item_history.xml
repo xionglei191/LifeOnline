@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.App.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/spacing_md"
+    android:layout_marginBottom="@dimen/spacing_md">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/spacing_md">
+
+        <!-- Checkbox for selection mode -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkbox_select"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:visibility="gone"
+            android:contentDescription="选择"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="@id/tv_type_icon"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Type Icon -->
+        <ImageView
+            android:id="@+id/tv_type_icon"
+            android:layout_width="@dimen/icon_size_large"
+            android:layout_height="@dimen/icon_size_large"
+            android:src="@drawable/ic_camera"
+            app:tint="@color/md_theme_primary"
+            android:contentDescription="类型图标"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/checkbox_select"
+            app:layout_goneMarginStart="0dp"
+            tools:src="@drawable/ic_camera" />
+
+        <!-- Content Preview -->
+        <TextView
+            android:id="@+id/tv_content"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:text="内容预览..."
+            android:textAppearance="@style/TextAppearance.App.Body.Large"
+            android:textColor="@color/on_surface"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="@id/tv_type_icon"
+            app:layout_constraintStart_toEndOf="@id/tv_type_icon"
+            app:layout_constraintEnd_toStartOf="@id/btn_edit"
+            tools:text="这是一段捕获的内容预览，可能会很长..." />
+
+        <!-- Edit Button -->
+        <ImageButton
+            android:id="@+id/btn_edit"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@android:drawable/ic_menu_edit"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/on_surface_variant"
+            android:contentDescription="编辑"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btn_delete" />
+
+        <!-- Delete Button -->
+        <ImageButton
+            android:id="@+id/btn_delete"
+            android:layout_width="@dimen/button_height_standard"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/error"
+            android:contentDescription="删除"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tv_status" />
+
+        <!-- Status Badge -->
+        <ImageView
+            android:id="@+id/tv_status"
+            android:layout_width="@dimen/icon_size_small_badge"
+            android:layout_height="@dimen/button_height_standard"
+            android:src="@drawable/ic_check_circle"
+            android:scaleType="center"
+            app:tint="@color/success"
+            android:contentDescription="状态"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:src="@drawable/ic_check_circle" />
+
+        <!-- Timestamp -->
+        <TextView
+            android:id="@+id/tv_timestamp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:text="2 分钟前"
+            android:textAppearance="@style/TextAppearance.App.Label.Small"
+            android:textColor="@color/neutral_500"
+            app:layout_constraintTop_toBottomOf="@id/tv_content"
+            app:layout_constraintStart_toEndOf="@id/tv_type_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="2 分钟前" />
+
+        <!-- Progress Bar (for PENDING/PROCESSING status) -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress_bar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:visibility="gone"
+            app:indicatorColor="@color/md_theme_primary"
+            app:trackColor="@color/neutral_200"
+            app:trackThickness="@dimen/progress_track_thickness"
+            app:layout_constraintTop_toBottomOf="@id/tv_timestamp"
+            app:layout_constraintStart_toEndOf="@id/tv_type_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:visibility="visible" />
+
+        <!-- Progress Text (retry count, error message) -->
+        <TextView
+            android:id="@+id/tv_progress_info"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_md"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:text="正在处理..."
+            android:textAppearance="@style/TextAppearance.App.Label.Small"
+            android:textColor="@color/neutral_400"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/progress_bar"
+            app:layout_constraintStart_toEndOf="@id/tv_type_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:visibility="visible"
+            tools:text="重试 2/10" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">灵光捕手</string>
+    <string name="capture_success">🚀 灵光已捕获</string>
+    <string name="capture_failed">❌ 捕获失败</string>
+    <string name="processing">处理中...</string>
+    <string name="permission_required">需要相关权限</string>
+</resources>
