@@ -128,9 +128,9 @@ pnpm index
 - 配置与索引：`/api/config`、`/api/index`、`/api/index/status`
 - Worker tasks：`/api/worker-tasks/*`
 - Schedules：`/api/schedules/*`
-- 旧手动 AI 工具：`/api/ai/*`
+- AI 配置：`/api/ai/prompts`、`/api/ai/provider`
 
 说明：
 - `worker-tasks` 是自动化主路径
-- `/api/ai/*` 目前保留为旧手动工具入口，不应再被视为主架构中心
+- `/api/ai/*` 仅保留 prompt/provider 配置接口，不再承载任务执行入口
 
