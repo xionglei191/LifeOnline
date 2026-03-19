@@ -1,14 +1,20 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
+const apiHost = process.env.LIFEOS_API_HOST || '192.168.31.246';
+const apiPort = process.env.LIFEOS_API_PORT || '3000';
+const apiHttpTarget = `http://${apiHost}:${apiPort}`;
+const apiWsTarget = `ws://${apiHost}:${apiPort}`;
+
 export default defineConfig({
   plugins: [vue()],
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': apiHttpTarget,
       '/ws': {
-        target: 'ws://localhost:3000',
+        target: apiWsTarget,
         ws: true,
       }
     }
