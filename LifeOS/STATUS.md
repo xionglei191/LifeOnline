@@ -1,8 +1,8 @@
 # LifeOS 项目状态报告
 
-**生成时间**: 2026-03-18 24:00
-**当前阶段**: Orchestration Refactor ✅ summarize_note 第二类 worker task 完成
-**下一阶段**: 收敛 legacy AI 入口
+**生成时间**: 2026-03-19 16:10
+**当前阶段**: Orchestration Refactor ✅ legacy AI 入口已收敛到 worker tasks
+**下一阶段**: 切换到新开发机（192.168.31.252）继续开发，服务器机（192.168.31.246）承载后端 / OpenClaw / Vault
 
 ---
 
@@ -16,6 +16,10 @@
 - ✅ 新增 worker task `retry/cancel` API，支持失败重试与运行中 best-effort 取消
 - ✅ 成功结果从输出路径升级为可点击笔记入口，可直接打开结果笔记
 - ✅ `/api/ai/classify-inbox`、`/api/ai/extract-tasks` 保留为 legacy/manual tools
+- ✅ Settings 的手动 Inbox 整理入口已改为创建 `classify_inbox` worker task
+- ✅ NoteDetail 的“提取行动项”入口已改为创建 `extract_tasks` worker task
+- ✅ `classify_inbox` 执行完成后会写入 `outputNotePaths`，可在任务详情中直接打开输出笔记
+- ✅ 新增 `extract_tasks` worker task 类型，统一纳入任务状态 / retry / cancel / 输出追踪体系
 - ✅ 查询接口规范化为通用 `WorkerTaskListFilters`（status / taskType / worker / sourceNoteId）
 - ✅ Settings 和 NoteDetail 均支持按状态 / 任务类型筛选
 - ✅ 新增 `WorkerTaskDetail` 独立弹层，展示完整任务时间线、输入参数、错误详情、输出笔记
@@ -88,24 +92,25 @@
 
 ✅ **后端服务**
 - 地址: http://localhost:3000
-- 状态: 运行中
+- 状态: 运行中（已切到新仓库路径）
+- 运行目录: /home/xionglei/LifeOnline/LifeOS/packages/server
 - 数据库: /home/xionglei/LifeOnline/LifeOS/packages/server/data/lifeos.db
-- 索引文件: 44 个
 
 ✅ **前端服务**
 - 地址: http://localhost:5173
-- 状态: 运行中
+- 局域网地址: http://192.168.31.246:5173
+- 状态: 运行中（已切到新仓库路径）
+- 运行目录: /home/xionglei/LifeOnline/LifeOS/packages/web
 - 构建工具: Vite 5.4.21
 
 ✅ **文件监听**
-- 监听目录: /home/xionglei/LifeOnline/LifeOS/mock-vault
-- 监听数量: 11 个目录
+- 监听目录: /home/xionglei/Vault_OS
 - 状态: 正常工作
 
 ✅ **WebSocket**
-- 路径: ws://localhost:3000/ws
-- 状态: 已连接
-- 实时推送: file-changed/index-complete/index-error
+- 开发访问路径: ws://<frontend-host>/ws
+- Vite 代理目标: 192.168.31.246:3000
+- 实时推送: file-changed/index-complete/index-error/worker-task-updated
 
 ✅ **AI 服务**
 - API: https://codeflow.asia
@@ -244,9 +249,14 @@ Phase 7:      ~330 行
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/ai/classify` | POST | 分类单个笔记 |
-| `/api/ai/classify-inbox` | POST | 批量分类 Inbox |
-| `/api/ai/extract-tasks` | POST | 提取行动项 |
+| `/api/ai/classify` | POST | 分类单个笔记（legacy） |
+| `/api/ai/classify-inbox` | POST | 批量分类 Inbox（legacy/manual） |
+| `/api/ai/extract-tasks` | POST | 提取行动项（legacy/manual） |
+| `/api/worker-tasks` | POST | 创建 worker task |
+| `/api/worker-tasks` | GET | 查询任务列表 |
+| `/api/worker-tasks/:id` | GET | 查询单个任务 |
+| `/api/worker-tasks/:id/retry` | POST | 重试任务 |
+| `/api/worker-tasks/:id/cancel` | POST | 取消任务 |
 
 ### WebSocket
 
