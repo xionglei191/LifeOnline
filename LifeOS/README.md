@@ -8,11 +8,9 @@ LifeOS 是 LifeOnline monorepo 中的控制核心，负责：
 - 按需调用 OpenClaw 作为外部执行节点
 - 将自动化结果统一写回 Vault
 
-当前真实运行基线：
-- 正式运行代码路径：`/home/xionglei/LifeOnline/LifeOS`
-- 主 Vault：`/home/xionglei/Vault_OS`
-- 运行主机：`192.168.31.246`
-- 开发机：当前这台新电脑
+当前真实运行基线见 [SUMMARY.md](SUMMARY.md)。
+
+这里主要保留子项目开发入口、模块结构与接口概览。
 
 ## 项目结构
 
@@ -116,7 +114,9 @@ pnpm index
 - 本地开发可使用 `mock-vault/`
 - 当前正式运行环境使用远端主 Vault，而不是本地 `mock-vault`
 
-## 运行与部署现实
+## 运行与部署
+
+开发 / 运行职责边界与主机路径以 [SUMMARY.md](SUMMARY.md) 为准。
 
 当前推荐工作模型：
 
@@ -125,8 +125,8 @@ pnpm index
 - 构建测试
 - 通过 SSH / rsync 同步到远端
 
-### 运行主机（`192.168.31.246`）
-- 持有主 Vault：`/home/xionglei/Vault_OS`
+### 运行主机
+- 持有主 Vault
 - 运行 LifeOS backend / web
 - 运行 OpenClaw
 - 作为手机同步锚点

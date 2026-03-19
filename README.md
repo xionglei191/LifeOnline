@@ -9,8 +9,7 @@ LifeOnline 是当前总仓库，统一承载两个业务子项目：
 
 - `LifeOS` backend 是当前控制核心
 - `LingGuangCatcher` 是输入端
-- 主 Vault 固定为 `192.168.31.246:/home/xionglei/Vault_OS`
-- `192.168.31.246` 同时承载 LifeOS runtime 与 OpenClaw
+- 运行基线与主机/路径信息统一维护在 [LifeOS 当前总结](LifeOS/SUMMARY.md)
 - 当前这台新电脑主要用于开发、测试和代码同步
 
 ## 当前保留的主文档
@@ -90,6 +89,6 @@ cd LingGuangCatcher
 
 ## 运行边界
 
-- `Vault_OS` 继续使用现有绝对路径 `~/Vault_OS` / `/home/xionglei/Vault_OS`
 - 不把主 Vault 迁移到新电脑；新电脑只承担开发与代码同步职责
 - `.claude/` 保持各机器本地独立，不做跨机器同步
+- 具体运行路径、主 Vault 和端口信息统一以 [LifeOS 当前总结](LifeOS/SUMMARY.md) 为准
