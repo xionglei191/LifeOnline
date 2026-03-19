@@ -5,7 +5,7 @@ export type Priority = 'high' | 'medium' | 'low';
 export type Privacy = 'public' | 'private' | 'sensitive';
 export type Source = 'lingguang' | 'desktop' | 'webclipper' | 'openclaw' | 'web' | 'auto';
 export type WorkerName = 'openclaw' | 'lifeos';
-export type WorkerTaskType = 'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report';
+export type WorkerTaskType = 'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'extract_tasks' | 'daily_report' | 'weekly_report';
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 export type PromptKey = 'classify' | 'extract_tasks' | 'summarize_note' | 'daily_report' | 'weekly_report';
 
@@ -149,6 +149,9 @@ export interface WorkerTaskInputMap {
   classify_inbox: {
     dryRun?: boolean;
   };
+  extract_tasks: {
+    noteId: string;
+  };
   daily_report: {
     date?: string;
   };
@@ -175,6 +178,13 @@ export interface WorkerTaskResultMap {
     classified: number;
     failed: number;
     items: Array<{ file: string; dimension: string; type: string; success: boolean; error?: string }>;
+  };
+  extract_tasks: {
+    title: string;
+    summary: string;
+    created: number;
+    sourceNoteTitle: string;
+    items: Array<{ title: string; dimension: string; priority: string; due?: string | null; filePath: string }>;
   };
   daily_report: {
     title: string;

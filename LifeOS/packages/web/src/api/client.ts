@@ -298,26 +298,19 @@ export async function clearFinishedWorkerTasks(): Promise<number> {
   return data.deleted;
 }
 
-export async function classifyInbox(): Promise<ClassifyResult> {
-  const res = await fetch(`${API_BASE}/ai/classify-inbox`, { method: 'POST' });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to classify inbox');
-  }
-  return res.json();
+export async function classifyInbox(): Promise<WorkerTask> {
+  return createWorkerTask({
+    taskType: 'classify_inbox',
+    input: {},
+  });
 }
 
-export async function extractTasks(noteId: string): Promise<ExtractTasksResult> {
-  const res = await fetch(`${API_BASE}/ai/extract-tasks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ noteId }),
+export async function extractTasks(noteId: string): Promise<WorkerTask> {
+  return createWorkerTask({
+    taskType: 'extract_tasks',
+    sourceNoteId: noteId,
+    input: { noteId },
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to extract tasks');
-  }
-  return res.json();
 }
 
 export async function fetchAISuggestions(): Promise<AISuggestion[]> {

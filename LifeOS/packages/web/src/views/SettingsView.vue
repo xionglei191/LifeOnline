@@ -281,9 +281,10 @@
               <option value="">全部任务</option>
               <option value="openclaw_task">OpenClaw 任务</option>
               <option value="summarize_note">笔记摘要</option>
-              <option value="classify_inbox">Inbox 自动分类</option>
-              <option value="daily_report">每日报告</option>
-              <option value="weekly_report">每周报告</option>
+              <option value="classify_inbox">Inbox 自动整理</option>
+              <option value="extract_tasks">提取行动项</option>
+              <option value="daily_report">每日回顾</option>
+              <option value="weekly_report">每周回顾</option>
             </select>
             <button class="btn-link" @click="loadWorkerTasks">刷新</button>
             <button class="btn-link btn-clear" @click="handleClearFinishedTasks">清除已结束</button>
@@ -332,9 +333,9 @@
           <label>任务类型</label>
           <select v-model="scheduleTaskType" :disabled="scheduleSubmitting">
             <option value="openclaw_task">OpenClaw 通用任务</option>
-            <option value="classify_inbox">Inbox 自动分类</option>
-            <option value="daily_report">每日报告</option>
-            <option value="weekly_report">每周报告</option>
+            <option value="classify_inbox">Inbox 自动整理</option>
+            <option value="daily_report">每日回顾</option>
+            <option value="weekly_report">每周回顾</option>
           </select>
         </div>
         <div class="form-group">
@@ -458,28 +459,14 @@
     <details class="settings-card legacy-collapse">
       <summary class="legacy-summary">
         <h3>Legacy / 手动工具</h3>
-        <span class="legacy-badge">旧版</span>
+        <span class="legacy-badge">兼容层</span>
       </summary>
-      <p class="hint" style="margin-top:12px;margin-bottom:16px">以下能力保留兼容，但不再代表主架构，只作为手动纠偏入口。</p>
+      <p class="hint" style="margin-top:12px;margin-bottom:16px">前端主入口已切换到 worker task；以下仅保留兼容说明，不再直接展示同步 AI 结果。</p>
       <div class="action-row">
         <button @click="handleClassifyInbox" :disabled="classifying" class="btn-ai">
-          {{ classifying ? '整理中...' : '手动整理 Inbox（Legacy）' }}
+          {{ classifying ? '创建中...' : '手动整理 Inbox（创建任务）' }}
         </button>
-        <span v-if="classifying" class="queue-info">AI 分析中，请稍候...</span>
-      </div>
-      <div v-if="classifyResult" class="classify-result">
-        <div class="stats-row">
-          <span class="stat">处理: {{ classifyResult.processed }}</span>
-          <span class="stat indexed">成功: {{ classifyResult.succeeded }}</span>
-          <span v-if="classifyResult.failed > 0" class="stat errors">失败: {{ classifyResult.failed }}</span>
-        </div>
-        <div v-if="classifyResult.results.length" class="classify-list">
-          <div v-for="r in classifyResult.results" :key="r.file" class="classify-item" :class="r.success ? 'ok' : 'fail'">
-            <span class="ci-file">{{ r.file }}</span>
-            <span v-if="r.success" class="ci-info">→ {{ r.dimension }} / {{ r.type }}</span>
-            <span v-else class="ci-error">{{ r.error }}</span>
-          </div>
-        </div>
+        <span v-if="classifying" class="queue-info">正在创建 worker task...</span>
       </div>
       <div v-if="aiMessage" :class="['message', aiMessageType]">{{ aiMessage }}</div>
     </details>
@@ -623,7 +610,7 @@ import NoteDetail from '../components/NoteDetail.vue';
 import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
 import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError, type ClassifyResult } from '../api/client';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse } from '@lifeos/shared';
 import { useWebSocket } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -711,7 +698,6 @@ const aiProviderMessageType = ref<'success' | 'error'>('success');
 const aiProviderTestResult = ref<TestAiProviderConnectionResponse | null>(null);
 const aiProviderClearKeyPending = ref(false);
 const classifying = ref(false);
-const classifyResult = ref<ClassifyResult | null>(null);
 const aiMessage = ref('');
 const aiMessageType = ref<'success' | 'error'>('success');
 const workerSubmitting = ref(false);
@@ -1164,25 +1150,14 @@ async function handleSave() {
 
 async function handleClassifyInbox() {
   classifying.value = true;
-  classifyResult.value = null;
   aiMessage.value = '';
   try {
-    const raw = await classifyInbox();
-    const succeeded = raw.results.filter((r: any) => r.success).length;
-    const failed = raw.results.filter((r: any) => !r.success).length;
-    classifyResult.value = { processed: raw.processed, succeeded, failed, results: raw.results.map((r: any) => ({
-      file: r.file,
-      success: r.success,
-      dimension: r.classification?.dimension,
-      type: r.classification?.type,
-      tags: r.classification?.tags,
-      newPath: r.targetPath,
-      error: r.error,
-    })) };
-    aiMessage.value = `整理完成：${succeeded} 个成功${failed > 0 ? `，${failed} 个失败` : ''}`;
-    aiMessageType.value = failed > 0 ? 'error' : 'success';
+    await classifyInbox();
+    aiMessage.value = 'Inbox 整理任务已创建，可在上方最近任务中查看状态与输出';
+    aiMessageType.value = 'success';
+    await loadWorkerTasks();
   } catch (e: any) {
-    aiMessage.value = e.message || 'AI 整理失败';
+    aiMessage.value = e.message || 'Inbox 整理任务创建失败';
     aiMessageType.value = 'error';
   } finally {
     classifying.value = false;
@@ -1273,9 +1248,10 @@ function taskTypeLabel(taskType: string): string {
   const labels: Record<string, string> = {
     openclaw_task: 'OpenClaw 任务',
     summarize_note: '笔记摘要',
-    classify_inbox: 'Inbox 分类',
-    daily_report: '每日报告',
-    weekly_report: '每周报告',
+    classify_inbox: 'Inbox 整理',
+    extract_tasks: '提取行动项',
+    daily_report: '每日回顾',
+    weekly_report: '每周回顾',
   };
   return labels[taskType] || taskType;
 }

@@ -123,6 +123,11 @@ const selectedNoteId = ref<string | null>(null);
 
 function taskLabel(taskType: WorkerTask['taskType']) {
   if (taskType === 'openclaw_task') return 'OpenClaw 任务';
+  if (taskType === 'summarize_note') return '笔记摘要';
+  if (taskType === 'classify_inbox') return 'Inbox 整理';
+  if (taskType === 'extract_tasks') return '提取行动项';
+  if (taskType === 'daily_report') return '每日回顾';
+  if (taskType === 'weekly_report') return '每周回顾';
   return taskType;
 }
 

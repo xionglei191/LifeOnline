@@ -218,31 +218,18 @@
             <div v-else class="empty-worker-tasks">{{ relatedWorkerFilterStatus ? '当前筛选下没有关联任务' : '当前笔记还没有发起过外部任务' }}</div>
           </section>
 
-          <details class="ai-panel legacy-collapse">
-            <summary class="legacy-summary">
-              <p class="panel-kicker" style="margin:0">Legacy AI Extraction</p>
-              <span class="legacy-badge">旧版</span>
-            </summary>
-            <p class="append-hint" style="margin-top:10px">手动工具，仅用于从正文中识别潜在行动项</p>
+          <section class="ai-panel">
+            <div class="append-head">
+              <p class="panel-kicker">Task Extraction</p>
+              <span class="append-hint">将当前笔记的行动项提取为 worker task，并在下方关联任务中查看结果</span>
+            </div>
             <div class="ai-actions">
               <button @click="handleExtractTasks" :disabled="extracting" class="primary-btn secondary">
-                {{ extracting ? '提取中...' : '提取行动项' }}
+                {{ extracting ? '发起中...' : '提取行动项' }}
               </button>
-              <span v-if="extracting" class="extract-hint">AI 分析中...</span>
+              <span v-if="extracting" class="extract-hint">正在创建 worker task...</span>
             </div>
-
-            <div v-if="extractResult" class="extract-result">
-              <h4>提取结果 ({{ extractResult.count }} 个任务)</h4>
-              <div v-if="extractResult.count === 0" class="no-tasks">未发现待办事项</div>
-              <div v-else class="task-list">
-                <div v-for="(task, i) in extractResult.tasks" :key="i" class="task-item">
-                  <span class="task-title">{{ task.title }}</span>
-                  <span v-if="task.due" class="task-due">{{ task.due }}</span>
-                  <span class="task-priority" :class="'pri-' + task.priority">{{ priorityLabels[task.priority] }}</span>
-                </div>
-              </div>
-            </div>
-          </details>
+          </section>
           </template>
         </div>
       </div>
@@ -272,7 +259,7 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, type ExtractTasksResult } from '../api/client';
+import { fetchNoteById, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
 import type { Note, WorkerTask } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
@@ -287,7 +274,6 @@ const note = ref<(Note & { encrypted?: boolean; approval_status?: string; approv
 const loading = ref(false);
 const error = ref<Error | null>(null);
 const extracting = ref(false);
-const extractResult = ref<ExtractTasksResult | null>(null);
 const workerSubmitting = ref(false);
 const workerMessage = ref('');
 const workerMessageType = ref<'success' | 'error'>('success');
@@ -412,7 +398,6 @@ watch(() => props.noteId, (id) => {
 watch(currentNoteId, async (id) => {
   if (!id) {
     note.value = null;
-    extractResult.value = null;
     decryptedContent.value = null;
     relatedWorkerTasks.value = [];
     showDeleteConfirm.value = false;
@@ -420,7 +405,6 @@ watch(currentNoteId, async (id) => {
   }
   loading.value = true;
   error.value = null;
-  extractResult.value = null;
   workerMessage.value = '';
   workerInstruction.value = '';
   workerDimension.value = 'learning';
@@ -496,11 +480,15 @@ async function handleAppend() {
 async function handleExtractTasks() {
   if (!currentNoteId.value) return;
   extracting.value = true;
-  extractResult.value = null;
+  workerMessage.value = '';
   try {
-    extractResult.value = await extractTasks(currentNoteId.value);
-  } catch {
-    extractResult.value = { tasks: [], count: 0 };
+    await extractTasks(currentNoteId.value);
+    await loadRelatedWorkerTasks(currentNoteId.value);
+    workerMessage.value = '行动项提取任务已创建，可在下方关联任务中查看结果';
+    workerMessageType.value = 'success';
+  } catch (e: any) {
+    workerMessage.value = e.message || '行动项提取任务创建失败';
+    workerMessageType.value = 'error';
   } finally {
     extracting.value = false;
   }

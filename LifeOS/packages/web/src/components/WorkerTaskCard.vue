@@ -74,6 +74,10 @@ defineEmits<{
 function taskLabel(taskType: WorkerTask['taskType']) {
   if (taskType === 'openclaw_task') return 'OpenClaw 任务';
   if (taskType === 'summarize_note') return '笔记摘要';
+  if (taskType === 'classify_inbox') return 'Inbox 整理';
+  if (taskType === 'extract_tasks') return '提取行动项';
+  if (taskType === 'daily_report') return '每日回顾';
+  if (taskType === 'weekly_report') return '每周回顾';
   return taskType;
 }
 
@@ -103,18 +107,32 @@ function formatDateTime(ts: string) {
 
 function formatWorkerInput(task: WorkerTask) {
   const input = task.input || {};
+  if (task.taskType === 'openclaw_task') {
+    return [
+      `指令：${(input as any).instruction || '—'}`,
+      `归档：${(input as any).outputDimension || 'learning'}`,
+    ].join(' · ');
+  }
   if (task.taskType === 'summarize_note') {
     return [
-      `笔记：${(input as any).noteId || '—'}`,
+      `笔记：${shortId((input as any).noteId || '—')}`,
       `语言：${(input as any).language || 'zh'}`,
       `长度：${(input as any).maxLength || 500}`,
     ].join(' · ');
   }
-  return [
-    `关键词：${(input as any).query || 'trending news'}`,
-    `区域：${(input as any).region || 'global'}`,
-    `数量：${(input as any).limit || 5}`,
-  ].join(' · ');
+  if (task.taskType === 'classify_inbox') {
+    return `模式：${(input as any).dryRun ? '预演' : '实际写入'}`;
+  }
+  if (task.taskType === 'extract_tasks') {
+    return `源笔记：${shortId((input as any).noteId || task.sourceNoteId || '—')}`;
+  }
+  if (task.taskType === 'daily_report') {
+    return `日期：${(input as any).date || '今天'}`;
+  }
+  if (task.taskType === 'weekly_report') {
+    return `周起始：${(input as any).weekStart || '本周一'}`;
+  }
+  return '无额外参数';
 }
 
 function taskSummary(task: WorkerTask) {

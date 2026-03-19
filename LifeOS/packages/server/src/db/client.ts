@@ -66,20 +66,20 @@ export function initDatabase(): void {
     console.log('Migration: added last_error column to task_schedules');
   }
 
-  // Migration: rebuild worker_tasks/task_schedules with openclaw_task CHECK constraint
+  // Migration: rebuild worker_tasks/task_schedules with latest task_type CHECK constraints
   // Also migrate existing collect_trending_news records to openclaw_task
   try {
     database.exec(`
       INSERT INTO worker_tasks (id, task_type, input_json, status, worker, created_at, updated_at)
-      VALUES ('__migration_test__', 'openclaw_task', '{}', 'pending', 'openclaw', '', '')
+      VALUES ('__migration_test__', 'extract_tasks', '{}', 'pending', 'lifeos', '', '')
     `);
     database.exec("DELETE FROM worker_tasks WHERE id = '__migration_test__'");
   } catch {
-    console.log('Migration: rebuilding worker_tasks table with openclaw_task CHECK constraint...');
+    console.log('Migration: rebuilding worker_tasks table with latest task_type CHECK constraint...');
     database.exec(`
       CREATE TABLE worker_tasks_new (
         id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report')),
+        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
         input_json TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
         worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
@@ -106,21 +106,21 @@ export function initDatabase(): void {
       CREATE INDEX IF NOT EXISTS idx_worker_tasks_created_at ON worker_tasks(created_at);
       CREATE INDEX IF NOT EXISTS idx_worker_tasks_source_note_id ON worker_tasks(source_note_id);
     `);
-    console.log('Migration: worker_tasks table rebuilt with openclaw_task');
+    console.log('Migration: worker_tasks table rebuilt with latest task types');
   }
 
   try {
     database.exec(`
       INSERT INTO task_schedules (id, task_type, input_json, cron_expression, label, enabled, created_at, updated_at)
-      VALUES ('__migration_test__', 'openclaw_task', '{}', '0 9 * * *', 'test', 1, '', '')
+      VALUES ('__migration_test__', 'extract_tasks', '{}', '0 9 * * *', 'test', 1, '', '')
     `);
     database.exec("DELETE FROM task_schedules WHERE id = '__migration_test__'");
   } catch {
-    console.log('Migration: rebuilding task_schedules table with openclaw_task CHECK constraint...');
+    console.log('Migration: rebuilding task_schedules table with latest task_type CHECK constraint...');
     database.exec(`
       CREATE TABLE task_schedules_new (
         id TEXT PRIMARY KEY,
-        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report')),
+        task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
         input_json TEXT NOT NULL,
         cron_expression TEXT NOT NULL,
         label TEXT NOT NULL,
@@ -142,7 +142,7 @@ export function initDatabase(): void {
       ALTER TABLE task_schedules_new RENAME TO task_schedules;
       CREATE INDEX IF NOT EXISTS idx_task_schedules_enabled ON task_schedules(enabled);
     `);
-    console.log('Migration: task_schedules table rebuilt with openclaw_task');
+    console.log('Migration: task_schedules table rebuilt with latest task types');
   }
 
   // Migration: add notes column to ai_prompts if missing

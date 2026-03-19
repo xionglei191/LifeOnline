@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_notes_due ON notes(due);
 
 CREATE TABLE IF NOT EXISTS worker_tasks (
   id TEXT PRIMARY KEY,
-  task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report')),
+  task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
   input_json TEXT NOT NULL,
   status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
   worker TEXT NOT NULL CHECK(worker IN ('openclaw', 'lifeos')),
@@ -62,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_worker_tasks_source_note_id ON worker_tasks(sourc
 
 CREATE TABLE IF NOT EXISTS task_schedules (
   id TEXT PRIMARY KEY,
-  task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report')),
+  task_type TEXT NOT NULL CHECK(task_type IN ('openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report')),
   input_json TEXT NOT NULL,
   cron_expression TEXT NOT NULL,
   label TEXT NOT NULL,

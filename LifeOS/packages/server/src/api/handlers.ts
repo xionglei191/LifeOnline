@@ -152,7 +152,7 @@ function parseWorkerTaskStatus(value: unknown): WorkerTaskStatus | undefined {
 function parseWorkerTaskType(value: unknown): WorkerTaskType | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
-  const valid: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report'];
+  const valid: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report'];
   return valid.includes(normalized as WorkerTaskType) ? normalized as WorkerTaskType : undefined;
 }
 
@@ -545,7 +545,7 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
     }
 
     if (body.taskType !== 'openclaw_task' && body.taskType !== 'summarize_note'
-        && body.taskType !== 'classify_inbox' && body.taskType !== 'daily_report' && body.taskType !== 'weekly_report') {
+        && body.taskType !== 'classify_inbox' && body.taskType !== 'extract_tasks' && body.taskType !== 'daily_report' && body.taskType !== 'weekly_report') {
       res.status(400).json({ error: 'Unsupported taskType' });
       return;
     }
@@ -562,6 +562,14 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
       const input = body.input as any;
       if (!input?.noteId) {
         res.status(400).json({ error: 'summarize_note requires input.noteId' });
+        return;
+      }
+    }
+
+    if (body.taskType === 'extract_tasks') {
+      const input = body.input as any;
+      if (!input?.noteId) {
+        res.status(400).json({ error: 'extract_tasks requires input.noteId' });
         return;
       }
     }
@@ -861,7 +869,7 @@ export async function getStatsTags(req: Request, res: Response): Promise<void> {
 export async function createScheduleHandler(req: Request, res: Response): Promise<void> {
   try {
     const body = req.body as CreateTaskScheduleRequest;
-    const validScheduleTypes: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'daily_report', 'weekly_report'];
+    const validScheduleTypes: WorkerTaskType[] = ['openclaw_task', 'summarize_note', 'classify_inbox', 'extract_tasks', 'daily_report', 'weekly_report'];
     if (!body?.taskType || !validScheduleTypes.includes(body.taskType)) {
       res.status(400).json({ error: 'Invalid or missing taskType' });
       return;

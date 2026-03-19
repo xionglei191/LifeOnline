@@ -23,7 +23,7 @@ import { classifyNote } from '../ai/classifier.js';
 import { extractTasks } from '../ai/taskExtractor.js';
 import { callClaude } from '../ai/aiClient.js';
 import { getEffectivePrompt } from '../ai/promptService.js';
-import { moveFile, readFileContent, buildTargetPath } from '../vault/fileManager.js';
+import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
 
 interface WorkerTaskRow {
   id: string;
@@ -381,6 +381,60 @@ function summarizeClassifyInboxResult(result: WorkerTaskResultMap['classify_inbo
   return result.summary;
 }
 
+// ── extract_tasks ──
+
+async function runExtractTasks(
+  task: WorkerTask<'extract_tasks'>
+): Promise<WorkerTaskResultMap['extract_tasks']> {
+  const input = task.input as WorkerTaskInputMap['extract_tasks'];
+  const db = getDb();
+  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(input.noteId) as any;
+  if (!note) throw new Error(`笔记不存在: ${input.noteId}`);
+
+  const tasks = await extractTasks(note.content || '');
+  const sourceNoteTitle = note.title || note.file_name || '未命名笔记';
+  if (!tasks.length) {
+    return {
+      title: `${sourceNoteTitle} 行动项提取`,
+      summary: '未发现可创建的行动项',
+      created: 0,
+      sourceNoteTitle,
+      items: [],
+    };
+  }
+
+  const config = await loadConfig();
+  const queue = getIndexQueue();
+  const date = new Date().toISOString().split('T')[0];
+  const items: WorkerTaskResultMap['extract_tasks']['items'] = [];
+
+  for (const extractedTask of tasks) {
+    const filePath = buildTaskFilePath(config.vaultPath, extractedTask.dimension, extractedTask.title, date);
+    const fileContent = buildTaskFrontmatter(extractedTask, date);
+    await createFile(filePath, fileContent);
+    queue?.enqueue(filePath, 'upsert');
+    items.push({
+      title: extractedTask.title,
+      dimension: extractedTask.dimension,
+      priority: extractedTask.priority,
+      due: extractedTask.due,
+      filePath,
+    });
+  }
+
+  return {
+    title: `${sourceNoteTitle} 行动项提取`,
+    summary: `已创建 ${items.length} 个行动项`,
+    created: items.length,
+    sourceNoteTitle,
+    items,
+  };
+}
+
+function summarizeExtractTasksResult(result: WorkerTaskResultMap['extract_tasks']): string {
+  return result.summary;
+}
+
 // ── daily_report ──
 
 function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dateEnd?: string): string {
@@ -578,6 +632,11 @@ export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTask
   if (request.taskType === 'classify_inbox') {
     const input = (request.input || {}) as Partial<WorkerTaskInputMap['classify_inbox']>;
     return { dryRun: input.dryRun ?? false };
+  }
+  if (request.taskType === 'extract_tasks') {
+    const input = (request.input || {}) as Partial<WorkerTaskInputMap['extract_tasks']>;
+    if (!input.noteId) throw new Error('extract_tasks requires noteId');
+    return { noteId: input.noteId };
   }
   if (request.taskType === 'daily_report') {
     const input = (request.input || {}) as Partial<WorkerTaskInputMap['daily_report']>;
@@ -835,11 +894,26 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
       if (!latest) throw new Error('Worker task disappeared');
       if (latest.status === 'cancelled') return latest;
 
+      const outputNotePaths = await persistClassifyInboxResult(task as WorkerTask<'classify_inbox'>, result);
       updateTaskStatus(taskId, {
         status: 'succeeded',
         finishedAt: new Date().toISOString(),
         resultSummary: summarizeClassifyInboxResult(result),
-        outputNotePaths: [],
+        outputNotePaths,
+        error: null,
+      });
+    } else if (task.taskType === 'extract_tasks') {
+      const result = await runExtractTasks(task as WorkerTask<'extract_tasks'>);
+
+      const latest = getWorkerTask(taskId);
+      if (!latest) throw new Error('Worker task disappeared');
+      if (latest.status === 'cancelled') return latest;
+
+      updateTaskStatus(taskId, {
+        status: 'succeeded',
+        finishedAt: new Date().toISOString(),
+        resultSummary: summarizeExtractTasksResult(result),
+        outputNotePaths: result.items.map((item) => item.filePath),
         error: null,
       });
     } else if (task.taskType === 'daily_report') {
