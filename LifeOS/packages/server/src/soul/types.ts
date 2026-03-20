@@ -14,7 +14,7 @@ export const SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES = ['not_dispatched', 'pend
 export type SoulActionExecutionStatus = typeof SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES[number];
 
 export type EventKind = 'weekly_reflection' | 'persona_shift' | 'milestone_report';
-export type ContinuityRecordKind = 'persona_direction' | 'weekly_theme';
+export type ContinuityRecordKind = 'persona_direction' | 'daily_rhythm' | 'weekly_theme';
 
 export interface SoulAction {
   id: string;

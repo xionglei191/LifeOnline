@@ -48,7 +48,11 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
 
   if (action.actionKind === 'promote_continuity_record') {
     const existing = getContinuityRecordBySourceReintegrationId(record.id);
-    const continuityKind = record.signalKind === 'persona_snapshot_reintegration' ? 'persona_direction' : 'weekly_theme';
+    const continuityKind = record.signalKind === 'persona_snapshot_reintegration'
+      ? 'persona_direction'
+      : record.signalKind === 'daily_report_reintegration'
+        ? 'daily_rhythm'
+        : 'weekly_theme';
     const continuity = upsertContinuityRecord({
       sourceReintegrationId: record.id,
       sourceNoteId: record.sourceNoteId,
@@ -58,7 +62,16 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
       target: record.target,
       strength: 'medium',
       summary: record.summary,
-      continuity: { anchor: record.summary, observationWindow: 'single_reviewed_signal', claim: record.summary, scope: continuityKind === 'persona_direction' ? 'persona' : 'weekly' },
+      continuity: {
+        anchor: record.summary,
+        observationWindow: 'single_reviewed_signal',
+        claim: record.summary,
+        scope: continuityKind === 'persona_direction'
+          ? 'persona'
+          : continuityKind === 'daily_rhythm'
+            ? 'daily'
+            : 'weekly',
+      },
       evidence: record.evidence,
       explanation: { whyNotOrdinaryArtifact: 'PR6 continuity promotion', whyReviewBacked: record.reviewReason ?? 'accepted reintegration record', reviewBacked: true },
       recordedAt: record.updatedAt,

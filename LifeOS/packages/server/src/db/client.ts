@@ -287,7 +287,10 @@ function ensureContinuityRecordsTable(database: Database.Database): void {
     'recorded_at', 'created_at', 'updated_at',
   ];
 
-  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  const createTableStatement = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'continuity_records'").get() as { sql?: string } | undefined;
+  const currentCreateTableSql = createTableStatement?.sql ?? '';
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name))
+    || !currentCreateTableSql.includes("'daily_rhythm'");
   if (!needsRebuild) {
     database.exec(indexesSql);
     return;

@@ -17,7 +17,7 @@ export function planPromotionSoulActions(record: ReintegrationRecord) {
     }));
   }
 
-  if (['weekly_report_reintegration', 'persona_snapshot_reintegration'].includes(record.signalKind)) {
+  if (['daily_report_reintegration', 'weekly_report_reintegration', 'persona_snapshot_reintegration'].includes(record.signalKind)) {
     planned.push(createOrReuseSoulAction({
       sourceNoteId,
       actionKind: 'promote_continuity_record',

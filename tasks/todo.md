@@ -1,23 +1,27 @@
-# PR6 review-backed promotion 守卫补强
+# PR6 daily-report continuity promotion 扩展
 
 ## 计划
 - [x] 读取 README / vision / tasks / CLAUDE.md 并复核当前 PR1–PR6 边界。
-- [x] 审查 PR6 promotion 当前实现，确认下一步应优先补 review-backed 边界守卫。
-- [x] 在 `pr6PromotionExecutor.ts` 为 promotion 执行补充 accepted-review 强约束，避免已创建 action 被越过 review 直接落对象层。
-- [x] 补充对应测试，覆盖 pending/rejected reintegration record 不得执行 promotion。
+- [x] 复核 PR6 现有 coverage，确认本轮应优先做保守、可验证的小步扩展，而不是新开治理面。
+- [x] 在 PR6 promotion planner / executor 中新增 `daily_report_reintegration -> promote_continuity_record` 的 review-backed 最小 coverage。
+- [x] 补充对应测试，覆盖 accepted 可晋升，以及 pending/rejected 不得越过最终执行口。
 - [x] 运行相关测试与 server build。
 - [ ] 记录本轮 review / 验证结果，并直接提交 git commit。
 
 ## 当前执行
-- 已将 accepted-review 守卫下沉到 `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts`：promotion executor 现在在 source reintegration record 存在后，继续强校验 `reviewStatus === 'accepted'`，否则直接拒绝执行。
-- 已补两条针对 dispatcher 最终执行口的回归测试：即便 promotion soul action 被手动置为 `approved`，若 source reintegration record 仍是 `pending_review` 或 `rejected`，也不得生成 `event_nodes` / `continuity_records`。
-- 为避免误报，已把新增用例切到独立 `createTestEnv(...)`，并在切换前显式 `closeDb()`，避免沿用上一个测试的 DB 连接导致唯一键冲突。
+- 已完成文档锚点读取：`README.md`、`CLAUDE.md`、`vision/00-权威基线/`、`vision/01-当前进度/`、`tasks/todo.md`、`tasks/lessons.md`。
+- 已确认当前 PR6 已具备 review-backed `event_nodes` / `continuity_records` 最小闭环，上一轮刚补完最终执行口 accepted-review 守卫。
+- 本轮已完成真实实现：
+  - `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts` 现在允许 `daily_report_reintegration` 在 accepted review 后同时规划 `promote_event_node` 与 `promote_continuity_record`。
+  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` 为 daily-report continuity promotion 落地 `daily_rhythm` continuity kind，并保持最终执行口的 accepted-review 强约束。
+  - `LifeOS/packages/server/src/soul/types.ts`、`LifeOS/packages/server/src/db/schema.ts`、`LifeOS/packages/server/src/db/client.ts` 已同步扩展 `daily_rhythm` 持久化约束与迁移判断，避免现有库 schema 漂移。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 已补 daily report accepted/rejected 两条 continuity promotion 覆盖。
 
 ## Review
-- 已完成文档锚点读取：`README.md`、`CLAUDE.md`、`vision/00-权威基线/`、`vision/01-当前进度/`、`tasks/todo.md`、`tasks/lessons.md`。
-- 已确认本轮更高价值的下一步不是继续扩范围，而是修补 PR6 promotion 最终执行口的 review-backed 守卫缺口。
-- 首轮 `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server test -- --test-name-pattern "PR6|promotion|reintegration review"` 未能作为精准验证命令使用：Node test runner 仍跑了全量测试，其中若干既有 `configLifecycle` 用例因固定读取 `/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json` 而在当前机器路径下失败；这属于现存环境/路径问题，不是本轮改动回归。
-- 已完成可落地验证：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，41/41。
+- 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
+- 当前代码现实：原先 `daily_report_reintegration` 只能晋升 event，不能晋升 continuity；本轮补的是局部 coverage，而不是新开治理面。
+- 约束保持不变：不得绕过 review；不得把 continuity 当普通输出；不得扩成通用化大改。
+- 已完成验证：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，42/42。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
-- 本轮结果表明：PR6 promotion 即使被手动推进到 `approved`，dispatcher 最终执行口仍不能绕过 accepted review 直接落高阈值对象层。
+- 本轮结果表明：daily report 现在也能在 accepted reintegration review backing 下进入 PR6 continuity promotion，但 rejected/pending 记录仍不能绕过 dispatcher 最终执行口落长期对象层。

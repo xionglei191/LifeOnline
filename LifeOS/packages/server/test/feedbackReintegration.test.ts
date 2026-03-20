@@ -1900,7 +1900,7 @@ test('accepted persona reintegration can plan and dispatch PR6 event and continu
   assert.equal(continuityRecords[0]?.sourceReintegrationId, reintegrationRecord!.id);
 });
 
-test('accepted daily report reintegration plans only PR6 event promotion', async (t) => {
+test('accepted daily report reintegration plans PR6 event and continuity promotions', async (t) => {
   const env = await createTestEnv('lifeos-pr6-daily-promotion-');
   const originalFetch = globalThis.fetch;
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
@@ -1930,10 +1930,11 @@ test('accepted daily report reintegration plans only PR6 event promotion', async
 
   const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
   assert.ok(reintegrationRecord);
-  const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept daily report event');
+  const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept daily report event and continuity');
   const planned = planPromotionSoulActions(accepted!);
-  assert.equal(planned.length, 1);
-  assert.equal(planned[0]?.actionKind, 'promote_event_node');
+  assert.equal(planned.length, 2);
+  assert.ok(planned.some((action) => action.actionKind === 'promote_event_node'));
+  assert.ok(planned.some((action) => action.actionKind === 'promote_continuity_record'));
 });
 
 test('unaccepted reintegration cannot plan PR6 promotions', async () => {
@@ -2013,9 +2014,9 @@ test('dispatch blocks PR6 promotion when reintegration review is still pending',
   assert.equal(listEventNodes().length, 0);
 });
 
-test('dispatch blocks PR6 promotion when reintegration review was rejected', async (t) => {
+test('accepted daily report continuity promotion dispatch creates daily_rhythm continuity record', async (t) => {
   closeDb();
-  const env = await createTestEnv('lifeos-pr6-rejected-dispatch-');
+  const env = await createTestEnv('lifeos-pr6-daily-continuity-dispatch-');
 
   t.after(async () => {
     await env.cleanup();
@@ -2023,19 +2024,19 @@ test('dispatch blocks PR6 promotion when reintegration review was rejected', asy
 
   initDatabase();
   upsertReintegrationRecord({
-    workerTaskId: 'manual-task-pr6-rejected-dispatch',
-    sourceNoteId: 'note-pr6-rejected-dispatch',
+    workerTaskId: 'manual-task-pr6-daily-continuity-dispatch',
+    sourceNoteId: 'note-pr6-daily-continuity-dispatch',
     soulActionId: null,
-    taskType: 'weekly_report',
+    taskType: 'daily_report',
     terminalStatus: 'succeeded',
-    signalKind: 'weekly_report_reintegration',
-    reviewStatus: 'rejected',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'accepted',
     target: 'derived_outputs',
     strength: 'medium',
-    summary: 'rejected review summary',
-    evidence: { source: 'test' },
-    reviewReason: 'not enough evidence',
-    now: '2026-03-20T10:00:00.000Z',
+    summary: 'daily summary worth continuity promotion',
+    evidence: { source: 'test', cadence: 'daily' },
+    reviewReason: 'daily continuity accepted',
+    now: '2026-03-20T10:30:00.000Z',
   });
 
   getDb().prepare(`
@@ -2044,16 +2045,76 @@ test('dispatch blocks PR6 promotion when reintegration review was rejected', asy
       created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    'soul:promote_continuity_record:reint:manual-task-pr6-rejected-dispatch',
-    'reint:manual-task-pr6-rejected-dispatch',
+    'soul:promote_continuity_record:reint:manual-task-pr6-daily-continuity-dispatch',
+    'reint:manual-task-pr6-daily-continuity-dispatch',
     'promote_continuity_record',
     'approved',
     'not_dispatched',
     'manually approved in test',
     null,
-    '2026-03-20T10:00:00.000Z',
-    '2026-03-20T10:00:00.000Z',
-    '2026-03-20T10:00:00.000Z',
+    '2026-03-20T10:30:00.000Z',
+    '2026-03-20T10:30:00.000Z',
+    '2026-03-20T10:30:00.000Z',
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  );
+
+  const dispatchResult = await dispatchApprovedSoulAction('soul:promote_continuity_record:reint:manual-task-pr6-daily-continuity-dispatch');
+  const continuityRecords = listContinuityRecords();
+
+  assert.equal(dispatchResult.dispatched, true);
+  assert.match(dispatchResult.reason, /已创建 continuity record|已更新 continuity record/);
+  assert.equal(continuityRecords.length, 1);
+  assert.equal(continuityRecords[0]?.continuityKind, 'daily_rhythm');
+  assert.equal(continuityRecords[0]?.target, 'derived_outputs');
+  assert.equal(continuityRecords[0]?.continuity.scope, 'daily');
+});
+
+test('dispatch blocks daily-report PR6 continuity promotion when reintegration review was rejected', async (t) => {
+  closeDb();
+  const env = await createTestEnv('lifeos-pr6-daily-rejected-dispatch-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-daily-rejected-dispatch',
+    sourceNoteId: 'note-pr6-daily-rejected-dispatch',
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'rejected',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'rejected daily continuity summary',
+    evidence: { source: 'test', cadence: 'daily' },
+    reviewReason: 'not enough continuity evidence',
+    now: '2026-03-20T11:00:00.000Z',
+  });
+
+  getDb().prepare(`
+    INSERT INTO soul_actions (
+      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'soul:promote_continuity_record:reint:manual-task-pr6-daily-rejected-dispatch',
+    'reint:manual-task-pr6-daily-rejected-dispatch',
+    'promote_continuity_record',
+    'approved',
+    'not_dispatched',
+    'manually approved in test',
+    null,
+    '2026-03-20T11:00:00.000Z',
+    '2026-03-20T11:00:00.000Z',
+    '2026-03-20T11:00:00.000Z',
     null,
     null,
     null,
@@ -2063,11 +2124,12 @@ test('dispatch blocks PR6 promotion when reintegration review was rejected', asy
   );
 
   await assert.rejects(
-    () => dispatchApprovedSoulAction('soul:promote_continuity_record:reint:manual-task-pr6-rejected-dispatch'),
+    () => dispatchApprovedSoulAction('soul:promote_continuity_record:reint:manual-task-pr6-daily-rejected-dispatch'),
     /accepted reintegration review/,
   );
   assert.equal(listContinuityRecords().length, 0);
 });
+
 
 test('terminal hook does not directly create PR6 event or continuity objects', async (t) => {
   const env = await createTestEnv('lifeos-pr6-no-direct-promotion-');
