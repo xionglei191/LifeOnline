@@ -344,6 +344,83 @@ test('updating config restores original watcher state when restart fails', async
   }
 });
 
+test('soul-actions API approve then dispatch runs governance happy path', async () => {
+  const env = await createTestEnv('lifeos-soul-actions-api-');
+  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const growthFilePath = path.join(env.vaultPath, '成长', '2026-03-20-api-review.md');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    await fs.mkdir(path.dirname(growthFilePath), { recursive: true });
+    await fs.writeFile(growthFilePath, `---\ntype: "note"\ndimension: "growth"\nstatus: "done"\npriority: "medium"\nprivacy: "private"\ndate: "2026-03-20"\nsource: "desktop"\ncreated: "2026-03-20T09:00:00.000Z"\nupdated: "2026-03-20T09:00:00.000Z"\n---\n\n我想继续以长期主义和系统化推进。\n`);
+
+    await waitFor(async () => {
+      try {
+        const queued = await api<{ soulActions: Array<{ id: string }> }>(
+          baseUrl,
+          '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+        );
+        return queued.soulActions.length === 1;
+      } catch {
+        return false;
+      }
+    });
+
+    const queueResponse = await api<{ soulActions: Array<{ id: string; governanceStatus: string; executionStatus: string }> }>(
+      baseUrl,
+      '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+    );
+    assert.equal(queueResponse.soulActions.length, 1);
+    const queued = queueResponse.soulActions[0]!;
+    assert.equal(queued.governanceStatus, 'pending_review');
+    assert.equal(queued.executionStatus, 'not_dispatched');
+
+    const approved = await api<{ soulAction: { id: string; governanceStatus: string; executionStatus: string } }>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}/approve`,
+      { method: 'POST', body: JSON.stringify({ reason: 'approved in api test' }) },
+    );
+    assert.equal(approved.soulAction.governanceStatus, 'approved');
+    assert.equal(approved.soulAction.executionStatus, 'not_dispatched');
+
+    const dispatched = await api<{ result: { dispatched: boolean; workerTaskId: string | null }; soulAction: { governanceStatus: string; executionStatus: string }; task: { id: string; status: string } }>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}/dispatch`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+    assert.equal(dispatched.result.dispatched, true);
+    assert.ok(dispatched.result.workerTaskId);
+    assert.equal(dispatched.soulAction.governanceStatus, 'approved');
+    assert.equal(dispatched.task.status, 'succeeded');
+
+    const detail = await api<{ soulAction: { id: string; governanceStatus: string; executionStatus: string; workerTaskId: string | null } }>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}`,
+    );
+    assert.equal(detail.soulAction.id, queued.id);
+    assert.equal(detail.soulAction.governanceStatus, 'approved');
+    assert.equal(detail.soulAction.executionStatus, 'succeeded');
+    assert.ok(detail.soulAction.workerTaskId);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];

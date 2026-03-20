@@ -41,10 +41,15 @@ export const TASK_SCHEDULE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_task_sc
 export const SOUL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   source_note_id TEXT NOT NULL,
   action_kind TEXT NOT NULL,
-  status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
+  governance_status TEXT NOT NULL CHECK(governance_status IN ('pending_review', 'approved', 'deferred', 'discarded')),
+  execution_status TEXT NOT NULL CHECK(execution_status IN ('not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled')),
+  governance_reason TEXT,
   worker_task_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  approved_at TEXT,
+  deferred_at TEXT,
+  discarded_at TEXT,
   started_at TEXT,
   finished_at TEXT,
   error TEXT,
@@ -53,7 +58,8 @@ export const SOUL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   UNIQUE(worker_task_id)`;
 
 export const SOUL_ACTION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_soul_actions_source_note_id ON soul_actions(source_note_id);
-CREATE INDEX IF NOT EXISTS idx_soul_actions_status ON soul_actions(status);
+CREATE INDEX IF NOT EXISTS idx_soul_actions_governance_status ON soul_actions(governance_status);
+CREATE INDEX IF NOT EXISTS idx_soul_actions_execution_status ON soul_actions(execution_status);
 CREATE INDEX IF NOT EXISTS idx_soul_actions_created_at ON soul_actions(created_at);`;
 
 export const PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
@@ -68,6 +74,68 @@ export const PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
 export const PERSONA_SNAPSHOT_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_persona_snapshots_source_note_id ON persona_snapshots(source_note_id);
 CREATE INDEX IF NOT EXISTS idx_persona_snapshots_worker_task_id ON persona_snapshots(worker_task_id);
 CREATE INDEX IF NOT EXISTS idx_persona_snapshots_updated_at ON persona_snapshots(updated_at);`;
+
+export const REINTEGRATION_RECORD_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  worker_task_id TEXT NOT NULL UNIQUE,
+  source_note_id TEXT,
+  soul_action_id TEXT,
+  task_type TEXT NOT NULL CHECK(task_type IN ('summarize_note', 'classify_inbox', 'extract_tasks', 'update_persona_snapshot', 'daily_report', 'weekly_report', 'openclaw_task')),
+  terminal_status TEXT NOT NULL CHECK(terminal_status IN ('succeeded', 'failed', 'cancelled')),
+  signal_kind TEXT NOT NULL,
+  review_status TEXT NOT NULL CHECK(review_status IN ('pending_review', 'accepted', 'rejected')),
+  target TEXT NOT NULL CHECK(target IN ('source_note', 'derived_outputs', 'task_record')),
+  strength TEXT NOT NULL CHECK(strength IN ('low', 'medium')),
+  summary TEXT NOT NULL,
+  evidence_json TEXT NOT NULL,
+  review_reason TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  reviewed_at TEXT`;
+
+export const REINTEGRATION_RECORD_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_reintegration_records_review_status ON reintegration_records(review_status);
+CREATE INDEX IF NOT EXISTS idx_reintegration_records_signal_kind ON reintegration_records(signal_kind);
+CREATE INDEX IF NOT EXISTS idx_reintegration_records_source_note_id ON reintegration_records(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_reintegration_records_created_at ON reintegration_records(created_at);`;
+
+export const EVENT_NODE_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_reintegration_id TEXT NOT NULL UNIQUE,
+  source_note_id TEXT,
+  source_soul_action_id TEXT,
+  promotion_soul_action_id TEXT NOT NULL UNIQUE,
+  event_kind TEXT NOT NULL CHECK(event_kind IN ('weekly_reflection', 'persona_shift', 'milestone_report')),
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  threshold TEXT NOT NULL CHECK(threshold IN ('high')),
+  status TEXT NOT NULL CHECK(status IN ('active')),
+  evidence_json TEXT NOT NULL,
+  explanation_json TEXT NOT NULL,
+  occurred_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
+export const EVENT_NODE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_event_nodes_source_note_id ON event_nodes(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_event_nodes_event_kind ON event_nodes(event_kind);
+CREATE INDEX IF NOT EXISTS idx_event_nodes_created_at ON event_nodes(created_at);`;
+
+export const CONTINUITY_RECORD_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_reintegration_id TEXT NOT NULL UNIQUE,
+  source_note_id TEXT,
+  source_soul_action_id TEXT,
+  promotion_soul_action_id TEXT NOT NULL UNIQUE,
+  continuity_kind TEXT NOT NULL CHECK(continuity_kind IN ('persona_direction', 'weekly_theme')),
+  target TEXT NOT NULL CHECK(target IN ('source_note', 'derived_outputs', 'task_record')),
+  strength TEXT NOT NULL CHECK(strength IN ('medium')),
+  summary TEXT NOT NULL,
+  continuity_json TEXT NOT NULL,
+  evidence_json TEXT NOT NULL,
+  explanation_json TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
+export const CONTINUITY_RECORD_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_continuity_records_source_note_id ON continuity_records(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_continuity_records_continuity_kind ON continuity_records(continuity_kind);
+CREATE INDEX IF NOT EXISTS idx_continuity_records_created_at ON continuity_records(created_at);`;
 
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
@@ -132,6 +200,24 @@ ${PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL}
 );
 
 ${PERSONA_SNAPSHOT_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS reintegration_records (
+${REINTEGRATION_RECORD_TABLE_COLUMNS_SQL}
+);
+
+${REINTEGRATION_RECORD_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS event_nodes (
+${EVENT_NODE_TABLE_COLUMNS_SQL}
+);
+
+${EVENT_NODE_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS continuity_records (
+${CONTINUITY_RECORD_TABLE_COLUMNS_SQL}
+);
+
+${CONTINUITY_RECORD_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS ai_prompts (
   key TEXT PRIMARY KEY,

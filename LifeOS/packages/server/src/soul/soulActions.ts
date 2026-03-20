@@ -3,22 +3,35 @@ import { getDb } from '../db/client.js';
 import {
   SUPPORTED_SOUL_ACTION_KINDS,
   type SoulAction,
+  type SoulActionExecutionStatus,
+  type SoulActionGovernanceStatus,
   type SoulActionKind,
-  type SoulActionStatus,
 } from './types.js';
 
 interface SoulActionRow {
   id: string;
   source_note_id: string;
   action_kind: SoulActionKind;
-  status: SoulActionStatus;
+  governance_status: SoulActionGovernanceStatus;
+  execution_status: SoulActionExecutionStatus;
+  governance_reason: string | null;
   worker_task_id: string | null;
   created_at: string;
   updated_at: string;
+  approved_at: string | null;
+  deferred_at: string | null;
+  discarded_at: string | null;
   started_at: string | null;
   finished_at: string | null;
   error: string | null;
   result_summary: string | null;
+}
+
+interface ListSoulActionsFilters {
+  governanceStatus?: SoulActionGovernanceStatus;
+  executionStatus?: SoulActionExecutionStatus;
+  sourceNoteId?: string;
+  actionKind?: SoulActionKind;
 }
 
 function rowToSoulAction(row: SoulActionRow): SoulAction {
@@ -26,10 +39,16 @@ function rowToSoulAction(row: SoulActionRow): SoulAction {
     id: row.id,
     sourceNoteId: row.source_note_id,
     actionKind: row.action_kind,
-    status: row.status,
+    governanceStatus: row.governance_status,
+    executionStatus: row.execution_status,
+    status: row.execution_status,
+    governanceReason: row.governance_reason,
     workerTaskId: row.worker_task_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    approvedAt: row.approved_at,
+    deferredAt: row.deferred_at,
+    discardedAt: row.discarded_at,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     error: row.error,
@@ -39,6 +58,41 @@ function rowToSoulAction(row: SoulActionRow): SoulAction {
 
 function buildSoulActionId(sourceNoteId: string, actionKind: SoulActionKind): string {
   return `soul:${actionKind}:${sourceNoteId}`;
+}
+
+function mapWorkerTaskStatusToExecutionStatus(status: WorkerTask['status']): SoulActionExecutionStatus {
+  if (status === 'pending') return 'pending';
+  if (status === 'running') return 'running';
+  if (status === 'succeeded') return 'succeeded';
+  if (status === 'failed') return 'failed';
+  return 'cancelled';
+}
+
+function updateSoulActionGovernanceState(input: {
+  id: string;
+  governanceStatus: SoulActionGovernanceStatus;
+  governanceReason?: string | null;
+  approvedAt?: string | null;
+  deferredAt?: string | null;
+  discardedAt?: string | null;
+  updatedAt?: string;
+}): SoulAction | null {
+  const now = input.updatedAt ?? new Date().toISOString();
+  getDb().prepare(`
+    UPDATE soul_actions
+    SET governance_status = ?, governance_reason = ?, approved_at = ?, deferred_at = ?, discarded_at = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    input.governanceStatus,
+    input.governanceReason ?? null,
+    input.approvedAt ?? null,
+    input.deferredAt ?? null,
+    input.discardedAt ?? null,
+    now,
+    input.id,
+  );
+
+  return getSoulAction(input.id);
 }
 
 export function isSupportedSoulActionKind(value: unknown): value is SoulActionKind {
@@ -69,21 +123,36 @@ export function getSoulActionByWorkerTaskId(workerTaskId: string): SoulAction | 
   return row ? rowToSoulAction(row) : null;
 }
 
-export function createOrReuseSoulAction(input: { sourceNoteId: string; actionKind: SoulActionKind; now?: string }): SoulAction {
+export function createOrReuseSoulAction(input: {
+  sourceNoteId: string;
+  actionKind: SoulActionKind;
+  now?: string;
+  governanceStatus?: SoulActionGovernanceStatus;
+  executionStatus?: SoulActionExecutionStatus;
+  governanceReason?: string | null;
+}): SoulAction {
   const existing = getSoulActionBySourceNoteIdAndKind(input.sourceNoteId, input.actionKind);
   if (existing) {
     return existing;
   }
 
   const now = input.now ?? new Date().toISOString();
+  const governanceStatus = input.governanceStatus ?? 'pending_review';
+  const executionStatus = input.executionStatus ?? 'not_dispatched';
   const action: SoulAction = {
     id: buildSoulActionId(input.sourceNoteId, input.actionKind),
     sourceNoteId: input.sourceNoteId,
     actionKind: input.actionKind,
-    status: 'pending',
+    governanceStatus,
+    executionStatus,
+    status: executionStatus,
+    governanceReason: input.governanceReason ?? null,
     workerTaskId: null,
     createdAt: now,
     updatedAt: now,
+    approvedAt: governanceStatus === 'approved' ? now : null,
+    deferredAt: governanceStatus === 'deferred' ? now : null,
+    discardedAt: governanceStatus === 'discarded' ? now : null,
     startedAt: null,
     finishedAt: null,
     error: null,
@@ -92,17 +161,22 @@ export function createOrReuseSoulAction(input: { sourceNoteId: string; actionKin
 
   getDb().prepare(`
     INSERT INTO soul_actions (
-      id, source_note_id, action_kind, status, worker_task_id,
-      created_at, updated_at, started_at, finished_at, error, result_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     action.id,
     action.sourceNoteId,
     action.actionKind,
-    action.status,
+    action.governanceStatus,
+    action.executionStatus,
+    action.governanceReason,
     action.workerTaskId,
     action.createdAt,
     action.updatedAt,
+    action.approvedAt,
+    action.deferredAt,
+    action.discardedAt,
     action.startedAt,
     action.finishedAt,
     action.error,
@@ -112,14 +186,90 @@ export function createOrReuseSoulAction(input: { sourceNoteId: string; actionKin
   return action;
 }
 
+export function approveSoulAction(id: string, governanceReason?: string | null, now = new Date().toISOString()): SoulAction | null {
+  const action = getSoulAction(id);
+  if (!action) return null;
+  if (action.governanceStatus !== 'pending_review') {
+    throw new Error('Only pending_review soul actions can be approved');
+  }
+  if (action.executionStatus !== 'not_dispatched') {
+    throw new Error('Only not_dispatched soul actions can be approved');
+  }
+
+  return updateSoulActionGovernanceState({
+    id,
+    governanceStatus: 'approved',
+    governanceReason: governanceReason ?? action.governanceReason,
+    approvedAt: now,
+    deferredAt: null,
+    discardedAt: null,
+    updatedAt: now,
+  });
+}
+
+export function deferSoulAction(id: string, governanceReason?: string | null, now = new Date().toISOString()): SoulAction | null {
+  const action = getSoulAction(id);
+  if (!action) return null;
+  if (!['pending_review', 'approved'].includes(action.governanceStatus)) {
+    throw new Error('Only pending_review or approved soul actions can be deferred');
+  }
+  if (action.executionStatus !== 'not_dispatched') {
+    throw new Error('Only not_dispatched soul actions can be deferred');
+  }
+
+  return updateSoulActionGovernanceState({
+    id,
+    governanceStatus: 'deferred',
+    governanceReason: governanceReason ?? action.governanceReason,
+    approvedAt: action.approvedAt,
+    deferredAt: now,
+    discardedAt: null,
+    updatedAt: now,
+  });
+}
+
+export function discardSoulAction(id: string, governanceReason?: string | null, now = new Date().toISOString()): SoulAction | null {
+  const action = getSoulAction(id);
+  if (!action) return null;
+  if (!['pending_review', 'approved', 'deferred'].includes(action.governanceStatus)) {
+    throw new Error('Only pending_review, approved, or deferred soul actions can be discarded');
+  }
+  if (action.executionStatus !== 'not_dispatched') {
+    throw new Error('Only not_dispatched soul actions can be discarded');
+  }
+
+  return updateSoulActionGovernanceState({
+    id,
+    governanceStatus: 'discarded',
+    governanceReason: governanceReason ?? action.governanceReason,
+    approvedAt: action.approvedAt,
+    deferredAt: action.deferredAt,
+    discardedAt: now,
+    updatedAt: now,
+  });
+}
+
 export function attachWorkerTaskToSoulAction(soulActionId: string, workerTaskId: string, now = new Date().toISOString()): SoulAction | null {
   getDb().prepare(`
     UPDATE soul_actions
-    SET worker_task_id = ?, updated_at = ?
+    SET worker_task_id = ?, execution_status = ?, updated_at = ?, started_at = NULL, finished_at = NULL, error = NULL, result_summary = NULL
     WHERE id = ?
-  `).run(workerTaskId, now, soulActionId);
+  `).run(workerTaskId, 'pending', now, soulActionId);
 
   return getSoulAction(soulActionId);
+}
+
+export function markSoulActionDispatched(id: string, workerTaskId: string, now = new Date().toISOString()): SoulAction | null {
+  const action = getSoulAction(id);
+  if (!action) return null;
+  if (action.governanceStatus !== 'approved') {
+    throw new Error('Only approved soul actions can be dispatched');
+  }
+  if (action.executionStatus !== 'not_dispatched') {
+    throw new Error('Only not_dispatched soul actions can be dispatched');
+  }
+
+  return attachWorkerTaskToSoulAction(id, workerTaskId, now);
 }
 
 export function syncSoulActionFromWorkerTask(task: WorkerTask): SoulAction | null {
@@ -129,14 +279,20 @@ export function syncSoulActionFromWorkerTask(task: WorkerTask): SoulAction | nul
   }
 
   const existing = getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, actionKind)
-    ?? createOrReuseSoulAction({ sourceNoteId: task.sourceNoteId, actionKind, now: task.updatedAt });
+    ?? createOrReuseSoulAction({
+      sourceNoteId: task.sourceNoteId,
+      actionKind,
+      now: task.updatedAt,
+      governanceStatus: 'approved',
+      executionStatus: mapWorkerTaskStatusToExecutionStatus(task.status),
+    });
 
   getDb().prepare(`
     UPDATE soul_actions
-    SET status = ?, worker_task_id = ?, updated_at = ?, started_at = ?, finished_at = ?, error = ?, result_summary = ?
+    SET execution_status = ?, worker_task_id = ?, updated_at = ?, started_at = ?, finished_at = ?, error = ?, result_summary = ?
     WHERE id = ?
   `).run(
-    task.status,
+    mapWorkerTaskStatusToExecutionStatus(task.status),
     task.id,
     task.updatedAt,
     task.startedAt ?? null,
@@ -149,7 +305,28 @@ export function syncSoulActionFromWorkerTask(task: WorkerTask): SoulAction | nul
   return getSoulAction(existing.id);
 }
 
-export function listSoulActions(): SoulAction[] {
-  const rows = getDb().prepare('SELECT * FROM soul_actions ORDER BY created_at DESC').all() as SoulActionRow[];
+export function listSoulActions(filters?: ListSoulActionsFilters): SoulAction[] {
+  const clauses: string[] = [];
+  const params: Array<string> = [];
+
+  if (filters?.governanceStatus) {
+    clauses.push('governance_status = ?');
+    params.push(filters.governanceStatus);
+  }
+  if (filters?.executionStatus) {
+    clauses.push('execution_status = ?');
+    params.push(filters.executionStatus);
+  }
+  if (filters?.sourceNoteId) {
+    clauses.push('source_note_id = ?');
+    params.push(filters.sourceNoteId);
+  }
+  if (filters?.actionKind) {
+    clauses.push('action_kind = ?');
+    params.push(filters.actionKind);
+  }
+
+  const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = getDb().prepare(`SELECT * FROM soul_actions ${whereClause} ORDER BY created_at DESC`).all(...params) as SoulActionRow[];
   return rows.map(rowToSoulAction);
 }

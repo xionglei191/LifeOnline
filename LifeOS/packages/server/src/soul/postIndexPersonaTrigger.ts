@@ -1,13 +1,19 @@
 import { getDb } from '../db/client.js';
 import { generateSoulActionCandidate } from './soulActionGenerator.js';
 import { evaluateInterventionGate } from './interventionGate.js';
-import { dispatchSoulActionCandidate } from './soulActionDispatcher.js';
+import { createOrReuseSoulAction } from './soulActions.js';
 
 interface IndexedNoteSnapshot {
   id: string;
   type: string;
   dimension: string;
   content: string;
+}
+
+export interface PostIndexPersonaTriggerResult {
+  triggered: boolean;
+  reason: string;
+  soulActionId: string | null;
 }
 
 interface IndexedNoteRow {
@@ -54,10 +60,14 @@ function shouldTriggerPersonaSnapshot(
 export async function triggerPersonaSnapshotAfterIndex(params: {
   filePath: string;
   previousNote: IndexedNoteSnapshot | null;
-}): Promise<void> {
+}): Promise<PostIndexPersonaTriggerResult> {
   const currentNote = readIndexedNoteByFilePath(params.filePath);
   if (!shouldTriggerPersonaSnapshot(params.previousNote, currentNote)) {
-    return;
+    return {
+      triggered: false,
+      reason: 'current note does not match PR3 persona snapshot review baseline',
+      soulActionId: null,
+    };
   }
 
   const candidate = generateSoulActionCandidate({
@@ -67,9 +77,31 @@ export async function triggerPersonaSnapshotAfterIndex(params: {
   });
   const gateDecision = evaluateInterventionGate(candidate);
 
-  if (!candidate || gateDecision.decision !== 'dispatch_now') {
-    return;
+  if (!candidate) {
+    return {
+      triggered: false,
+      reason: 'candidate generation returned null for PR3 persona snapshot review baseline',
+      soulActionId: null,
+    };
   }
 
-  await dispatchSoulActionCandidate(candidate, gateDecision);
+  if (gateDecision.decision !== 'queue_for_review') {
+    return {
+      triggered: false,
+      reason: gateDecision.reason,
+      soulActionId: null,
+    };
+  }
+
+  const soulAction = createOrReuseSoulAction({
+    sourceNoteId: candidate.sourceNoteId,
+    actionKind: candidate.actionKind,
+    governanceReason: gateDecision.reason,
+  });
+
+  return {
+    triggered: true,
+    reason: gateDecision.reason,
+    soulActionId: soulAction.id,
+  };
 }

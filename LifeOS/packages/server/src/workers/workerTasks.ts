@@ -40,9 +40,11 @@ import {
   createOrReuseSoulAction,
   deriveSoulActionKindFromWorkerTask,
   getSoulActionBySourceNoteIdAndKind,
+  getSoulActionByWorkerTaskId,
   syncSoulActionFromWorkerTask,
 } from '../soul/soulActions.js';
-import { upsertPersonaSnapshot } from '../soul/personaSnapshots.js';
+import { upsertReintegrationRecord } from '../soul/reintegrationRecords.js';
+import { getPersonaSnapshotBySourceNoteId, upsertPersonaSnapshot } from '../soul/personaSnapshots.js';
 
 interface WorkerTaskRow {
   id: string;
@@ -238,9 +240,46 @@ function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
 function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
   try {
     const packet = createFeedbackReintegrationPayload(task);
-    integrateContinuity(packet);
+    const result = integrateContinuity(packet);
+    const soulAction = getSoulActionByWorkerTaskId(task.id);
+    const personaSnapshot = packet.sourceNoteId ? getPersonaSnapshotBySourceNoteId(packet.sourceNoteId) : null;
+
+    upsertReintegrationRecord({
+      workerTaskId: packet.taskId,
+      sourceNoteId: packet.sourceNoteId,
+      soulActionId: soulAction?.id ?? null,
+      taskType: packet.taskType,
+      terminalStatus: packet.status,
+      signalKind: packet.taskType === 'summarize_note'
+        ? 'summary_reintegration'
+        : packet.taskType === 'extract_tasks'
+          ? 'task_extraction_reintegration'
+          : packet.taskType === 'classify_inbox'
+            ? 'classification_reintegration'
+            : packet.taskType === 'update_persona_snapshot'
+              ? 'persona_snapshot_reintegration'
+              : packet.taskType === 'daily_report'
+                ? 'daily_report_reintegration'
+                : packet.taskType === 'weekly_report'
+                  ? 'weekly_report_reintegration'
+                  : 'openclaw_reintegration',
+      target: result.target,
+      strength: result.strength,
+      summary: result.summary,
+      evidence: {
+        taskId: packet.taskId,
+        taskType: packet.taskType,
+        sourceNoteId: packet.sourceNoteId,
+        resultSummary: packet.resultSummary,
+        error: packet.error,
+        outputNotePaths: packet.outputNotePaths,
+        personaSnapshotId: personaSnapshot?.id ?? null,
+        personaSnapshotSummary: personaSnapshot?.summary ?? null,
+        personaContentPreview: personaSnapshot?.snapshot.contentPreview ?? null,
+      },
+    });
   } catch {
-    // Reintegration skeleton is intentionally side-effect free and best-effort for unsupported task types.
+    // Reintegration remains best-effort; PR5 may persist lightweight records but must never break terminal task completion.
   }
 }
 
@@ -250,11 +289,14 @@ function bindSoulActionToWorkerTask(task: WorkerTask): void {
     return;
   }
 
-  const soulAction = createOrReuseSoulAction({
-    sourceNoteId: task.sourceNoteId,
-    actionKind,
-    now: task.createdAt,
-  });
+  const soulAction = getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, actionKind)
+    ?? createOrReuseSoulAction({
+      sourceNoteId: task.sourceNoteId,
+      actionKind,
+      now: task.createdAt,
+      governanceStatus: 'approved',
+      executionStatus: 'pending',
+    });
   attachWorkerTaskToSoulAction(soulAction.id, task.id, task.updatedAt);
 }
 

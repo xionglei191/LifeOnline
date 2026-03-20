@@ -4,6 +4,7 @@ export interface SoulActionCandidate {
   sourceNoteId: string;
   actionKind: SoulActionKind;
   noteId: string;
+  trigger: 'post_index_growth_note';
 }
 
 export function generateSoulActionCandidate(input: {
@@ -23,5 +24,6 @@ export function generateSoulActionCandidate(input: {
     sourceNoteId: input.sourceNoteId,
     actionKind: 'update_persona_snapshot',
     noteId: input.noteId,
+    trigger: 'post_index_growth_note',
   };
 }

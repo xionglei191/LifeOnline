@@ -9,6 +9,12 @@ import { broadcastUpdate, getIndexQueue } from '../index.js';
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../vault/fileManager.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
+import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../soul/soulActions.js';
+import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
+import { listReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
+import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
+import { listEventNodes } from '../soul/eventNodes.js';
+import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest } from '@lifeos/shared';
@@ -145,6 +151,28 @@ function parseWorkerTaskStatus(value: unknown): WorkerTaskStatus | undefined {
   return ['pending', 'running', 'succeeded', 'failed', 'cancelled'].includes(normalized)
     ? (normalized as WorkerTaskStatus)
     : undefined;
+}
+
+function parseSoulActionGovernanceStatus(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return ['pending_review', 'approved', 'deferred', 'discarded'].includes(normalized)
+    ? normalized as 'pending_review' | 'approved' | 'deferred' | 'discarded'
+    : undefined;
+}
+
+function parseSoulActionExecutionStatus(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return ['not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled'].includes(normalized)
+    ? normalized as 'not_dispatched' | 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+    : undefined;
+}
+
+function parseSoulActionKind(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return isSupportedSoulActionKind(normalized) ? normalized : undefined;
 }
 
 function parseWorkerTaskType(value: unknown): WorkerTaskType | undefined {
@@ -400,6 +428,174 @@ export async function testAiProviderHandler(req: Request, res: Response): Promis
     }
     console.error('Test AI provider connection error:', error);
     res.status(500).json({ error: message });
+  }
+}
+
+// GET /api/soul-actions
+export async function listSoulActionsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
+      ? req.query.sourceNoteId.trim()
+      : undefined;
+
+    const filters = {
+      sourceNoteId,
+      governanceStatus: parseSoulActionGovernanceStatus(req.query.governanceStatus),
+      executionStatus: parseSoulActionExecutionStatus(req.query.executionStatus),
+      actionKind: parseSoulActionKind(req.query.actionKind),
+    };
+
+    res.json({ soulActions: listSoulActions(filters), filters });
+  } catch (error) {
+    console.error('List soul actions error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+// GET /api/soul-actions/:id
+export async function getSoulActionHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const soulAction = getSoulAction(req.params.id);
+    if (!soulAction) {
+      res.status(404).json({ error: 'Soul action not found' });
+      return;
+    }
+    res.json({ soulAction });
+  } catch (error) {
+    console.error('Get soul action error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+function getGovernanceReason(body: any): string | null {
+  return typeof body?.reason === 'string' && body.reason.trim() ? body.reason.trim() : null;
+}
+
+export async function approveSoulActionHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
+    if (!soulAction) {
+      res.status(404).json({ error: 'Soul action not found' });
+      return;
+    }
+    res.json({ soulAction });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function deferSoulActionHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const soulAction = deferSoulAction(req.params.id, getGovernanceReason(req.body));
+    if (!soulAction) {
+      res.status(404).json({ error: 'Soul action not found' });
+      return;
+    }
+    res.json({ soulAction });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function discardSoulActionHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const soulAction = discardSoulAction(req.params.id, getGovernanceReason(req.body));
+    if (!soulAction) {
+      res.status(404).json({ error: 'Soul action not found' });
+      return;
+    }
+    res.json({ soulAction });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function dispatchSoulActionHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const result = await dispatchApprovedSoulAction(req.params.id);
+    if (!result.soulActionId) {
+      res.status(404).json({ error: result.reason });
+      return;
+    }
+    if (!result.dispatched) {
+      res.status(400).json({ error: result.reason, result });
+      return;
+    }
+
+    const soulAction = getSoulAction(result.soulActionId);
+    const task = result.workerTaskId ? getWorkerTask(result.workerTaskId) : null;
+    res.status(202).json({ result, soulAction, task });
+  } catch (error) {
+    console.error('Dispatch soul action error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+export async function listReintegrationRecordsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const reviewStatus = typeof req.query.reviewStatus === 'string' ? req.query.reviewStatus.trim() as 'pending_review' | 'accepted' | 'rejected' : undefined;
+    res.json({ reintegrationRecords: listReintegrationRecords({ reviewStatus }) });
+  } catch (error) {
+    console.error('List reintegration records error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+export async function acceptReintegrationRecordHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const record = acceptReintegrationRecord(req.params.id, getGovernanceReason(req.body));
+    if (!record) {
+      res.status(404).json({ error: 'Reintegration record not found' });
+      return;
+    }
+    res.json({ reintegrationRecord: record });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function rejectReintegrationRecordHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const record = rejectReintegrationRecord(req.params.id, getGovernanceReason(req.body));
+    if (!record) {
+      res.status(404).json({ error: 'Reintegration record not found' });
+      return;
+    }
+    res.json({ reintegrationRecord: record });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function planPromotionsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const record = getReintegrationRecord(req.params.id);
+    if (!record) {
+      res.status(404).json({ error: 'Reintegration record not found' });
+      return;
+    }
+    const soulActions = planPromotionSoulActions(record);
+    res.json({ soulActions });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || String(error) });
+  }
+}
+
+export async function listEventNodesHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    res.json({ eventNodes: listEventNodes() });
+  } catch (error) {
+    console.error('List event nodes error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+export async function listContinuityRecordsHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    res.json({ continuityRecords: listContinuityRecords() });
+  } catch (error) {
+    console.error('List continuity records error:', error);
+    res.status(500).json({ error: String(error) });
   }
 }
 

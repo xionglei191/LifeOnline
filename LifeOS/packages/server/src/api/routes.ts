@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler } from './handlers.js';
+import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler, listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler, dispatchSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, listReintegrationRecordsHandler, acceptReintegrationRecordHandler, rejectReintegrationRecordHandler, planPromotionsHandler, listEventNodesHandler, listContinuityRecordsHandler } from './handlers.js';
 
 export const router = Router();
 
@@ -26,6 +26,18 @@ router.get('/worker-tasks', listWorkerTasksHandler);
 router.get('/worker-tasks/:id', getWorkerTaskHandler);
 router.post('/worker-tasks/:id/retry', retryWorkerTaskHandler);
 router.post('/worker-tasks/:id/cancel', cancelWorkerTaskHandler);
+router.get('/soul-actions', listSoulActionsHandler);
+router.get('/soul-actions/:id', getSoulActionHandler);
+router.post('/soul-actions/:id/approve', approveSoulActionHandler);
+router.post('/soul-actions/:id/dispatch', dispatchSoulActionHandler);
+router.post('/soul-actions/:id/defer', deferSoulActionHandler);
+router.post('/soul-actions/:id/discard', discardSoulActionHandler);
+router.get('/reintegration-records', listReintegrationRecordsHandler);
+router.post('/reintegration-records/:id/accept', acceptReintegrationRecordHandler);
+router.post('/reintegration-records/:id/reject', rejectReintegrationRecordHandler);
+router.post('/reintegration-records/:id/plan-promotions', planPromotionsHandler);
+router.get('/event-nodes', listEventNodesHandler);
+router.get('/continuity-records', listContinuityRecordsHandler);
 router.post('/schedules', createScheduleHandler);
 router.get('/schedules/health', scheduleHealthHandler);
 router.get('/schedules', listSchedulesHandler);

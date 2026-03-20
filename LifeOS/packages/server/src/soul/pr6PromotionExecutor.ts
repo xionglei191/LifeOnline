@@ -1,0 +1,66 @@
+import { getReintegrationRecord } from './reintegrationReview.js';
+import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
+import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
+import type { SoulAction } from './types.js';
+
+export interface PromotionExecutionResult {
+  summary: string;
+}
+
+export function executePromotionSoulAction(action: SoulAction): PromotionExecutionResult {
+  const sourceReintegrationId = action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null;
+  if (!sourceReintegrationId) {
+    throw new Error('PR6 promotion soul action requires reintegration-record sourceNoteId');
+  }
+
+  const record = getReintegrationRecord(sourceReintegrationId);
+  if (!record) {
+    throw new Error('Source reintegration record not found');
+  }
+
+  if (action.actionKind === 'promote_event_node') {
+    const existing = getEventNodeBySourceReintegrationId(record.id);
+    const eventKind = record.signalKind === 'persona_snapshot_reintegration'
+      ? 'persona_shift'
+      : record.signalKind === 'weekly_report_reintegration'
+        ? 'weekly_reflection'
+        : 'milestone_report';
+    const node = upsertEventNode({
+      sourceReintegrationId: record.id,
+      sourceNoteId: record.sourceNoteId,
+      sourceSoulActionId: record.soulActionId,
+      promotionSoulActionId: action.id,
+      eventKind,
+      title: `${eventKind}:${record.id}`,
+      summary: record.summary,
+      threshold: 'high',
+      status: 'active',
+      evidence: record.evidence,
+      explanation: { whyHighThreshold: 'review-backed PR6 promotion', whyNow: record.summary, reviewBacked: true },
+      occurredAt: record.updatedAt,
+    });
+    return { summary: existing ? `已更新 event node: ${node.id}` : `已创建 event node: ${node.id}` };
+  }
+
+  if (action.actionKind === 'promote_continuity_record') {
+    const existing = getContinuityRecordBySourceReintegrationId(record.id);
+    const continuityKind = record.signalKind === 'persona_snapshot_reintegration' ? 'persona_direction' : 'weekly_theme';
+    const continuity = upsertContinuityRecord({
+      sourceReintegrationId: record.id,
+      sourceNoteId: record.sourceNoteId,
+      sourceSoulActionId: record.soulActionId,
+      promotionSoulActionId: action.id,
+      continuityKind,
+      target: record.target,
+      strength: 'medium',
+      summary: record.summary,
+      continuity: { anchor: record.summary, observationWindow: 'single_reviewed_signal', claim: record.summary, scope: continuityKind === 'persona_direction' ? 'persona' : 'weekly' },
+      evidence: record.evidence,
+      explanation: { whyNotOrdinaryArtifact: 'PR6 continuity promotion', whyReviewBacked: record.reviewReason ?? 'accepted reintegration record', reviewBacked: true },
+      recordedAt: record.updatedAt,
+    });
+    return { summary: existing ? `已更新 continuity record: ${continuity.id}` : `已创建 continuity record: ${continuity.id}` };
+  }
+
+  throw new Error(`Unsupported PR6 promotion action kind: ${action.actionKind}`);
+}

@@ -14,9 +14,15 @@ import {
   type SupportedReintegrationTaskType,
 } from '../src/workers/feedbackReintegration.js';
 import { integrateContinuity } from '../src/workers/continuityIntegrator.js';
+import { getReintegrationRecordByWorkerTaskId, upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
+import { acceptReintegrationRecord } from '../src/soul/reintegrationReview.js';
+import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
+import { listEventNodes } from '../src/soul/eventNodes.js';
+import { listContinuityRecords } from '../src/soul/continuityRecords.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate } from '../src/soul/soulActionDispatcher.js';
+import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../src/soul/postIndexPersonaTrigger.js';
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
 
@@ -96,7 +102,8 @@ test('extract_tasks with sourceNoteId creates and reuses a SoulAction record', a
 
   const firstSoulAction = getSoulActionBySourceNoteIdAndKind('note-soul-create', 'extract_tasks');
   assert.ok(firstSoulAction);
-  assert.equal(firstSoulAction.status, 'pending');
+  assert.equal(firstSoulAction.governanceStatus, 'approved');
+  assert.equal(firstSoulAction.executionStatus, 'pending');
   assert.equal(firstSoulAction.workerTaskId, firstTask.id);
 
   const secondTask = createWorkerTask({
@@ -180,7 +187,8 @@ test('extract_tasks execution syncs SoulAction lifecycle to terminal state', asy
 
   assert.equal(result.status, 'succeeded');
   assert.ok(soulAction);
-  assert.equal(soulAction.status, 'succeeded');
+  assert.equal(soulAction.governanceStatus, 'approved');
+  assert.equal(soulAction.executionStatus, 'succeeded');
   assert.equal(soulAction.sourceNoteId, 'note-soul-success');
   assert.equal(soulAction.workerTaskId, task.id);
   assert.ok(soulAction.startedAt);
@@ -250,7 +258,8 @@ test('terminal failure and cancellation also sync SoulAction lifecycle', async (
 
   assert.equal(failedResult.status, 'failed');
   assert.ok(failedSoulAction);
-  assert.equal(failedSoulAction.status, 'failed');
+  assert.equal(failedSoulAction.governanceStatus, 'approved');
+  assert.equal(failedSoulAction.executionStatus, 'failed');
   assert.match(failedSoulAction.error || '', /API error: 500 extract-tasks-upstream-failure/);
   assert.equal(failedSoulAction.resultSummary, null);
   assert.ok(failedSoulAction.finishedAt);
@@ -268,7 +277,8 @@ test('terminal failure and cancellation also sync SoulAction lifecycle', async (
 
   assert.equal(cancelledResult.status, 'cancelled');
   assert.ok(cancelledSoulAction);
-  assert.equal(cancelledSoulAction.status, 'cancelled');
+  assert.equal(cancelledSoulAction.governanceStatus, 'approved');
+  assert.equal(cancelledSoulAction.executionStatus, 'cancelled');
   assert.equal(cancelledSoulAction.error, '任务已取消');
   assert.equal(cancelledSoulAction.resultSummary, null);
   assert.ok(cancelledSoulAction.finishedAt);
@@ -546,19 +556,20 @@ test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts p
     INSERT INTO notes (
       id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
     ) VALUES (
-      'note-persona-success', '/tmp/note-persona-success.md', 'note-persona-success.md', 'Persona 成功测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我最近更专注长期主义、系统化推进与稳定节奏。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+      'note-persona-success-pr5', '/tmp/note-persona-success-pr5.md', 'note-persona-success-pr5.md', 'Persona 成功测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我最近更专注长期主义、系统化推进与稳定节奏。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
     )
   `).run();
 
   const task = createWorkerTask({
     taskType: 'update_persona_snapshot',
-    input: { noteId: 'note-persona-success' },
-    sourceNoteId: 'note-persona-success',
+    input: { noteId: 'note-persona-success-pr5' },
+    sourceNoteId: 'note-persona-success-pr5',
   });
 
   const result = await executeWorkerTask(task.id);
   const soulAction = getSoulActionByWorkerTaskId(task.id);
-  const snapshot = getPersonaSnapshotBySourceNoteId('note-persona-success');
+  const snapshot = getPersonaSnapshotBySourceNoteId('note-persona-success-pr5');
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
 
   assert.equal(result.status, 'succeeded');
   assert.ok(soulAction);
@@ -570,6 +581,11 @@ test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts p
   assert.match(snapshot?.summary || '', /已更新人格快照/);
   assert.equal(snapshot?.snapshot.sourceNoteTitle, 'Persona 成功测试笔记');
   assert.match(snapshot?.snapshot.contentPreview || '', /长期主义/);
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.signalKind, 'persona_snapshot_reintegration');
+  assert.equal(reintegrationRecord?.sourceNoteId, 'note-persona-success-pr5');
+  assert.equal(reintegrationRecord?.soulActionId, soulAction?.id ?? null);
+  assert.equal(reintegrationRecord?.reviewStatus, 'pending_review');
   assert.deepEqual(result.outputNotePaths, []);
 });
 
@@ -598,7 +614,7 @@ test('update_persona_snapshot missing note fails without creating persona snapsh
   assert.equal(snapshot, null);
 });
 
-test('post-index queue dispatches update_persona_snapshot for new growth note', async (t) => {
+test('post-index queue creates pending_review soul action for new growth note', async (t) => {
   const env = await createTestEnv('lifeos-persona-post-index-create-');
 
   t.after(async () => {
@@ -628,14 +644,16 @@ test('post-index queue dispatches update_persona_snapshot for new growth note', 
 
   const soulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
   const snapshot = getPersonaSnapshotBySourceNoteId(note!.id);
+  const workerTaskCount = getDb().prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?").get(note!.id) as { total: number };
 
   assert.ok(soulAction);
-  assert.equal(soulAction?.status, 'succeeded');
-  assert.ok(snapshot);
-  assert.match(snapshot?.snapshot.contentPreview || '', /长期主义/);
+  assert.equal(soulAction?.governanceStatus, 'pending_review');
+  assert.equal(soulAction?.executionStatus, 'not_dispatched');
+  assert.equal(workerTaskCount.total, 0);
+  assert.equal(snapshot, null);
 });
 
-test('post-index queue updates persona snapshot when growth note content changes', async (t) => {
+test('post-index queue reuses pending_review soul action when growth note content changes', async (t) => {
   const env = await createTestEnv('lifeos-persona-post-index-append-');
 
   t.after(async () => {
@@ -662,17 +680,18 @@ test('post-index queue updates persona snapshot when growth note content changes
 
   const note = getDb().prepare('SELECT id FROM notes WHERE file_path = ?').get(filePath) as { id: string } | undefined;
   assert.ok(note);
-  const firstSnapshot = getPersonaSnapshotBySourceNoteId(note!.id);
-  assert.ok(firstSnapshot);
+  const firstSoulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
+  assert.ok(firstSoulAction);
 
   await rewriteMarkdownContent(filePath, (content) => `${content}\n\n补充：现在我更强调稳态推进与节奏感。`);
   queue.enqueue(filePath, 'upsert');
   await waitForQueueToDrain(queue);
 
-  const updatedSnapshot = getPersonaSnapshotBySourceNoteId(note!.id);
-  assert.ok(updatedSnapshot);
-  assert.match(updatedSnapshot?.snapshot.contentPreview || '', /稳态推进/);
-  assert.notEqual(updatedSnapshot?.updatedAt, firstSnapshot?.updatedAt);
+  const updatedSoulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
+  assert.ok(updatedSoulAction);
+  assert.equal(updatedSoulAction?.id, firstSoulAction?.id);
+  assert.equal(updatedSoulAction?.governanceStatus, 'pending_review');
+  assert.equal(updatedSoulAction?.executionStatus, 'not_dispatched');
 });
 
 test('post-index queue ignores frontmatter-only updates for growth note', async (t) => {
@@ -702,19 +721,19 @@ test('post-index queue ignores frontmatter-only updates for growth note', async 
 
   const note = getDb().prepare('SELECT id FROM notes WHERE file_path = ?').get(filePath) as { id: string } | undefined;
   assert.ok(note);
-  const beforeSnapshot = getPersonaSnapshotBySourceNoteId(note!.id);
-  assert.ok(beforeSnapshot);
+  const beforeSoulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
+  assert.ok(beforeSoulAction);
   const beforeTasks = getDb().prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?").get(note!.id) as { total: number };
 
   await updateFrontmatter(filePath, { priority: 'high', status: 'done' });
   queue.enqueue(filePath, 'upsert');
   await waitForQueueToDrain(queue);
 
-  const afterSnapshot = getPersonaSnapshotBySourceNoteId(note!.id);
+  const afterSoulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
   const afterTasks = getDb().prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?").get(note!.id) as { total: number };
 
-  assert.ok(afterSnapshot);
-  assert.equal(afterSnapshot?.updatedAt, beforeSnapshot?.updatedAt);
+  assert.ok(afterSoulAction);
+  assert.equal(afterSoulAction?.updatedAt, beforeSoulAction?.updatedAt);
   assert.equal(afterTasks.total, beforeTasks.total);
 });
 
@@ -774,7 +793,48 @@ test('post-index queue ignores non-target notes for persona snapshot trigger', a
   assert.equal(taskCount.total, 0);
 });
 
-test('generator gate dispatcher runs minimal PR2 update_persona_snapshot closure', async (t) => {
+test('post-index PR3 baseline queues reviewable soul action instead of auto-dispatching', async (t) => {
+  const env = await createTestEnv('lifeos-persona-pr3-queue-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const queue = new IndexQueue(() => {});
+  const filePath = path.join(env.vaultPath, '成长', '2026-03-20-pr3-queue.md');
+  await createFile(filePath, buildNoteMarkdown({
+    type: 'note',
+    dimension: 'growth',
+    status: 'done',
+    priority: 'medium',
+    privacy: 'private',
+    date: '2026-03-20',
+    source: 'desktop',
+    created: '2026-03-20T09:00:00.000Z',
+    updated: '2026-03-20T09:00:00.000Z',
+  }, '我最近更强调长期主义、稳态推进与节奏感。'));
+
+  queue.enqueue(filePath, 'upsert');
+  await waitForQueueToDrain(queue);
+
+  const note = getDb().prepare('SELECT id FROM notes WHERE file_path = ?').get(filePath) as { id: string } | undefined;
+  assert.ok(note);
+
+  const soulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
+  const snapshot = getPersonaSnapshotBySourceNoteId(note!.id);
+  const workerTaskCount = getDb()
+    .prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?")
+    .get(note!.id) as { total: number };
+
+  assert.ok(soulAction);
+  assert.equal(soulAction?.governanceStatus, 'pending_review');
+  assert.equal(soulAction?.executionStatus, 'not_dispatched');
+  assert.equal(workerTaskCount.total, 0);
+  assert.equal(snapshot, null);
+});
+
+test('generator gate queues PR3 reviewable update_persona_snapshot action', async (t) => {
   const env = await createTestEnv('lifeos-persona-dispatch-');
 
   t.after(async () => {
@@ -799,24 +859,26 @@ test('generator gate dispatcher runs minimal PR2 update_persona_snapshot closure
     sourceNoteId: 'note-persona-dispatch',
     actionKind: 'update_persona_snapshot',
     noteId: 'note-persona-dispatch',
+    trigger: 'post_index_growth_note',
   });
 
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
-    decision: 'dispatch_now',
-    reason: 'low-risk persona snapshot update can run immediately',
+    decision: 'queue_for_review',
+    reason: 'PR3 governance bridge requires review before dispatch',
   });
 
   const dispatchResult = await dispatchSoulActionCandidate(candidate!, gateDecision);
-  assert.equal(dispatchResult.dispatched, true);
-  assert.ok(dispatchResult.workerTaskId);
+  assert.equal(dispatchResult.dispatched, false);
+  assert.equal(dispatchResult.workerTaskId, null);
+  assert.ok(dispatchResult.soulActionId);
 
-  const task = getSoulActionByWorkerTaskId(dispatchResult.workerTaskId!);
+  const soulAction = getSoulActionBySourceNoteIdAndKind('note-persona-dispatch', 'update_persona_snapshot');
   const snapshot = getPersonaSnapshotBySourceNoteId('note-persona-dispatch');
-  assert.ok(task);
-  assert.equal(task?.status, 'succeeded');
-  assert.ok(snapshot);
-  assert.equal(snapshot?.workerTaskId, dispatchResult.workerTaskId);
+  assert.ok(soulAction);
+  assert.equal(soulAction?.governanceStatus, 'pending_review');
+  assert.equal(soulAction?.executionStatus, 'not_dispatched');
+  assert.equal(snapshot, null);
 });
 
 test('generator and gate stay observational when source context is missing', () => {
@@ -830,8 +892,110 @@ test('generator and gate stay observational when source context is missing', () 
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
     decision: 'observe_only',
-    reason: 'missing source note context for update_persona_snapshot',
+    reason: 'missing source note context for PR3 governance queue',
   });
+});
+
+test('post-index PR3 baseline returns explicit trigger result and creates reviewable soul action', async (t) => {
+  const env = await createTestEnv('lifeos-persona-pr2-baseline-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const filePath = path.join(env.vaultPath, '成长', '2026-03-20-pr2-baseline.md');
+  await createFile(filePath, buildNoteMarkdown({
+    type: 'note',
+    dimension: 'growth',
+    status: 'done',
+    priority: 'medium',
+    privacy: 'private',
+    date: '2026-03-20',
+    source: 'desktop',
+    created: '2026-03-20T09:00:00.000Z',
+    updated: '2026-03-20T09:00:00.000Z',
+  }, '我想继续以稳态、节奏感和系统化方式推进。'));
+
+  const queue = new IndexQueue(() => {});
+  queue.enqueue(filePath, 'upsert');
+  await waitForQueueToDrain(queue);
+
+  const note = getDb().prepare('SELECT id FROM notes WHERE file_path = ?').get(filePath) as { id: string } | undefined;
+  assert.ok(note);
+
+  const previousNote = getIndexedNoteTriggerSnapshot(filePath);
+  const result = await triggerPersonaSnapshotAfterIndex({
+    filePath,
+    previousNote,
+  });
+
+  assert.equal(result.triggered, false);
+  assert.match(result.reason, /current note does not match PR3 persona snapshot review baseline/);
+
+  const soulAction = getSoulActionBySourceNoteIdAndKind(note!.id, 'update_persona_snapshot');
+  const snapshot = getPersonaSnapshotBySourceNoteId(note!.id);
+  const workerTaskCount = getDb()
+    .prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?")
+    .get(note!.id) as { total: number };
+
+  assert.ok(soulAction);
+  assert.equal(soulAction?.governanceStatus, 'pending_review');
+  assert.equal(soulAction?.executionStatus, 'not_dispatched');
+  assert.equal(workerTaskCount.total, 0);
+  assert.equal(snapshot, null);
+});
+
+test('dispatcher reuses stable PR3 soul action id across repeated queueing', async (t) => {
+  const env = await createTestEnv('lifeos-persona-pr2-repeat-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-persona-repeat', '/tmp/note-persona-repeat.md', 'note-persona-repeat.md', 'Persona 重复派发测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我最近更强调长期主义和系统化推进。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const firstCandidate = generateSoulActionCandidate({
+    sourceNoteId: 'note-persona-repeat',
+    noteId: 'note-persona-repeat',
+    noteContent: '我最近更强调长期主义和系统化推进。',
+  });
+  const firstDispatch = await dispatchSoulActionCandidate(firstCandidate!, evaluateInterventionGate(firstCandidate));
+  const firstSoulAction = getSoulActionBySourceNoteIdAndKind('note-persona-repeat', 'update_persona_snapshot');
+
+  assert.ok(firstDispatch.soulActionId);
+  assert.ok(firstSoulAction);
+
+  getDb().prepare(`UPDATE notes SET content = ?, updated = ? WHERE id = ?`).run(
+    '我最近更强调长期主义、系统化推进和节奏感。',
+    '2026-03-20T10:00:00.000Z',
+    'note-persona-repeat',
+  );
+
+  const secondCandidate = generateSoulActionCandidate({
+    sourceNoteId: 'note-persona-repeat',
+    noteId: 'note-persona-repeat',
+    noteContent: '我最近更强调长期主义、系统化推进和节奏感。',
+  });
+  const secondDispatch = await dispatchSoulActionCandidate(secondCandidate!, evaluateInterventionGate(secondCandidate));
+  const secondSoulAction = getSoulActionBySourceNoteIdAndKind('note-persona-repeat', 'update_persona_snapshot');
+  const workerTaskCount = getDb()
+    .prepare("SELECT COUNT(*) as total FROM worker_tasks WHERE task_type = 'update_persona_snapshot' AND source_note_id = ?")
+    .get('note-persona-repeat') as { total: number };
+
+  assert.equal(secondDispatch.soulActionId, firstDispatch.soulActionId);
+  assert.equal(secondSoulAction?.id, firstSoulAction?.id);
+  assert.equal(secondDispatch.workerTaskId, null);
+  assert.equal(workerTaskCount.total, 0);
+  assert.equal(secondSoulAction?.governanceStatus, 'pending_review');
+  assert.equal(secondSoulAction?.executionStatus, 'not_dispatched');
 });
 
 test('executeWorkerTask hits reintegration wiring on classify_inbox success path', async (t) => {
@@ -854,6 +1018,9 @@ test('executeWorkerTask hits reintegration wiring on classify_inbox success path
   assert.ok(Array.isArray(result.outputNotePaths));
   assert.doesNotThrow(() => createFeedbackReintegrationPayload(result));
   assert.equal(integrateContinuity(createFeedbackReintegrationPayload(result)).taskType, 'classify_inbox');
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.signalKind, 'classification_reintegration');
 });
 
 test('executeWorkerTask hits reintegration wiring on extract_tasks success path', async (t) => {
@@ -910,6 +1077,9 @@ test('executeWorkerTask hits reintegration wiring on extract_tasks success path'
   assert.ok(Array.isArray(result.outputNotePaths));
   assert.doesNotThrow(() => createFeedbackReintegrationPayload(result));
   assert.equal(integrateContinuity(createFeedbackReintegrationPayload(result)).taskType, 'extract_tasks');
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.signalKind, 'task_extraction_reintegration');
 });
 
 test('executeWorkerTask hits reintegration wiring on supported success path', async (t) => {
@@ -1025,6 +1195,9 @@ test('executeWorkerTask hits reintegration wiring on daily_report success path',
     strength: 'medium',
     summary: `${result.resultSummary} Continuity target: derived_outputs.`,
   });
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.signalKind, 'daily_report_reintegration');
 });
 
 test('executeWorkerTask hits reintegration wiring on daily_report failed path', async (t) => {
@@ -1196,6 +1369,9 @@ test('executeWorkerTask hits reintegration wiring on weekly_report success path'
     strength: 'medium',
     summary: `${result.resultSummary} Continuity target: derived_outputs.`,
   });
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.signalKind, 'weekly_report_reintegration');
 });
 
 test('executeWorkerTask hits reintegration wiring on weekly_report failed path', async (t) => {
@@ -1417,6 +1593,154 @@ test('executeWorkerTask hits reintegration wiring on cancelled supported path', 
     strength: 'low',
     summary: 'summarize_note ended as cancelled; continuity remains observational only (任务已取消).',
   });
+});
+
+test('accepted persona reintegration can plan and dispatch PR6 event and continuity promotions', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-persona-promotion-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-pr6-persona', '/tmp/note-pr6-persona.md', 'note-pr6-persona.md', 'PR6 Persona 测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我最近更专注长期主义、系统化推进与稳定节奏。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const task = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-pr6-persona' },
+    sourceNoteId: 'note-pr6-persona',
+  });
+  const result = await executeWorkerTask(task.id);
+  assert.equal(result.status, 'succeeded');
+
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+
+  const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept for PR6 promotion');
+  assert.ok(accepted);
+  assert.equal(accepted?.reviewStatus, 'accepted');
+
+  const planned = planPromotionSoulActions(accepted!);
+  assert.equal(planned.length, 2);
+  assert.ok(planned.some((action) => action.actionKind === 'promote_event_node'));
+  assert.ok(planned.some((action) => action.actionKind === 'promote_continuity_record'));
+
+  const eventAction = planned.find((action) => action.actionKind === 'promote_event_node');
+  const continuityAction = planned.find((action) => action.actionKind === 'promote_continuity_record');
+  assert.ok(eventAction);
+  assert.ok(continuityAction);
+
+  getDb().prepare(`UPDATE soul_actions SET governance_status = 'approved', approved_at = updated_at WHERE id = ?`).run(eventAction!.id);
+  getDb().prepare(`UPDATE soul_actions SET governance_status = 'approved', approved_at = updated_at WHERE id = ?`).run(continuityAction!.id);
+
+  const { dispatchApprovedSoulAction } = await import('../src/soul/soulActionDispatcher.js');
+  const eventDispatch = await dispatchApprovedSoulAction(eventAction!.id);
+  const continuityDispatch = await dispatchApprovedSoulAction(continuityAction!.id);
+
+  assert.equal(eventDispatch.dispatched, true);
+  assert.equal(continuityDispatch.dispatched, true);
+
+  const eventNodes = listEventNodes();
+  const continuityRecords = listContinuityRecords();
+  assert.equal(eventNodes.length, 1);
+  assert.equal(continuityRecords.length, 1);
+  assert.equal(eventNodes[0]?.sourceReintegrationId, reintegrationRecord!.id);
+  assert.equal(continuityRecords[0]?.sourceReintegrationId, reintegrationRecord!.id);
+});
+
+test('accepted daily report reintegration plans only PR6 event promotion', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-daily-promotion-');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    content: [{ type: 'text', text: '这是日报摘要' }],
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  t.after(async () => {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const task = createWorkerTask({ taskType: 'daily_report', input: { date: '2026-03-20' } });
+  const result = await executeWorkerTask(task.id);
+  assert.equal(result.status, 'succeeded');
+
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
+  assert.ok(reintegrationRecord);
+  const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept daily report event');
+  const planned = planPromotionSoulActions(accepted!);
+  assert.equal(planned.length, 1);
+  assert.equal(planned[0]?.actionKind, 'promote_event_node');
+});
+
+test('unaccepted reintegration cannot plan PR6 promotions', async () => {
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6',
+    sourceNoteId: null,
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'manual summary',
+    evidence: {},
+    now: '2026-03-20T09:00:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-pr6');
+  assert.ok(record);
+  assert.throws(() => planPromotionSoulActions(record!), /accepted/);
+});
+
+test('terminal hook does not directly create PR6 event or continuity objects', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-no-direct-promotion-');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    content: [{ type: 'text', text: '这是周报摘要' }],
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  t.after(async () => {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const task = createWorkerTask({ taskType: 'weekly_report', input: { weekStart: '2026-03-16' } });
+  const result = await executeWorkerTask(task.id);
+  assert.equal(result.status, 'succeeded');
+  assert.equal(listEventNodes().length, 0);
+  assert.equal(listContinuityRecords().length, 0);
 });
 
 test('feedback reintegration rejects unsupported or non-terminal tasks', () => {

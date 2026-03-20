@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { SCHEMA, WORKER_TASK_TABLE_COLUMNS_SQL, WORKER_TASK_INDEXES_SQL, TASK_SCHEDULE_TABLE_COLUMNS_SQL, TASK_SCHEDULE_INDEXES_SQL, SOUL_ACTION_TABLE_COLUMNS_SQL, SOUL_ACTION_INDEXES_SQL, PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL, PERSONA_SNAPSHOT_INDEXES_SQL } from './schema.js';
+import { SCHEMA, WORKER_TASK_TABLE_COLUMNS_SQL, WORKER_TASK_INDEXES_SQL, TASK_SCHEDULE_TABLE_COLUMNS_SQL, TASK_SCHEDULE_INDEXES_SQL, SOUL_ACTION_TABLE_COLUMNS_SQL, SOUL_ACTION_INDEXES_SQL, PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL, PERSONA_SNAPSHOT_INDEXES_SQL, REINTEGRATION_RECORD_TABLE_COLUMNS_SQL, REINTEGRATION_RECORD_INDEXES_SQL, EVENT_NODE_TABLE_COLUMNS_SQL, EVENT_NODE_INDEXES_SQL, CONTINUITY_RECORD_TABLE_COLUMNS_SQL, CONTINUITY_RECORD_INDEXES_SQL } from './schema.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -98,17 +98,25 @@ function ensureSoulActionsTable(database: Database.Database): void {
     'id',
     'source_note_id',
     'action_kind',
-    'status',
+    'governance_status',
+    'execution_status',
+    'governance_reason',
     'worker_task_id',
     'created_at',
     'updated_at',
+    'approved_at',
+    'deferred_at',
+    'discarded_at',
     'started_at',
     'finished_at',
     'error',
     'result_summary',
   ];
 
-  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  const hasLegacyStatusOnly = columns.some((column) => column.name === 'status')
+    && !columns.some((column) => column.name === 'governance_status')
+    && !columns.some((column) => column.name === 'execution_status');
+  const needsRebuild = hasLegacyStatusOnly || requiredColumns.some((name) => !columns.some((column) => column.name === name));
   if (!needsRebuild) {
     database.exec(indexesSql);
     return;
@@ -116,8 +124,37 @@ function ensureSoulActionsTable(database: Database.Database): void {
 
   console.log('Migration: rebuilding soul_actions table with latest schema...');
   database.exec(`
+    CREATE TABLE soul_actions_new (
+${SOUL_ACTION_TABLE_COLUMNS_SQL}
+    );
+    INSERT INTO soul_actions_new (
+      id, source_note_id, action_kind, governance_status, execution_status, governance_reason,
+      worker_task_id, created_at, updated_at, approved_at, deferred_at, discarded_at,
+      started_at, finished_at, error, result_summary
+    )
+    SELECT
+      id,
+      source_note_id,
+      action_kind,
+      'approved',
+      CASE
+        WHEN status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled') THEN status
+        ELSE 'not_dispatched'
+      END,
+      NULL,
+      worker_task_id,
+      created_at,
+      updated_at,
+      created_at,
+      NULL,
+      NULL,
+      started_at,
+      finished_at,
+      error,
+      result_summary
+    FROM soul_actions;
     DROP TABLE soul_actions;
-    ${tableSql}
+    ALTER TABLE soul_actions_new RENAME TO soul_actions;
     ${indexesSql}
   `);
   console.log('Migration: soul_actions table rebuilt with latest schema');
@@ -157,6 +194,112 @@ function ensurePersonaSnapshotsTable(database: Database.Database): void {
     ${indexesSql}
   `);
   console.log('Migration: persona_snapshots table rebuilt with latest schema');
+}
+
+function ensureReintegrationRecordsTable(database: Database.Database): void {
+  const tableSql = `CREATE TABLE IF NOT EXISTS reintegration_records (\n${REINTEGRATION_RECORD_TABLE_COLUMNS_SQL}\n);`;
+  const indexesSql = REINTEGRATION_RECORD_INDEXES_SQL;
+  const columns = database.prepare("PRAGMA table_info(reintegration_records)").all() as Array<{ name: string }>;
+
+  if (columns.length === 0) {
+    database.exec(`${tableSql}\n${indexesSql}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id',
+    'worker_task_id',
+    'source_note_id',
+    'soul_action_id',
+    'task_type',
+    'terminal_status',
+    'signal_kind',
+    'review_status',
+    'target',
+    'strength',
+    'summary',
+    'evidence_json',
+    'review_reason',
+    'created_at',
+    'updated_at',
+    'reviewed_at',
+  ];
+
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  if (!needsRebuild) {
+    database.exec(indexesSql);
+    return;
+  }
+
+  console.log('Migration: rebuilding reintegration_records table with latest schema...');
+  database.exec(`
+    DROP TABLE reintegration_records;
+    ${tableSql}
+    ${indexesSql}
+  `);
+  console.log('Migration: reintegration_records table rebuilt with latest schema');
+}
+
+function ensureEventNodesTable(database: Database.Database): void {
+  const tableSql = `CREATE TABLE IF NOT EXISTS event_nodes (\n${EVENT_NODE_TABLE_COLUMNS_SQL}\n);`;
+  const indexesSql = EVENT_NODE_INDEXES_SQL;
+  const columns = database.prepare("PRAGMA table_info(event_nodes)").all() as Array<{ name: string }>;
+
+  if (columns.length === 0) {
+    database.exec(`${tableSql}\n${indexesSql}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id', 'source_reintegration_id', 'source_note_id', 'source_soul_action_id', 'promotion_soul_action_id',
+    'event_kind', 'title', 'summary', 'threshold', 'status', 'evidence_json', 'explanation_json',
+    'occurred_at', 'created_at', 'updated_at',
+  ];
+
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  if (!needsRebuild) {
+    database.exec(indexesSql);
+    return;
+  }
+
+  console.log('Migration: rebuilding event_nodes table with latest schema...');
+  database.exec(`
+    DROP TABLE event_nodes;
+    ${tableSql}
+    ${indexesSql}
+  `);
+  console.log('Migration: event_nodes table rebuilt with latest schema');
+}
+
+function ensureContinuityRecordsTable(database: Database.Database): void {
+  const tableSql = `CREATE TABLE IF NOT EXISTS continuity_records (\n${CONTINUITY_RECORD_TABLE_COLUMNS_SQL}\n);`;
+  const indexesSql = CONTINUITY_RECORD_INDEXES_SQL;
+  const columns = database.prepare("PRAGMA table_info(continuity_records)").all() as Array<{ name: string }>;
+
+  if (columns.length === 0) {
+    database.exec(`${tableSql}\n${indexesSql}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id', 'source_reintegration_id', 'source_note_id', 'source_soul_action_id', 'promotion_soul_action_id',
+    'continuity_kind', 'target', 'strength', 'summary', 'continuity_json', 'evidence_json', 'explanation_json',
+    'recorded_at', 'created_at', 'updated_at',
+  ];
+
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  if (!needsRebuild) {
+    database.exec(indexesSql);
+    return;
+  }
+
+  console.log('Migration: rebuilding continuity_records table with latest schema...');
+  database.exec(`
+    DROP TABLE continuity_records;
+    ${tableSql}
+    ${indexesSql}
+  `);
+  console.log('Migration: continuity_records table rebuilt with latest schema');
 }
 
 let db: Database.Database | null = null;
@@ -236,6 +379,9 @@ export function initDatabase(): void {
 
   ensureSoulActionsTable(database);
   ensurePersonaSnapshotsTable(database);
+  ensureReintegrationRecordsTable(database);
+  ensureEventNodesTable(database);
+  ensureContinuityRecordsTable(database);
 
   // Migration: add notes column to ai_prompts if missing
   const promptCols = database.prepare("PRAGMA table_info(ai_prompts)").all() as Array<{ name: string }>;
