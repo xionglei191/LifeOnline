@@ -6,7 +6,7 @@ import type { WorkerTask } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb } from '../src/db/client.js';
 import { createWorkerTask, executeWorkerTask, cancelWorkerTask } from '../src/workers/workerTasks.js';
-import { getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
+import { approveSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
@@ -865,7 +865,7 @@ test('generator gate queues PR3 reviewable update_persona_snapshot action', asyn
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
     decision: 'queue_for_review',
-    reason: 'PR3 governance bridge requires review before dispatch',
+    reason: 'persona snapshot candidate requires review-backed dispatch',
   });
 
   const dispatchResult = await dispatchSoulActionCandidate(candidate!, gateDecision);
@@ -881,6 +881,85 @@ test('generator gate queues PR3 reviewable update_persona_snapshot action', asyn
   assert.equal(snapshot, null);
 });
 
+test('generator gate queues and dispatches review-backed extract_tasks closure', async (t) => {
+  const env = await createTestEnv('lifeos-extract-dispatch-');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    content: [{
+      type: 'text',
+      text: JSON.stringify({ tasks: [] }),
+    }],
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  t.after(async () => {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-extract-closure', '/tmp/note-extract-closure.md', 'note-extract-closure.md', 'Extract Closure 测试笔记', 'note', 'learning', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '请帮我整理任务。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const candidate = generateSoulActionCandidate({
+    sourceNoteId: 'note-extract-closure',
+    noteId: 'note-extract-closure',
+    noteContent: '请帮我整理任务。',
+    preferredActionKind: 'extract_tasks',
+  });
+  assert.deepEqual(candidate, {
+    sourceNoteId: 'note-extract-closure',
+    actionKind: 'extract_tasks',
+    noteId: 'note-extract-closure',
+    trigger: 'manual_extract_tasks_request',
+  });
+
+  const gateDecision = evaluateInterventionGate(candidate);
+  assert.deepEqual(gateDecision, {
+    decision: 'queue_for_review',
+    reason: 'extract_tasks candidate requires review-backed dispatch',
+  });
+
+  const queued = await dispatchSoulActionCandidate(candidate!, gateDecision);
+  assert.equal(queued.dispatched, false);
+  assert.ok(queued.soulActionId);
+  assert.equal(queued.workerTaskId, null);
+
+  const queuedSoulAction = getSoulActionBySourceNoteIdAndKind('note-extract-closure', 'extract_tasks');
+  assert.ok(queuedSoulAction);
+  assert.equal(queuedSoulAction?.governanceStatus, 'pending_review');
+  assert.equal(queuedSoulAction?.executionStatus, 'not_dispatched');
+
+  const approved = approveSoulAction(queuedSoulAction!.id, 'approve extract closure');
+  assert.ok(approved);
+  assert.equal(approved?.governanceStatus, 'approved');
+
+  const { dispatchApprovedSoulAction } = await import('../src/soul/soulActionDispatcher.js');
+  const dispatched = await dispatchApprovedSoulAction(queuedSoulAction!.id);
+  assert.equal(dispatched.dispatched, true);
+  assert.ok(dispatched.workerTaskId);
+
+  const task = getSoulActionByWorkerTaskId(dispatched.workerTaskId!);
+  assert.ok(task);
+  assert.equal(task?.executionStatus, 'succeeded');
+  assert.equal(task?.governanceStatus, 'approved');
+});
+
 test('generator and gate stay observational when source context is missing', () => {
   const candidate = generateSoulActionCandidate({
     sourceNoteId: null,
@@ -892,7 +971,7 @@ test('generator and gate stay observational when source context is missing', () 
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
     decision: 'observe_only',
-    reason: 'missing source note context for PR3 governance queue',
+    reason: 'missing source note context for governance queue',
   });
 });
 

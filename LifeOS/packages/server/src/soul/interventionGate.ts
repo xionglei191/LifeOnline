@@ -9,12 +9,19 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
   if (!candidate?.sourceNoteId || !candidate.noteId) {
     return {
       decision: 'observe_only',
-      reason: 'missing source note context for PR3 governance queue',
+      reason: 'missing source note context for governance queue',
+    };
+  }
+
+  if (candidate.actionKind === 'extract_tasks') {
+    return {
+      decision: 'queue_for_review',
+      reason: 'extract_tasks candidate requires review-backed dispatch',
     };
   }
 
   return {
     decision: 'queue_for_review',
-    reason: 'PR3 governance bridge requires review before dispatch',
+    reason: 'persona snapshot candidate requires review-backed dispatch',
   };
 }
