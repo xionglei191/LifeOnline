@@ -131,7 +131,7 @@ review queue 应优先理解为：
 - `schema.ts` 已定义 `soul_actions` 表结构与索引；
 - `client.ts` 已在数据库初始化流程中确保 `soul_actions` 表存在并在缺列时重建；
 - `soulActions.ts` 已提供最小 create/get/list、worker task 绑定、terminal lifecycle 同步能力；
-- 当前范围仍然很窄：仅明确覆盖 `extract_tasks`，且本质上仍是对 `workerTasks` 生命周期的 server-local 镜像层。
+- 当前范围仍然很窄：已可明确覆盖 `extract_tasks` 与 `update_persona_snapshot` 两条最小可锚定路径，且本质上仍是对 `workerTasks` 生命周期的 server-local 镜像层。
 
 关键锚点：
 - `soulActions.ts:48-52`
@@ -228,7 +228,7 @@ review queue 应优先理解为：
 当前已可确认：
 - `src/soul/` 已存在最小 `SoulAction` 模块，不再是“待核实是否存在”；
 - `soul_actions` 表、最小 store/query、worker task 绑定与生命周期同步已落地；
-- 当前实现范围仍很窄，只明确覆盖 `extract_tasks`，且以 worker-mirrored、server-local persistence 为主；
+- 当前实现范围仍很窄，以 `extract_tasks` / `update_persona_snapshot` 为中心形成最小可锚定覆盖，且以 worker-mirrored、server-local persistence 为主；
 - 因此不能写成“PR1 完整完成”，但也不能再写成“未开始”。
 ### In Scope
 - `soul_actions` 持久化结构；
