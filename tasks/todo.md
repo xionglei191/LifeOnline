@@ -1,40 +1,23 @@
-# PR6 高阈值 Event / Continuity Reintegration 最小落地
+# PR6 review-backed promotion 守卫补强
 
 ## 计划
-- [x] 新增 `event_nodes` 与 `continuity_records` 两类高阈值对象层及 schema。
-- [x] 扩展 `soul_actions`，支持 `promote_event_node` / `promote_continuity_record` 两类 promotion action。
-- [x] 新增 reintegration review / promotion planner / promotion executor，形成 review-backed promotion 闭环。
-- [x] 让 Dispatcher 成为唯一 promotion 执行入口，禁止 terminal hook 直写最终对象。
-- [x] 新增最小 API：reintegration accept/reject/plan-promotions + event/continuity list。
-- [x] 覆盖方案 B：
-  - Event：`daily_report` + `weekly_report` + `update_persona_snapshot`
-  - Continuity：`weekly_report` + `update_persona_snapshot`
-- [x] 补数据库与 PR6 promotion 测试。
-- [x] 运行 `pnpm --filter server test`。
-- [x] 运行 `pnpm --filter server build`。
+- [x] 读取 README / vision / tasks / CLAUDE.md 并复核当前 PR1–PR6 边界。
+- [x] 审查 PR6 promotion 当前实现，确认下一步应优先补 review-backed 边界守卫。
+- [x] 在 `pr6PromotionExecutor.ts` 为 promotion 执行补充 accepted-review 强约束，避免已创建 action 被越过 review 直接落对象层。
+- [x] 补充对应测试，覆盖 pending/rejected reintegration record 不得执行 promotion。
+- [x] 运行相关测试与 server build。
+- [ ] 记录本轮 review / 验证结果，并直接提交 git commit。
+
+## 当前执行
+- 已将 accepted-review 守卫下沉到 `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts`：promotion executor 现在在 source reintegration record 存在后，继续强校验 `reviewStatus === 'accepted'`，否则直接拒绝执行。
+- 已补两条针对 dispatcher 最终执行口的回归测试：即便 promotion soul action 被手动置为 `approved`，若 source reintegration record 仍是 `pending_review` 或 `rejected`，也不得生成 `event_nodes` / `continuity_records`。
+- 为避免误报，已把新增用例切到独立 `createTestEnv(...)`，并在切换前显式 `closeDb()`，避免沿用上一个测试的 DB 连接导致唯一键冲突。
 
 ## Review
-- 已在 `LifeOS/packages/server/src/db/schema.ts` 新增 `event_nodes` 与 `continuity_records` 两张表，并在 `LifeOS/packages/server/src/db/client.ts` 接入建表/迁移。
-- 已在 `LifeOS/packages/server/src/soul/types.ts` 扩展 `SUPPORTED_SOUL_ACTION_KINDS`，新增 `promote_event_node` / `promote_continuity_record`。
-- 已新增：
-  - `LifeOS/packages/server/src/soul/eventNodes.ts`
-  - `LifeOS/packages/server/src/soul/continuityRecords.ts`
-  - `LifeOS/packages/server/src/soul/reintegrationReview.ts`
-  - `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts`
-  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts`
-- 已在 `LifeOS/packages/server/src/soul/soulActionDispatcher.ts` 支持 PR6 promotion action 分流：普通 action 仍走 worker task，PR6 promotion action 走本地 executor，但仍必须先 approve 再 dispatch。
-- 已在 `LifeOS/packages/server/src/api/handlers.ts` / `LifeOS/packages/server/src/api/routes.ts` 新增：
-  - `GET /api/reintegration-records`
-  - `POST /api/reintegration-records/:id/accept`
-  - `POST /api/reintegration-records/:id/reject`
-  - `POST /api/reintegration-records/:id/plan-promotions`
-  - `GET /api/event-nodes`
-  - `GET /api/continuity-records`
-- 已在 `LifeOS/packages/server/test/db.test.ts` 补 schema 断言；已在 `LifeOS/packages/server/test/feedbackReintegration.test.ts` 补 PR6 最小 promotion 闭环测试，包括：
-  - accepted persona reintegration -> event + continuity promotion
-  - accepted daily report -> event only
-  - 未 accept 不得 plan promotions
-  - terminal hook 不得直写最终对象
-- `pnpm --filter server test` 全量通过，55/55。
-- `pnpm --filter server build` 通过。
-- 已补正式任务书文稿对齐：PR2 / PR3 不再按“未开始”表述，而按“最小落地（保守口径）”冻结当前代码现实，消除文稿内部前后冲突。
+- 已完成文档锚点读取：`README.md`、`CLAUDE.md`、`vision/00-权威基线/`、`vision/01-当前进度/`、`tasks/todo.md`、`tasks/lessons.md`。
+- 已确认本轮更高价值的下一步不是继续扩范围，而是修补 PR6 promotion 最终执行口的 review-backed 守卫缺口。
+- 首轮 `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server test -- --test-name-pattern "PR6|promotion|reintegration review"` 未能作为精准验证命令使用：Node test runner 仍跑了全量测试，其中若干既有 `configLifecycle` 用例因固定读取 `/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json` 而在当前机器路径下失败；这属于现存环境/路径问题，不是本轮改动回归。
+- 已完成可落地验证：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，41/41。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮结果表明：PR6 promotion 即使被手动推进到 `approved`，dispatcher 最终执行口仍不能绕过 accepted review 直接落高阈值对象层。

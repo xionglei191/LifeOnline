@@ -18,6 +18,10 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
     throw new Error('Source reintegration record not found');
   }
 
+  if (record.reviewStatus !== 'accepted') {
+    throw new Error('PR6 promotion requires accepted reintegration review');
+  }
+
   if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
     const eventKind = record.signalKind === 'persona_snapshot_reintegration'
