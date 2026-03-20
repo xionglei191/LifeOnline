@@ -1,8 +1,16 @@
 import { getDb } from '../db/client.js';
-import type { ReintegrationSignalKind, SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from '../workers/feedbackReintegration.js';
+import type { SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from '../workers/feedbackReintegration.js';
 import type { ContinuityStrength, ContinuityTarget } from '../workers/continuityIntegrator.js';
 
 export type ReintegrationReviewStatus = 'pending_review' | 'accepted' | 'rejected';
+export type ReintegrationSignalKind =
+  | 'summary_reintegration'
+  | 'classification_reintegration'
+  | 'task_extraction_reintegration'
+  | 'persona_snapshot_reintegration'
+  | 'daily_report_reintegration'
+  | 'weekly_report_reintegration'
+  | 'openclaw_reintegration';
 
 export interface ReintegrationRecord {
   id: string;

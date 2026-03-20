@@ -10,6 +10,7 @@ import { approveSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByW
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
+  createReintegrationRecordInput,
   getReintegrationSignalKind,
   SUPPORTED_REINTEGRATION_TASK_TYPES,
   type SupportedReintegrationTaskType,
@@ -50,6 +51,74 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('createReintegrationRecordInput centralizes record assembly for terminal tasks', () => {
+  const task = buildTerminalTask('update_persona_snapshot', {
+    id: 'task-record-input',
+    resultSummary: '已更新人格快照：更稳定推进。',
+    sourceNoteId: 'note-record-input',
+    outputNotePaths: [],
+    outputNotes: [],
+  });
+
+  const recordInput = createReintegrationRecordInput(task, {
+    soulActionId: 'soul-123',
+    personaSnapshot: {
+      id: 'persona-123',
+      sourceNoteId: 'note-record-input',
+      soulActionId: 'soul-123',
+      workerTaskId: 'task-record-input',
+      summary: '长期主义与稳定节奏',
+      snapshot: {
+        sourceNoteTitle: '测试笔记',
+        summary: '人格快照摘要',
+        contentPreview: '长期主义与稳定节奏',
+        updatedAt: '2026-03-20T09:00:00.000Z',
+      },
+      createdAt: '2026-03-20T09:00:00.000Z',
+      updatedAt: '2026-03-20T09:00:00.000Z',
+    },
+  });
+
+  assert.deepEqual(recordInput, {
+    workerTaskId: 'task-record-input',
+    sourceNoteId: 'note-record-input',
+    soulActionId: 'soul-123',
+    taskType: 'update_persona_snapshot',
+    terminalStatus: 'succeeded',
+    signalKind: 'persona_snapshot_reintegration',
+    target: 'source_note',
+    strength: 'medium',
+    summary: '已更新人格快照：更稳定推进。 Continuity target: source_note.',
+    evidence: {
+      taskId: 'task-record-input',
+      taskType: 'update_persona_snapshot',
+      sourceNoteId: 'note-record-input',
+      resultSummary: '已更新人格快照：更稳定推进。',
+      error: null,
+      outputNotePaths: [],
+      personaSnapshotId: 'persona-123',
+      personaSnapshotSummary: '长期主义与稳定节奏',
+      personaContentPreview: '长期主义与稳定节奏',
+    },
+  });
+});
+
+test('createReintegrationRecordInput keeps persona evidence nullable when absent', () => {
+  const task = buildTerminalTask('daily_report', {
+    id: 'task-record-input-daily',
+    sourceNoteId: null,
+    resultSummary: '已生成今日日报',
+  });
+
+  const recordInput = createReintegrationRecordInput(task);
+
+  assert.equal(recordInput.signalKind, 'daily_report_reintegration');
+  assert.equal(recordInput.target, 'derived_outputs');
+  assert.equal(recordInput.evidence.personaSnapshotId, null);
+  assert.equal(recordInput.evidence.personaSnapshotSummary, null);
+  assert.equal(recordInput.evidence.personaContentPreview, null);
+});
 
 async function waitFor(condition: () => boolean | Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();

@@ -33,8 +33,7 @@ import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
 import { getTodayDateString } from '../utils/date.js';
 import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
-import { createFeedbackReintegrationPayload, getReintegrationSignalKind } from './feedbackReintegration.js';
-import { integrateContinuity } from './continuityIntegrator.js';
+import { createReintegrationRecordInput } from './feedbackReintegration.js';
 import {
   attachWorkerTaskToSoulAction,
   createOrReuseSoulAction,
@@ -239,33 +238,12 @@ function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
 
 function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
   try {
-    const packet = createFeedbackReintegrationPayload(task);
-    const result = integrateContinuity(packet);
-    const soulAction = getSoulActionByWorkerTaskId(task.id);
-    const personaSnapshot = packet.sourceNoteId ? getPersonaSnapshotBySourceNoteId(packet.sourceNoteId) : null;
-
-    upsertReintegrationRecord({
-      workerTaskId: packet.taskId,
-      sourceNoteId: packet.sourceNoteId,
-      soulActionId: soulAction?.id ?? null,
-      taskType: packet.taskType,
-      terminalStatus: packet.status,
-      signalKind: getReintegrationSignalKind(packet.taskType),
-      target: result.target,
-      strength: result.strength,
-      summary: result.summary,
-      evidence: {
-        taskId: packet.taskId,
-        taskType: packet.taskType,
-        sourceNoteId: packet.sourceNoteId,
-        resultSummary: packet.resultSummary,
-        error: packet.error,
-        outputNotePaths: packet.outputNotePaths,
-        personaSnapshotId: personaSnapshot?.id ?? null,
-        personaSnapshotSummary: personaSnapshot?.summary ?? null,
-        personaContentPreview: personaSnapshot?.snapshot.contentPreview ?? null,
-      },
+    const reintegrationInput = createReintegrationRecordInput(task, {
+      soulActionId: getSoulActionByWorkerTaskId(task.id)?.id ?? null,
+      personaSnapshot: task.sourceNoteId ? getPersonaSnapshotBySourceNoteId(task.sourceNoteId) : null,
     });
+
+    upsertReintegrationRecord(reintegrationInput);
   } catch {
     // Reintegration remains best-effort; PR5 may persist lightweight records but must never break terminal task completion.
   }
