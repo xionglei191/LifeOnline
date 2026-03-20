@@ -13,6 +13,15 @@ export const SUPPORTED_REINTEGRATION_TASK_TYPES = [
 export type SupportedReintegrationTaskType = typeof SUPPORTED_REINTEGRATION_TASK_TYPES[number];
 export type TerminalWorkerTaskStatus = 'succeeded' | 'failed' | 'cancelled';
 
+export type ReintegrationSignalKind =
+  | 'summary_reintegration'
+  | 'classification_reintegration'
+  | 'task_extraction_reintegration'
+  | 'persona_snapshot_reintegration'
+  | 'daily_report_reintegration'
+  | 'weekly_report_reintegration'
+  | 'openclaw_reintegration';
+
 export interface FeedbackReintegrationPayload {
   taskId: string;
   taskType: SupportedReintegrationTaskType;
@@ -31,6 +40,25 @@ export function isSupportedReintegrationTaskType(taskType: WorkerTask['taskType'
 
 export function isTerminalWorkerTaskStatus(status: WorkerTask['status']): status is TerminalWorkerTaskStatus {
   return status === 'succeeded' || status === 'failed' || status === 'cancelled';
+}
+
+export function getReintegrationSignalKind(taskType: SupportedReintegrationTaskType): ReintegrationSignalKind {
+  switch (taskType) {
+    case 'summarize_note':
+      return 'summary_reintegration';
+    case 'classify_inbox':
+      return 'classification_reintegration';
+    case 'extract_tasks':
+      return 'task_extraction_reintegration';
+    case 'update_persona_snapshot':
+      return 'persona_snapshot_reintegration';
+    case 'daily_report':
+      return 'daily_report_reintegration';
+    case 'weekly_report':
+      return 'weekly_report_reintegration';
+    case 'openclaw_task':
+      return 'openclaw_reintegration';
+  }
 }
 
 export function createFeedbackReintegrationPayload(task: WorkerTask): FeedbackReintegrationPayload {

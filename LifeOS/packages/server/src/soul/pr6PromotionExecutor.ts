@@ -1,6 +1,7 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
+import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getEventKindForReintegrationSignal } from './pr6PromotionRules.js';
 import type { SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
@@ -18,17 +19,11 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
     throw new Error('Source reintegration record not found');
   }
 
-  if (record.reviewStatus !== 'accepted') {
-    throw new Error('PR6 promotion requires accepted reintegration review');
-  }
+  assertAcceptedPromotionReintegration(record, 'PR6 promotion requires accepted reintegration review');
 
   if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
-    const eventKind = record.signalKind === 'persona_snapshot_reintegration'
-      ? 'persona_shift'
-      : record.signalKind === 'weekly_report_reintegration'
-        ? 'weekly_reflection'
-        : 'milestone_report';
+    const eventKind = getEventKindForReintegrationSignal(record.signalKind);
     const node = upsertEventNode({
       sourceReintegrationId: record.id,
       sourceNoteId: record.sourceNoteId,
@@ -48,11 +43,7 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
 
   if (action.actionKind === 'promote_continuity_record') {
     const existing = getContinuityRecordBySourceReintegrationId(record.id);
-    const continuityKind = record.signalKind === 'persona_snapshot_reintegration'
-      ? 'persona_direction'
-      : record.signalKind === 'daily_report_reintegration'
-        ? 'daily_rhythm'
-        : 'weekly_theme';
+    const continuityKind = getContinuityKindForReintegrationSignal(record.signalKind);
     const continuity = upsertContinuityRecord({
       sourceReintegrationId: record.id,
       sourceNoteId: record.sourceNoteId,

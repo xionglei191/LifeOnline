@@ -1,4 +1,5 @@
 import { getDb } from '../db/client.js';
+import type { ReintegrationSignalKind } from '../workers/feedbackReintegration.js';
 import { getReintegrationRecordByWorkerTaskId, type ReintegrationRecord } from './reintegrationRecords.js';
 
 interface ReintegrationRecordRow {
@@ -28,7 +29,7 @@ function rowToReintegrationRecord(row: ReintegrationRecordRow): ReintegrationRec
     soulActionId: row.soul_action_id,
     taskType: row.task_type as ReintegrationRecord['taskType'],
     terminalStatus: row.terminal_status,
-    signalKind: row.signal_kind,
+    signalKind: row.signal_kind as ReintegrationSignalKind,
     reviewStatus: row.review_status,
     target: row.target,
     strength: row.strength,

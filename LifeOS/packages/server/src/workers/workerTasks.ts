@@ -33,7 +33,7 @@ import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
 import { getTodayDateString } from '../utils/date.js';
 import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
-import { createFeedbackReintegrationPayload } from './feedbackReintegration.js';
+import { createFeedbackReintegrationPayload, getReintegrationSignalKind } from './feedbackReintegration.js';
 import { integrateContinuity } from './continuityIntegrator.js';
 import {
   attachWorkerTaskToSoulAction,
@@ -250,19 +250,7 @@ function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
       soulActionId: soulAction?.id ?? null,
       taskType: packet.taskType,
       terminalStatus: packet.status,
-      signalKind: packet.taskType === 'summarize_note'
-        ? 'summary_reintegration'
-        : packet.taskType === 'extract_tasks'
-          ? 'task_extraction_reintegration'
-          : packet.taskType === 'classify_inbox'
-            ? 'classification_reintegration'
-            : packet.taskType === 'update_persona_snapshot'
-              ? 'persona_snapshot_reintegration'
-              : packet.taskType === 'daily_report'
-                ? 'daily_report_reintegration'
-                : packet.taskType === 'weekly_report'
-                  ? 'weekly_report_reintegration'
-                  : 'openclaw_reintegration',
+      signalKind: getReintegrationSignalKind(packet.taskType),
       target: result.target,
       strength: result.strength,
       summary: result.summary,

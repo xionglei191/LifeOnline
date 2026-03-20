@@ -1,5 +1,5 @@
 import { getDb } from '../db/client.js';
-import type { SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from '../workers/feedbackReintegration.js';
+import type { ReintegrationSignalKind, SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from '../workers/feedbackReintegration.js';
 import type { ContinuityStrength, ContinuityTarget } from '../workers/continuityIntegrator.js';
 
 export type ReintegrationReviewStatus = 'pending_review' | 'accepted' | 'rejected';
@@ -11,7 +11,7 @@ export interface ReintegrationRecord {
   soulActionId: string | null;
   taskType: SupportedReintegrationTaskType;
   terminalStatus: TerminalWorkerTaskStatus;
-  signalKind: string;
+  signalKind: ReintegrationSignalKind;
   reviewStatus: ReintegrationReviewStatus;
   target: ContinuityTarget;
   strength: ContinuityStrength;
@@ -50,7 +50,7 @@ function rowToReintegrationRecord(row: ReintegrationRecordRow): ReintegrationRec
     soulActionId: row.soul_action_id,
     taskType: row.task_type,
     terminalStatus: row.terminal_status,
-    signalKind: row.signal_kind,
+    signalKind: row.signal_kind as ReintegrationSignalKind,
     reviewStatus: row.review_status,
     target: row.target,
     strength: row.strength,
@@ -78,7 +78,7 @@ export function upsertReintegrationRecord(input: {
   soulActionId?: string | null;
   taskType: SupportedReintegrationTaskType;
   terminalStatus: TerminalWorkerTaskStatus;
-  signalKind: string;
+  signalKind: ReintegrationSignalKind;
   reviewStatus?: ReintegrationReviewStatus;
   target: ContinuityTarget;
   strength: ContinuityStrength;

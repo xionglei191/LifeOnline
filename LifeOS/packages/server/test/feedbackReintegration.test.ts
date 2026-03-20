@@ -10,6 +10,7 @@ import { approveSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByW
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
+  getReintegrationSignalKind,
   SUPPORTED_REINTEGRATION_TASK_TYPES,
   type SupportedReintegrationTaskType,
 } from '../src/workers/feedbackReintegration.js';
@@ -19,6 +20,7 @@ import { acceptReintegrationRecord } from '../src/soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
+import { getPromotionActionKindsForReintegration } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -346,6 +348,15 @@ test('supported task types generate stable reintegration payloads', () => {
     assert.equal(payload.sourceNoteId, task.sourceNoteId ?? null);
     assert.deepEqual(payload.outputNotePaths, task.outputNotePaths ?? []);
     assert.notEqual(payload.outputNotePaths, task.outputNotePaths);
+    assert.equal(getReintegrationSignalKind(taskType), {
+      summarize_note: 'summary_reintegration',
+      classify_inbox: 'classification_reintegration',
+      extract_tasks: 'task_extraction_reintegration',
+      update_persona_snapshot: 'persona_snapshot_reintegration',
+      daily_report: 'daily_report_reintegration',
+      weekly_report: 'weekly_report_reintegration',
+      openclaw_task: 'openclaw_reintegration',
+    }[taskType]);
   }
 });
 
@@ -1933,6 +1944,10 @@ test('accepted daily report reintegration plans PR6 event and continuity promoti
   const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept daily report event and continuity');
   const planned = planPromotionSoulActions(accepted!);
   assert.equal(planned.length, 2);
+  assert.deepEqual(
+    getPromotionActionKindsForReintegration(accepted!).sort(),
+    ['promote_continuity_record', 'promote_event_node'],
+  );
   assert.ok(planned.some((action) => action.actionKind === 'promote_event_node'));
   assert.ok(planned.some((action) => action.actionKind === 'promote_continuity_record'));
 });
