@@ -35,20 +35,19 @@
   - `LifeOS/packages/server/src/workers/workerTasks.ts` 改为仅收集 `soulActionId` 与 `personaSnapshot` 后调用统一 helper，进一步收窄 terminal hook 内联逻辑。
   - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 补两条 helper 级别断言，锁定 persona evidence 存在/缺失时的 record 输入输出。
 - 本轮继续完成的真实实现：
-  - `LifeOS/packages/shared/src/types.ts` 补齐 reintegration / soul-action 共享类型与 API contract，正式定义 `ListReintegrationRecordsResponse`、`AcceptReintegrationRecordResponse`、`RejectReintegrationRecordResponse`、`PlanReintegrationPromotionsResponse`，避免 server/web 各自猜测返回 shape。
-  - `LifeOS/packages/web/src/api/client.ts` 新增 `fetchReintegrationRecords()`、`acceptReintegrationRecord()`、`rejectReintegrationRecord()`、`planReintegrationPromotions()`，并让 accept API 直接返回 typed `soulActions`，为后续 web review UI 消费 auto-plan 结果打好 client 层地基。
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 HTTP 级契约测试，锁定 `/api/reintegration-records/:id/accept` 返回 `reintegrationRecord + soulActions`，并验证后续 `plan-promotions` 复用同一批 soul action id，不发生重复创建。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 新增最小 reintegration review 面板，直接在现有 settings/admin 入口中展示 reintegration records，并支持按 review status 筛选、刷新、accept / reject 与可选 reason。
+  - accept 动作现在在 UI 中直接消费 `acceptReintegrationRecord()` 返回的 `soulActions`，把 auto-planned PR6 promotion actions 即时展示在对应 record 下方，不再要求主流程里必须再点一次 plan。
+  - 保留 `手动补规划` fallback 按钮，对已 accepted 但需要再次查看/确认 promotion action 的场景复用 `planReintegrationPromotions()`。
+  - 同一面板里增加 evidence 展开区、review status summary strip 与紧凑的 operational layout，让这条 PR6 review-backed 链路首次在 web 控制台中被真实消费，而不只是停留在 contract/client 层。
 - 本轮验证补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts test/feedbackReintegration.test.ts` 通过，47/47。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter shared exec tsc --noEmit` 通过。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts test/feedbackReintegration.test.ts` 通过，47/47。
 - 当前未完成项：
-  - web 端仍没有真实的 reintegration review/promotion UI；目前只是先把 shared contract、client 和 server API 契约补齐，没有伪造一个并不存在的管理面。
-  - 下一步若要真正消除“accept 后还要点 plan”的体验问题，仍需在 `packages/web` 新增或扩展 review/reintegration 视图来消费 `acceptReintegrationRecord()` 返回的 `soulActions`。
+  - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
+  - accept 后只是展示 auto-planned soul actions；后续若要真正闭环，还可以继续把 soul action approve/dispatch 入口也接到同一面板或相邻面板。
 - 下一步建议：
-  - 优先在 `SettingsView.vue` 或新的 review admin 组件中落地最小 reintegration review 面板，直接消费 `fetchReintegrationRecords()` 与 `acceptReintegrationRecord()`，让这条 contract 从“已定义”变成“已被实际使用”。
-  - 若不想直接上 UI，也可先补一条 web client 级单测，锁定 accept/list/plan 的调用路径与返回 shape。
+  - 优先补最小 soul-action review 区块，让 accept -> planned soul actions -> approve/dispatch 在 web 端形成一条连续治理链路。
+  - 若暂不扩 UI，可先补一条 web 层测试，锁定 reintegration 面板的 accept/filter/render 主路径，避免后续回归。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。

@@ -320,6 +320,125 @@
       </div>
     </div>
 
+    <div class="settings-card reintegration-card">
+      <div class="reintegration-head">
+        <div>
+          <h3>Reintegration Review</h3>
+          <p class="hint reintegration-subtitle">在 settings 中直接复核终态 worker 回流记录，accept 时显示自动规划出的 PR6 promotion actions。</p>
+        </div>
+        <div class="reintegration-head-actions">
+          <select v-model="reintegrationFilterStatus" class="worker-filter" @change="loadReintegrationRecords">
+            <option value="">全部状态</option>
+            <option value="pending_review">待复核</option>
+            <option value="accepted">已接受</option>
+            <option value="rejected">已拒绝</option>
+          </select>
+          <button class="btn-link" @click="loadReintegrationRecords">刷新</button>
+        </div>
+      </div>
+
+      <div class="reintegration-summary-strip">
+        <div class="reintegration-summary-item">
+          <span>待复核</span>
+          <strong>{{ reintegrationStatusSummary.pending_review }}</strong>
+        </div>
+        <div class="reintegration-summary-item">
+          <span>已接受</span>
+          <strong>{{ reintegrationStatusSummary.accepted }}</strong>
+        </div>
+        <div class="reintegration-summary-item">
+          <span>已拒绝</span>
+          <strong>{{ reintegrationStatusSummary.rejected }}</strong>
+        </div>
+      </div>
+
+      <div v-if="reintegrationMessage" :class="['message', reintegrationMessageType]">{{ reintegrationMessage }}</div>
+
+      <div v-if="reintegrationLoading" class="worker-empty-state">加载中...</div>
+      <div v-else-if="reintegrationRecords.length" class="reintegration-list">
+        <article v-for="record in reintegrationRecords" :key="record.id" class="reintegration-item">
+          <div class="reintegration-item-top">
+            <div class="reintegration-item-title-row">
+              <strong>{{ taskTypeLabel(record.taskType) }}</strong>
+              <span class="prompt-status" :class="reintegrationStatusClass(record.reviewStatus)">{{ reintegrationStatusText(record.reviewStatus) }}</span>
+              <span class="worker-pill">{{ record.signalKind }}</span>
+              <span class="worker-pill">{{ record.strength }}</span>
+            </div>
+            <button class="btn-link" @click="toggleReintegrationExpanded(record.id)">
+              {{ reintegrationExpandedIds.includes(record.id) ? '收起详情' : '展开详情' }}
+            </button>
+          </div>
+
+          <p class="reintegration-summary-text">{{ record.summary }}</p>
+
+          <div class="reintegration-meta-grid">
+            <span>Worker: {{ record.workerTaskId }}</span>
+            <span>Target: {{ record.target }}</span>
+            <span>创建于 {{ formatTime(record.createdAt) }}</span>
+            <span v-if="record.reviewedAt">复核于 {{ formatTime(record.reviewedAt) }}</span>
+          </div>
+
+          <div class="reintegration-reason-row">
+            <input
+              v-model="reintegrationReasonDrafts[record.id]"
+              type="text"
+              class="reintegration-reason-input"
+              placeholder="可选：输入 accept/reject 理由"
+              :disabled="reintegrationActionId === record.id"
+            />
+            <button
+              class="btn-worker"
+              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'pending_review'"
+              @click="handleAcceptReintegration(record)"
+            >
+              {{ reintegrationActionId === record.id ? '处理中...' : '接受并自动规划' }}
+            </button>
+            <button
+              class="btn-cancel"
+              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'pending_review'"
+              @click="handleRejectReintegration(record)"
+            >
+              拒绝
+            </button>
+            <button
+              class="btn-link"
+              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'accepted'"
+              @click="handlePlanReintegration(record)"
+            >
+              手动补规划
+            </button>
+          </div>
+
+          <div v-if="record.reviewReason" class="reintegration-review-reason">
+            复核理由：{{ record.reviewReason }}
+          </div>
+
+          <div v-if="reintegrationExpandedIds.includes(record.id)" class="reintegration-expanded">
+            <div class="reintegration-evidence-block">
+              <div class="reintegration-section-label">Evidence</div>
+              <pre>{{ JSON.stringify(record.evidence, null, 2) }}</pre>
+            </div>
+
+            <div v-if="reintegrationPlannedActions[record.id]?.length" class="reintegration-actions-block">
+              <div class="reintegration-section-label">Planned promotion actions</div>
+              <div class="reintegration-actions-list">
+                <div v-for="action in reintegrationPlannedActions[record.id]" :key="action.id" class="reintegration-action-item">
+                  <div>
+                    <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
+                    <div class="reintegration-action-meta">{{ action.id }}</div>
+                  </div>
+                  <span class="prompt-status default">{{ action.governanceStatus }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div v-else class="worker-empty-state">
+        当前筛选下没有 reintegration records
+      </div>
+    </div>
+
     <div class="settings-card">
       <h3>定时任务</h3>
       <p class="hint" style="margin-bottom:16px">配置周期性自动执行的任务，如每天定时采集热门新闻。</p>
@@ -610,8 +729,8 @@ import NoteDetail from '../components/NoteDetail.vue';
 import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
 import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
-import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
 
@@ -720,6 +839,15 @@ const promptMessageType = ref<'success' | 'error'>('success');
 
 // Schedule state
 const schedules = ref<TaskSchedule[]>([]);
+const reintegrationRecords = ref<ReintegrationRecord[]>([]);
+const reintegrationFilterStatus = ref<'' | ReintegrationRecord['reviewStatus']>('pending_review');
+const reintegrationLoading = ref(false);
+const reintegrationMessage = ref('');
+const reintegrationMessageType = ref<'success' | 'error'>('success');
+const reintegrationActionId = ref<string | null>(null);
+const reintegrationReasonDrafts = ref<Record<string, string>>({});
+const reintegrationPlannedActions = ref<Record<string, SoulAction[]>>({});
+const reintegrationExpandedIds = ref<string[]>([]);
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
 const schedulePreset = ref('0 9 * * *');
@@ -790,6 +918,16 @@ const aiProviderDirty = computed(() => {
     || !!aiProviderApiKey.value.trim()
     || aiProviderClearKeyPending.value;
 });
+const reintegrationStatusSummary = computed(() => {
+  return reintegrationRecords.value.reduce((acc, record) => {
+    acc[record.reviewStatus] += 1;
+    return acc;
+  }, {
+    pending_review: 0,
+    accepted: 0,
+    rejected: 0,
+  } as Record<ReintegrationRecord['reviewStatus'], number>);
+});
 
 async function loadStatus() {
   try {
@@ -811,6 +949,18 @@ async function loadSchedules() {
   try {
     schedules.value = await fetchTaskSchedules();
   } catch (_) { /* ignore */ }
+}
+
+async function loadReintegrationRecords() {
+  reintegrationLoading.value = true;
+  try {
+    reintegrationRecords.value = await fetchReintegrationRecords(reintegrationFilterStatus.value || undefined);
+  } catch (e: any) {
+    reintegrationMessage.value = e.message || '加载 reintegration records 失败';
+    reintegrationMessageType.value = 'error';
+  } finally {
+    reintegrationLoading.value = false;
+  }
 }
 
 async function loadPrompts() {
@@ -930,6 +1080,104 @@ function promptStatusText(prompt: PromptRecord) {
 function promptStatusClass(prompt: PromptRecord) {
   if (!prompt.isOverridden) return 'default';
   return prompt.enabled ? 'overridden' : 'disabled';
+}
+
+function reintegrationStatusText(status: ReintegrationRecord['reviewStatus']) {
+  if (status === 'pending_review') return '待复核';
+  if (status === 'accepted') return '已接受';
+  return '已拒绝';
+}
+
+function reintegrationStatusClass(status: ReintegrationRecord['reviewStatus']) {
+  if (status === 'accepted') return 'overridden';
+  if (status === 'rejected') return 'disabled';
+  return 'warning';
+}
+
+function promotionActionLabel(actionKind: SoulAction['actionKind']) {
+  if (actionKind === 'promote_event_node') return '生成 Event Node';
+  if (actionKind === 'promote_continuity_record') return '生成 Continuity Record';
+  if (actionKind === 'create_event_node') return '创建 Event Node';
+  if (actionKind === 'update_persona_snapshot') return '更新 Persona Snapshot';
+  return '提取行动项';
+}
+
+function toggleReintegrationExpanded(id: string) {
+  if (reintegrationExpandedIds.value.includes(id)) {
+    reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
+    return;
+  }
+  reintegrationExpandedIds.value = [...reintegrationExpandedIds.value, id];
+}
+
+async function handleAcceptReintegration(record: ReintegrationRecord) {
+  reintegrationActionId.value = record.id;
+  reintegrationMessage.value = '';
+  try {
+    const result = await acceptReintegrationRecord(record.id, {
+      reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
+    });
+    reintegrationPlannedActions.value = {
+      ...reintegrationPlannedActions.value,
+      [record.id]: result.soulActions,
+    };
+    reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
+      ? reintegrationExpandedIds.value
+      : [...reintegrationExpandedIds.value, record.id];
+    reintegrationMessage.value = result.soulActions.length
+      ? `已接受并自动规划 ${result.soulActions.length} 条 promotion actions`
+      : '已接受，但当前没有可规划的 promotion actions';
+    reintegrationMessageType.value = 'success';
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    reintegrationMessage.value = e.message || '接受 reintegration record 失败';
+    reintegrationMessageType.value = 'error';
+  } finally {
+    reintegrationActionId.value = null;
+  }
+}
+
+async function handleRejectReintegration(record: ReintegrationRecord) {
+  reintegrationActionId.value = record.id;
+  reintegrationMessage.value = '';
+  try {
+    await rejectReintegrationRecord(record.id, {
+      reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
+    });
+    reintegrationMessage.value = '已拒绝该 reintegration record';
+    reintegrationMessageType.value = 'success';
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    reintegrationMessage.value = e.message || '拒绝 reintegration record 失败';
+    reintegrationMessageType.value = 'error';
+  } finally {
+    reintegrationActionId.value = null;
+  }
+}
+
+async function handlePlanReintegration(record: ReintegrationRecord) {
+  reintegrationActionId.value = record.id;
+  reintegrationMessage.value = '';
+  try {
+    const soulActions = await planReintegrationPromotions(record.id);
+    reintegrationPlannedActions.value = {
+      ...reintegrationPlannedActions.value,
+      [record.id]: soulActions,
+    };
+    reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
+      ? reintegrationExpandedIds.value
+      : [...reintegrationExpandedIds.value, record.id];
+    reintegrationMessage.value = soulActions.length
+      ? `已规划 ${soulActions.length} 条 promotion actions`
+      : '当前没有可规划的 promotion actions';
+    reintegrationMessageType.value = 'success';
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    reintegrationMessage.value = e.message || '手动规划 promotion actions 失败';
+    reintegrationMessageType.value = 'error';
+  } finally {
+    reintegrationActionId.value = null;
+  }
 }
 
 function discardPromptChanges() {
@@ -1109,6 +1357,7 @@ onMounted(async () => {
   await loadStatus();
   await loadWorkerTasks();
   await loadSchedules();
+  await loadReintegrationRecords();
   await loadPrompts();
   await loadAiProviderSettings();
   document.addEventListener('ws-update', handleWsUpdate);
@@ -1126,6 +1375,9 @@ function handleWsUpdate(event: Event) {
   }
   if (wsEvent.type === 'schedule-updated') {
     loadSchedules();
+  }
+  if (wsEvent.type === 'worker-task-updated') {
+    loadReintegrationRecords();
   }
 }
 
@@ -1484,22 +1736,172 @@ async function handleReindex() {
   color: #b45309;
 }
 
-.provider-summary {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: var(--meta-bg);
-  border-radius: 8px;
+.reintegration-card {
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(62% 0.06 250) 22%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(96% 0.01 250) 8%), var(--card-bg));
 }
 
-.provider-summary-row {
+.reintegration-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.reintegration-subtitle {
+  margin-top: 4px;
+  max-width: 56ch;
+}
+
+.reintegration-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reintegration-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.reintegration-summary-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--meta-bg) 88%, oklch(97% 0.015 250) 12%);
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 82%, transparent);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-secondary);
+}
+
+.reintegration-summary-item strong {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.reintegration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reintegration-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 84%, transparent);
+  background: color-mix(in oklch, var(--card-bg) 94%, oklch(98% 0.01 250) 6%);
+}
+
+.reintegration-item-top {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  align-items: flex-start;
+}
+
+.reintegration-item-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reintegration-summary-text {
+  margin: 10px 0 8px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.reintegration-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.reintegration-reason-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reintegration-reason-input {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--border-color, #d1d5db) 85%, transparent);
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+.reintegration-review-reason {
+  margin-top: 10px;
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+.reintegration-expanded {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.reintegration-evidence-block,
+.reintegration-actions-block {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--meta-bg);
+}
+
+.reintegration-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.reintegration-evidence-block pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.reintegration-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reintegration-action-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--card-bg) 90%, oklch(98% 0.01 250) 10%);
+}
+
+.reintegration-action-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
 
 .provider-grid {
   display: grid;
@@ -2326,6 +2728,24 @@ async function handleReindex() {
   word-break: break-all;
 }
 @media (max-width: 900px) {
+  .reintegration-head {
+    flex-direction: column;
+  }
+
+  .reintegration-summary-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .reintegration-reason-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reintegration-head-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
   .prompt-center {
     grid-template-columns: 1fr;
   }
