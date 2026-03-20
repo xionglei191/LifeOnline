@@ -14,6 +14,7 @@ export const SUPPORTED_WORKER_TASK_TYPES = [
   'summarize_note',
   'classify_inbox',
   'extract_tasks',
+  'update_persona_snapshot',
   'daily_report',
   'weekly_report',
 ] as const;
@@ -164,6 +165,9 @@ export interface WorkerTaskInputMap {
   extract_tasks: {
     noteId: string;
   };
+  update_persona_snapshot: {
+    noteId: string;
+  };
   daily_report: {
     date?: string;
   };
@@ -197,6 +201,18 @@ export interface WorkerTaskResultMap {
     created: number;
     sourceNoteTitle: string;
     items: Array<{ title: string; dimension: string; priority: string; due?: string | null; filePath: string }>;
+  };
+  update_persona_snapshot: {
+    title: string;
+    summary: string;
+    sourceNoteTitle: string;
+    snapshotId: string;
+    snapshot: {
+      sourceNoteTitle: string;
+      summary: string;
+      contentPreview: string;
+      updatedAt: string;
+    };
   };
   daily_report: {
     title: string;

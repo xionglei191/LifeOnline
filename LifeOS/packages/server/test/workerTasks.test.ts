@@ -12,6 +12,7 @@ test('normalizeTaskInput validates required fields and defaults', async () => {
     assert.throws(() => normalizeTaskInput({ taskType: 'openclaw_task', input: {} as never }), /instruction/);
     assert.throws(() => normalizeTaskInput({ taskType: 'summarize_note', input: {} as never }), /noteId/);
     assert.throws(() => normalizeTaskInput({ taskType: 'extract_tasks', input: {} as never }), /noteId/);
+    assert.throws(() => normalizeTaskInput({ taskType: 'update_persona_snapshot', input: {} as never }), /noteId/);
 
     assert.deepEqual(normalizeTaskInput({ taskType: 'classify_inbox', input: {} }), { dryRun: false });
     assert.deepEqual(normalizeTaskInput({ taskType: 'openclaw_task', input: { instruction: '  hi  ' } as never }), {

@@ -38,6 +38,37 @@ export const TASK_SCHEDULE_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
 
 export const TASK_SCHEDULE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_task_schedules_enabled ON task_schedules(enabled);`;
 
+export const SOUL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_note_id TEXT NOT NULL,
+  action_kind TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
+  worker_task_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT,
+  error TEXT,
+  result_summary TEXT,
+  UNIQUE(source_note_id, action_kind),
+  UNIQUE(worker_task_id)`;
+
+export const SOUL_ACTION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_soul_actions_source_note_id ON soul_actions(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_soul_actions_status ON soul_actions(status);
+CREATE INDEX IF NOT EXISTS idx_soul_actions_created_at ON soul_actions(created_at);`;
+
+export const PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_note_id TEXT NOT NULL UNIQUE,
+  soul_action_id TEXT,
+  worker_task_id TEXT,
+  summary TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
+export const PERSONA_SNAPSHOT_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_persona_snapshots_source_note_id ON persona_snapshots(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_persona_snapshots_worker_task_id ON persona_snapshots(worker_task_id);
+CREATE INDEX IF NOT EXISTS idx_persona_snapshots_updated_at ON persona_snapshots(updated_at);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -89,6 +120,18 @@ ${TASK_SCHEDULE_TABLE_COLUMNS_SQL}
 );
 
 ${TASK_SCHEDULE_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS soul_actions (
+${SOUL_ACTION_TABLE_COLUMNS_SQL}
+);
+
+${SOUL_ACTION_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS persona_snapshots (
+${PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL}
+);
+
+${PERSONA_SNAPSHOT_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS ai_prompts (
   key TEXT PRIMARY KEY,

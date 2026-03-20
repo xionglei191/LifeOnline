@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { SCHEMA, WORKER_TASK_TABLE_COLUMNS_SQL, WORKER_TASK_INDEXES_SQL, TASK_SCHEDULE_TABLE_COLUMNS_SQL, TASK_SCHEDULE_INDEXES_SQL } from './schema.js';
+import { SCHEMA, WORKER_TASK_TABLE_COLUMNS_SQL, WORKER_TASK_INDEXES_SQL, TASK_SCHEDULE_TABLE_COLUMNS_SQL, TASK_SCHEDULE_INDEXES_SQL, SOUL_ACTION_TABLE_COLUMNS_SQL, SOUL_ACTION_INDEXES_SQL, PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL, PERSONA_SNAPSHOT_INDEXES_SQL } from './schema.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -84,6 +84,81 @@ function ensureTaskTableConstraintOrRebuild(database: Database.Database, options
   }
 }
 
+function ensureSoulActionsTable(database: Database.Database): void {
+  const tableSql = `CREATE TABLE IF NOT EXISTS soul_actions (\n${SOUL_ACTION_TABLE_COLUMNS_SQL}\n);`;
+  const indexesSql = SOUL_ACTION_INDEXES_SQL;
+  const columns = database.prepare("PRAGMA table_info(soul_actions)").all() as Array<{ name: string }>;
+
+  if (columns.length === 0) {
+    database.exec(`${tableSql}\n${indexesSql}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id',
+    'source_note_id',
+    'action_kind',
+    'status',
+    'worker_task_id',
+    'created_at',
+    'updated_at',
+    'started_at',
+    'finished_at',
+    'error',
+    'result_summary',
+  ];
+
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  if (!needsRebuild) {
+    database.exec(indexesSql);
+    return;
+  }
+
+  console.log('Migration: rebuilding soul_actions table with latest schema...');
+  database.exec(`
+    DROP TABLE soul_actions;
+    ${tableSql}
+    ${indexesSql}
+  `);
+  console.log('Migration: soul_actions table rebuilt with latest schema');
+}
+
+function ensurePersonaSnapshotsTable(database: Database.Database): void {
+  const tableSql = `CREATE TABLE IF NOT EXISTS persona_snapshots (\n${PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL}\n);`;
+  const indexesSql = PERSONA_SNAPSHOT_INDEXES_SQL;
+  const columns = database.prepare("PRAGMA table_info(persona_snapshots)").all() as Array<{ name: string }>;
+
+  if (columns.length === 0) {
+    database.exec(`${tableSql}\n${indexesSql}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id',
+    'source_note_id',
+    'soul_action_id',
+    'worker_task_id',
+    'summary',
+    'snapshot_json',
+    'created_at',
+    'updated_at',
+  ];
+
+  const needsRebuild = requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  if (!needsRebuild) {
+    database.exec(indexesSql);
+    return;
+  }
+
+  console.log('Migration: rebuilding persona_snapshots table with latest schema...');
+  database.exec(`
+    DROP TABLE persona_snapshots;
+    ${tableSql}
+    ${indexesSql}
+  `);
+  console.log('Migration: persona_snapshots table rebuilt with latest schema');
+}
+
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
@@ -158,6 +233,9 @@ export function initDatabase(): void {
     rebuildingLog: 'Migration: rebuilding task_schedules table with latest task_type CHECK constraint...',
     rebuiltLog: 'Migration: task_schedules table rebuilt with latest task types',
   });
+
+  ensureSoulActionsTable(database);
+  ensurePersonaSnapshotsTable(database);
 
   // Migration: add notes column to ai_prompts if missing
   const promptCols = database.prepare("PRAGMA table_info(ai_prompts)").all() as Array<{ name: string }>;

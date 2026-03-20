@@ -20,7 +20,7 @@ test('initDatabase creates key tables and columns', async () => {
     initDatabase();
     const db = getDb();
 
-    for (const table of ['notes', 'worker_tasks', 'task_schedules', 'ai_prompts', 'ai_provider_settings']) {
+    for (const table of ['notes', 'worker_tasks', 'task_schedules', 'soul_actions', 'persona_snapshots', 'ai_prompts', 'ai_provider_settings']) {
       assert.equal(tableExists(db, table), true, `missing table ${table}`);
     }
 
@@ -28,6 +28,7 @@ test('initDatabase creates key tables and columns', async () => {
     assert.deepEqual(columnNames(db, 'notes').includes('inbox_origin'), true);
     assert.deepEqual(columnNames(db, 'task_schedules').includes('consecutive_failures'), true);
     assert.deepEqual(columnNames(db, 'task_schedules').includes('last_error'), true);
+    assert.deepEqual(columnNames(db, 'persona_snapshots').includes('snapshot_json'), true);
     assert.deepEqual(columnNames(db, 'ai_prompts').includes('notes'), true);
   } finally {
     await env.cleanup();

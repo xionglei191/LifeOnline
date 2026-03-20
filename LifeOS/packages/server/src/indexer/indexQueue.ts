@@ -1,4 +1,5 @@
 import { indexFile, deleteFileRecord } from './indexer.js';
+import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../soul/postIndexPersonaTrigger.js';
 import type { WsEvent, IndexOperation, IndexErrorEventData } from '@lifeos/shared';
 
 interface QueueItem {
@@ -56,11 +57,15 @@ export class IndexQueue {
 
       this.broadcast({ type: 'file-changed', data: { filePath, operation: item.operation } });
 
+      const previousNote = item.operation === 'upsert'
+        ? getIndexedNoteTriggerSnapshot(filePath)
+        : null;
       let success = false;
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           if (item.operation === 'upsert') {
             await indexFile(filePath);
+            await triggerPersonaSnapshotAfterIndex({ filePath, previousNote });
           } else {
             await deleteFileRecord(filePath);
           }

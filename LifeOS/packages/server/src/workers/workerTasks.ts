@@ -33,6 +33,16 @@ import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
 import { getTodayDateString } from '../utils/date.js';
 import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
+import { createFeedbackReintegrationPayload } from './feedbackReintegration.js';
+import { integrateContinuity } from './continuityIntegrator.js';
+import {
+  attachWorkerTaskToSoulAction,
+  createOrReuseSoulAction,
+  deriveSoulActionKindFromWorkerTask,
+  getSoulActionBySourceNoteIdAndKind,
+  syncSoulActionFromWorkerTask,
+} from '../soul/soulActions.js';
+import { upsertPersonaSnapshot } from '../soul/personaSnapshots.js';
 
 interface WorkerTaskRow {
   id: string;
@@ -107,6 +117,13 @@ const workerTaskDefinitions: WorkerTaskDefinitionMap = {
     worker: 'lifeos',
     normalizeInput: (input) => {
       if (!input?.noteId) throwWorkerTaskValidationError('extract_tasks requires noteId');
+      return { noteId: input.noteId };
+    },
+  },
+  update_persona_snapshot: {
+    worker: 'lifeos',
+    normalizeInput: (input) => {
+      if (!input?.noteId) throwWorkerTaskValidationError('update_persona_snapshot requires noteId');
       return { noteId: input.noteId };
     },
   },
@@ -216,6 +233,29 @@ function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
   if (!latest) throw new Error('Worker task disappeared');
   if (latest.status === 'cancelled') return null;
   return latest;
+}
+
+function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
+  try {
+    const packet = createFeedbackReintegrationPayload(task);
+    integrateContinuity(packet);
+  } catch {
+    // Reintegration skeleton is intentionally side-effect free and best-effort for unsupported task types.
+  }
+}
+
+function bindSoulActionToWorkerTask(task: WorkerTask): void {
+  const actionKind = deriveSoulActionKindFromWorkerTask(task);
+  if (!actionKind || !task.sourceNoteId) {
+    return;
+  }
+
+  const soulAction = createOrReuseSoulAction({
+    sourceNoteId: task.sourceNoteId,
+    actionKind,
+    now: task.createdAt,
+  });
+  attachWorkerTaskToSoulAction(soulAction.id, task.id, task.updatedAt);
 }
 
 async function persistOpenClawResult(
@@ -532,6 +572,50 @@ function summarizeExtractTasksResult(result: WorkerTaskResultMap['extract_tasks'
   return result.summary;
 }
 
+function buildPersonaContentPreview(content: string): string {
+  return content.replace(/\s+/g, ' ').trim().slice(0, 280);
+}
+
+async function runUpdatePersonaSnapshot(
+  task: WorkerTask<'update_persona_snapshot'>
+): Promise<WorkerTaskResultMap['update_persona_snapshot']> {
+  const input = task.input as WorkerTaskInputMap['update_persona_snapshot'];
+  const note = getRequiredWorkerNote(input.noteId);
+  const sourceNoteTitle = getWorkerNoteTitle(note);
+  const contentPreview = buildPersonaContentPreview(note.content || '');
+  const summary = contentPreview
+    ? `已更新人格快照：${sourceNoteTitle}`
+    : `已更新人格快照：${sourceNoteTitle}（原笔记内容为空）`;
+  const action = task.sourceNoteId
+    ? getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, 'update_persona_snapshot')
+    : null;
+
+  const snapshot = upsertPersonaSnapshot({
+    sourceNoteId: task.sourceNoteId ?? input.noteId,
+    soulActionId: action?.id ?? null,
+    workerTaskId: task.id,
+    summary,
+    snapshot: {
+      sourceNoteTitle,
+      summary,
+      contentPreview,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  return {
+    title: `${sourceNoteTitle} 人格快照更新`,
+    summary,
+    sourceNoteTitle,
+    snapshotId: snapshot.id,
+    snapshot: snapshot.snapshot,
+  };
+}
+
+function summarizeUpdatePersonaSnapshotResult(result: WorkerTaskResultMap['update_persona_snapshot']): string {
+  return result.summary;
+}
+
 // ── daily_report ──
 
 function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dateEnd?: string): string {
@@ -741,6 +825,8 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     task.scheduleId
   );
 
+  bindSoulActionToWorkerTask(task);
+
   return task;
 }
 
@@ -808,6 +894,7 @@ function updateTaskStatus(taskId: string, updates: Partial<WorkerTask>) {
 
   const updated = getWorkerTask(taskId);
   if (updated) {
+    syncSoulActionFromWorkerTask(updated);
     broadcastUpdate({ type: 'worker-task-updated', data: updated });
   }
   return updated;
@@ -913,6 +1000,11 @@ const workerTaskExecutionRegistry: WorkerTaskExecutionRegistry = {
     summarize: summarizeExtractTasksResult,
     getOutputNotePaths: async (_task, result) => result.items.map((item) => item.filePath),
   },
+  update_persona_snapshot: {
+    run: (task) => runUpdatePersonaSnapshot(task),
+    summarize: summarizeUpdatePersonaSnapshotResult,
+    getOutputNotePaths: async () => [],
+  },
   daily_report: {
     run: (task) => runDailyReport(task),
     summarize: summarizeDailyReportResult,
@@ -943,7 +1035,15 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
 
     const result = await handler.run(task as never, controller.signal);
 
-    if (!ensureTaskCanFinalize(taskId)) return getWorkerTask(taskId)!;
+    const finalizableTask = ensureTaskCanFinalize(taskId);
+    if (!finalizableTask) {
+      const cancelledTask = getWorkerTask(taskId);
+      if (!cancelledTask) throw new Error('Worker task disappeared');
+      if (cancelledTask.status === 'cancelled') {
+        tryBestEffortReintegrateTerminalTask(cancelledTask);
+      }
+      return cancelledTask;
+    }
 
     const outputNotePaths = await handler.getOutputNotePaths(task as never, result as never);
     updateTaskStatus(taskId, {
@@ -953,6 +1053,10 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
       outputNotePaths,
       error: null,
     });
+
+    const completedTask = getWorkerTask(taskId);
+    if (!completedTask) throw new Error('Worker task disappeared');
+    tryBestEffortReintegrateTerminalTask(completedTask);
   } catch (error: any) {
     const latest = getWorkerTask(taskId);
     if (!latest) throw new Error('Worker task disappeared');
@@ -963,6 +1067,10 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
         error: error?.message || String(error),
         outputNotePaths: [],
       });
+
+      const failedTask = getWorkerTask(taskId);
+      if (!failedTask) throw new Error('Worker task disappeared');
+      tryBestEffortReintegrateTerminalTask(failedTask);
     }
   } finally {
     runningTaskControllers.delete(taskId);
