@@ -37,3 +37,4 @@
   - terminal hook 不得直写最终对象
 - `pnpm --filter server test` 全量通过，55/55。
 - `pnpm --filter server build` 通过。
+- 已补正式任务书文稿对齐：PR2 / PR3 不再按“未开始”表述，而按“最小落地（保守口径）”冻结当前代码现实，消除文稿内部前后冲突。

@@ -188,15 +188,15 @@ review queue 应优先理解为：
 经过代码核查，目前**不能**把以下内容写成“已实现”：
 
 - 完整 `src/soul/` 模块体系已经齐备；
-- `SoulAction` 已覆盖多 task types 或形成独立治理主线；
-- low-risk candidate → gate → dispatch 闭环已真实存在；
-- review queue / review API 已真实存在；
-- persona/event/continuity 对象层 reintegration 已真实存在。
+- `SoulAction` 已覆盖多 task types 或形成通用、产品化的独立治理主线；
+- 低风险 action framework 已形成广覆盖、可扩展的通用闭环；
+- review queue / review API 已形成完整产品化治理控制面；
+- persona/event/continuity 对象层 reintegration 已全面产品化落地。
 
 核验依据：
-- 当前 `src/soul/` 已存在，但范围仅是最小类型与 `extract_tasks` 镜像同步；
-- 当前 schema/client 已能初始化 `soul_actions`，但尚未证明完整治理 runtime；
-- 当前能明确锚定的是“PR1 最小骨架 + worker-side PR4 skeleton”，而不是 PR2/PR3 主线闭环。
+- 当前 `src/soul/` 已存在最小 `generator` / `gate` / `dispatcher` / review queue / review API，但覆盖范围仍窄；
+- 当前 schema/client 已能稳定承载 `soul_actions` 与最小治理状态迁移，但尚未证明更广 action coverage 与产品化治理 runtime；
+- 当前能明确锚定的是“PR1 最小骨架 + PR2/PR3 最小治理闭环 + worker-side PR4 skeleton + PR5/PR6 保守最小落地”，而不是完整自治治理系统。
 ---
 
 ## 五、阶段路线图总览（PR1–PR6）
@@ -276,9 +276,13 @@ candidate -> gate -> dispatch -> execute
 的第一条可验证闭环。
 
 ### 当前状态
-**未开始 / 仍是主线缺口。**
+**最小落地（保守口径）。**
 
-这是当前最值得作为“快速落地”主线推进的阶段之一。
+当前已可确认：
+- `LifeOS/packages/server/src/soul/soulActionGenerator.ts` 已存在，能够生成以 `update_persona_snapshot` / `extract_tasks` 为中心的最小 candidate；
+- `LifeOS/packages/server/src/soul/interventionGate.ts` 已存在，且输出的是显式治理决策，而不是隐含 boolean；
+- `LifeOS/packages/server/src/soul/soulActionDispatcher.ts` 已形成最小 `queue_for_review -> approve -> dispatch -> execute` 闭环，dispatch 仍经由现有 worker 宿主执行；
+- 当前范围仍然很窄，只覆盖保守、低风险、可解释的最小 action 闭环，不应写成通用低风险 action framework 已完成。
 
 ### In Scope
 - `soulActionGenerator.ts`；
@@ -327,9 +331,13 @@ candidate -> gate -> dispatch -> execute
 把“被 Gate 拦下或延后的动作如何继续被人机共同接住”正式落成治理执行面。
 
 ### 当前状态
-**未开始 / 仍是主线缺口。**
+**最小落地（保守口径）。**
 
-PR3 是当前另一条最值得优先补齐的中段主链。
+当前已可确认：
+- `soul_actions` 已具备 `pending_review` / `approved` / `deferred` / `discarded` 等最小治理状态；
+- 已有 review queue list / detail，以及 `approve` / `dispatch` / `defer` / `discard` 最小治理操作；
+- `approve` 与 `dispatch` 已在当前实现中分离保留，未被混成一步；
+- `handlers.ts` / `routes.ts` 已提供最小 review/governance API，但当前仍不是完整产品化治理控制面。
 
 ### In Scope
 - review queue list / detail；
@@ -633,11 +641,11 @@ PR4 当前完成口径应固定为：
 1. **总体路线已经清楚。**
    `vision/` 对第一阶段路线收束已经足够稳定，不需要再重新发明路线。
 
-2. **当前最明确已落地的是两块最小真实锚点：PR1 最小骨架与 PR4 最小 skeleton。**
-   PR1 已有最小 `SoulAction` runtime/store 镜像层，PR4 已有真实 terminal path 接线的回流骨架；但两者都必须严格限制口径，不能夸大为完整治理系统完成。
+2. **当前最明确已落地的是四块最小真实锚点：PR1 最小骨架、PR2 最小低风险闭环、PR3 最小治理桥，以及 PR4 最小 skeleton。**
+   PR1 已有最小 `SoulAction` runtime/store 镜像层，PR2 已有保守 low-risk `candidate -> gate -> review/dispatch -> execute` 闭环，PR3 已有最小 review/governance/execution bridge，PR4 已有真实 terminal path 接线的回流骨架；但四者都必须严格限制口径，不能夸大为完整治理系统完成。
 
-3. **当前最大的真实主线缺口是 PR2 与 PR3。**
-   既然 PR1 与 PR4 都已有部分真实落地，如果要快速落地，应优先补中段闭环，而不是继续围绕 PR4 做微补强。
+3. **当前更真实的主线缺口，已经从“PR2/PR3 是否存在”转向“覆盖面、产品化治理面与后续边界收口”。**
+   既然 PR1–PR4 都已有保守、可锚定的最小落地，后续快速落地应优先做状态收口、边界冻结与小步扩展，而不是继续基于过时口径把 PR2/PR3 视作未开始。
 4. **这份文稿可作为后续固定对齐底板。**
    后续每次推进，只需回答：
    - 当前推进的是哪一阶段；
@@ -648,4 +656,4 @@ PR4 当前完成口径应固定为：
 
 ## 十二、一句话收束
 
-> LifeOnline 第一阶段当前已经同时具备两块最小真实锚点：一是 `src/soul/` 中以 `extract_tasks` 为中心的 PR1 最小 `SoulAction` 镜像骨架，二是 `workerTasks -> feedbackReintegration -> continuityIntegrator` 这一侧真实接线的保守 PR4 最小回流骨架；但真正决定项目能否快速落地的下一主线，仍然不是继续做 PR4 周边微补强，而是尽快补上 PR2 的低风险闭环与 PR3 的治理执行桥。
+> LifeOnline 第一阶段当前已经具备四块最小真实锚点：一是 `src/soul/` 中以 `extract_tasks` 为中心的 PR1 最小 `SoulAction` 镜像骨架，二是以 `update_persona_snapshot` / `extract_tasks` 为中心的 PR2 最小低风险闭环，三是 review queue + approve / dispatch / defer / discard 的 PR3 最小治理执行桥，四是 `workerTasks -> feedbackReintegration -> continuityIntegrator` 这一侧真实接线的保守 PR4 最小回流骨架；后续主线应继续在保守边界内收口状态、冻结口径，并沿 review-backed、可解释、可审计的路径小步推进 PR5 / PR6 之后的演进。
