@@ -1,6 +1,7 @@
 export const SUPPORTED_SOUL_ACTION_KINDS = [
   'extract_tasks',
   'update_persona_snapshot',
+  'create_event_node',
   'promote_event_node',
   'promote_continuity_record',
 ] as const;

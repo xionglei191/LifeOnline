@@ -18,7 +18,7 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
     throw new Error('Source reintegration record not found');
   }
 
-  if (action.actionKind === 'promote_event_node') {
+  if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
     const eventKind = record.signalKind === 'persona_snapshot_reintegration'
       ? 'persona_shift'

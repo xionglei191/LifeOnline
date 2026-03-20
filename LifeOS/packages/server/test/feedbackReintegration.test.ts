@@ -21,7 +21,7 @@ import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
-import { dispatchSoulActionCandidate } from '../src/soul/soulActionDispatcher.js';
+import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
 import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../src/soul/postIndexPersonaTrigger.js';
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
@@ -1762,6 +1762,83 @@ test('executeWorkerTask hits reintegration wiring on cancelled supported path', 
     strength: 'low',
     summary: 'summarize_note ended as cancelled; continuity remains observational only (任务已取消).',
   });
+});
+
+test('approved create_event_node action reuses PR6 event promotion executor', async (t) => {
+  const env = await createTestEnv('lifeos-pr2-create-event-node-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO reintegration_records (
+      id, worker_task_id, source_note_id, soul_action_id, task_type, terminal_status,
+      signal_kind, review_status, target, strength, summary, evidence_json,
+      review_reason, created_at, updated_at, reviewed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    'reint:create-event-node',
+    'task-create-event-node',
+    'note-create-event-node',
+    'soul:update_persona_snapshot:note-create-event-node',
+    'update_persona_snapshot',
+    'succeeded',
+    'persona_snapshot_reintegration',
+    'accepted',
+    'source_note',
+    'medium',
+    '稳定人格变化信号，值得沉淀为 event node。',
+    JSON.stringify({ source: 'test' }),
+    'accepted for create_event_node coverage',
+    '2026-03-20T09:00:00.000Z',
+    '2026-03-20T09:00:00.000Z',
+    '2026-03-20T09:00:00.000Z',
+  );
+
+  const soulAction = approveSoulAction(
+    'soul:create_event_node:reint:create-event-node',
+    'approve create_event_node coverage',
+    '2026-03-20T09:01:00.000Z',
+  ) ?? getSoulActionBySourceNoteIdAndKind('reint:create-event-node', 'create_event_node');
+
+  if (!soulAction) {
+    getDb().prepare(`
+      INSERT INTO soul_actions (
+        id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+        created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'soul:create_event_node:reint:create-event-node',
+      'reint:create-event-node',
+      'create_event_node',
+      'approved',
+      'not_dispatched',
+      'approve create_event_node coverage',
+      null,
+      '2026-03-20T09:00:00.000Z',
+      '2026-03-20T09:01:00.000Z',
+      '2026-03-20T09:01:00.000Z',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    );
+  }
+
+  const dispatchResult = await dispatchApprovedSoulAction('soul:create_event_node:reint:create-event-node');
+  const eventNodes = listEventNodes();
+  const createdAction = getSoulActionBySourceNoteIdAndKind('reint:create-event-node', 'create_event_node');
+
+  assert.equal(dispatchResult.dispatched, true);
+  assert.match(dispatchResult.reason, /已创建 event node|已更新 event node/);
+  assert.ok(createdAction);
+  assert.equal(createdAction?.executionStatus, 'succeeded');
+  assert.equal(eventNodes.length, 1);
+  assert.equal(eventNodes[0]?.sourceReintegrationId, 'reint:create-event-node');
 });
 
 test('accepted persona reintegration can plan and dispatch PR6 event and continuity promotions', async (t) => {

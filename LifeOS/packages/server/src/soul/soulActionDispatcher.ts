@@ -1,5 +1,6 @@
 import { createWorkerTask, executeWorkerTask } from '../workers/workerTasks.js';
 import { createOrReuseSoulAction, getSoulAction } from './soulActions.js';
+import { getDb } from '../db/client.js';
 import { executePromotionSoulAction } from './pr6PromotionExecutor.js';
 import type { SoulActionCandidate } from './soulActionGenerator.js';
 import type { InterventionGateDecision } from './interventionGate.js';
@@ -88,8 +89,18 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     };
   }
 
-  if (soulAction.actionKind === 'promote_event_node' || soulAction.actionKind === 'promote_continuity_record') {
+  if (
+    soulAction.actionKind === 'create_event_node'
+    || soulAction.actionKind === 'promote_event_node'
+    || soulAction.actionKind === 'promote_continuity_record'
+  ) {
     const result = executePromotionSoulAction(soulAction);
+    const now = new Date().toISOString();
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = ?, updated_at = ?, started_at = ?, finished_at = ?, error = NULL, result_summary = ?
+      WHERE id = ?
+    `).run('succeeded', now, now, now, result.summary, soulAction.id);
     return {
       dispatched: true,
       reason: result.summary,
