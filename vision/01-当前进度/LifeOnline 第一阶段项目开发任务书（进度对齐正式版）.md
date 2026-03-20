@@ -176,7 +176,7 @@ review queue 应优先理解为：
 #### 当前实现形态
 - `SoulAction` 当前先作为 `workerTasks` 的生命周期镜像层存在；
 - `soul_actions` 当前是 server-local SQLite 持久化，不是独立治理系统；
-- 现有 SoulAction 范围仅保守覆盖 `extract_tasks`；
+- 现有 SoulAction 范围以 `extract_tasks` / `update_persona_snapshot` 为中心形成保守的最小可锚定覆盖；
 - reintegration 当前先落在 `src/workers/`，保持 best-effort、side-effect-free。
 
 #### 目标形态
@@ -520,7 +520,7 @@ PR4 当前完成口径应固定为：
 
 | 阶段 | 当前状态 | 已落地内容 | 剩余关键缺口 | 建议下一步 |
 |---|---|---|---|---|
-| PR1 | 部分落地（最小骨架） | `src/soul/` 已存在最小 `SoulAction` 类型/同步模块，`soul_actions` 表与 server-local store 已落地，当前仅保守覆盖 `extract_tasks` | 缺少 generator / gate / dispatcher / review queue，尚未形成完整治理主线 | 冻结保守口径，后续在此基础上推进 PR2 |
+| PR1 | 部分落地（最小骨架） | `src/soul/` 已存在最小 `SoulAction` 类型/同步模块，`soul_actions` 表与 server-local store 已落地，当前以 `extract_tasks` / `update_persona_snapshot` 为中心形成最小可锚定覆盖 | 缺少更广 action coverage 与完整产品化治理主线 | 冻结保守口径，后续在此基础上推进 PR2 |
 | PR2 | 最小落地（保守口径） | 已形成以 `update_persona_snapshot` 为中心的最小 low-risk closed loop | 仍缺多 action kinds 的通用 candidate / gate / dispatcher 闭环 | 冻结保守口径，按最小闭环已落地对齐 |
 | PR3 | 最小落地（保守口径） | 已有 `soul_actions` 双状态、review queue、approve / dispatch / defer / discard 最小治理面 | 仍缺完整产品化治理控制面与更广 action coverage | 冻结保守口径，按最小治理桥已落地对齐 |
 | PR4 | 已完成最小 skeleton | `workerTasks.ts` 已在真实 terminal path 接线到 `feedbackReintegration.ts` + `continuityIntegrator.ts` + 对应 tests | 尚未进入 persona/event/continuity 深层 reintegration | 冻结口径，不再继续无止境微补强 |

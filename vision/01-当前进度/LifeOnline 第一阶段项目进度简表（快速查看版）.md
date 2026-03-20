@@ -11,7 +11,7 @@
 
 | 阶段 | 当前状态 | 一句话判断 |
 |---|---|---|
-| PR1｜SoulAction 运行态骨架 | 部分落地（最小骨架） | 已有最小 `SoulAction` runtime/store 与 `soul_actions` 落地，当前仅保守覆盖 `extract_tasks` |
+| PR1｜SoulAction 运行态骨架 | 部分落地（最小骨架） | 已有最小 `SoulAction` runtime/store 与 `soul_actions` 落地，当前以 `extract_tasks` / `update_persona_snapshot` 为中心形成最小可锚定覆盖 |
 | PR2｜低风险闭环 | 最小落地（保守口径） | 已形成以 `update_persona_snapshot` 为中心的最小 `candidate -> gate -> dispatch -> execute` 闭环 |
 | PR3｜治理执行桥 | 最小落地（保守口径） | 已有 `soul_actions` 双状态、review queue、approve / dispatch / defer / discard 最小治理面 |
 | PR4｜最小回流骨架 | 已落地（保守口径） | 已在真实 terminal worker path 接线最小 payload / summary / target / strength skeleton |
