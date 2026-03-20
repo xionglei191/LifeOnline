@@ -4,6 +4,8 @@ export type Status = 'pending' | 'in_progress' | 'done' | 'cancelled';
 export type Priority = 'high' | 'medium' | 'low';
 export type Privacy = 'public' | 'private' | 'sensitive';
 export type Source = 'lingguang' | 'desktop' | 'webclipper' | 'openclaw' | 'web' | 'auto';
+export type ContinuityTarget = 'source_note' | 'derived_outputs' | 'task_record';
+export type ContinuityStrength = 'low' | 'medium';
 export const SUPPORTED_WORKER_NAMES = ['openclaw', 'lifeos'] as const;
 export type WorkerName = typeof SUPPORTED_WORKER_NAMES[number];
 export function isSupportedWorkerName(value: unknown): value is WorkerName {
@@ -21,6 +23,27 @@ export const SUPPORTED_WORKER_TASK_TYPES = [
 export type WorkerTaskType = typeof SUPPORTED_WORKER_TASK_TYPES[number];
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 export type PromptKey = 'classify' | 'extract_tasks' | 'summarize_note' | 'daily_report' | 'weekly_report';
+export const SUPPORTED_SOUL_ACTION_KINDS = [
+  'extract_tasks',
+  'update_persona_snapshot',
+  'create_event_node',
+  'promote_event_node',
+  'promote_continuity_record',
+] as const;
+export type SoulActionKind = typeof SUPPORTED_SOUL_ACTION_KINDS[number];
+export const SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES = ['pending_review', 'approved', 'deferred', 'discarded'] as const;
+export type SoulActionGovernanceStatus = typeof SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES[number];
+export const SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES = ['not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled'] as const;
+export type SoulActionExecutionStatus = typeof SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES[number];
+export type ReintegrationReviewStatus = 'pending_review' | 'accepted' | 'rejected';
+export type ReintegrationSignalKind =
+  | 'summary_reintegration'
+  | 'classification_reintegration'
+  | 'task_extraction_reintegration'
+  | 'persona_snapshot_reintegration'
+  | 'daily_report_reintegration'
+  | 'weekly_report_reintegration'
+  | 'openclaw_reintegration';
 
 export interface PromptRecord {
   key: PromptKey;
@@ -254,6 +277,45 @@ export interface WorkerTask<T extends WorkerTaskType = WorkerTaskType> {
   outputNotes?: WorkerTaskOutputNote[];
 }
 
+export interface SoulAction {
+  id: string;
+  sourceNoteId: string;
+  actionKind: SoulActionKind;
+  governanceStatus: SoulActionGovernanceStatus;
+  executionStatus: SoulActionExecutionStatus;
+  status: SoulActionExecutionStatus;
+  governanceReason: string | null;
+  workerTaskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt: string | null;
+  deferredAt: string | null;
+  discardedAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  error: string | null;
+  resultSummary: string | null;
+}
+
+export interface ReintegrationRecord {
+  id: string;
+  workerTaskId: string;
+  sourceNoteId: string | null;
+  soulActionId: string | null;
+  taskType: WorkerTaskType;
+  terminalStatus: WorkerTaskStatus;
+  signalKind: ReintegrationSignalKind;
+  reviewStatus: ReintegrationReviewStatus;
+  target: ContinuityTarget;
+  strength: ContinuityStrength;
+  summary: string;
+  evidence: Record<string, unknown>;
+  reviewReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+}
+
 export interface CreateWorkerTaskRequest {
   taskType: WorkerTaskType;
   input?: WorkerTaskInputMap[WorkerTaskType];
@@ -318,4 +380,25 @@ export interface UpdateTaskScheduleRequest {
   cronExpression?: string;
   label?: string;
   input?: WorkerTaskInputMap[WorkerTaskType];
+}
+
+export interface ListReintegrationRecordsResponse {
+  reintegrationRecords: ReintegrationRecord[];
+}
+
+export interface ReintegrationReviewRequest {
+  reason?: string | null;
+}
+
+export interface AcceptReintegrationRecordResponse {
+  reintegrationRecord: ReintegrationRecord;
+  soulActions: SoulAction[];
+}
+
+export interface RejectReintegrationRecordResponse {
+  reintegrationRecord: ReintegrationRecord;
+}
+
+export interface PlanReintegrationPromotionsResponse {
+  soulActions: SoulAction[];
 }

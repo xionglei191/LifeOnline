@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction } from '@lifeos/shared';
 
 export interface SearchResult {
   notes: Note[];
@@ -254,6 +254,57 @@ export async function fetchWorkerTasks(
     throw new Error(data.error || 'Failed to fetch worker tasks');
   }
   return data.tasks || [];
+}
+
+export async function fetchReintegrationRecords(reviewStatus?: ReintegrationRecord['reviewStatus']): Promise<ReintegrationRecord[]> {
+  const params = new URLSearchParams();
+  if (reviewStatus) {
+    params.set('reviewStatus', reviewStatus);
+  }
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/reintegration-records${query ? `?${query}` : ''}`);
+  const data = await res.json().catch(() => ({} as Partial<ListReintegrationRecordsResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch reintegration records');
+  }
+  return data.reintegrationRecords || [];
+}
+
+export async function acceptReintegrationRecord(id: string, payload: ReintegrationReviewRequest = {}): Promise<AcceptReintegrationRecordResponse> {
+  const res = await fetch(`${API_BASE}/reintegration-records/${encodeURIComponent(id)}/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({} as Partial<AcceptReintegrationRecordResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to accept reintegration record');
+  }
+  return data as AcceptReintegrationRecordResponse;
+}
+
+export async function rejectReintegrationRecord(id: string, payload: ReintegrationReviewRequest = {}): Promise<RejectReintegrationRecordResponse> {
+  const res = await fetch(`${API_BASE}/reintegration-records/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({} as Partial<RejectReintegrationRecordResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to reject reintegration record');
+  }
+  return data as RejectReintegrationRecordResponse;
+}
+
+export async function planReintegrationPromotions(id: string): Promise<SoulAction[]> {
+  const res = await fetch(`${API_BASE}/reintegration-records/${encodeURIComponent(id)}/plan-promotions`, {
+    method: 'POST',
+  });
+  const data = await res.json().catch(() => ({} as Partial<PlanReintegrationPromotionsResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to plan reintegration promotions');
+  }
+  return data.soulActions || [];
 }
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
