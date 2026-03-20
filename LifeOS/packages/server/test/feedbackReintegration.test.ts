@@ -78,6 +78,46 @@ function buildNoteMarkdown(frontmatter: Record<string, unknown>, content: string
   return `${lines.join('\n')}\n`;
 }
 
+test('update_persona_snapshot with sourceNoteId creates and reuses a SoulAction record', async (t) => {
+  const env = await createTestEnv('lifeos-persona-soul-action-create-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-persona-create', '/tmp/note-persona-create.md', 'note-persona-create.md', 'Persona 创建测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我想继续稳定推进。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const firstTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-persona-create' },
+    sourceNoteId: 'note-persona-create',
+  });
+
+  const firstSoulAction = getSoulActionBySourceNoteIdAndKind('note-persona-create', 'update_persona_snapshot');
+  assert.ok(firstSoulAction);
+  assert.equal(firstSoulAction.governanceStatus, 'approved');
+  assert.equal(firstSoulAction.executionStatus, 'pending');
+  assert.equal(firstSoulAction.workerTaskId, firstTask.id);
+
+  const secondTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-persona-create' },
+    sourceNoteId: 'note-persona-create',
+  });
+
+  const reusedSoulAction = getSoulActionBySourceNoteIdAndKind('note-persona-create', 'update_persona_snapshot');
+  assert.ok(reusedSoulAction);
+  assert.equal(reusedSoulAction.id, firstSoulAction.id);
+  assert.equal(reusedSoulAction.workerTaskId, secondTask.id);
+});
+
 test('extract_tasks with sourceNoteId creates and reuses a SoulAction record', async (t) => {
   const env = await createTestEnv('lifeos-soul-action-create-');
 
@@ -587,6 +627,56 @@ test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts p
   assert.equal(reintegrationRecord?.soulActionId, soulAction?.id ?? null);
   assert.equal(reintegrationRecord?.reviewStatus, 'pending_review');
   assert.deepEqual(result.outputNotePaths, []);
+});
+
+test('update_persona_snapshot terminal failure and cancellation also sync SoulAction lifecycle', async (t) => {
+  const env = await createTestEnv('lifeos-persona-soul-action-sync-terminal-');
+  let cancelTaskId = '';
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-persona-cancelled', '/tmp/note-persona-cancelled.md', 'note-persona-cancelled.md', 'Persona 取消测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我想继续稳定推进。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const failedTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-persona-missing-sync' },
+    sourceNoteId: 'note-persona-missing-sync',
+  });
+  const failedResult = await executeWorkerTask(failedTask.id);
+  const failedSoulAction = getSoulActionByWorkerTaskId(failedTask.id);
+
+  assert.equal(failedResult.status, 'failed');
+  assert.ok(failedSoulAction);
+  assert.equal(failedSoulAction.governanceStatus, 'approved');
+  assert.equal(failedSoulAction.executionStatus, 'failed');
+  assert.match(failedSoulAction.error || '', /笔记不存在/);
+  assert.equal(failedSoulAction.resultSummary, null);
+
+  const cancelledTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-persona-cancelled' },
+    sourceNoteId: 'note-persona-cancelled',
+  });
+  cancelTaskId = cancelledTask.id;
+  cancelWorkerTask(cancelTaskId);
+  const cancelledResult = await executeWorkerTask(cancelledTask.id);
+  const cancelledSoulAction = getSoulActionByWorkerTaskId(cancelledTask.id);
+
+  assert.equal(cancelledResult.status, 'cancelled');
+  assert.ok(cancelledSoulAction);
+  assert.equal(cancelledSoulAction.governanceStatus, 'approved');
+  assert.equal(cancelledSoulAction.executionStatus, 'cancelled');
+  assert.equal(cancelledSoulAction.error, '任务已取消');
+  assert.equal(cancelledSoulAction.resultSummary, null);
 });
 
 test('update_persona_snapshot missing note fails without creating persona snapshot', async (t) => {
