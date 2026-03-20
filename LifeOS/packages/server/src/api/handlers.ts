@@ -11,7 +11,7 @@ import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecut
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../soul/soulActions.js';
 import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
-import { listReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
+import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../soul/eventNodes.js';
 import { listContinuityRecords } from '../soul/continuityRecords.js';
@@ -543,12 +543,12 @@ export async function listReintegrationRecordsHandler(req: Request, res: Respons
 
 export async function acceptReintegrationRecordHandler(req: Request, res: Response): Promise<void> {
   try {
-    const record = acceptReintegrationRecord(req.params.id, getGovernanceReason(req.body));
-    if (!record) {
+    const result = acceptReintegrationRecordAndPlanPromotions(req.params.id, getGovernanceReason(req.body));
+    if (!result) {
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
-    res.json({ reintegrationRecord: record });
+    res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }

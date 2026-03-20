@@ -11,6 +11,8 @@
 - [x] 若 Claude 恢复正常输出，继续收敛 PR6 中下一处最小真实缺口（优先重复 review predicate / promotion rule 的集中化）；若仍异常，保留当前状态并等待下一轮 token/CLI 状态恢复。
 - [x] 将 `workerTasks.ts` terminal reintegration hook 中剩余的 payload/result/record 拼装逻辑压回 `feedbackReintegration.ts` 的更窄 helper，减少 terminal hook 内联组装。
 - [x] 补充最窄测试，锁定 reintegration record 输入组装对 persona evidence 与 continuity 字段的稳定输出。
+- [x] 在 reintegration review accept 路径增加最小 orchestration helper：accepted 后自动规划 PR6 promotion actions，但仍不自动 dispatch，继续保持 approve/dispatch 分离。
+- [x] 补充最窄测试，锁定 accept 即产出 promotion actions，以及重复规划复用既有 soul actions 的幂等性。
 
 ## 当前执行
 - 已完成文档锚点读取：`README.md`、`CLAUDE.md`、`vision/00-权威基线/`、`vision/01-当前进度/`、`tasks/todo.md`、`tasks/lessons.md`。
@@ -32,9 +34,19 @@
   - `LifeOS/packages/server/src/workers/feedbackReintegration.ts` 新增 `createReintegrationRecordInput()`，统一 terminal reintegration record 的 payload / continuity / evidence 组装。
   - `LifeOS/packages/server/src/workers/workerTasks.ts` 改为仅收集 `soulActionId` 与 `personaSnapshot` 后调用统一 helper，进一步收窄 terminal hook 内联逻辑。
   - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 补两条 helper 级别断言，锁定 persona evidence 存在/缺失时的 record 输入输出。
-- Claude Code 可用性状态：这轮没有继续调用 Claude 代做，因为当前已经能在本地安全完成一处更小、更确定的规则集中化；上轮记录的 Claude 静默退出问题仍未单独复测关闭。
-
-## Review
+- 本轮继续完成的真实实现：
+  - 新增 `LifeOS/packages/server/src/soul/reintegrationReview.ts` 中的 `acceptReintegrationRecordAndPlanPromotions()`，把“accept 后自动规划 PR6 promotion actions”收口在 service 层，避免把编排逻辑塞回 handler。
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 accept reintegration endpoint 现在直接返回 `{ reintegrationRecord, soulActions }`，让 review 接受动作一次性暴露下一步可治理对象，但仍不自动 dispatch。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增两条 coverage：一条锁定 accept 即产出 `promote_event_node` + `promote_continuity_record`；另一条锁定重复规划不会重复创建 promotion soul actions。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，46/46。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍有 Node 25 vs package engine 的 warning，但不影响本轮 build 成功）。
+- 当前未完成项：
+  - 还没有把这轮 accept->auto-plan 变更直接提交 git commit。
+  - Web 控制台还未消费 accept 接口新增返回的 `soulActions` 字段；当前后端保持兼容，但前端尚未利用这批即时规划结果。
+- 下一步建议：
+  - 优先在 `packages/web` review/reintegration 视图里消费 accept 响应中的 `soulActions`，把“接受后还要手动再点 plan”这一步从 UI 上去掉。
+  - 若仍只做 server 侧，可继续补一条 API handler 级测试，锁定 accept endpoint 返回 shape，避免后续回归。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。

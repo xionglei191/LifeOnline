@@ -1,5 +1,6 @@
 import { getDb } from '../db/client.js';
 import type { ReintegrationSignalKind } from '../workers/feedbackReintegration.js';
+import { planPromotionSoulActions } from './reintegrationPromotionPlanner.js';
 import { getReintegrationRecordByWorkerTaskId, type ReintegrationRecord } from './reintegrationRecords.js';
 
 interface ReintegrationRecordRow {
@@ -68,6 +69,21 @@ function updateReintegrationReviewStatus(id: string, reviewStatus: 'accepted' | 
 
 export function acceptReintegrationRecord(id: string, reason: string | null): ReintegrationRecord | null {
   return updateReintegrationReviewStatus(id, 'accepted', reason);
+}
+
+export function acceptReintegrationRecordAndPlanPromotions(id: string, reason: string | null): {
+  reintegrationRecord: ReintegrationRecord;
+  soulActions: ReturnType<typeof planPromotionSoulActions>;
+} | null {
+  const reintegrationRecord = acceptReintegrationRecord(id, reason);
+  if (!reintegrationRecord) {
+    return null;
+  }
+
+  return {
+    reintegrationRecord,
+    soulActions: planPromotionSoulActions(reintegrationRecord),
+  };
 }
 
 export function rejectReintegrationRecord(id: string, reason: string | null): ReintegrationRecord | null {

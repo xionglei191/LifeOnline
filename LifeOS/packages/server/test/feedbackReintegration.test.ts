@@ -17,7 +17,7 @@ import {
 } from '../src/workers/feedbackReintegration.js';
 import { integrateContinuity } from '../src/workers/continuityIntegrator.js';
 import { getReintegrationRecordByWorkerTaskId, upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
-import { acceptReintegrationRecord } from '../src/soul/reintegrationReview.js';
+import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions } from '../src/soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
@@ -1919,6 +1919,92 @@ test('approved create_event_node action reuses PR6 event promotion executor', as
   assert.equal(createdAction?.executionStatus, 'succeeded');
   assert.equal(eventNodes.length, 1);
   assert.equal(eventNodes[0]?.sourceReintegrationId, 'reint:create-event-node');
+});
+
+test('acceptReintegrationRecordAndPlanPromotions auto-plans PR6 actions on acceptance', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-accept-plan-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-accept-plan',
+    sourceNoteId: null,
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'weekly accept-plan summary',
+    evidence: { source: 'test' },
+    now: '2026-03-21T08:30:00.000Z',
+  });
+
+  const reintegrationRecord = getReintegrationRecordByWorkerTaskId('manual-task-pr6-accept-plan');
+  assert.ok(reintegrationRecord);
+  assert.equal(reintegrationRecord?.reviewStatus, 'pending_review');
+
+  const acceptedResult = acceptReintegrationRecordAndPlanPromotions(reintegrationRecord!.id, 'accept and auto-plan PR6 promotions');
+  assert.ok(acceptedResult);
+  assert.equal(acceptedResult?.reintegrationRecord.reviewStatus, 'accepted');
+  assert.equal(acceptedResult?.soulActions.length, 2);
+  assert.deepEqual(
+    acceptedResult?.soulActions.map((action) => action.actionKind).sort(),
+    ['promote_continuity_record', 'promote_event_node'],
+  );
+
+  const persistedEventAction = getSoulActionBySourceNoteIdAndKind(`reint:${reintegrationRecord!.workerTaskId}`, 'promote_event_node');
+  const persistedContinuityAction = getSoulActionBySourceNoteIdAndKind(`reint:${reintegrationRecord!.workerTaskId}`, 'promote_continuity_record');
+  assert.ok(persistedEventAction);
+  assert.ok(persistedContinuityAction);
+});
+
+test('acceptReintegrationRecordAndPlanPromotions reuses existing PR6 promotion actions', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-accept-plan-idempotent-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-auto-plan',
+    sourceNoteId: 'note-pr6-auto-plan',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'weekly auto-plan summary',
+    evidence: { source: 'test' },
+    now: '2026-03-21T09:00:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-pr6-auto-plan');
+  assert.ok(record);
+
+  const firstAcceptance = acceptReintegrationRecordAndPlanPromotions(record!.id, 'first accept');
+  assert.ok(firstAcceptance);
+  assert.equal(firstAcceptance?.soulActions.length, 2);
+
+  const secondPlanned = planPromotionSoulActions(firstAcceptance!.reintegrationRecord);
+  assert.equal(secondPlanned.length, 2);
+  assert.equal(secondPlanned[0]?.id, firstAcceptance?.soulActions[0]?.id);
+  assert.equal(secondPlanned[1]?.id, firstAcceptance?.soulActions[1]?.id);
+
+  const promotionActions = getDb().prepare(`
+    SELECT COUNT(*) as total
+    FROM soul_actions
+    WHERE source_note_id = ?
+      AND action_kind IN ('promote_event_node', 'promote_continuity_record')
+  `).get(`reint:${record!.workerTaskId}`) as { total: number };
+  assert.equal(promotionActions.total, 2);
 });
 
 test('accepted persona reintegration can plan and dispatch PR6 event and continuity promotions', async (t) => {
