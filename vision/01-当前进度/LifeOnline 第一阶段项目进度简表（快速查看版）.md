@@ -4,8 +4,8 @@
 
 ## 1. 当前总判断
 - **总体路线已清楚**：第一阶段继续按 PR1–PR6 推进。
-- **当前已形成从 PR1 到 PR6 的最小可锚定链路**：PR1 最小 `SoulAction` 骨架、PR4 最小 skeleton、PR5 轻量回流信号层、PR6 高阈值 promotion 骨架均已有最小落地。
-- **当前不应夸大**：不能把 PR1 写成完整完成，也不能把 PR5/PR6 写成通用、全量、产品化的 persona/event/continuity 系统已完成。
+- **当前已形成从 PR1 到 PR6 的最小可锚定链路**：PR1 最小 `SoulAction` 骨架、PR2 最小低风险闭环、PR3 最小治理执行桥、PR4 最小 skeleton、PR5 轻量回流信号层、PR6 高阈值 promotion 骨架均已有最小落地。
+- **当前不应夸大**：不能把这些最小落地写成完整、通用、全量、产品化的自治治理系统已完成。
 
 ## 2. 六阶段快照
 
@@ -36,12 +36,12 @@
 - 通用、全量、产品化的 persona / event / continuity 对象层 reintegration
 
 ## 5. 当前实现形态 vs 目标形态
-- **当前实现形态**：`SoulAction` 先作为 `workerTasks` 生命周期镜像层，范围仅保守覆盖 `extract_tasks`；reintegration 先落在 `src/workers/`，保持 best-effort、side-effect-free。
-- **目标形态**：后续再补 generator / gate / dispatcher / review queue，并再决定相关能力是否进一步向 `src/soul/` 中枢收束。
+- **当前实现形态**：PR1–PR6 都已形成保守、可锚定的最小落地；其中 `SoulAction` 先作为 `workerTasks` 生命周期镜像层与最小治理宿主存在，reintegration 保持 review-backed、best-effort、可边界化推进。
+- **目标形态**：后续继续补 action coverage、治理控制面收口与更稳的 review-backed 演进，而不是把当前最小闭环误写成完整产品化系统。
 
 ## 6. 当前主线程优先级
 1. **P0：冻结保守口径**
-2. **P1：同步 PR5 / PR6 文档状态**
+2. **P1：同步 PR1–PR6 文档状态并消除前后冲突**
 3. **P2：收口验证与落地审查**
 4. **P3：在保守边界内继续后续演进**
 
