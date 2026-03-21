@@ -393,15 +393,15 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/components/WorkerTaskCard.vue` 把 worker pills 从直接展示底层枚举值收紧为真实可读标签：`lifeos/openclaw` 映射为 `LifeOS/OpenClaw`，`update_persona_snapshot` 也同步映射为 `人格快照更新`，避免 worker 视图继续泄漏 shared contract 内部枚举名。
-  - 新增 `LifeOS/packages/web/src/components/WorkerTaskCard.test.ts`，直接锁定 worker/task pills 会展示本地化标签而不是原始枚举值，补上 worker task 卡片此前完全缺失的最小组件回归保护。
+  - `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 按同一口径收紧 detail pills：`lifeos/openclaw` 映射为 `LifeOS/OpenClaw`，`update_persona_snapshot` 映射为 `人格快照更新`，避免 worker task 列表与 detail overlay 对同一 contract 展示口径不一致。
+  - 新增 `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts`，直接锁定 detail overlay 会展示本地化 worker/task 标签而不是原始枚举值，并覆盖 LifeOS 与 OpenClaw 两条 worker 路径。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskCard.test.ts` 通过，4 files / 55 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskDetail.test.ts` 通过，5 files / 57 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一主线推进，可直接提交这条 worker task card contract 文案收敛增量；若还要继续补一轮，可评估 `WorkerTaskDetail.vue` 是否也存在同样的原始 `worker/taskType` 枚举泄漏，再决定是否做同类收敛。
+  - 若继续沿同一主线推进，可直接提交这条 worker task detail contract 文案收敛增量；若还要继续补一轮，可评估 `WorkerTaskDetail.vue` 的时间线/结果区是否还有直接泄漏原始 contract 枚举值的文案缺口。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
   - 这次补的是同一条真实事件契约链上的剩余缺口：`SettingsView.test.ts:218` 与 `:222` 本就通过组件真实 camelCase emits 驱动父层，因此运行时代码也应与测试和组件声明保持一致，避免未来出现“测试通过但真实监听名漂移”的风险。
