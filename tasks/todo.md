@@ -520,6 +520,14 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract 主线推进，可在 server/shared 新增 worker task 枚举时，同步补一条跨层回归，确认 web helper 与用户可见文案会在新值落地时第一时间被测试阻断。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 新增 retry/cancel 两条动作级回归，锁定 detail overlay 在执行 `retryWorkerTask()` / `cancelWorkerTask()` 后会展示与 `NoteDetail` 一致的本地化 worker-task 元信息与正确动作前缀，而不是只验证静态 pill 标签。
+  - 这次补的是上一轮共享 helper 收口后的直接用户可见消费面：如果 `WorkerTaskDetail` 没有动作级测试，后续即使 helper 仍在，也可能重新退回固定文案而不被发现。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskDetail.test.ts` 通过，7 files / 67 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更已提交 git commit。
+- 下一步建议再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
