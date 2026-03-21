@@ -587,6 +587,27 @@
   - 优先继续排查 `reintegrationApi.test.ts` 里其余仍默认按 `sourceNoteId=record.id` 查询 promotion 分组的旧断言，并按 `sourceReintegrationId` 继续收口，直到整组 API contract 全面转到新主语义。
   - 若要继续提高信噪比，再单独处理 server integration suite 的偶发超时隔离问题，但那是独立于本轮 source contract 收口之外的测试基础设施议题。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将剩余 promotion source contract 用例继续从旧的 `sourceNoteId = record.id` 语义迁到显式 `sourceReintegrationId`：accept / manual-plan websocket follow-up、approve websocket follow-up、dispatch websocket follow-up、dispatch/list refresh、staggered grouped refresh、sequential dispatch、same-status execution filter 等场景现在统一按 reintegration source 查询和对齐。
+  - 同批测试的 reintegration fixture 补回真实 `sourceNoteId`（如 `note-api-pr6-accept-ws-filter-followup`、`note-api-pr6-ws-filter-followup`、`note-api-pr6-event-node-dispatch-followup`、`note-api-pr6-staggered-grouped-settings-refresh`），避免 runtime 合法 fallback 到 `record.id` 后继续把旧兼容语义伪装成主语义。
+  - websocket 断言现在显式区分两层事实源：`sourceNoteId` 断言真实 note source，`sourceReintegrationId` 断言对应 reintegration record id，不再把两者混成同一个字段。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，31/31（重定向日志确认退出码 `EXIT:0`）。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮 server test/build 均通过。
+- 当前未完成项再补充：
+  - 旧兼容路径仍保留：若后续新 fixture 再写成 `sourceNoteId: null`，planner/runtime 仍会合法 fallback 到 `record.id`；继续补 contract coverage 时需要避免把 fallback 当成主语义。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一高价值主线推进，优先检查 `feedbackReintegration.test.ts`、`feedbackReintegration.ts` 与未来新增 reintegration API fixture 是否还存在 `sourceNoteId: null` 但断言按真实 note source 编写的潜在漂移点。
+  - 若本轮先收口，也可以直接提交当前这批 promotion source contract test 迁移，避免 `reintegrationApi.test.ts` 再次回退到旧兼容语义。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 promotion dispatch 后 mixed-group progress 用例里的 worker-task follow-up 查询从旧的 `record.id -> sourceNoteId` 误用，收回到真实 note source `note-api-pr6-filter-subset-convergence`，不再把 reintegration group key 错当成 worker task 的 note-level 事实源。
+  - 同一用例新增对 `/api/worker-tasks` 返回 `filters.sourceNoteId` 的断言，明确锁住这条 contract 仍然是 note 级过滤，而 promotion soul-action follow-up 才走 `sourceReintegrationId`；这样把两个不同事实源边界直接在同一条测试里分开锚定。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action filters converge when governance and execution subsets are queried after mixed group progress" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮定向 contract test 与 build 均通过。
+- 当前未完成项再补充：
   - 先修正 `LifeOS/packages/server/config.json` 被测试残留污染的问题：从不存在的 `/tmp/lifeos-config-restart-rollback-...` 临时 vault 路径恢复为正式运行配置 `/home/xionglei/Vault_OS` + `3000`，避免当前 working tree 被误用于运行时会直接指向失效数据目录。
   - `LifeOS/packages/web/src/components/AISuggestions.test.ts` 新增 5 条最窄前端回归测试，直接锁定 AI suggestions 面板在初始 idle、刷新成功、空结果、错误、加载中五种主状态下都正确消费 `fetchAISuggestions()` 与 shared `AISuggestion` contract，并继续展示本地化 type / dimension 文案。
 - 本轮验证待执行：

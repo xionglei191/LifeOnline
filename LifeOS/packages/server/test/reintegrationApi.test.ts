@@ -1011,7 +1011,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-accept-ws-filter-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-accept-ws-filter-followup',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -1033,7 +1033,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1043,7 +1043,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1072,11 +1072,11 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
 
     const fullAfterAccept = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const pendingAfterAccept = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
 
     assert.equal(fullAfterAccept.soulActions.length, accepted.soulActions.length);
@@ -1126,7 +1126,7 @@ test('reintegration accept emits reintegration-record-updated websocket event al
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-accept-record-ws-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-accept-record-ws-refresh',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -1152,7 +1152,7 @@ test('reintegration accept emits reintegration-record-updated websocket event al
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1162,7 +1162,7 @@ test('reintegration accept emits reintegration-record-updated websocket event al
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1191,7 +1191,7 @@ test('reintegration accept emits reintegration-record-updated websocket event al
       [...seenActionIds].sort(),
       accepted.soulActions.map((action) => action.id).sort(),
     );
-    assert.ok(actionEvents.every((event) => event.data.sourceNoteId === record!.id));
+    assert.ok(actionEvents.every((event) => event.data.sourceReintegrationId === record!.id));
 
     const acceptedRecords = await api<ListReintegrationRecordsResponse>(
       baseUrl,
@@ -1249,7 +1249,7 @@ test('reintegration manual planning emits reintegration-record-updated websocket
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-plan-record-ws-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-plan-record-ws-refresh',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -1275,7 +1275,7 @@ test('reintegration manual planning emits reintegration-record-updated websocket
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1285,7 +1285,7 @@ test('reintegration manual planning emits reintegration-record-updated websocket
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1311,15 +1311,15 @@ test('reintegration manual planning emits reintegration-record-updated websocket
       [...seenActionIds].sort(),
       planned.soulActions.map((action) => action.id).sort(),
     );
-    assert.ok(actionEvents.every((event) => event.data.sourceNoteId === record!.id));
+    assert.ok(actionEvents.every((event) => event.data.sourceReintegrationId === record!.id));
 
     const fullAfterPlan = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const pendingAfterPlan = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
 
     assert.equal(fullAfterPlan.soulActions.length, planned.soulActions.length);
@@ -1365,7 +1365,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-accept-ws-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-accept-ws-refresh',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -1387,7 +1387,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1397,7 +1397,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
       waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+          if (event.type !== 'soul-action-updated' || event.data.sourceReintegrationId !== record!.id) {
             return false;
           }
           seenActionIds.add(event.data.id);
@@ -1424,6 +1424,10 @@ test('reintegration accept emits soul-action-updated websocket events for planne
     );
     assert.deepEqual(
       wsEvents.map((event) => event.data.sourceNoteId),
+      ['note-api-pr6-accept-ws-refresh', 'note-api-pr6-accept-ws-refresh'],
+    );
+    assert.deepEqual(
+      wsEvents.map((event) => event.data.sourceReintegrationId),
       [record!.id, record!.id],
     );
     assert.ok(wsEvents.every((event) => event.data.governanceStatus === 'pending_review'));
@@ -2160,7 +2164,7 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-dispatch-list-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-event-node-dispatch-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -2209,16 +2213,16 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
     assert.equal(dispatched.soulAction?.id, action!.id);
     assert.ok(dispatched.soulAction);
     assert.ok(['pending', 'running', 'succeeded'].includes(dispatched.soulAction.executionStatus));
-    assert.equal(dispatched.soulAction.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction.sourceNoteId, 'note-api-pr6-event-node-dispatch-followup');
     assert.equal(dispatched.soulAction.sourceReintegrationId, record!.id);
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
-    assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-event-node-dispatch-followup');
     assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, dispatched.soulAction.executionStatus);
@@ -2551,7 +2555,7 @@ test('grouped settings list stays coherent across staggered approve and dispatch
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-staggered-group-updates',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-staggered-grouped-settings-refresh',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -2594,7 +2598,7 @@ test('grouped settings list stays coherent across staggered approve and dispatch
 
     const listedAfterFirstApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const firstApproveById = new Map(listedAfterFirstApprove.soulActions.map((action) => [action.id, action]));
     assert.equal(firstApproveById.get(firstAction.id)?.governanceStatus, 'approved');
@@ -2623,13 +2627,15 @@ test('grouped settings list stays coherent across staggered approve and dispatch
 
     const listedAfterMixedUpdate = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const mixedById = new Map(listedAfterMixedUpdate.soulActions.map((action) => [action.id, action]));
-    assert.equal(mixedById.get(firstAction.id)?.sourceNoteId, record!.id);
+    assert.equal(mixedById.get(firstAction.id)?.sourceNoteId, 'note-api-pr6-staggered-grouped-settings-refresh');
+    assert.equal(mixedById.get(firstAction.id)?.sourceReintegrationId, record!.id);
     assert.equal(mixedById.get(firstAction.id)?.governanceStatus, 'approved');
     assert.equal(mixedById.get(firstAction.id)?.executionStatus, firstDispatched.soulAction!.executionStatus);
-    assert.equal(mixedById.get(secondAction.id)?.sourceNoteId, record!.id);
+    assert.equal(mixedById.get(secondAction.id)?.sourceNoteId, 'note-api-pr6-staggered-grouped-settings-refresh');
+    assert.equal(mixedById.get(secondAction.id)?.sourceReintegrationId, record!.id);
     assert.equal(mixedById.get(secondAction.id)?.governanceStatus, 'approved');
     assert.equal(mixedById.get(secondAction.id)?.executionStatus, 'not_dispatched');
 
@@ -2670,7 +2676,7 @@ test('grouped settings list drops dispatch-ready count from one to zero across s
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-sequential-dispatch-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-sequential-dispatch-refresh',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -2723,7 +2729,7 @@ test('grouped settings list drops dispatch-ready count from one to zero across s
 
     const listedAfterFirstDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const firstReady = listedAfterFirstDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
     const firstDispatched = listedAfterFirstDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
@@ -2744,7 +2750,7 @@ test('grouped settings list drops dispatch-ready count from one to zero across s
 
     const listedAfterSecondDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const secondReady = listedAfterSecondDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
     const secondDispatched = listedAfterSecondDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
@@ -2783,7 +2789,7 @@ test('grouped status filters stay aligned with full-list semantics after sequent
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-filter-convergence',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-filter-convergence',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -2836,15 +2842,15 @@ test('grouped status filters stay aligned with full-list semantics after sequent
 
     const fullAfterFirstDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const readyAfterFirstDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     const dispatchedAfterFirstDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
     );
     assert.equal(fullAfterFirstDispatch.soulActions.length, accepted.soulActions.length);
     assert.equal(readyAfterFirstDispatch.soulActions.length, 1);
@@ -2864,15 +2870,15 @@ test('grouped status filters stay aligned with full-list semantics after sequent
 
     const fullAfterSecondDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const readyAfterSecondDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     const secondDispatchedAfterSecondDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(secondDispatch.soulAction!.executionStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(secondDispatch.soulAction!.executionStatus)}`,
     );
     assert.equal(fullAfterSecondDispatch.soulActions.length, accepted.soulActions.length);
     assert.equal(readyAfterSecondDispatch.soulActions.length, 0);
@@ -2912,7 +2918,7 @@ test('soul-action filters converge when governance and execution subsets are que
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-filter-subset-convergence',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-filter-subset-convergence',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -2971,24 +2977,25 @@ test('soul-action filters converge when governance and execution subsets are que
 
     const fullList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const workerTasksAfterFirstDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent('note-api-pr6-filter-subset-convergence')}`,
     );
     const dispatchedWorkerTask = workerTasksAfterFirstDispatch.tasks.find((task) => task.id === firstDispatch.task!.id);
+    assert.equal(workerTasksAfterFirstDispatch.filters.sourceNoteId, 'note-api-pr6-filter-subset-convergence');
     const approvedList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
     );
     const readyList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     const dispatchedList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
     );
 
     assert.equal(fullList.soulActions.length, 2);
@@ -3036,7 +3043,7 @@ test('soul-action filters converge when governance and execution subsets are que
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-same-status-filter-subsets',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-same-status-filter-subsets',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3093,19 +3100,19 @@ test('soul-action filters converge when governance and execution subsets are que
 
     const fullList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const approvedList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
     );
     const readyList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     const sameStatusList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(terminalStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(terminalStatus)}`,
     );
 
     assert.equal(fullList.soulActions.length, accepted.soulActions.length);
@@ -3150,7 +3157,7 @@ test('approve websocket updates stay aligned with follow-up filtered lists for g
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-approve-ws-filter-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-approve-ws-filter-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3181,7 +3188,7 @@ test('approve websocket updates stay aligned with follow-up filtered lists for g
     const secondAction = accepted.soulActions[1]!;
     const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === firstAction.id,
     );
 
     const firstApprove = await api<SoulActionResponse>(
@@ -3196,22 +3203,23 @@ test('approve websocket updates stay aligned with follow-up filtered lists for g
     const wsEvent = await wsEventPromise;
     assert.equal(wsEvent.type, 'soul-action-updated');
     assert.equal(wsEvent.data.id, firstAction.id);
-    assert.equal(wsEvent.data.sourceNoteId, record!.id);
+    assert.equal(wsEvent.data.sourceNoteId, 'note-api-pr6-approve-ws-filter-followup');
+    assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
     assert.equal(wsEvent.data.governanceStatus, firstApprove.soulAction.governanceStatus);
     assert.equal(wsEvent.data.governanceStatus, 'approved');
     assert.equal(wsEvent.data.executionStatus, 'not_dispatched');
 
     const fullAfterApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const pendingAfterApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
     const approvedReadyAfterApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
 
     assert.equal(fullAfterApprove.soulActions.length, 2);
@@ -3263,7 +3271,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-approve-ws-sequential-filter-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-approve-ws-sequential-filter-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3295,7 +3303,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
 
     const firstWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === firstAction.id,
     );
     await api<SoulActionResponse>(
       baseUrl,
@@ -3311,11 +3319,11 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
 
     const pendingAfterFirstApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
     const approvedAfterFirstApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
 
     assert.equal(pendingAfterFirstApprove.soulActions.length, 1);
@@ -3325,7 +3333,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
 
     const secondWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === secondAction.id,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === secondAction.id,
     );
     await api<SoulActionResponse>(
       baseUrl,
@@ -3341,15 +3349,15 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
 
     const fullAfterSecondApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const pendingAfterSecondApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
     const approvedAfterSecondApprove = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
 
     assert.equal(pendingAfterSecondApprove.soulActions.length, 0);
@@ -3397,7 +3405,7 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-ws-filter-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-ws-filter-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3439,7 +3447,7 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     const secondAction = accepted.soulActions[1]!;
     const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === firstAction.id,
     );
 
     const firstDispatch = await api<DispatchSoulActionResponse>(
@@ -3453,22 +3461,20 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     assert.ok(firstDispatch.soulAction);
 
     const wsEvent = await wsEventPromise;
-    assert.equal(wsEvent.type, 'soul-action-updated');
-    assert.equal(wsEvent.data.id, firstAction.id);
-    assert.equal(wsEvent.data.sourceNoteId, record!.id);
-    assert.equal(wsEvent.data.executionStatus, firstDispatch.soulAction!.executionStatus);
+    assert.equal(wsEvent.data.sourceNoteId, 'note-api-pr6-ws-filter-followup');
+    assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
 
     const fullAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const readyAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     const dispatchedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
     );
 
     assert.equal(fullAfterDispatch.soulActions.length, 2);
@@ -3521,7 +3527,7 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-ws-refresh',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-ws-refresh',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3560,7 +3566,7 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
 
     const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === action!.id,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === action!.id,
     );
 
     const dispatchResponse = await api<DispatchSoulActionResponse>(
@@ -3575,7 +3581,8 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
     const wsEvent = await wsEventPromise;
     assert.equal(wsEvent.type, 'soul-action-updated');
     assert.equal(wsEvent.data.id, action!.id);
-    assert.equal(wsEvent.data.sourceNoteId, record!.id);
+    assert.equal(wsEvent.data.sourceNoteId, 'note-api-pr6-ws-refresh');
+    assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
     assert.ok(['pending', 'running', 'succeeded'].includes(wsEvent.data.executionStatus));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
@@ -3609,7 +3616,7 @@ test('execution-status filter stays aligned when grouped actions converge to the
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-same-status-filter',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-same-status-filter',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -3666,19 +3673,19 @@ test('execution-status filter stays aligned when grouped actions converge to the
 
     const fullList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     assert.equal(fullList.soulActions.length, accepted.soulActions.length);
 
     const readyList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
     assert.equal(readyList.soulActions.length, 0);
 
     const sameStatusList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(terminalStatus)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(terminalStatus)}`,
     );
     assert.equal(sameStatusList.soulActions.length, accepted.soulActions.length);
 
