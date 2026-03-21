@@ -1,3 +1,53 @@
+# shared note write-back contract 收口
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只在新的 shared contract 主线上推进。
+- [x] 复核 note 写回链（`createNote` / `updateNote`）的 server/web/shared contract，确认仍存在本地内联请求/响应 shape。
+- [x] 把 note 写回请求/响应类型补进 `packages/shared`，避免 client 继续用裸字符串与本地 response shape。
+- [x] 更新 web typed client 以复用新的 shared request/response contract。
+- [x] 补 web client 回归，锁定 `createNote()` / `updateNote()` 的真实请求与响应 shape。
+- [x] 跑定向验证并更新本文件。
+
+## 当前执行
+- 已确认当前仓库剩余 dirty state 主要是并行中的 `CLAUDE.md`、`lifeonline-claude-worker-v2.sh`、以及上一条 grouped governance / SettingsView 工作；本轮没有覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `UpdateNoteRequest`
+    - `UpdateNoteResponse`
+    - `CreateNoteRequest`
+    - `CreateNoteResponse`
+    把 note 写回链的请求/响应 contract 正式收进 shared。
+  - `LifeOS/packages/web/src/api/client.ts`：
+    - `updateNote()` 改为返回 shared `UpdateNoteResponse`，并复用 `UpdateNoteRequest`
+    - `createNote()` 改为复用 `CreateNoteRequest` / `CreateNoteResponse`
+    - 同时修正 client 侧对 create-note 响应的读取方式，不再只靠本地 `{ filePath }` 窄类型。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增两条回归：
+    - `sends typed note update requests and returns the shared success response`
+    - `sends typed create-note requests and returns the shared response shape`
+    直接锁定 note 写回请求体与 server 实际成功响应的 contract。
+- 这次没有回到 grouped governance，也没有只做重命名；重点是把 note 主路径的写回 contract 从 web 本地影子定义收回 shared 单一事实源。
+
+## 本轮选择依据
+- 用户要求下一轮优先继续处理新的 `server/web/shared contract gap`。
+- 上一轮已补齐 note read/detail contract（title / encrypted / approval metadata），但 note write-back 仍存在两个真实漂移点：
+  - `updateNote()` 仍以内联对象承载请求字段；
+  - `createNote()` 仍以内联 request/response shape 承载 contract，而 server 实际返回 `{ success: true, filePath }`。
+- 这些都属于主路径写回 contract 漂移，价值高于继续补 grouped governance 同类稳定性测试。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；vitest 同时跑过当前 web 测试集，9 files / 119 tests。
+- 当前环境仍有 Node engine warning（包声明 `>=20 <21`，实际 `v25.8.1`），但本轮验证通过。
+
+## 当前未完成项
+- 本轮 shared/web contract 收口改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- server 侧 `updateNote` handler 仍直接从 `req.body` 解构字段，尚未显式对齐 shared request type；虽然 runtime 行为已匹配，但 handler 层还没拿到同一份 typed contract。
+
+## 下一步建议
+- 继续沿同一 contract 主线，把 server note handlers 的 request/response 也接回 shared 类型，形成 server/web/shared 完整对齐。
+- 若这条线确认收得差不多，再看下一个主路径 gap：`createNote` 的 `source` 当前固定写 `'desktop'` 是否与 web 创建入口的事实源语义一致。
+
+
 # shared Note metadata contract 收口
 
 ## 计划

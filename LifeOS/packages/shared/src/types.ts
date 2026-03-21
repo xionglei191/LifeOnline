@@ -200,6 +200,31 @@ export interface Note extends Frontmatter {
   file_modified_at: string;
 }
 
+export interface UpdateNoteRequest {
+  status?: Status;
+  priority?: Priority;
+  tags?: string[];
+  approval_status?: ApprovalStatus;
+}
+
+export interface UpdateNoteResponse {
+  success: true;
+}
+
+export interface CreateNoteRequest {
+  title: string;
+  dimension: Dimension;
+  type?: NoteType;
+  content?: string;
+  priority?: Priority;
+  tags?: string[];
+}
+
+export interface CreateNoteResponse {
+  success: true;
+  filePath: string;
+}
+
 export interface DashboardData {
   todayTodos: Note[];
   weeklyHighlights: Note[];

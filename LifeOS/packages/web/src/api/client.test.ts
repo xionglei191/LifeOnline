@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,44 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('sends typed note update requests and returns the shared success response', async () => {
+    const response: UpdateNoteResponse = { success: true };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => response,
+    }));
+
+    await expect(updateNote('note-1', { approval_status: 'approved', status: 'done' })).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledWith('/api/notes/note-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approval_status: 'approved', status: 'done' }),
+    });
+  });
+
+  it('sends typed create-note requests and returns the shared response shape', async () => {
+    const request: CreateNoteRequest = {
+      title: 'Contract note',
+      dimension: 'learning',
+      type: 'note',
+      content: 'hello',
+      priority: 'medium',
+      tags: ['contract'],
+    };
+    const response: CreateNoteResponse = { success: true, filePath: '/vault/learning/2026-03-22-contract-note.md' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => response,
+    }));
+
+    await expect(createNote(request)).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledWith('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
   });
 
   it('surfaces API errors for promotion projection fetches', async () => {

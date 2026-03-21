@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse } from '@lifeos/shared';
 
 export interface SearchResult {
   notes: Note[];
@@ -469,16 +469,17 @@ export async function fetchContinuityRecords(): Promise<ContinuityRecord[]> {
 }
 
 // Note write-back API
-export async function updateNote(id: string, updates: { status?: string; priority?: string; tags?: string[]; approval_status?: import('@lifeos/shared').ApprovalStatus }): Promise<void> {
+export async function updateNote(id: string, updates: UpdateNoteRequest): Promise<UpdateNoteResponse> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
+  const data = await res.json().catch(() => ({} as Partial<UpdateNoteResponse> & { error?: string }));
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to update note');
   }
+  return data as UpdateNoteResponse;
 }
 
 export async function appendNote(id: string, text: string): Promise<void> {
@@ -503,24 +504,17 @@ export async function deleteNote(id: string): Promise<void> {
   }
 }
 
-export async function createNote(data: {
-  title: string;
-  dimension: string;
-  type?: string;
-  content?: string;
-  priority?: string;
-  tags?: string[];
-}): Promise<{ filePath: string }> {
+export async function createNote(data: CreateNoteRequest): Promise<CreateNoteResponse> {
   const res = await fetch(`${API_BASE}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  const payload = await res.json().catch(() => ({} as Partial<CreateNoteResponse> & { error?: string }));
   if (!res.ok) {
-    const d = await res.json().catch(() => ({}));
-    throw new Error(d.error || 'Failed to create note');
+    throw new Error(payload.error || 'Failed to create note');
   }
-  return res.json();
+  return payload as CreateNoteResponse;
 }
 
 // Stats API
