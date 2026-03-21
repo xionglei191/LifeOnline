@@ -827,95 +827,148 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
 
     initDatabase();
-    const action = createOrReuseSoulAction({
-      sourceNoteId: '2025-02-01.md',
-      actionKind: 'update_persona_snapshot',
+    const sourceNoteId = '2025-02-01.md';
+    const firstAction = createOrReuseSoulAction({
+      sourceNoteId,
+      actionKind: 'extract_tasks',
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
       now: '2026-03-22T01:00:00.000Z',
       governanceReason: 'approved for dispatch task websocket follow-up test',
     });
+    const secondAction = createOrReuseSoulAction({
+      sourceNoteId,
+      actionKind: 'update_persona_snapshot',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      now: '2026-03-22T01:01:00.000Z',
+      governanceReason: 'approved for dispatch task websocket follow-up test',
+    });
 
-    const taskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
+    const firstTaskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
       socket,
-      (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === action.sourceNoteId,
+      (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'extract_tasks',
     );
 
-    const dispatched = await api<DispatchSoulActionResponse>(
+    const firstDispatched = await api<DispatchSoulActionResponse>(
       baseUrl,
-      `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
       {
         method: 'POST',
         body: JSON.stringify({}),
       },
     );
 
-    assert.equal(dispatched.soulAction?.id, action.id);
-    assert.equal(dispatched.soulAction?.sourceNoteId, action.sourceNoteId);
-    assert.ok(dispatched.result.workerTaskId);
-    assert.ok(dispatched.task);
-    assert.equal(dispatched.task?.id, dispatched.result.workerTaskId);
-    assert.equal(dispatched.task?.sourceNoteId, action.sourceNoteId);
-    assert.equal(dispatched.task?.taskType, 'update_persona_snapshot');
-    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(dispatched.task!.status));
+    assert.equal(firstDispatched.soulAction?.id, firstAction.id);
+    assert.equal(firstDispatched.soulAction?.sourceNoteId, sourceNoteId);
+    assert.ok(firstDispatched.result.workerTaskId);
+    assert.ok(firstDispatched.task);
+    assert.equal(firstDispatched.task?.id, firstDispatched.result.workerTaskId);
+    assert.equal(firstDispatched.task?.sourceNoteId, sourceNoteId);
+    assert.equal(firstDispatched.task?.taskType, 'extract_tasks');
+    assert.equal(firstDispatched.task?.worker, 'lifeos');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
 
-    const taskEvent = await taskEventPromise;
-    assert.equal(taskEvent.type, 'worker-task-updated');
-    assert.equal(taskEvent.data.id, dispatched.result.workerTaskId);
-    assert.equal(taskEvent.data.sourceNoteId, action.sourceNoteId);
-    assert.equal(taskEvent.data.taskType, 'update_persona_snapshot');
-    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(taskEvent.data.status));
+    const firstTaskEvent = await firstTaskEventPromise;
+    assert.equal(firstTaskEvent.type, 'worker-task-updated');
+    assert.equal(firstTaskEvent.data.id, firstDispatched.result.workerTaskId);
+    assert.equal(firstTaskEvent.data.sourceNoteId, sourceNoteId);
+    assert.equal(firstTaskEvent.data.taskType, 'extract_tasks');
+    assert.equal(firstTaskEvent.data.worker, 'lifeos');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstTaskEvent.data.status));
+
+    const secondTaskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
+      socket,
+      (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'update_persona_snapshot',
+    );
+
+    const secondDispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.equal(secondDispatched.soulAction?.id, secondAction.id);
+    assert.equal(secondDispatched.soulAction?.sourceNoteId, sourceNoteId);
+    assert.ok(secondDispatched.result.workerTaskId);
+    assert.ok(secondDispatched.task);
+    assert.equal(secondDispatched.task?.id, secondDispatched.result.workerTaskId);
+    assert.equal(secondDispatched.task?.sourceNoteId, sourceNoteId);
+    assert.equal(secondDispatched.task?.taskType, 'update_persona_snapshot');
+    assert.equal(secondDispatched.task?.worker, 'lifeos');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
+
+    const secondTaskEvent = await secondTaskEventPromise;
+    assert.equal(secondTaskEvent.type, 'worker-task-updated');
+    assert.equal(secondTaskEvent.data.id, secondDispatched.result.workerTaskId);
+    assert.equal(secondTaskEvent.data.sourceNoteId, sourceNoteId);
+    assert.equal(secondTaskEvent.data.taskType, 'update_persona_snapshot');
+    assert.equal(secondTaskEvent.data.worker, 'lifeos');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondTaskEvent.data.status));
 
     const workerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}`,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}`,
     );
-    const filteredWorkerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+    const extractTaskFilteredWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}&taskType=${encodeURIComponent(dispatched.task!.taskType)}`,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=extract_tasks`,
     );
-    const statusFilteredWorkerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+    const personaTaskFilteredWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}&status=${encodeURIComponent(dispatched.task!.status)}`,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=update_persona_snapshot`,
     );
     const workerFilteredWorkerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}&worker=${encodeURIComponent(dispatched.task!.worker)}`,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&worker=lifeos`,
     );
-    const refreshedTask = workerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
-    const filteredTask = filteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
-    const statusFilteredTask = statusFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
-    const workerFilteredTask = workerFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
 
-    assert.ok(refreshedTask);
-    assert.ok(filteredTask);
-    assert.ok(statusFilteredTask);
-    assert.ok(workerFilteredTask);
-    assert.equal(workerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
-    assert.equal(filteredWorkerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
-    assert.equal(filteredWorkerTasksAfterDispatch.filters.taskType, dispatched.task!.taskType);
-    assert.equal(statusFilteredWorkerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
-    assert.equal(statusFilteredWorkerTasksAfterDispatch.filters.status, dispatched.task!.status);
-    assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
-    assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.worker, dispatched.task!.worker);
-    assert.equal(refreshedTask?.id, taskEvent.data.id);
-    assert.equal(refreshedTask?.sourceNoteId, taskEvent.data.sourceNoteId);
-    assert.equal(refreshedTask?.taskType, taskEvent.data.taskType);
-    assert.equal(refreshedTask?.worker, taskEvent.data.worker);
-    assert.equal(filteredTask?.id, dispatched.task?.id);
-    assert.equal(filteredTask?.sourceNoteId, dispatched.task?.sourceNoteId);
-    assert.equal(filteredTask?.taskType, dispatched.task?.taskType);
-    assert.equal(statusFilteredTask?.id, dispatched.task?.id);
-    assert.equal(statusFilteredTask?.sourceNoteId, dispatched.task?.sourceNoteId);
-    assert.equal(statusFilteredTask?.status, dispatched.task?.status);
-    assert.equal(workerFilteredTask?.id, dispatched.task?.id);
-    assert.equal(workerFilteredTask?.sourceNoteId, dispatched.task?.sourceNoteId);
-    assert.equal(workerFilteredTask?.worker, dispatched.task?.worker);
-    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(refreshedTask!.status));
-    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(filteredTask!.status));
-    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(statusFilteredTask!.status));
-    assert.equal(refreshedTask?.worker, dispatched.task?.worker);
-    assert.equal(taskEvent.data.worker, dispatched.task?.worker);
+    const allTaskIds = workerTasksAfterDispatch.tasks.map((task) => task.id);
+    const extractTask = extractTaskFilteredWorkerTasks.tasks.find((task) => task.id === firstDispatched.result.workerTaskId);
+    const personaTask = personaTaskFilteredWorkerTasks.tasks.find((task) => task.id === secondDispatched.result.workerTaskId);
+    const workerFilteredFirstTask = workerFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === firstDispatched.result.workerTaskId);
+    const workerFilteredSecondTask = workerFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === secondDispatched.result.workerTaskId);
+
+    assert.equal(workerTasksAfterDispatch.filters.sourceNoteId, sourceNoteId);
+    assert.equal(extractTaskFilteredWorkerTasks.filters.sourceNoteId, sourceNoteId);
+    assert.equal(extractTaskFilteredWorkerTasks.filters.taskType, 'extract_tasks');
+    assert.equal(personaTaskFilteredWorkerTasks.filters.sourceNoteId, sourceNoteId);
+    assert.equal(personaTaskFilteredWorkerTasks.filters.taskType, 'update_persona_snapshot');
+    assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.sourceNoteId, sourceNoteId);
+    assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.worker, 'lifeos');
+
+    assert.ok(allTaskIds.includes(firstDispatched.result.workerTaskId!));
+    assert.ok(allTaskIds.includes(secondDispatched.result.workerTaskId!));
+    assert.ok(extractTask);
+    assert.ok(personaTask);
+    assert.ok(workerFilteredFirstTask);
+    assert.ok(workerFilteredSecondTask);
+
+    assert.equal(extractTask?.id, firstTaskEvent.data.id);
+    assert.equal(extractTask?.sourceNoteId, firstTaskEvent.data.sourceNoteId);
+    assert.equal(extractTask?.taskType, firstTaskEvent.data.taskType);
+    assert.equal(extractTask?.worker, firstTaskEvent.data.worker);
+    assert.equal(personaTask?.id, secondTaskEvent.data.id);
+    assert.equal(personaTask?.sourceNoteId, secondTaskEvent.data.sourceNoteId);
+    assert.equal(personaTask?.taskType, secondTaskEvent.data.taskType);
+    assert.equal(personaTask?.worker, secondTaskEvent.data.worker);
+
+    assert.equal(extractTask?.id, firstDispatched.task?.id);
+    assert.equal(extractTask?.sourceNoteId, firstDispatched.task?.sourceNoteId);
+    assert.equal(extractTask?.taskType, firstDispatched.task?.taskType);
+    assert.equal(personaTask?.id, secondDispatched.task?.id);
+    assert.equal(personaTask?.sourceNoteId, secondDispatched.task?.sourceNoteId);
+    assert.equal(personaTask?.taskType, secondDispatched.task?.taskType);
+
+    assert.equal(workerFilteredFirstTask?.worker, firstDispatched.task?.worker);
+    assert.equal(workerFilteredSecondTask?.worker, secondDispatched.task?.worker);
+    assert.equal(workerFilteredFirstTask?.sourceNoteId, sourceNoteId);
+    assert.equal(workerFilteredSecondTask?.sourceNoteId, sourceNoteId);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(extractTask!.status));
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(personaTask!.status));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
       socket.terminate();

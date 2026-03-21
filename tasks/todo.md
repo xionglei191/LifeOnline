@@ -384,6 +384,12 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task websocket filter retention 回归补强。
   - 若还要继续补一轮，可检查 `soul-action-updated` 刷新路径是否也缺同级“保留当前 filter 上下文”的断言，若缺则可用同样方式补齐。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 dispatch 后 worker-task convergence contract 扩展到同一 `sourceNoteId` 下的双 action 场景：现在会连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 两条已批准 action，并分别校验各自的 `DispatchSoulActionResponse.task`、`worker-task-updated` websocket 事件，以及 `/api/worker-tasks?sourceNoteId=...` 与按 `taskType`/`worker` 过滤的 follow-up 列表都仍能稳定命中对应 task。
+  - 这次补的是 grouped settings 更真实的 worker-task 刷新事实源：不再只证明“单条 dispatch 后能对上”，而是直接锁定同组连续 dispatch 两条不同 taskType 时，worker-task websocket 与 follow-up list 不会串 task 或被后一次 dispatch 覆盖。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:385` 新增 soul-action websocket refresh filter retention 断言，锁定在 grouped governance 面板已选中 `quickFilter=dispatch_ready_only`、`governanceStatus=approved`、`executionStatus=not_dispatched` 的情况下，收到 `soul-action-updated` 后父层刷新仍会按当前筛选条件重新请求 `fetchSoulActions`，且 panel 上下文不会丢失。
   - 这次补齐的是另一条同级 websocket 监听链，保证 grouped governance 不会因为 soul-action 事件刷新而掉回默认筛选态。
 - 本轮验证再补充：
