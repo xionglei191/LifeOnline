@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
-import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
+import type { PromptRecord, ReintegrationRecord, SoulAction } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchConfig: vi.fn(),
@@ -120,6 +120,45 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'mixed-1', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
 ];
 
+function createPromptRecord(overrides: Partial<PromptRecord> & Pick<PromptRecord, 'key' | 'label' | 'description' | 'requiredPlaceholders' | 'defaultContent' | 'effectiveContent' | 'enabled' | 'isOverridden'>): PromptRecord {
+  return {
+    key: overrides.key,
+    label: overrides.label,
+    description: overrides.description,
+    requiredPlaceholders: overrides.requiredPlaceholders,
+    defaultContent: overrides.defaultContent,
+    overrideContent: overrides.overrideContent ?? null,
+    effectiveContent: overrides.effectiveContent,
+    enabled: overrides.enabled,
+    updatedAt: overrides.updatedAt ?? null,
+    notes: overrides.notes ?? null,
+    isOverridden: overrides.isOverridden,
+  };
+}
+
+const promptRecords: PromptRecord[] = [
+  createPromptRecord({
+    key: 'classify',
+    label: '笔记分类',
+    description: '用于识别笔记维度、类型、优先级与标题。',
+    requiredPlaceholders: ['{content}'],
+    defaultContent: 'classify default {content}',
+    effectiveContent: 'classify default {content}',
+    enabled: true,
+    isOverridden: false,
+  }),
+  createPromptRecord({
+    key: 'suggest',
+    label: '洞察建议',
+    description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+    requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+    defaultContent: 'suggest default {dashboardData} {recentNotes}',
+    effectiveContent: 'suggest default {dashboardData} {recentNotes}',
+    enabled: true,
+    isOverridden: false,
+  }),
+];
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -177,7 +216,7 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchTaskSchedules.mockResolvedValue([]);
     apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
     apiMocks.fetchSoulActions.mockResolvedValue(soulActions);
-    apiMocks.fetchAiPrompts.mockResolvedValue([]);
+    apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
     apiMocks.fetchAiProviderSettings.mockResolvedValue({
       baseUrl: 'http://localhost:3000',
       model: 'test-model',
@@ -240,6 +279,61 @@ describe('SettingsView soul action governance wiring', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('shows the suggest prompt in the prompt center with its required placeholders', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('洞察建议');
+    expect(wrapper.text()).toContain('suggest');
+
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    expect(promptButtons).toHaveLength(2);
+    await promptButtons[1]!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('用于基于近期数据生成 2-3 条可执行洞察建议。');
+    const placeholderList = wrapper.find('.placeholder-list');
+    expect(placeholderList.text()).toContain('{dashboardData}');
+    expect(placeholderList.text()).toContain('{recentNotes}');
+    const textarea = wrapper.find('.prompt-editor .prompt-textarea');
+    expect((textarea.element as HTMLTextAreaElement).value).toContain('suggest default {dashboardData} {recentNotes}');
+  });
+
+  it('disables saving the suggest prompt when a required placeholder is missing', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    await promptButtons[1]!.trigger('click');
+    await flushPromises();
+
+    const textarea = wrapper.find('.prompt-editor .prompt-textarea');
+    await textarea.setValue('suggest default {dashboardData}');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('缺少占位符：{recentNotes}');
+    const promptActionButtons = wrapper.findAll('.prompt-actions button');
+    const saveOverrideButton = promptActionButtons.find((button) => button.text().includes('保存 override'));
+    const saveDisabledButton = promptActionButtons.find((button) => button.text().includes('保存并禁用 override'));
+    expect(saveOverrideButton).toBeTruthy();
+    expect(saveDisabledButton).toBeTruthy();
+    expect((saveOverrideButton!.element as HTMLButtonElement).disabled).toBe(true);
+    expect((saveDisabledButton!.element as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('keeps the suggest prompt selected after prompt records load', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    await promptButtons[1]!.trigger('click');
+
+    expect(promptButtons[1]!.classes()).toContain('active');
+    expect(wrapper.text()).toContain('洞察建议');
+    expect(wrapper.find('.prompt-list-item.active .prompt-key').text()).toBe('suggest');
   });
 
   it('passes grouped governance props into the panel after initial load', async () => {
@@ -2341,7 +2435,7 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    await wrapper.find('textarea').setValue('搜索最近一周 AI Agent 领域的重要进展并整理');
+    await wrapper.find('.worker-form textarea').setValue('搜索最近一周 AI Agent 领域的重要进展并整理');
     await wrapper.find('.worker-form select').setValue('career');
     const createButton = wrapper.findAll('button').find((button) => button.text() === '执行任务');
     expect(createButton).toBeTruthy();

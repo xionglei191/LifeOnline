@@ -562,6 +562,11 @@
 - 本轮验证待执行再补充：
   - 运行 AI suggestions 组件测试与 web build，确认 dashboard 首屏洞察流现在默认自动拉取且回归通过。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 3 条 AI Prompt 调优中心断言，直接锁定新加的 `suggest` prompt 会在 settings prompt 列表中真实出现、能展示 `{dashboardData}` / `{recentNotes}` 两个必需占位符、并且当编辑内容缺少占位符时保存按钮会被禁用。
+  - 这次补的是 `server/shared -> settings prompt center` 的真实 contract-to-UI 投射缺口：此前后端与 shared 已支持 `suggest` prompt，但前端没有回归保证它真的被选中、展示、校验与编辑，不是继续在 grouped governance 链上做同类平移。
+- 本轮验证待执行补充：
+  - 运行 `SettingsView` 定向测试与 web build，确认 `suggest` prompt 已被 settings prompt center 稳定消费。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 related worker task 的 `handleRetryRelatedTask()` / `handleCancelRelatedTask()` 也直接消费 `retryWorkerTask()` / `cancelWorkerTask()` 返回的 `WorkerTask`，成功反馈与创建路径统一为本地化的 `任务 ID · 任务类型 · 状态 · worker` 文案，避免同一组件内 create 与 retry/cancel 两套展示口径分叉。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 新增 retry 与 cancel 两条回归，锁定关联任务操作后会展示 `提取行动项 · 等待执行 · LifeOS` 与 `OpenClaw 任务 · 已取消 · OpenClaw`，并继续防止 raw enum 回流到 UI。
 - 本轮验证再补充：
