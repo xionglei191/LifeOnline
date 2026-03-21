@@ -663,6 +663,16 @@
 - 当前未完成项再补充：
   - 本轮 server/web/shared 变更待提交 git commit。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 在现有 accept 三段连续刷新回归之外，再新增 1 条“只经过 `reintegration-record-updated`” 的 view-level 断言：锁定 accept 成功提示在不依赖 `worker-task-updated` 或 `soul-action-updated` 的情况下，也能仅凭新引入的 reintegration review websocket 刷新链继续保留。
+  - 这次补的是上一轮 websocket 事件拆分后的最小前端闭环：既然 `reintegration-record-updated` 已经成为独立事实源，就应显式证明 web 端只收到这条事件时也不会丢掉 review success feedback，而不是继续只在混合刷新序列里间接覆盖。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 83 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，22/22。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server/web/shared 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 reject 事件回归之外，再新增 accept 路径的 `reintegration-record-updated` websocket contract：锁定 accept 后会先收到更新后的 reintegration record，再收到两条对应的 `soul-action-updated`，且 record 事件里的 `reviewStatus/reviewReason/reviewedAt` 与 accept response 及 accepted/pending follow-up 列表保持一致。
   - 这次继续停留在同一条 review refresh 主线，不做对称整理；目标是把上一轮刚引入的独立 reintegration websocket 事实源，在 accept 场景也正式锁成 server contract，避免新事件只被 reject 路径覆盖。
 - 本轮验证再补充：
