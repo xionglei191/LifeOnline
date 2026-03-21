@@ -2079,6 +2079,11 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
       },
     );
 
+    const filteredSoulActions = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
+    );
+    const filteredAction = filteredSoulActions.soulActions.find((item) => item.id === action!.id);
     const listedEventNodes = await api<{ eventNodes: Array<{
       id: string;
       sourceReintegrationId: string;
@@ -2090,8 +2095,16 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
     }> }>(baseUrl, '/api/event-nodes');
     const eventNode = listedEventNodes.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
 
+    assert.equal(filteredSoulActions.filters.sourceReintegrationId, record!.id);
+    assert.equal(filteredSoulActions.filters.governanceStatus, 'approved');
+    assert.equal(filteredSoulActions.filters.executionStatus, dispatched.soulAction!.executionStatus);
+    assert.equal(filteredAction?.id, dispatched.soulAction?.id);
+    assert.equal(filteredAction?.sourceNoteId, dispatched.soulAction?.sourceNoteId);
+    assert.equal(filteredAction?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
+    assert.equal(filteredAction?.governanceStatus, dispatched.soulAction?.governanceStatus);
+    assert.equal(filteredAction?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.ok(eventNode);
-    assert.equal(eventNode?.promotionSoulActionId, action!.id);
+    assert.equal(eventNode?.promotionSoulActionId, filteredAction?.id);
     assert.equal(eventNode?.sourceReintegrationId, record!.id);
     assert.equal(eventNode?.eventKind, 'weekly_reflection');
     assert.equal(eventNode?.title, '周回顾事件');
@@ -2175,6 +2188,11 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
       },
     );
 
+    const filteredSoulActions = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
+    );
+    const filteredAction = filteredSoulActions.soulActions.find((item) => item.id === action!.id);
     const listedContinuity = await api<{ continuityRecords: Array<{
       id: string;
       sourceReintegrationId: string;
@@ -2185,8 +2203,16 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
     }> }>(baseUrl, '/api/continuity-records');
     const continuity = listedContinuity.continuityRecords.find((item) => item.sourceReintegrationId === record!.id);
 
+    assert.equal(filteredSoulActions.filters.sourceReintegrationId, record!.id);
+    assert.equal(filteredSoulActions.filters.governanceStatus, 'approved');
+    assert.equal(filteredSoulActions.filters.executionStatus, dispatched.soulAction!.executionStatus);
+    assert.equal(filteredAction?.id, dispatched.soulAction?.id);
+    assert.equal(filteredAction?.sourceNoteId, dispatched.soulAction?.sourceNoteId);
+    assert.equal(filteredAction?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
+    assert.equal(filteredAction?.governanceStatus, dispatched.soulAction?.governanceStatus);
+    assert.equal(filteredAction?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.ok(continuity);
-    assert.equal(continuity?.promotionSoulActionId, action!.id);
+    assert.equal(continuity?.promotionSoulActionId, filteredAction?.id);
     assert.equal(continuity?.sourceReintegrationId, record!.id);
     assert.equal(continuity?.summary, record!.summary);
     assert.equal(dispatched.soulAction?.resultSummary, dispatched.result.reason);
