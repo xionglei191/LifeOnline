@@ -1107,6 +1107,135 @@ test('grouped settings list drops dispatch-ready count from one to zero across s
   }
 });
 
+test('grouped status filters stay aligned with full-list semantics after sequential dispatch refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-filter-convergence-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-filter-convergence',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api filter convergence summary',
+      evidence: { source: 'api-filter-convergence-test' },
+      now: '2026-03-21T20:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-filter-convergence');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for filter convergence test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    for (const action of accepted.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve for filter convergence test' }),
+        },
+      );
+    }
+
+    const firstAction = accepted.soulActions[0]!;
+    const secondAction = accepted.soulActions[1]!;
+
+    const firstDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.ok(firstDispatch.soulAction);
+
+    const fullAfterFirstDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const readyAfterFirstDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+    const dispatchedAfterFirstDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(firstDispatch.soulAction!.executionStatus)}`,
+    );
+    assert.equal(fullAfterFirstDispatch.soulActions.length, accepted.soulActions.length);
+    assert.equal(readyAfterFirstDispatch.soulActions.length, 1);
+    assert.equal(readyAfterFirstDispatch.soulActions[0]?.id, secondAction.id);
+    assert.equal(dispatchedAfterFirstDispatch.soulActions.length, 1);
+    assert.equal(dispatchedAfterFirstDispatch.soulActions[0]?.id, firstAction.id);
+
+    const secondDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.ok(secondDispatch.soulAction);
+
+    const fullAfterSecondDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const readyAfterSecondDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+    const secondDispatchedAfterSecondDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(secondDispatch.soulAction!.executionStatus)}`,
+    );
+    assert.equal(fullAfterSecondDispatch.soulActions.length, accepted.soulActions.length);
+    assert.equal(readyAfterSecondDispatch.soulActions.length, 0);
+
+    const fullyDispatched = fullAfterSecondDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
+    assert.equal(fullyDispatched.length, accepted.soulActions.length);
+    assert.ok(fullyDispatched.some((action) => action.id === firstAction.id));
+    assert.ok(fullyDispatched.some((action) => action.id === secondAction.id));
+    assert.ok(secondDispatchedAfterSecondDispatch.soulActions.some((action) => action.id === secondAction.id));
+    assert.ok(secondDispatchedAfterSecondDispatch.soulActions.every((action) => action.executionStatus === secondDispatch.soulAction!.executionStatus));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
