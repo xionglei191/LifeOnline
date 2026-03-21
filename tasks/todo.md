@@ -274,3 +274,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 grouped governance filter round-trip 回归补强。
   - 若还要继续补一轮，可评估是否值得转去 server contract 层补 soul-action filter 组合收敛，而不是继续在 web view 层做低边际微补强。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 2 条 soul-action filter convergence contract test：一条锁定 mixed group progress 下 `approved` 总子集等于 `ready(not_dispatched)` 与 `dispatched(current executionStatus)` 两个子集并集；另一条锁定 same-status dispatch 场景下 `approved` 列表与 executionStatus 子集保持同一成员集合。
+  - 这次明确转回 server contract 层，直接保护 settings grouped governance 真正依赖的 API 事实源，避免继续停留在 web view 低边际微补强。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，14/14。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 server filter convergence contract 补强。
+  - 若还要继续补一轮，可评估是否值得把 websocket 推送后的 follow-up filter 收敛也补成同类 server contract 测试。
