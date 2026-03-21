@@ -219,3 +219,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 grouped governance / SettingsView 回归补强；这一段父层接线与反馈语义已经形成更完整的最小保护。
   - 若还要继续补一轮，再评估是否值得补单条 action loading/disabled 态在父层往返中的 view 级断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。
+  - 这次继续收敛在现有 grouped governance 主线上，只补真正减少误操作风险的最小 DOM 级保护，不新增接口、不改 contract，也不扩 UI 范围。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/SoulActionGovernancePanel.test.ts` 通过，3 files / 33 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前按钮状态回归补强。
+  - 若还要继续补一轮，可评估 `SettingsView` 父层是否还值得补“操作进行中 actionId 正确透传到 panel” 的 view 级断言。

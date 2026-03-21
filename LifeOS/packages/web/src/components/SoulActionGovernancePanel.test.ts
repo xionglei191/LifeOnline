@@ -226,6 +226,39 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.text()).toContain('可尝试切换为“全部分组”或检查是否还有已批准但未派发的分组。');
   });
 
+  it('disables single-action controls and shows loading text while the matching action is processing', () => {
+    const wrapper = mountPanel('dispatch_ready_only', {
+      actionId: 'ready-1',
+    });
+
+    const actionRows = wrapper.findAll('.soul-action-item');
+    const processingRow = actionRows[0]!;
+    expect(processingRow.find('.btn-worker').attributes('disabled')).toBeDefined();
+    expect(processingRow.find('.btn-cancel').attributes('disabled')).toBeDefined();
+    expect(processingRow.text()).toContain('处理中...');
+  });
+
+  it('keeps approve disabled for already approved actions and dispatch disabled for pending actions', () => {
+    const wrapper = mountPanel('pending_only');
+
+    const actionRows = wrapper.findAll('.soul-action-item');
+    const pendingRow = actionRows[0]!;
+    const approvedRow = actionRows[1]!;
+
+    expect(pendingRow.find('.btn-worker').attributes('disabled')).toBeUndefined();
+    expect(pendingRow.find('.btn-cancel').attributes('disabled')).toBeDefined();
+    expect(approvedRow.find('.btn-worker').attributes('disabled')).toBeDefined();
+    expect(approvedRow.find('.btn-cancel').attributes('disabled')).toBeUndefined();
+  });
+
+  it('disables dispatch for actions that are already finished', () => {
+    const wrapper = mountPanel('all');
+
+    const actionRows = wrapper.findAll('.soul-action-item');
+    const doneRow = actionRows[actionRows.length - 1]!;
+    expect(doneRow.find('.btn-cancel').attributes('disabled')).toBeDefined();
+  });
+
   it('disables group dispatch while the matching group is processing', () => {
     const wrapper = mountPanel('dispatch_ready_only', {
       groupDispatchId: 'record-ready',
