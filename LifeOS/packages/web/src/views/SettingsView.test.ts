@@ -946,8 +946,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchSoulActions.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.groupKey === 'record-mixed');
     expect(pendingGroup).toBeTruthy();
 
     panel.vm.$emit('approve-group', pendingGroup);
@@ -971,8 +971,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchReintegrationRecords.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.groupKey === 'record-ready');
     expect(readyGroup).toBeTruthy();
 
     panel.vm.$emit('dispatch-group', readyGroup);
@@ -1121,8 +1121,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchReintegrationRecords.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.groupKey === 'record-mixed');
     expect(pendingGroup).toBeTruthy();
 
     panel.vm.$emit('approve-group', pendingGroup);
@@ -1150,8 +1150,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchWorkerTasks.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.groupKey === 'record-mixed');
     expect(pendingGroup).toBeTruthy();
 
     panel.vm.$emit('approve-group', pendingGroup);
@@ -1967,8 +1967,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchSoulActions.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.groupKey === 'record-mixed');
     expect(pendingGroup).toBeTruthy();
 
     panel.vm.$emit('approve-group', pendingGroup);
@@ -1991,8 +1991,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchReintegrationRecords.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.groupKey === 'record-ready');
     expect(readyGroup).toBeTruthy();
 
     panel.vm.$emit('dispatch-group', readyGroup);
@@ -2018,8 +2018,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchWorkerTasks.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.groupKey === 'record-ready');
     expect(readyGroup).toBeTruthy();
 
     panel.vm.$emit('dispatch-group', readyGroup);
@@ -2066,8 +2066,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchReintegrationRecords.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.groupKey === 'record-ready');
     expect(readyGroup).toBeTruthy();
 
     panel.vm.$emit('dispatch-group', readyGroup);
@@ -2091,8 +2091,8 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.groupKey === 'record-mixed');
     expect(pendingGroup).toBeTruthy();
 
     panel.vm.$emit('approve-group', pendingGroup);
@@ -2116,8 +2116,8 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
-    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    const groups = panel.props('groups') as Array<{ groupKey: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.groupKey === 'record-ready');
     expect(readyGroup).toBeTruthy();
 
     panel.vm.$emit('dispatch-group', readyGroup);

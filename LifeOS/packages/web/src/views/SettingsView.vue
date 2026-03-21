@@ -1319,7 +1319,7 @@ async function handleApproveSoulAction(action: SoulAction) {
   }
 }
 
-async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actions: SoulAction[]; pendingCount: number }) {
+async function handleApproveSoulActionGroup(group: { groupKey: string; actions: SoulAction[]; pendingCount: number }) {
   const pendingActions = group.actions.filter((action) => action.governanceStatus === 'pending_review');
   if (!pendingActions.length) {
     soulActionMessage.value = '当前分组没有待批准的 soul actions';
@@ -1327,7 +1327,7 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
     return;
   }
 
-  soulActionGroupActionId.value = group.sourceNoteId;
+  soulActionGroupActionId.value = group.groupKey;
   soulActionMessage.value = '';
   try {
     for (const action of pendingActions) {
@@ -1348,7 +1348,7 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
   }
 }
 
-async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; actions: SoulAction[]; dispatchReadyCount: number }) {
+async function handleDispatchSoulActionGroup(group: { groupKey: string; actions: SoulAction[]; dispatchReadyCount: number }) {
   const dispatchableActions = group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
   if (!dispatchableActions.length) {
     soulActionMessage.value = '当前分组没有可派发的 soul actions';
@@ -1361,7 +1361,7 @@ async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; acti
     return;
   }
 
-  soulActionGroupDispatchId.value = group.sourceNoteId;
+  soulActionGroupDispatchId.value = group.groupKey;
   soulActionMessage.value = '';
   try {
     const dispatchResults = [] as Awaited<ReturnType<typeof dispatchSoulAction>>[];

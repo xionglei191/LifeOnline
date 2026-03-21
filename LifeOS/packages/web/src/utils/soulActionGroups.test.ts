@@ -115,7 +115,7 @@ describe('soulActionGroups', () => {
     const groups = buildSoulActionGroups(soulActions, reintegrationRecords, 'pending_only');
 
     expect(groups).toHaveLength(1);
-    expect(groups[0]?.sourceNoteId).toBe('record-mixed');
+    expect(groups[0]?.groupKey).toBe('record-mixed');
     expect(groups[0]?.pendingCount).toBe(1);
     expect(groups[0]?.dispatchReadyCount).toBe(1);
   });
@@ -124,7 +124,7 @@ describe('soulActionGroups', () => {
     const groups = buildSoulActionGroups(soulActions, reintegrationRecords, 'dispatch_ready_only');
 
     expect(groups).toHaveLength(1);
-    expect(groups[0]?.sourceNoteId).toBe('record-ready');
+    expect(groups[0]?.groupKey).toBe('record-ready');
     expect(groups[0]?.dispatchReadyCount).toBe(2);
     expect(groups[0]?.actions).toHaveLength(2);
   });
@@ -132,7 +132,7 @@ describe('soulActionGroups', () => {
   it('sorts groups by reintegration record recency when available', () => {
     const groups = buildSoulActionGroups(soulActions, reintegrationRecords, 'all');
 
-    expect(groups.map((group) => group.sourceNoteId)).toEqual([
+    expect(groups.map((group) => group.groupKey)).toEqual([
       'record-ready',
       'record-mixed',
       'record-dispatched',
@@ -160,7 +160,7 @@ describe('soulActionGroups', () => {
     expect(getSoulActionGroupCount(nonPromotionActions)).toBe(1);
     const groups = buildSoulActionGroups(nonPromotionActions, reintegrationRecords, 'all');
     expect(groups).toHaveLength(1);
-    expect(groups[0]?.sourceNoteId).toBe('note-1');
+    expect(groups[0]?.groupKey).toBe('note-1');
     expect(groups[0]?.reintegrationRecord).toBeNull();
   });
 

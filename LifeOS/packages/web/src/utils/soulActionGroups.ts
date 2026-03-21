@@ -3,7 +3,7 @@ import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
 export type SoulActionGroupQuickFilter = 'all' | 'pending_only' | 'dispatch_ready_only';
 
 export interface SoulActionGroup {
-  sourceNoteId: string;
+  groupKey: string;
   actions: SoulAction[];
   reintegrationRecord: ReintegrationRecord | null;
   pendingCount: number;
@@ -34,7 +34,7 @@ export function buildSoulActionGroups(
   reintegrationRecords: ReintegrationRecord[],
   quickFilter: SoulActionGroupQuickFilter,
 ): SoulActionGroup[] {
-  const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
+  const grouped = new Map<string, { groupKey: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
 
   for (const action of soulActions) {
     const key = getSoulActionGroupKey(action);
@@ -44,7 +44,7 @@ export function buildSoulActionGroups(
       continue;
     }
     grouped.set(key, {
-      sourceNoteId: key,
+      groupKey: key,
       actions: [action],
       reintegrationRecord: reintegrationRecords.find((record) => record.id === key) || null,
     });

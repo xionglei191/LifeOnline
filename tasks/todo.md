@@ -363,6 +363,17 @@
   - 还没有继续确认是否存在别的 web 入口会手工构造 `/api/soul-actions?sourceNoteId=reint:...`，绕过 `fetchSoulActions()`。
 - 下一步建议补充：
   - 优先全局检查 web 端是否还有绕过 typed client 的 soul-action 请求；如果没有，就可以开始整理当前这组 server+web 事实源一致性改动并考虑提交。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/utils/soulActionGroups.ts` 把 grouped governance 的分组键字段从误导性的 `sourceNoteId` 正式更名为 `groupKey`，明确这里承载的是“按 reintegration 优先、note 次之”的分组主键，而不是原始 source note 本身。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue`、`LifeOS/packages/web/src/views/SettingsView.vue` 同步把 group-level key、collapse id、in-flight id 与 handler 形参全部切到 `groupKey`，避免组件/父层继续把 reintegration group key 误传播成 `sourceNoteId` 语义。
+  - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts`、`LifeOS/packages/web/src/views/SettingsView.test.ts` 同步更新断言，锁定这次命名收口不改变现有治理行为，只修正 contract-to-UI 与 view/component 接线层的错误语义。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/soulActionGroups.test.ts src/components/SoulActionGovernancePanel.test.ts src/views/SettingsView.test.ts` 通过；Vitest 合计 9 files / 116 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项补充：
+  - 这组 web 命名/投射收口改动还未单独提交。
+- 下一步建议补充：
+  - 这批 web 改动已经形成独立变更集，可与无关 `CLAUDE.md` / `lifeonline-claude-worker-v2.sh` 继续隔离后直接单独提交。
 单条 action loading/disabled 态在父层往返中的 view 级断言。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。

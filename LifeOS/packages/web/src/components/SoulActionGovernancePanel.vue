@@ -59,32 +59,32 @@
 
     <div v-if="loading" class="worker-empty-state">加载中...</div>
     <div v-else-if="groups.length" class="reintegration-list soul-action-group-list">
-      <section v-for="group in groups" :key="group.sourceNoteId" class="reintegration-item soul-action-group">
+      <section v-for="group in groups" :key="group.groupKey" class="reintegration-item soul-action-group">
         <div class="reintegration-item-top">
           <div class="reintegration-item-title-row">
             <strong>{{ group.reintegrationRecord ? taskTypeLabel(group.reintegrationRecord.taskType) : 'Promotion actions' }}</strong>
             <span class="worker-pill">{{ group.actions.length }} actions</span>
             <span class="worker-pill">pending {{ group.pendingCount }}</span>
             <span class="worker-pill">ready {{ group.dispatchReadyCount }}</span>
-            <span class="worker-pill source-pill">Reintegration {{ group.sourceNoteId }}</span>
+            <span class="worker-pill source-pill">Reintegration {{ group.groupKey }}</span>
           </div>
           <div class="reintegration-head-actions soul-action-group-toolbar">
             <button
               class="btn-worker"
-              :disabled="groupActionId === group.sourceNoteId || group.pendingCount === 0"
+              :disabled="groupActionId === group.groupKey || group.pendingCount === 0"
               @click="emit('approve-group', group)"
             >
-              {{ groupActionId === group.sourceNoteId ? '处理中...' : `批准本组待治理项 (${group.pendingCount})` }}
+              {{ groupActionId === group.groupKey ? '处理中...' : `批准本组待治理项 (${group.pendingCount})` }}
             </button>
             <button
               class="btn-cancel"
-              :disabled="groupDispatchId === group.sourceNoteId || group.dispatchReadyCount !== group.actions.length || group.dispatchReadyCount === 0"
+              :disabled="groupDispatchId === group.groupKey || group.dispatchReadyCount !== group.actions.length || group.dispatchReadyCount === 0"
               @click="emit('dispatch-group', group)"
             >
-              {{ groupDispatchId === group.sourceNoteId ? '处理中...' : `派发本组已批准项 (${group.dispatchReadyCount})` }}
+              {{ groupDispatchId === group.groupKey ? '处理中...' : `派发本组已批准项 (${group.dispatchReadyCount})` }}
             </button>
-            <button class="btn-link" @click="emit('toggle-collapsed', group.sourceNoteId)">
-              {{ collapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
+            <button class="btn-link" @click="emit('toggle-collapsed', group.groupKey)">
+              {{ collapsedGroupIds.includes(group.groupKey) ? '展开分组' : '收起分组' }}
             </button>
           </div>
         </div>
@@ -96,7 +96,7 @@
           <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
         </div>
 
-        <div v-if="!collapsedGroupIds.includes(group.sourceNoteId)" class="soul-action-group-actions">
+        <div v-if="!collapsedGroupIds.includes(group.groupKey)" class="soul-action-group-actions">
           <article v-for="action in group.actions" :key="action.id" class="reintegration-item soul-action-item">
             <div class="reintegration-item-top">
               <div class="reintegration-item-title-row">
@@ -207,7 +207,7 @@ const emit = defineEmits<{
   (event: 'refresh'): void;
   (event: 'approve-group', group: SoulActionGroup): void;
   (event: 'dispatch-group', group: SoulActionGroup): void;
-  (event: 'toggle-collapsed', sourceNoteId: string): void;
+  (event: 'toggle-collapsed', groupKey: string): void;
   (event: 'approve-action', action: SoulAction): void;
   (event: 'defer-action', action: SoulAction): void;
   (event: 'discard-action', action: SoulAction): void;
