@@ -609,6 +609,80 @@ test('AI suggestions API responds with shared list contract', async () => {
   }
 });
 
+test('search API matches dimension terms used by search view copy', async () => {
+  const env = await createTestEnv('lifeos-search-dimension-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=growth');
+    assert.ok(result.notes.length > 0);
+    assert.ok(result.notes.some((note) => note.dimension === 'growth'));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('search API matches tag terms used by search view copy', async () => {
+  const env = await createTestEnv('lifeos-search-tag-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const taggedNotePath = path.join(env.vaultPath, '成长', '2026-03-22-search-tag-contract.md');
+
+  try {
+    await fs.writeFile(
+      taggedNotePath,
+      `---
+type: note
+dimension: growth
+status: pending
+privacy: private
+date: 2026-03-22
+tags: [rare-search-tag-contract]
+source: web
+created: 2026-03-22T10:00:00
+---
+
+Tag-only search body.
+`,
+    );
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=rare-search-tag-contract');
+    assert.ok(result.notes.some((note) => note.file_path === taggedNotePath));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('notes API returns shared note title field when indexer extracts one', async () => {
   const env = await createTestEnv('lifeos-notes-title-contract-');
   const configFile = CONFIG_FILE;

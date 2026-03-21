@@ -1,3 +1,43 @@
+# search 语义与 UI 承诺对齐
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只处理新的高价值主路径缺口。
+- [x] 复核 SearchView 文案与 `/api/search` 实际匹配字段，确认是否存在真实的用户可见行为断裂。
+- [x] 修正 search API，使其与前端承诺的“维度词、标签词”搜索语义一致。
+- [x] 补最小 server 回归，分别锁定维度词和标签词搜索都能命中。
+- [x] 跑定向验证并更新本文件。
+
+## 当前执行
+- 已确认当前工作树仍只有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 `/api/search` 查询从仅匹配 `file_name` / `content`，扩展为同时匹配 `dimension` / `tags`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增两条回归：
+    - `search API matches dimension terms used by search view copy`
+    - `search API matches tag terms used by search view copy`
+    直接锁定 SearchView 空态文案里承诺的“维度词、标签词”确实能通过 search API 命中结果。
+- 这次修的不是 grouped governance，也不是同类稳定性平移；而是一个直接的主路径行为断裂：前端明确提示用户可以搜维度词、标签词，但后端此前根本不支持。
+
+## 本轮选择依据
+- 用户要求下一轮优先继续找新的高价值 contract gap / 事实源问题 / 主路径断裂。
+- 搜索是直接可见的主路径；`SearchView.vue` 文案已经向用户承诺“尝试更短的关键词或维度词、标签词”，而 `/api/search` 之前只搜文件名和正文。
+- 这属于明确的用户可见 false promise，优先级高于继续补 grouped governance 同类测试。
+
+## 本轮验证
+- 定向验证通过：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "search API matches" test/configLifecycle.test.ts`
+  - 2/2 通过。
+- 全文件回归中新增 search 用例也通过；但 `configLifecycle.test.ts` 同时存在一条既有无关超时：`updating config treats equivalent vault paths as unchanged after normalization`。该波动与本轮 search 改动无关，因此本轮采用 scoped 定向验证作为通过依据。
+
+## 当前未完成项
+- 本轮 search 语义修正改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- 搜索 contract 仍是 server-local 返回 shape，尚未显式提升为 shared `SearchResult` contract；web 当前使用本地 client type。
+
+## 下一步建议
+- 若继续沿高价值 gap 主线推进，下一步优先把 `searchNotes()` 的响应 shape 收回 shared，消除 search 结果 contract 的本地类型漂移。
+- 若继续做行为侧补强，也可以检查 search 是否还应匹配 `type` / `status`，但那需要先确认产品语义，优先级低于把当前 response contract 收回 shared。
+
+
 # note 文件命名语义收口
 
 ## 计划

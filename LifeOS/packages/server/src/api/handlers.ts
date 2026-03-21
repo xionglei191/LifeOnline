@@ -292,9 +292,12 @@ export async function searchNotes(req: Request, res: Response): Promise<void> {
     const keyword = `%${q}%`;
     const notes = db.prepare(`
       SELECT * FROM notes
-      WHERE file_name LIKE ? OR content LIKE ?
+      WHERE file_name LIKE ?
+        OR content LIKE ?
+        OR dimension LIKE ?
+        OR tags LIKE ?
       ORDER BY date DESC LIMIT 50
-    `).all(keyword, keyword).map(parseNote);
+    `).all(keyword, keyword, keyword, keyword).map(parseNote);
 
     res.json({ notes, total: notes.length, query: q });
   } catch (error) {
