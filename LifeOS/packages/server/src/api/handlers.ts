@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -885,7 +885,7 @@ export async function createNote(req: Request<Record<string, never>, CreateNoteR
 }
 
 // GET /api/stats/trend?days=30
-export async function getStatsTrend(req: Request, res: Response): Promise<void> {
+export async function getStatsTrend(req: Request<Record<string, never>, StatsTrendPoint[], Record<string, never>, { days?: string }>, res: Response<StatsTrendPoint[]>): Promise<void> {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const db = getDb();
@@ -895,7 +895,7 @@ export async function getStatsTrend(req: Request, res: Response): Promise<void> 
       FROM notes
       WHERE date >= date('now', '-' || ? || ' days')
       GROUP BY day ORDER BY day ASC
-    `).all(days) as any[];
+    `).all(days) as StatsTrendPoint[];
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: String(error) });
@@ -903,7 +903,7 @@ export async function getStatsTrend(req: Request, res: Response): Promise<void> 
 }
 
 // GET /api/stats/radar
-export async function getStatsRadar(req: Request, res: Response): Promise<void> {
+export async function getStatsRadar(_req: Request<Record<string, never>, StatsRadarPoint[]>, res: Response<StatsRadarPoint[]>): Promise<void> {
   try {
     const db = getDb();
     const dimensions = ['health','career','finance','learning','relationship','life','hobby','growth'];
@@ -911,8 +911,8 @@ export async function getStatsRadar(req: Request, res: Response): Promise<void> 
       SELECT COUNT(*) as total, SUM(CASE WHEN status='done' THEN 1 ELSE 0 END) as done
       FROM notes WHERE dimension = ?
     `);
-    const data = dimensions.map(dim => {
-      const row = stmt.get(dim) as any;
+    const data: StatsRadarPoint[] = dimensions.map(dim => {
+      const row = stmt.get(dim) as { total: number; done: number };
       const rate = row.total > 0 ? Math.round((row.done / row.total) * 100) : 0;
       return { dimension: dim, rate, total: row.total, done: row.done };
     });
@@ -923,7 +923,7 @@ export async function getStatsRadar(req: Request, res: Response): Promise<void> 
 }
 
 // GET /api/stats/monthly
-export async function getStatsMonthly(req: Request, res: Response): Promise<void> {
+export async function getStatsMonthly(_req: Request<Record<string, never>, StatsMonthlyPoint[]>, res: Response<StatsMonthlyPoint[]>): Promise<void> {
   try {
     const db = getDb();
     const rows = db.prepare(`
@@ -933,7 +933,7 @@ export async function getStatsMonthly(req: Request, res: Response): Promise<void
       FROM notes
       WHERE date >= date('now', '-6 months')
       GROUP BY month ORDER BY month ASC
-    `).all() as any[];
+    `).all() as StatsMonthlyPoint[];
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: String(error) });
@@ -941,7 +941,7 @@ export async function getStatsMonthly(req: Request, res: Response): Promise<void
 }
 
 // GET /api/stats/tags
-export async function getStatsTags(req: Request, res: Response): Promise<void> {
+export async function getStatsTags(_req: Request<Record<string, never>, StatsTagPoint[]>, res: Response<StatsTagPoint[]>): Promise<void> {
   try {
     const db = getDb();
     const notes = db.prepare('SELECT tags FROM notes WHERE tags IS NOT NULL').all() as any[];
@@ -952,7 +952,7 @@ export async function getStatsTags(req: Request, res: Response): Promise<void> {
         tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
       } catch {}
     });
-    const sorted = Object.entries(tagCount)
+    const sorted: StatsTagPoint[] = Object.entries(tagCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 30)
       .map(([tag, count]) => ({ tag, count }));

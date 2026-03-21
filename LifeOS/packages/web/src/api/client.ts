@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -488,25 +488,25 @@ export async function createNote(data: CreateNoteRequest): Promise<CreateNoteRes
 }
 
 // Stats API
-export async function fetchStatsTrend(days = 30): Promise<Array<{ day: string; total: number; done: number }>> {
+export async function fetchStatsTrend(days = 30): Promise<StatsTrendPoint[]> {
   const res = await fetch(`${API_BASE}/stats/trend?days=${days}`);
   if (!res.ok) return [];
   return res.json();
 }
 
-export async function fetchStatsRadar(): Promise<Array<{ dimension: string; rate: number; total: number; done: number }>> {
+export async function fetchStatsRadar(): Promise<StatsRadarPoint[]> {
   const res = await fetch(`${API_BASE}/stats/radar`);
   if (!res.ok) return [];
   return res.json();
 }
 
-export async function fetchStatsMonthly(): Promise<Array<{ month: string; total: number; done: number }>> {
+export async function fetchStatsMonthly(): Promise<StatsMonthlyPoint[]> {
   const res = await fetch(`${API_BASE}/stats/monthly`);
   if (!res.ok) return [];
   return res.json();
 }
 
-export async function fetchStatsTags(): Promise<Array<{ tag: string; count: number }>> {
+export async function fetchStatsTags(): Promise<StatsTagPoint[]> {
   const res = await fetch(`${API_BASE}/stats/tags`);
   if (!res.ok) return [];
   return res.json();

@@ -1,3 +1,46 @@
+# stats shared contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 `StatsView` 主路径依赖的 stats API，确认 trend/radar/monthly/tags 是否仍停留在 web-local response shape。
+- [x] 把 stats response point contract 提升到 `packages/shared`，并让 web client / server handlers 直接复用。
+- [x] 补最小 web + server 回归，锁定 stats 主路径已经切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `StatsTrendPoint`
+    - `StatsRadarPoint`
+    - `StatsMonthlyPoint`
+    - `StatsTagPoint`
+  - `LifeOS/packages/web/src/api/client.ts` 删除四组 stats 的本地内联数组 shape，改为直接复用 shared stats point contract。
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `getStatsTrend()` 显式接回 shared `StatsTrendPoint[]`
+    - `getStatsRadar()` 显式接回 shared `StatsRadarPoint[]`
+    - `getStatsMonthly()` 显式接回 shared `StatsMonthlyPoint[]`
+    - `getStatsTags()` 显式接回 shared `StatsTagPoint[]`
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 `fetches typed stats contracts from shared response shapes`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `stats APIs respond with shared stats contracts`。
+- 这次修的不是对称测试平移，而是 `StatsView` 主路径下四组稳定返回 shape 一直停留在 web-local response type 的真实 contract drift。
+
+## 本轮选择依据
+- 用户要求继续优先找新的高价值 `server/web/shared contract gap`。
+- `schedule health` 收口后，下一条直接可见的主路径就是 `StatsView`；`fetchStatsTrend` / `fetchStatsRadar` / `fetchStatsMonthly` / `fetchStatsTags` 仍全部使用 web-local 内联 shape，而 server 端也没有显式 shared typing。
+- 这条线能继续减少主路径 response contract 的重复源和未来统计面板改动时的漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 122 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "stats APIs respond with shared stats contracts|schedule health API responds with shared schedule health contract" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- Stats 主路径 contract 已收口，但 `StatsView.vue` 仍未显式从 shared 导入这些 point 类型；目前它通过 client 返回值推断使用，仍可视为后续可选收口点。
+- 下一步可继续检查其他 Settings / Dashboard 主路径是否还有 web-local response shape。
+
+
 # schedule health shared contract 收口
 
 ## 计划

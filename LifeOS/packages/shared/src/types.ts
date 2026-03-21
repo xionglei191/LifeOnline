@@ -265,6 +265,30 @@ export interface ScheduleHealth {
   failingSchedules: FailingScheduleHealthItem[];
 }
 
+export interface StatsTrendPoint {
+  day: string;
+  total: number;
+  done: number;
+}
+
+export interface StatsRadarPoint {
+  dimension: string;
+  rate: number;
+  total: number;
+  done: number;
+}
+
+export interface StatsMonthlyPoint {
+  month: string;
+  total: number;
+  done: number;
+}
+
+export interface StatsTagPoint {
+  tag: string;
+  count: number;
+}
+
 export interface DashboardData {
   todayTodos: Note[];
   weeklyHighlights: Note[];

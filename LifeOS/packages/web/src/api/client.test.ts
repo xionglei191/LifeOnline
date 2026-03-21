@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -162,6 +162,27 @@ describe('api client promotion projections', () => {
 
     await expect(fetchScheduleHealth()).resolves.toEqual(response);
     expect(fetch).toHaveBeenCalledWith('/api/schedules/health');
+  });
+
+  it('fetches typed stats contracts from shared response shapes', async () => {
+    const trend: StatsTrendPoint[] = [{ day: '2026-03-22', total: 3, done: 1 }];
+    const radar: StatsRadarPoint[] = [{ dimension: 'growth', rate: 50, total: 2, done: 1 }];
+    const monthly: StatsMonthlyPoint[] = [{ month: '2026-03', total: 12, done: 7 }];
+    const tags: StatsTagPoint[] = [{ tag: 'contract', count: 4 }];
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => trend })
+      .mockResolvedValueOnce({ ok: true, json: async () => radar })
+      .mockResolvedValueOnce({ ok: true, json: async () => monthly })
+      .mockResolvedValueOnce({ ok: true, json: async () => tags }));
+
+    await expect(fetchStatsTrend()).resolves.toEqual(trend);
+    await expect(fetchStatsRadar()).resolves.toEqual(radar);
+    await expect(fetchStatsMonthly()).resolves.toEqual(monthly);
+    await expect(fetchStatsTags()).resolves.toEqual(tags);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/stats/trend?days=30');
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/stats/radar');
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/stats/monthly');
+    expect(fetch).toHaveBeenNthCalledWith(4, '/api/stats/tags');
   });
 
   it('sends typed search requests and returns the shared response shape', async () => {

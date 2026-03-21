@@ -110,6 +110,41 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('stats APIs respond with shared stats contracts', async () => {
+  const env = await createTestEnv('lifeos-stats-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const trend = await api<Array<import('../../shared/src/types.js').StatsTrendPoint>>(baseUrl, '/api/stats/trend?days=30');
+    const radar = await api<Array<import('../../shared/src/types.js').StatsRadarPoint>>(baseUrl, '/api/stats/radar');
+    const monthly = await api<Array<import('../../shared/src/types.js').StatsMonthlyPoint>>(baseUrl, '/api/stats/monthly');
+    const tags = await api<Array<import('../../shared/src/types.js').StatsTagPoint>>(baseUrl, '/api/stats/tags');
+
+    assert.ok(Array.isArray(trend));
+    assert.ok(Array.isArray(radar));
+    assert.ok(Array.isArray(monthly));
+    assert.ok(Array.isArray(tags));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('schedule health API responds with shared schedule health contract', async () => {
   const env = await createTestEnv('lifeos-schedule-health-contract-');
   const configFile = CONFIG_FILE;
