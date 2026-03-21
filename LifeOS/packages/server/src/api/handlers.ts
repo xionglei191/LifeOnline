@@ -590,6 +590,8 @@ export async function planPromotionsHandler(req: Request, res: Response): Promis
       return;
     }
     const soulActions = planPromotionSoulActions(record);
+    broadcastReintegrationRecordUpdate(record);
+    soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
     res.json({ soulActions });
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });

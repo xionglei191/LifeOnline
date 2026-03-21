@@ -519,6 +519,16 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 `NoteDetail.vue` 是否还存在与 worker task 相关的错误态/刷新态提示未消费统一本地化 helper，优先补真实用户可见缺口而非对称扩张。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 manual `planReintegrationPromotions` 的 `reintegration-record-updated` 单事件 retention 回归，锁定手动补规划成功提示在只收到 reintegration record websocket 刷新时仍保持可见，并继续要求仅刷新 reintegration records / soul actions，不误刷 worker tasks。
+  - 这次延续 accept/reject 已补齐的同级事实源保护，把 manual planning 也收口到新的 `reintegration-record-updated` websocket contract 上，避免三条 reintegration review 成功路径在 view-level retention 上重新分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 84 tests。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿这条 reintegration websocket 主线推进，下一步优先检查 `planReintegrationPromotions` 在 server/shared contract 层是否也值得补一条 `reintegration-record-updated` 对齐断言，避免 web 已锁住而 server 事实源仍留空档。
+  - 若不再继续补强，可直接提交当前 manual planning reintegration-record retention 回归增量。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 将原先只适用于 create 路径的 `workerTaskCreatedMessage()` 收敛为 action-aware 的 `workerTaskActionMessage()`，让 create / retry / cancel 三条路径继续共用同一份本地化 worker-task 元信息拼装逻辑，同时修正 retry/cancel 成功反馈仍显示“已创建任务”的语义错误。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 将 retry/cancel 断言同步收紧为 `已重新入队任务` 与 `已取消任务`，避免 UI 在 contract 字段已正确消费后仍误导用户当前动作语义。
 - 本轮验证再补充：
@@ -560,6 +570,18 @@
 - 下一步建议再补充：
   - 若继续沿 worker-task feedback retention 主线推进，可直接提交当前 dispatch feedback 连续 websocket retention 断言。
   - 若还要继续补一轮，可检查 `SettingsView` 里 group quick action 的成功提示是否也缺少跨连续 websocket 刷新保留断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/api/handlers.ts` 让 `planPromotionsHandler()` 也显式广播 `reintegration-record-updated` 与对应的 `soul-action-updated`，把手动 `planReintegrationPromotions` 收口到与 accept/reject 相同的 websocket 事实源链路，不再只返回 HTTP 响应。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 manual planning 的 websocket contract 回归，锁定对已 accepted reintegration record 调用 `/plan-promotions` 后，会先收到同一条 `reintegration-record-updated`，再收到两条与 response / follow-up pending list 对齐的 `soul-action-updated`。
+  - 这次补的是上一轮 web-only retention 回归在 server 侧缺失的事实源保护，避免 `SettingsView` 已开始直接消费 `reintegration-record-updated`，但手动 planning 路径却没有对等广播。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "reintegration manual planning emits reintegration-record-updated websocket event aligned with follow-up lists" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 本轮再次跑到已有无关旧用例 `grouped settings list stays coherent across staggered approve and dispatch updates` 的偶发启动超时；新增 manual planning websocket 用例本身在定向重跑时稳定通过，因此本轮继续以定向回归 + server build 作为有效验证结论。
+- 当前未完成项再补充：
+  - 本轮 server/web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 reintegration websocket 主线推进，下一步可检查 `SettingsView` 是否还缺一条 manual planning 成功后连续经过 `reintegration-record-updated -> soul-action-updated` 双事件链仍保留提示的 view-level 回归；若已有，则可直接提交当前 server/web 对齐增量。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把 grouped dispatch worker-task contract 补到 `taskType + worker + status` 三者组合过滤：在同一 `sourceNoteId` 下连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 后，额外校验 `/api/worker-tasks?sourceNoteId=...&taskType=...&worker=lifeos&status=...` 仍能稳定命中各自 task，且返回 filters 与 dispatch response / websocket 中的 worker、status 保持一致。
   - 这次继续压实 grouped settings 依赖的 worker-task filtered refresh 事实源：不仅 taskType/status 对得上，连 taskType/worker/status 三者组合过滤在同组连续 dispatch 后也不会把两个 task 串在一起。
