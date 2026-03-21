@@ -1291,6 +1291,16 @@ function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' |
   return `source note ${action.sourceNoteId}`;
 }
 
+function buildDispatchedWorkerTaskSuffix(result: Awaited<ReturnType<typeof dispatchSoulAction>>): string {
+  const workerTaskLabel = result.task ? workerTaskTypeLabel(result.task.taskType) : null;
+  const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
+  const workerTaskWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
+  const workerTaskMeta = [workerTaskLabel, workerTaskStatus, workerTaskWorker].filter(Boolean).join(' · ');
+  return result.result.workerTaskId
+    ? `（Worker Task: ${result.result.workerTaskId}${workerTaskMeta ? ` · ${workerTaskMeta}` : ''}）`
+    : '';
+}
+
 async function handleApproveSoulAction(action: SoulAction) {
   soulActionActionId.value = action.id;
   soulActionMessage.value = '';
@@ -1354,12 +1364,15 @@ async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; acti
   soulActionGroupDispatchId.value = group.sourceNoteId;
   soulActionMessage.value = '';
   try {
+    const dispatchResults = [] as Awaited<ReturnType<typeof dispatchSoulAction>>[];
     for (const action of dispatchableActions) {
-      await dispatchSoulAction(action.id);
+      dispatchResults.push(await dispatchSoulAction(action.id));
     }
     const dispatchedCount = dispatchableActions.length;
     const totalCount = group.actions.length;
-    soulActionMessage.value = `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions`;
+    const lastDispatchResult = dispatchResults.at(-1) ?? null;
+    const workerTaskSuffix = lastDispatchResult ? buildDispatchedWorkerTaskSuffix(lastDispatchResult) : '';
+    soulActionMessage.value = `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions${workerTaskSuffix}`;
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
@@ -1412,13 +1425,7 @@ async function handleDispatchSoulAction(action: SoulAction) {
   soulActionMessage.value = '';
   try {
     const result = await dispatchSoulAction(action.id);
-    const workerTaskLabel = result.task ? workerTaskTypeLabel(result.task.taskType) : null;
-    const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
-    const workerTaskWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
-    const workerTaskMeta = [workerTaskLabel, workerTaskStatus, workerTaskWorker].filter(Boolean).join(' · ');
-    const workerTaskSuffix = result.result.workerTaskId
-      ? `（Worker Task: ${result.result.workerTaskId}${workerTaskMeta ? ` · ${workerTaskMeta}` : ''}）`
-      : '';
+    const workerTaskSuffix = buildDispatchedWorkerTaskSuffix(result);
     soulActionMessage.value = `${result.result.reason}${workerTaskSuffix}`;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
     await loadSoulActions({ preserveMessage: true });
