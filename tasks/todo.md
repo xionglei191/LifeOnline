@@ -572,6 +572,12 @@
 - 本轮验证待执行再补充：
   - 重新运行 `SettingsView` 定向测试与 web build，确认 suggest prompt 的保存回路与前一轮显示/校验回归一起稳定通过。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 1 条 promotion dispatch contract 回归，锁定 `promote_continuity_record` 这类本地执行的 PR6 promotion action 在 `/dispatch` 后，会返回 `result.dispatched=true`、`workerTaskId=null`、`task=null`，同时 `soulAction.executionStatus` 与后续 `/api/soul-actions?sourceNoteId=...` 读到的结果一致。
+  - 同文件里顺手去掉一处不再被 `upsertReintegrationRecord()` 输入类型接受的 `reviewedAt` 测试字段，修复“定向测试能过但 server build 被旧测试类型漂移卡住”的真实验证缺口。
+- 本轮验证结果补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|dispatch response stays aligned with follow-up soul-action list for grouped settings refresh" test/reintegrationApi.test.ts` 通过，新增 promotion dispatch 用例稳定通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 related worker task 的 `handleRetryRelatedTask()` / `handleCancelRelatedTask()` 也直接消费 `retryWorkerTask()` / `cancelWorkerTask()` 返回的 `WorkerTask`，成功反馈与创建路径统一为本地化的 `任务 ID · 任务类型 · 状态 · worker` 文案，避免同一组件内 create 与 retry/cancel 两套展示口径分叉。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 新增 retry 与 cancel 两条回归，锁定关联任务操作后会展示 `提取行动项 · 等待执行 · LifeOS` 与 `OpenClaw 任务 · 已取消 · OpenClaw`，并继续防止 raw enum 回流到 UI。
 - 本轮验证再补充：
