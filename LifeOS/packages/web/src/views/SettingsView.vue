@@ -473,6 +473,7 @@
 
       <div class="reintegration-filter-state soul-action-filter-state">
         当前分组视图：{{ soulActionGroupQuickFilterLabel }}
+        <span class="worker-pill soul-action-filter-pill">{{ soulActionGroupQuickFilterStats }}</span>
       </div>
 
       <div class="reintegration-summary-strip soul-action-summary-strip">
@@ -1113,6 +1114,7 @@ const soulActionGroupQuickFilterLabel = computed(() => {
       return '全部分组';
   }
 });
+const soulActionGroupQuickFilterStats = computed(() => `${soulActionGroups.value.length} / ${soulActionGroupCount.value} 分组命中`);
 const soulActionGroupCount = computed(() => {
   const groupIds = new Set(soulActions.value.map((action) => action.sourceNoteId));
   return groupIds.size;
@@ -2149,6 +2151,17 @@ async function handleReindex() {
   margin-bottom: 10px;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.soul-action-filter-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.soul-action-filter-pill {
+  font-size: 11px;
 }
 
 .reintegration-list {
