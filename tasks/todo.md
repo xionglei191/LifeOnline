@@ -393,15 +393,15 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在现有 dispatch response worker-task convergence contract 上继续补了 `worker` 过滤收敛：新增 `/api/worker-tasks?sourceNoteId=...&worker=...` follow-up 列表断言，锁定 dispatch 返回的 `task.worker` 会与 `worker-task-updated` websocket 事件以及 worker filtered list 中的同一 task 保持一致。
-  - 这次继续停留在 server contract 事实源，不扩 UI、不改 runtime 行为，直接补上 grouped governance 在 dispatch 后 worker 视图刷新链里最后一个已存在但此前未显式回归保护的过滤维度。
+  - `LifeOS/packages/web/src/components/WorkerTaskCard.vue` 把 worker pills 从直接展示底层枚举值收紧为真实可读标签：`lifeos/openclaw` 映射为 `LifeOS/OpenClaw`，`update_persona_snapshot` 也同步映射为 `人格快照更新`，避免 worker 视图继续泄漏 shared contract 内部枚举名。
+  - 新增 `LifeOS/packages/web/src/components/WorkerTaskCard.test.ts`，直接锁定 worker/task pills 会展示本地化标签而不是原始枚举值，补上 worker task 卡片此前完全缺失的最小组件回归保护。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskCard.test.ts` 通过，4 files / 55 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
-  - 本轮 server 变更待提交 git commit。
+  - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交这条 worker filter convergence contract 增量；若还要继续补一轮，可评估 worker-task websocket 刷新后的 `worker` 过滤子集是否还值得再补一条更直接的 follow-up convergence 覆盖。
+  - 若继续沿同一主线推进，可直接提交这条 worker task card contract 文案收敛增量；若还要继续补一轮，可评估 `WorkerTaskDetail.vue` 是否也存在同样的原始 `worker/taskType` 枚举泄漏，再决定是否做同类收敛。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
   - 这次补的是同一条真实事件契约链上的剩余缺口：`SettingsView.test.ts:218` 与 `:222` 本就通过组件真实 camelCase emits 驱动父层，因此运行时代码也应与测试和组件声明保持一致，避免未来出现“测试通过但真实监听名漂移”的风险。

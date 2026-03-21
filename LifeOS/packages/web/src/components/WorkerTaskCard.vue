@@ -5,8 +5,8 @@
       <span class="wtc-status" :class="`status-${task.status}`">{{ taskStatusLabel(task.status) }}</span>
     </div>
     <div class="wtc-pills">
-      <span class="wtc-pill">{{ task.worker }}</span>
-      <span class="wtc-pill">{{ task.taskType }}</span>
+      <span class="wtc-pill">{{ workerLabel(task.worker) }}</span>
+      <span class="wtc-pill">{{ taskLabel(task.taskType) }}</span>
       <span v-if="task.sourceNoteId && showSourceNote" class="wtc-pill">source {{ shortId(task.sourceNoteId) }}</span>
       <span class="wtc-pill">输出 {{ task.outputNotes?.length || 0 }}</span>
     </div>
@@ -76,6 +76,7 @@ function taskLabel(taskType: WorkerTask['taskType']) {
   if (taskType === 'summarize_note') return '笔记摘要';
   if (taskType === 'classify_inbox') return 'Inbox 整理';
   if (taskType === 'extract_tasks') return '提取行动项';
+  if (taskType === 'update_persona_snapshot') return '人格快照更新';
   if (taskType === 'daily_report') return '每日回顾';
   if (taskType === 'weekly_report') return '每周回顾';
   return taskType;
@@ -90,6 +91,12 @@ function taskStatusLabel(status: WorkerTask['status']) {
     case 'cancelled': return '已取消';
     default: return status;
   }
+}
+
+function workerLabel(worker: WorkerTask['worker']) {
+  if (worker === 'lifeos') return 'LifeOS';
+  if (worker === 'openclaw') return 'OpenClaw';
+  return worker;
 }
 
 function shortId(value: string) {
