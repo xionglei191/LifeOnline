@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse } from '@lifeos/shared';
 
 export interface SearchResult {
   notes: Note[];
@@ -441,6 +441,24 @@ export async function fetchAISuggestions(): Promise<AISuggestion[]> {
     throw new Error(data.error || 'Failed to fetch AI suggestions');
   }
   return data.suggestions || [];
+}
+
+export async function fetchEventNodes(): Promise<EventNode[]> {
+  const res = await fetch(`${API_BASE}/event-nodes`);
+  const data = await res.json().catch(() => ({} as Partial<ListEventNodesResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch event nodes');
+  }
+  return data.eventNodes || [];
+}
+
+export async function fetchContinuityRecords(): Promise<ContinuityRecord[]> {
+  const res = await fetch(`${API_BASE}/continuity-records`);
+  const data = await res.json().catch(() => ({} as Partial<ListContinuityRecordsResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch continuity records');
+  }
+  return data.continuityRecords || [];
 }
 
 // Note write-back API

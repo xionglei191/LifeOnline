@@ -752,13 +752,12 @@
   - 若定向测试与 build 通过，可直接提交当前 worker-task status-only filtered refresh 收敛补强。
   - 若继续往下补，应转去寻找新的 fact-source gap，而不是继续在当前 worker-task filter 维度做低边际对称扩张。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/shared/src/types.ts` 新增 `EventNode` / `ContinuityRecord` 与 `ListEventNodesResponse` / `ListContinuityRecordsResponse` 共享 contract，把此前只停留在 server 本地类型里的 event/continuity list 返回形状正式上收为 shared 事实源。
-  - `LifeOS/packages/server/src/api/handlers.ts` 改为显式使用这两类 shared response 类型返回 `/api/event-nodes` 与 `/api/continuity-records`，避免 web 未来开始消费时继续内联响应形状。
-  - 这次不是重复补同类 retention，而是把前一轮刚锁住的 object-list 事实源继续收口到 server/shared contract 层，减少后续 web/client 消费时再次出现“API 已有、但 shared 没类型、handler 仍是隐式 JSON”的分叉。
+  - `LifeOS/packages/web/src/api/client.ts` 新增 `fetchEventNodes()` 与 `fetchContinuityRecords()`，把刚上收进 shared 的 promotion projection list contract 真正落到 web typed client，而不是继续让后续页面/组件直接手写 fetch + 内联响应类型。
+  - 新增 `LifeOS/packages/web/src/api/client.test.ts`，最小锁定这两条 client 会按 shared response shape 解析成功结果，并在 API 返回 error 时抛出对应错误，防止 event/continuity 投射链在真正接 UI 前又退回“server 有 contract、web client 无 typed seam”的状态。
+  - 这次补的是新的 contract-to-client 投射缺口，不是继续在 settings websocket/retention 上做对称平移。
 - 本轮验证结果补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record|continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record" test/reintegrationApi.test.ts` 通过，2/2。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter shared build` 不适用：当前 shared package 没有 `build` script，因此本轮以 server build + 定向 contract test 作为有效验证结论。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；当前 web test runner 会一并跑现有 9 个测试文件，合计 104 tests 全通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
