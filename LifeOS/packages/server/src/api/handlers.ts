@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -122,7 +122,7 @@ export async function getNotes(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function triggerIndex(req: Request, res: Response): Promise<void> {
+export async function triggerIndex(_req: Request<Record<string, never>, IndexResult>, res: Response<IndexResult>): Promise<void> {
   try {
     const config = await loadConfig();
     const result = await indexVault(config.vaultPath);
@@ -135,15 +135,17 @@ export async function triggerIndex(req: Request, res: Response): Promise<void> {
 }
 
 // GET /api/index/status
-export async function getIndexStatus(req: Request, res: Response): Promise<void> {
+export async function getIndexStatus(_req: Request<Record<string, never>, IndexStatus>, res: Response<IndexStatus>): Promise<void> {
   const queue = getIndexQueue();
-  res.json(queue ? queue.getStatus() : { queueSize: 0, processing: false, processingFile: null });
+  const status: IndexStatus = queue ? queue.getStatus() : { queueSize: 0, processing: false, processingFile: null };
+  res.json(status);
 }
 
 // GET /api/index/errors
-export async function getIndexErrors(req: Request, res: Response): Promise<void> {
+export async function getIndexErrors(_req: Request<Record<string, never>, IndexErrorEventData[]>, res: Response<IndexErrorEventData[]>): Promise<void> {
   const queue = getIndexQueue();
-  res.json(queue ? queue.getErrors() : []);
+  const errors: IndexErrorEventData[] = queue ? queue.getErrors() : [];
+  res.json(errors);
 }
 
 function parseWorkerTaskStatus(value: unknown): WorkerTaskStatus | undefined {
@@ -308,7 +310,7 @@ export async function searchNotes(req: Request<Record<string, never>, SearchResu
 }
 
 // GET /api/config
-export async function getConfig(req: Request, res: Response): Promise<void> {
+export async function getConfig(_req: Request<Record<string, never>, Config>, res: Response<Config>): Promise<void> {
   try {
     const config = await loadConfig();
     res.json(config);
@@ -319,7 +321,7 @@ export async function getConfig(req: Request, res: Response): Promise<void> {
 }
 
 // POST /api/config
-export async function updateConfig(req: Request, res: Response): Promise<void> {
+export async function updateConfig(req: Request<Record<string, never>, UpdateConfigResponse, UpdateConfigRequest>, res: Response<UpdateConfigResponse>): Promise<void> {
   try {
     const { vaultPath } = req.body;
     if (!vaultPath) {
@@ -332,7 +334,8 @@ export async function updateConfig(req: Request, res: Response): Promise<void> {
       broadcastUpdate({ type: 'index-complete', data: result.indexResult });
     }
 
-    res.json({ success: true, indexResult: result.indexResult });
+    const response: UpdateConfigResponse = { success: true, indexResult: result.indexResult };
+    res.json(response);
   } catch (error) {
     if (error instanceof InvalidVaultPathError) {
       res.status(400).json({ error: error.message });

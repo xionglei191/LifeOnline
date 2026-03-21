@@ -1,25 +1,6 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult } from '@lifeos/shared';
 
-export interface IndexResult {
-  total: number;
-  indexed: number;
-  skipped: number;
-  deleted: number;
-  errors: string[];
-}
-
-export interface IndexStatus {
-  queueSize: number;
-  processing: boolean;
-  processingFile: string | null;
-}
-
-export interface IndexError {
-  filePath: string;
-  operation: string;
-  error: string;
-  timestamp: string;
-}
+export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
 
@@ -81,28 +62,23 @@ export async function searchNotes(query: string): Promise<SearchResult> {
   return res.json();
 }
 
-export interface Config {
-  vaultPath: string;
-  port: number;
-}
-
 export async function fetchConfig(): Promise<Config> {
   const res = await fetch(`${API_BASE}/config`);
   if (!res.ok) throw new Error('Failed to fetch config');
   return res.json();
 }
 
-export async function updateConfig(vaultPath: string): Promise<{ success: boolean; indexResult: any }> {
+export async function updateConfig(vaultPath: string): Promise<UpdateConfigResponse> {
   const res = await fetch(`${API_BASE}/config`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vaultPath }),
+    body: JSON.stringify({ vaultPath } satisfies UpdateConfigRequest),
   });
+  const data = await res.json().catch(() => ({} as Partial<UpdateConfigResponse> & { error?: string }));
   if (!res.ok) {
-    const data = await res.json();
     throw new Error(data.error || 'Failed to update config');
   }
-  return res.json();
+  return data as UpdateConfigResponse;
 }
 
 // AI API types

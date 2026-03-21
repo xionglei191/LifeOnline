@@ -1,3 +1,61 @@
+# config/index shared contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 Settings 主路径依赖的 config / index API，确认哪些 response/request shape 仍停留在 web-local 或 server-local 类型。
+- [x] 把 `Config`、`UpdateConfigRequest`、`UpdateConfigResponse`、`IndexStatus` 收回 `packages/shared`，并让 web client / server handler 直接复用。
+- [x] 复用已有 shared `IndexResult` / `IndexErrorEventData`，去掉 web client 里的重复定义。
+- [x] 补最小 web + server 回归，锁定 config/index 主路径已切到 shared contract。
+- [x] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也未回到 grouped governance / SettingsView 的同类对称补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增 shared：
+    - `Config`
+    - `UpdateConfigRequest`
+    - `UpdateConfigResponse`
+    - `IndexStatus`
+  - `LifeOS/packages/web/src/api/client.ts`：
+    - 删除本地 `Config` / `IndexStatus` / `IndexResult` / `IndexError` 的重复定义
+    - 改为直接复用 shared `Config`、`UpdateConfigRequest`、`UpdateConfigResponse`、`IndexStatus`、`IndexResult`、`IndexErrorEventData`
+    - `updateConfig()` 改为返回 shared `UpdateConfigResponse`，并对请求体使用 `UpdateConfigRequest`
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `triggerIndex()` 显式接回 shared `IndexResult`
+    - `getIndexStatus()` 显式接回 shared `IndexStatus`
+    - `getIndexErrors()` 显式接回 shared `IndexErrorEventData[]`
+    - `getConfig()` 显式接回 shared `Config`
+    - `updateConfig()` 显式接回 shared `UpdateConfigRequest` / `UpdateConfigResponse`
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增：
+    - `fetches typed config and index contracts from shared response shapes`
+    - `sends typed config updates and returns the shared response shape`
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增：
+    - `config API responds with shared config contracts`
+- 这次修的不是重复命名整理，而是 Settings 主路径下仍然存在的真实 contract gap：config/index API 一直混用 web-local、server-local、shared 三套 shape。
+
+## 本轮选择依据
+- 用户要求继续优先找新的高价值 `server/web/shared contract gap`。
+- Search 主路径刚闭环后，下一条直接可见、仍然多源漂移的主路径就是 Settings 里的 config/index API：
+  - web client 自己定义 `Config` / `IndexStatus`
+  - server configManager 自己定义 `Config`
+  - shared 已有 `IndexResult` / `IndexErrorEventData`，但前后端没完全对齐复用
+- 这条线可以直接减少主路径 contract 漂移和 Settings 页后续修改的重复源风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 121 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "config API responds with shared config contracts|updating config persists vault path" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮 config/index contract 收口改动尚未提交 git commit。
+- `LifeOS/packages/server/src/config/configManager.ts` 仍保留本地 `Config` interface，可作为下一轮继续收口的候选点。
+- 仍可继续检查其他主路径 API 是否还有 web-local / server-local shape，例如 stats 或 schedule health。
+
+## 下一步建议
+- 若继续沿 contract 主线推进，下一步优先把 `configManager.ts` 的本地 `Config` 也接回 shared，完成 config contract 的最后一段闭环。
+- 收完 config 之后，再检查 `schedule health` / `stats` 这类 Settings 直接消费但仍停留在本地 shape 的接口。
+
+
 # server search handler contract 闭环
 
 ## 计划

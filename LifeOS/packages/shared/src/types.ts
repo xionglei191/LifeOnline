@@ -231,6 +231,26 @@ export interface SearchResult {
   query: string;
 }
 
+export interface Config {
+  vaultPath: string;
+  port: number;
+}
+
+export interface UpdateConfigRequest {
+  vaultPath: string;
+}
+
+export interface UpdateConfigResponse {
+  success: true;
+  indexResult: IndexResult | null;
+}
+
+export interface IndexStatus {
+  queueSize: number;
+  processing: boolean;
+  processingFile: string | null;
+}
+
 export interface DashboardData {
   todayTodos: Note[];
   weeklyHighlights: Note[];

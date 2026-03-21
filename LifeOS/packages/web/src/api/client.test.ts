@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -77,18 +77,67 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
   });
 
-  it('sends typed note update requests and returns the shared success response', async () => {
-    const response: UpdateNoteResponse = { success: true };
+  it('fetches typed config and index contracts from shared response shapes', async () => {
+    const config: Config = {
+      vaultPath: '/vault',
+      port: 3000,
+    };
+    const indexStatus: IndexStatus = {
+      queueSize: 1,
+      processing: true,
+      processingFile: '/vault/inbox.md',
+    };
+    const indexErrors: IndexErrorEventData[] = [
+      {
+        filePath: '/vault/bad.md',
+        operation: 'upsert',
+        error: 'parse failed',
+        timestamp: '2026-03-22T10:00:00.000Z',
+      },
+    ];
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => config,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => indexStatus,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => indexErrors,
+      }));
+
+    await expect(fetchConfig()).resolves.toEqual(config);
+    await expect(fetchIndexStatus()).resolves.toEqual(indexStatus);
+    await expect(fetchIndexErrors()).resolves.toEqual(indexErrors);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/config');
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/index/status');
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/index/errors');
+  });
+
+  it('sends typed config updates and returns the shared response shape', async () => {
+    const response: UpdateConfigResponse = {
+      success: true,
+      indexResult: {
+        total: 2,
+        indexed: 2,
+        skipped: 0,
+        deleted: 0,
+        errors: [],
+      },
+    };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => response,
     }));
 
-    await expect(updateNote('note-1', { approval_status: 'approved', status: 'done' })).resolves.toEqual(response);
-    expect(fetch).toHaveBeenCalledWith('/api/notes/note-1', {
-      method: 'PATCH',
+    await expect(updateConfig('/vault')).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledWith('/api/config', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ approval_status: 'approved', status: 'done' }),
+      body: JSON.stringify({ vaultPath: '/vault' }),
     });
   });
 

@@ -110,6 +110,50 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('config API responds with shared config contracts', async () => {
+  const env = await createTestEnv('lifeos-config-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const config = await api<import('../../shared/src/types.js').Config>(baseUrl, '/api/config');
+    assert.equal(config.vaultPath, env.vaultPath);
+    assert.equal(config.port, env.port);
+
+    const unchanged = await api<import('../../shared/src/types.js').UpdateConfigResponse>(baseUrl, '/api/config', {
+      method: 'POST',
+      body: JSON.stringify({ vaultPath: env.vaultPath } satisfies import('../../shared/src/types.js').UpdateConfigRequest),
+    });
+    assert.equal(unchanged.success, true);
+    assert.equal(unchanged.indexResult, null);
+
+    const indexStatus = await api<import('../../shared/src/types.js').IndexStatus>(baseUrl, '/api/index/status');
+    assert.equal(typeof indexStatus.queueSize, 'number');
+    assert.equal(typeof indexStatus.processing, 'boolean');
+    assert.equal(indexStatus.processingFile === null || typeof indexStatus.processingFile === 'string', true);
+
+    const indexErrors = await api<Array<import('../../shared/src/types.js').IndexErrorEventData>>(baseUrl, '/api/index/errors');
+    assert.ok(Array.isArray(indexErrors));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('loadStoredConfig keeps persisted values separate from env overrides', async () => {
   const env = await createTestEnv('lifeos-config-persist-');
   const configFile = CONFIG_FILE;
