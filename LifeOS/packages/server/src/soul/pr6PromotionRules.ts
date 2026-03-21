@@ -13,6 +13,12 @@ const PR6_SIGNAL_EVENT_KIND: Partial<Record<ReintegrationRecord['signalKind'], E
   weekly_report_reintegration: 'weekly_reflection',
 };
 
+const PR6_SIGNAL_EVENT_TITLE: Partial<Record<ReintegrationRecord['signalKind'], string>> = {
+  persona_snapshot_reintegration: '人格切换事件',
+  daily_report_reintegration: '里程碑事件',
+  weekly_report_reintegration: '周回顾事件',
+};
+
 const PR6_SIGNAL_CONTINUITY_KIND: Partial<Record<ReintegrationRecord['signalKind'], ContinuityRecordKind>> = {
   persona_snapshot_reintegration: 'persona_direction',
   daily_report_reintegration: 'daily_rhythm',
@@ -36,6 +42,14 @@ export function getEventKindForReintegrationSignal(signalKind: ReintegrationReco
     throw new Error(`Unsupported PR6 event promotion signal kind: ${signalKind}`);
   }
   return eventKind;
+}
+
+export function getEventTitleForReintegrationSignal(signalKind: ReintegrationRecord['signalKind']): string {
+  const title = PR6_SIGNAL_EVENT_TITLE[signalKind];
+  if (!title) {
+    throw new Error(`Unsupported PR6 event promotion title signal kind: ${signalKind}`);
+  }
+  return title;
 }
 
 export function getContinuityKindForReintegrationSignal(signalKind: ReintegrationRecord['signalKind']): ContinuityRecordKind {

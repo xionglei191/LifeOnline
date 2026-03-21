@@ -215,17 +215,17 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 30 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
-  - 本轮 web 变更仍未提交 git commit。
+  - 本轮 server 变更仍未提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一条高价值主线推进，优先检查 promotion projections 是否还存在新的事实源一致性缺口，例如 server list 某一侧失败时 web 是否仍保留另一侧已成功投射的数据；不要回到 grouped governance 的同类对称补强。
-  - 若本轮就收口，也可以直接提交当前 projection partial-failure 收敛与 view 级回归，继续保持 server/shared/web -> UI 的投射链完整。
+  - 若继续沿同一条高价值主线推进，优先检查 PR6 promotion action 的 `sourceNoteId` / reintegration id 过载是否要收口成更明确的 shared/server contract，而不是回到 grouped governance 的低边际补强。
+  - 若本轮就收口，也可以直接提交当前 event-node 标题语义收紧与 contract test 增量，继续提升 projection 从 server 到 UI 的可读性。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 将 `loadPromotionProjections()` 从 `Promise.all` 收紧为 `Promise.allSettled`，使 `/api/event-nodes` 与 `/api/continuity-records` 任一侧失败时，另一侧成功结果仍会真实保留到 UI，而不是被整批清空。
-  - 同一实现里把 projection 错误提示改为按失败侧拼接消息：event-node 失败时只清空 `eventNodes`，continuity 失败时只清空 `continuityRecords`，避免局部 API 故障放大成整块 projection 面板失真。
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 partial-failure 回归，锁定 continuity 拉取失败时 event-node 投射仍保留、event-node 拉取失败时 continuity 投射仍保留，并继续保证 settings 其余主面板不被打断。
+  - `LifeOS/packages/server/src/soul/pr6PromotionRules.ts` 新增 `getEventTitleForReintegrationSignal()`，把 PR6 signalKind 到 event-node 展示标题的映射收口到统一规则源，避免标题语义继续散落在 executor 或 UI。
+  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` 不再生成 `${eventKind}:${record.id}` 这种机器式标题，而是为 persona / daily / weekly 三条真实 promotion 路径分别落地可读标题：`人格切换事件`、`里程碑事件`、`周回顾事件`。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 event-node follow-up projection contract 断言继续收紧到 `eventKind + title + summary` 三元组，直接锁住 server 对 web projection panel 暴露的人类可读展示数据，而不只是 id 与 summary。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过；Vitest 合计 9 files / 108 tests。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，30/30。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
   - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 将单条 dispatch 成功提示继续收紧为直接消费 `DispatchSoulActionResponse.task.taskType`，在已有 workerTaskId 基础上补充本地化 task label，避免 web 侧只展示 ID 而没有落地 shared/server 已锁住的 task contract。

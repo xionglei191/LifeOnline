@@ -1954,6 +1954,7 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
       sourceSoulActionId: string | null;
       promotionSoulActionId: string | null;
       eventKind: string;
+      title: string;
       summary: string;
     }> }>(baseUrl, '/api/event-nodes');
     const eventNode = listedEventNodes.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
@@ -1961,6 +1962,8 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
     assert.ok(eventNode);
     assert.equal(eventNode?.promotionSoulActionId, action!.id);
     assert.equal(eventNode?.sourceReintegrationId, record!.id);
+    assert.equal(eventNode?.eventKind, 'weekly_reflection');
+    assert.equal(eventNode?.title, '周回顾事件');
     assert.equal(eventNode?.summary, record!.summary);
     assert.equal(dispatched.soulAction?.resultSummary, dispatched.result.reason);
   } finally {

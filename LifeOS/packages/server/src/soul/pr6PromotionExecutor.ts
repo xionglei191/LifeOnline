@@ -1,7 +1,7 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
-import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getEventKindForReintegrationSignal } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
 import type { SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
@@ -24,13 +24,14 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
   if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
     const eventKind = getEventKindForReintegrationSignal(record.signalKind);
+    const title = getEventTitleForReintegrationSignal(record.signalKind);
     const node = upsertEventNode({
       sourceReintegrationId: record.id,
       sourceNoteId: record.sourceNoteId,
       sourceSoulActionId: record.soulActionId,
       promotionSoulActionId: action.id,
       eventKind,
-      title: `${eventKind}:${record.id}`,
+      title,
       summary: record.summary,
       threshold: 'high',
       status: 'active',
