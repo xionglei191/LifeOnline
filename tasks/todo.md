@@ -548,7 +548,14 @@
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一条 worker-task contract 主线推进，可在 server/shared 新增 worker task 枚举时，同步补一条跨层回归，确认 web helper 与用户可见文案会在新值落地时第一时间被测试阻断。
+  - 若继续沿 worker-task feedback retention 主线推进，可直接提交当前 dispatch feedback 连续 websocket retention 断言。
+  - 若还要继续补一轮，可检查 `SettingsView` 里 group quick action 的成功提示是否也缺少跨连续 websocket 刷新保留断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把 grouped dispatch worker-task contract 补到 `taskType + worker + status` 三者组合过滤：在同一 `sourceNoteId` 下连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 后，额外校验 `/api/worker-tasks?sourceNoteId=...&taskType=...&worker=lifeos&status=...` 仍能稳定命中各自 task，且返回 filters 与 dispatch response / websocket 中的 worker、status 保持一致。
+  - 这次继续压实 grouped settings 依赖的 worker-task filtered refresh 事实源：不仅 taskType/status 对得上，连 taskType/worker/status 三者组合过滤在同组连续 dispatch 后也不会把两个 task 串在一起。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 再补一条 websocket refresh retention 回归，锁定 detail overlay 在 retry/cancel 成功后即使收到同任务的 `worker-task-updated` 事件，也会继续保留刚显示出的本地化动作反馈，不会被紧随其后的刷新抹掉。
   - 这次补的是上一轮动作级回归的后半段真实风险：如果 websocket 刷新会立刻清空动作消息，那么前一轮把 action-aware 文案收紧到 UI 的价值仍会被抵消。
