@@ -319,6 +319,18 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 server filter convergence contract 补强。
   - 若还要继续补一轮，可评估是否值得把 websocket 推送后的 follow-up filter 收敛也补成同类 server contract 测试。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/PromotionProjectionPanel.vue` 将 projection 列表里的 `sourceReintegrationId` 裸值收紧为显式 `Reintegration {{ id }}` 标签，避免 promotion projection 继续把 reintegration source 当成无语义内部 ID 直接泄漏到用户可见层。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步增加 projection 文案断言，并把 classify-inbox 用例从脆弱的首个 `.btn-ai` 选择器改为按真实按钮文案定位，修复因页面新增其他 AI 按钮导致的现有测试断点。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，57 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿当前高价值主线推进，优先转回新的 server/web/shared contract gap 或事实源一致性问题，不再继续做 grouped governance / SettingsView websocket/filter/retention 的同类对称补强。
+  - 可优先检查 promotion dispatch 主路径上是否还有 `sourceReintegrationId` / `sourceNoteId` 语义混用未收口到 shared/server contract。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 websocket + follow-up filter convergence contract test，锁定同组 action 在 dispatch 后收到 `soul-action-updated` 事件时，其 `executionStatus` 与随后 `approved + not_dispatched` / `approved + current executionStatus` 两个过滤列表的成员收敛保持一致。
   - 这次继续停留在 server contract 事实源，不扩 UI，不改 runtime 行为，直接补 settings grouped governance 最依赖的“事件驱动刷新后过滤结果仍可信”回归保护。
 - 本轮验证再补充：

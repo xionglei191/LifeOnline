@@ -35,7 +35,7 @@
             <div class="reintegration-item-title-row">
               <strong>{{ eventNode.title }}</strong>
               <span class="worker-pill">{{ eventNode.eventKind }}</span>
-              <span class="worker-pill">{{ eventNode.sourceReintegrationId }}</span>
+              <span class="worker-pill">Reintegration {{ eventNode.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-summary-text">{{ eventNode.summary }}</div>
             <div class="reintegration-meta-grid">
@@ -54,7 +54,7 @@
             <div class="reintegration-item-title-row">
               <strong>{{ continuity.summary }}</strong>
               <span class="worker-pill">{{ continuity.continuityKind }}</span>
-              <span class="worker-pill">{{ continuity.sourceReintegrationId }}</span>
+              <span class="worker-pill">Reintegration {{ continuity.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-meta-grid">
               <span>Target: {{ continuity.target }}</span>

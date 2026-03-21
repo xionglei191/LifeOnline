@@ -2701,7 +2701,7 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    const classifyButton = wrapper.findAll('button').find((button) => button.text() === '整理 Inbox');
+    const classifyButton = wrapper.findAll('button').find((button) => button.text().includes('手动整理 Inbox'));
     expect(classifyButton).toBeTruthy();
     await classifyButton!.trigger('click');
     await flushPromises();
