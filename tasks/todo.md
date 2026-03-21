@@ -329,3 +329,14 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
   - 若还要继续补一轮，可评估 approve / dispatch / accept 三阶段 websocket filter convergence 是否值得抽成共享断言 helper，但优先级低于继续寻找新的 contract 缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:802` 新增 dispatch response worker-task convergence contract test，改用真实会走 worker host 的 `update_persona_snapshot` soul action，锁定 dispatch 返回的 `result.workerTaskId` 会与随后 `worker-task-updated` websocket 事件以及 `/api/worker-tasks?sourceNoteId=...` follow-up 列表中的同一 task id / sourceNoteId / taskType 保持一致。
+  - 这次补的是 grouped governance 在 dispatch 后除 `soul-action-updated` 外另一条关键事实源：worker task 视图刷新链；同时避免把瞬时 status 绑定死，只验证真正稳定的 contract 字段。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task convergence contract 补强。
+  - 若还要继续补一轮，可检查 web 侧是否已有对 worker task websocket 刷新语义的回归保护；若没有，再决定是补 view 级测试还是继续找 server contract 缺口。

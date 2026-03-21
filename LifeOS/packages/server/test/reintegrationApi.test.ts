@@ -16,6 +16,7 @@ import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer } from '../src/index.js';
 import { initDatabase } from '../src/db/client.js';
 import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
+import { createOrReuseSoulAction } from '../src/soul/soulActions.js';
 
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
@@ -789,6 +790,85 @@ test('reintegration accept emits soul-action-updated websocket events for planne
       [record!.id, record!.id],
     );
     assert.ok(wsEvents.every((event) => event.data.governanceStatus === 'pending_review'));
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('dispatch response worker task stays aligned with websocket and follow-up worker task list for grouped settings refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-dispatch-task-ws-followup-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    const action = createOrReuseSoulAction({
+      sourceNoteId: '2025-02-01.md',
+      actionKind: 'update_persona_snapshot',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      now: '2026-03-22T01:00:00.000Z',
+      governanceReason: 'approved for dispatch task websocket follow-up test',
+    });
+
+    const taskEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === action.sourceNoteId,
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.equal(dispatched.soulAction?.id, action.id);
+    assert.equal(dispatched.soulAction?.sourceNoteId, action.sourceNoteId);
+    assert.ok(dispatched.result.workerTaskId);
+
+    const taskEvent = await taskEventPromise;
+    assert.equal(taskEvent.type, 'worker-task-updated');
+    assert.equal(taskEvent.data.id, dispatched.result.workerTaskId);
+    assert.equal(taskEvent.data.sourceNoteId, action.sourceNoteId);
+    assert.equal(taskEvent.data.taskType, 'update_persona_snapshot');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(taskEvent.data.status));
+
+    const workerTasksAfterDispatch = await api<{ tasks: Array<WsEvent['data']>; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}`,
+    );
+    const refreshedTask = workerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
+
+    assert.ok(refreshedTask);
+    assert.equal(workerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
+    assert.equal(refreshedTask?.id, taskEvent.data.id);
+    assert.equal(refreshedTask?.sourceNoteId, taskEvent.data.sourceNoteId);
+    assert.equal(refreshedTask?.taskType, taskEvent.data.taskType);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(refreshedTask!.status));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
       socket.terminate();
