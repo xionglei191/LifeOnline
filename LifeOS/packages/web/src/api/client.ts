@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, CreateWorkerTaskResponse, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -108,10 +108,6 @@ export interface ExtractTasksResult {
   count: number;
 }
 
-export interface WorkerTaskListResponse {
-  tasks: WorkerTask[];
-}
-
 export async function fetchAiPrompts(): Promise<PromptRecord[]> {
   const res = await fetch(`${API_BASE}/ai/prompts`);
   const data = await res.json().catch(() => ({}));
@@ -185,11 +181,11 @@ export async function createWorkerTask(request: CreateWorkerTaskRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<CreateWorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to create worker task');
   }
-  return data.task;
+  return data.task as WorkerTask;
 }
 
 export async function fetchWorkerTasks(
@@ -210,7 +206,7 @@ export async function fetchWorkerTasks(
     params.set('worker', options.worker);
   }
   const res = await fetch(`${API_BASE}/worker-tasks?${params}`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<WorkerTaskListResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch worker tasks');
   }
@@ -356,44 +352,44 @@ export async function discardSoulAction(id: string, payload: ReintegrationReview
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch worker task');
   }
-  return data.task;
+  return data.task as WorkerTask;
 }
 
 export async function retryWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/retry`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to retry worker task');
   }
-  return data.task;
+  return data.task as WorkerTask;
 }
 
 export async function cancelWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/cancel`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to cancel worker task');
   }
-  return data.task;
+  return data.task as WorkerTask;
 }
 
 export async function clearFinishedWorkerTasks(): Promise<number> {
   const res = await fetch(`${API_BASE}/worker-tasks/finished`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<ClearFinishedWorkerTasksResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to clear worker tasks');
   }
-  return data.deleted;
+  return data.deleted || 0;
 }
 
 export async function classifyInbox(): Promise<WorkerTask> {

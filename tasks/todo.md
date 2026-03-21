@@ -1,3 +1,44 @@
+# worker task shared response contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 worker task 主路径的 response wrapper，确认 list/get/retry/cancel/clear-finished 是否仍停留在 shared 外的 server-local / web-local shape。
+- [x] 把 worker task response wrappers 提升到 `packages/shared`，并让 web client / server handlers 直接复用。
+- [x] 补最小 web + server 回归，锁定 worker task 主路径已经切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `WorkerTaskListResponse`
+    - `WorkerTaskResponse`
+    - `ClearFinishedWorkerTasksResponse`
+  - `LifeOS/packages/web/src/api/client.ts` 删除本地 `WorkerTaskListResponse`，并让 `createWorkerTask()` / `fetchWorkerTasks()` / `fetchWorkerTask()` / `retryWorkerTask()` / `cancelWorkerTask()` / `clearFinishedWorkerTasks()` 直接消费 shared worker task response contract。
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `createWorkerTaskHandler()` 显式接回 shared `CreateWorkerTaskResponse`
+    - `listWorkerTasksHandler()` 显式接回 shared `WorkerTaskListResponse`
+    - `getWorkerTaskHandler()` / `retryWorkerTaskHandler()` / `cancelWorkerTaskHandler()` 显式接回 shared `WorkerTaskResponse`
+    - `clearFinishedWorkerTasksHandler()` 显式接回 shared `ClearFinishedWorkerTasksResponse`
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 worker task shared contract 回归。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `worker task APIs respond with shared worker task contracts`。
+- 这次修的不是低边际测试平移，而是 worker task 主路径仍然保留的 response wrapper duplication：shared 只覆盖了 create，其他稳定返回 shape 仍靠 web/server 各自内联约定。
+
+## 本轮选择依据
+- 用户要求优先继续处理新的高价值 `server/web/shared contract gap`。
+- dashboard/timeline/calendar 收口后，worker task 主路径仍直接服务主流程，且 web 中还保留本地 `WorkerTaskListResponse`，server handlers 也仍在内联 `{ task }` / `{ tasks }` / `{ success, deleted }` wrapper。
+- 这条线可以继续减少 worker task 主路径 response contract 的重复源和未来变更时的漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 126 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "worker task APIs respond with shared worker task contracts|dashboard, timeline, and calendar APIs respond with shared view contracts" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- worker task 主路径收口后，下一步可继续检查 AI prompt / provider / reintegration 等 response wrapper 是否仍有 shared 外的稳定 shape。
+
+
 # dashboard/timeline/calendar shared view contract 闭环
 
 ## 计划

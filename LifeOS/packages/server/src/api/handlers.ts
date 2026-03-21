@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -674,9 +674,12 @@ export async function listContinuityRecordsHandler(_req: Request, res: Response)
 }
 
 // POST /api/worker-tasks
-export async function createWorkerTaskHandler(req: Request, res: Response): Promise<void> {
+export async function createWorkerTaskHandler(
+  req: Request<Record<string, never>, CreateWorkerTaskResponse, CreateWorkerTaskRequest>,
+  res: Response<CreateWorkerTaskResponse>,
+): Promise<void> {
   try {
-    const body = req.body as CreateWorkerTaskRequest;
+    const body = req.body;
     if (!body?.taskType) {
       res.status(400).json({ error: 'taskType is required' });
       return;
@@ -694,7 +697,8 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
     broadcastUpdate({ type: 'worker-task-updated', data: task });
     startWorkerTaskExecution(task.id);
 
-    res.status(202).json({ task });
+    const response: CreateWorkerTaskResponse = { task };
+    res.status(202).json(response);
   } catch (error) {
     if (isTaskInputValidationError(error)) {
       res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
@@ -706,7 +710,10 @@ export async function createWorkerTaskHandler(req: Request, res: Response): Prom
 }
 
 // GET /api/worker-tasks
-export async function listWorkerTasksHandler(req: Request, res: Response): Promise<void> {
+export async function listWorkerTasksHandler(
+  req: Request<Record<string, never>, WorkerTaskListResponse, Record<string, never>, WorkerTaskListFilters & { limit?: string }>,
+  res: Response<WorkerTaskListResponse>,
+): Promise<void> {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
@@ -720,10 +727,10 @@ export async function listWorkerTasksHandler(req: Request, res: Response): Promi
       worker: parseWorkerName(req.query.worker),
     };
 
-    res.json({
+    const response: WorkerTaskListResponse = {
       tasks: listWorkerTasks(limit, filters),
-      filters,
-    });
+    };
+    res.json(response);
   } catch (error) {
     console.error('List worker tasks error:', error);
     res.status(500).json({ error: String(error) });
@@ -731,14 +738,15 @@ export async function listWorkerTasksHandler(req: Request, res: Response): Promi
 }
 
 // GET /api/worker-tasks/:id
-export async function getWorkerTaskHandler(req: Request, res: Response): Promise<void> {
+export async function getWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
   try {
     const task = getWorkerTask(req.params.id);
     if (!task) {
       res.status(404).json({ error: 'Worker task not found' });
       return;
     }
-    res.json({ task });
+    const response: WorkerTaskResponse = { task };
+    res.json(response);
   } catch (error) {
     console.error('Get worker task error:', error);
     res.status(500).json({ error: String(error) });
@@ -746,10 +754,11 @@ export async function getWorkerTaskHandler(req: Request, res: Response): Promise
 }
 
 // POST /api/worker-tasks/:id/retry
-export async function retryWorkerTaskHandler(req: Request, res: Response): Promise<void> {
+export async function retryWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
   try {
     const task = retryWorkerTask(req.params.id);
-    res.status(202).json({ task });
+    const response: WorkerTaskResponse = { task };
+    res.status(202).json(response);
   } catch (error: any) {
     const message = error?.message || String(error);
     if (message === 'Worker task not found') {
@@ -761,10 +770,11 @@ export async function retryWorkerTaskHandler(req: Request, res: Response): Promi
 }
 
 // POST /api/worker-tasks/:id/cancel
-export async function cancelWorkerTaskHandler(req: Request, res: Response): Promise<void> {
+export async function cancelWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
   try {
     const task = cancelWorkerTask(req.params.id);
-    res.json({ task });
+    const response: WorkerTaskResponse = { task };
+    res.json(response);
   } catch (error: any) {
     const message = error?.message || String(error);
     if (message === 'Worker task not found') {
@@ -776,10 +786,14 @@ export async function cancelWorkerTaskHandler(req: Request, res: Response): Prom
 }
 
 // DELETE /api/worker-tasks/finished
-export async function clearFinishedWorkerTasksHandler(_req: Request, res: Response): Promise<void> {
+export async function clearFinishedWorkerTasksHandler(
+  _req: Request<Record<string, never>, ClearFinishedWorkerTasksResponse>,
+  res: Response<ClearFinishedWorkerTasksResponse>,
+): Promise<void> {
   try {
     const deleted = clearFinishedWorkerTasks();
-    res.json({ success: true, deleted });
+    const response: ClearFinishedWorkerTasksResponse = { success: true, deleted };
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }

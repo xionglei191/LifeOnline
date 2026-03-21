@@ -481,6 +481,19 @@ export interface CreateWorkerTaskRequest {
   sourceNoteId?: string;
 }
 
+export interface WorkerTaskListResponse {
+  tasks: WorkerTask[];
+}
+
+export interface WorkerTaskResponse {
+  task: WorkerTask;
+}
+
+export interface ClearFinishedWorkerTasksResponse {
+  success: true;
+  deleted: number;
+}
+
 export interface CreateWorkerTaskResponse {
   task: WorkerTask;
 }

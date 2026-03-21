@@ -8,6 +8,7 @@ import type { AISuggestion, ListAiSuggestionsResponse, PromptRecord } from '@lif
 import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
+import { createWorkerTask as seedWorkerTask, cancelWorkerTask as seedCancelWorkerTask } from '../src/workers/workerTasks.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
 const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -109,6 +110,73 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
     socket.once('error', onError);
   });
 }
+
+test('worker task APIs respond with shared worker task contracts', async () => {
+  const env = await createTestEnv('lifeos-worker-task-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const created = await api<import('../../shared/src/types.js').CreateWorkerTaskResponse>(baseUrl, '/api/worker-tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        taskType: 'openclaw_task',
+        input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      } satisfies import('../../shared/src/types.js').CreateWorkerTaskRequest),
+    });
+    assert.equal(created.task.taskType, 'openclaw_task');
+
+    const listed = await api<import('../../shared/src/types.js').WorkerTaskListResponse>(baseUrl, '/api/worker-tasks?limit=10&taskType=openclaw_task');
+    assert.ok(listed.tasks.some((task) => task.id === created.task.id));
+
+    const fetched = await api<import('../../shared/src/types.js').WorkerTaskResponse>(baseUrl, `/api/worker-tasks/${created.task.id}`);
+    assert.equal(fetched.task.id, created.task.id);
+
+    const cancellableTask = seedWorkerTask({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Seed cancellable task', outputDimension: 'learning' },
+    });
+    const cancelled = await api<import('../../shared/src/types.js').WorkerTaskResponse>(baseUrl, `/api/worker-tasks/${cancellableTask.id}/cancel`, {
+      method: 'POST',
+    });
+    assert.equal(cancelled.task.id, cancellableTask.id);
+    assert.equal(cancelled.task.status, 'cancelled');
+
+    const retrySeed = seedWorkerTask({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Seed retry task', outputDimension: 'learning' },
+    });
+    seedCancelWorkerTask(retrySeed.id);
+
+    const retried = await api<import('../../shared/src/types.js').WorkerTaskResponse>(baseUrl, `/api/worker-tasks/${retrySeed.id}/retry`, {
+      method: 'POST',
+    });
+    assert.equal(retried.task.id, retrySeed.id);
+
+    const cleared = await api<import('../../shared/src/types.js').ClearFinishedWorkerTasksResponse>(baseUrl, '/api/worker-tasks/finished', {
+      method: 'DELETE',
+    });
+    assert.equal(cleared.success, true);
+    assert.equal(typeof cleared.deleted, 'number');
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
 
 test('dashboard, timeline, and calendar APIs respond with shared view contracts', async () => {
   const env = await createTestEnv('lifeos-view-contracts-');

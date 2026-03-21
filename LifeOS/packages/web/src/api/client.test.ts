@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,82 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('fetches typed worker-task contracts from shared response shapes', async () => {
+    const task: WorkerTask = {
+      id: 'worker-task-1',
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      status: 'pending',
+      worker: 'openclaw',
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      startedAt: null,
+      finishedAt: null,
+      result: null,
+      error: null,
+      sourceNoteId: null,
+      scheduleId: null,
+      outputNotePaths: [],
+      outputNotes: [],
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ task }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tasks: [task] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ task }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ task: { ...task, status: 'running' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ task: { ...task, status: 'cancelled' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, deleted: 2 }) }));
+
+    await expect(createWorkerTask({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+    })).resolves.toEqual(task);
+    await expect(fetchWorkerTasks(10, { taskType: 'openclaw_task' })).resolves.toEqual([task]);
+    await expect(fetchWorkerTask('worker-task-1')).resolves.toEqual(task);
+    await expect(retryWorkerTask('worker-task-1')).resolves.toEqual({ ...task, status: 'running' });
+    await expect(cancelWorkerTask('worker-task-1')).resolves.toEqual({ ...task, status: 'cancelled' });
+    await expect(clearFinishedWorkerTasks()).resolves.toEqual(2);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/worker-tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskType: 'openclaw_task',
+        input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/worker-tasks?limit=10&taskType=openclaw_task');
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/worker-tasks/worker-task-1');
+    expect(fetch).toHaveBeenNthCalledWith(4, '/api/worker-tasks/worker-task-1/retry', {
+      method: 'POST',
+    });
+    expect(fetch).toHaveBeenNthCalledWith(5, '/api/worker-tasks/worker-task-1/cancel', {
+      method: 'POST',
+    });
+    expect(fetch).toHaveBeenNthCalledWith(6, '/api/worker-tasks/finished', {
+      method: 'DELETE',
+    });
+  });
+
+  it('surfaces API errors for worker-task contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'create failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'list failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'fetch failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'retry failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'cancel failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'clear failed' }) }));
+
+    await expect(createWorkerTask({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+    })).rejects.toThrow('create failed');
+    await expect(fetchWorkerTasks()).rejects.toThrow('list failed');
+    await expect(fetchWorkerTask('worker-task-1')).rejects.toThrow('fetch failed');
+    await expect(retryWorkerTask('worker-task-1')).rejects.toThrow('retry failed');
+    await expect(cancelWorkerTask('worker-task-1')).rejects.toThrow('cancel failed');
+    await expect(clearFinishedWorkerTasks()).rejects.toThrow('clear failed');
   });
 
   it('fetches typed config and index contracts from shared response shapes', async () => {
