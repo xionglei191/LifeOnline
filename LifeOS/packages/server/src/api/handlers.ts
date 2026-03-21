@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -615,7 +615,10 @@ export async function planPromotionsHandler(req: Request, res: Response): Promis
 
 export async function listEventNodesHandler(_req: Request, res: Response): Promise<void> {
   try {
-    res.json({ eventNodes: listEventNodes() });
+    const response: ListEventNodesResponse = {
+      eventNodes: listEventNodes(),
+    };
+    res.json(response);
   } catch (error) {
     console.error('List event nodes error:', error);
     res.status(500).json({ error: String(error) });
@@ -624,7 +627,10 @@ export async function listEventNodesHandler(_req: Request, res: Response): Promi
 
 export async function listContinuityRecordsHandler(_req: Request, res: Response): Promise<void> {
   try {
-    res.json({ continuityRecords: listContinuityRecords() });
+    const response: ListContinuityRecordsResponse = {
+      continuityRecords: listContinuityRecords(),
+    };
+    res.json(response);
   } catch (error) {
     console.error('List continuity records error:', error);
     res.status(500).json({ error: String(error) });

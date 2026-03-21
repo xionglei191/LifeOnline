@@ -114,6 +114,53 @@ export interface ListAiSuggestionsResponse {
   suggestions: AISuggestion[];
 }
 
+export type EventKind = 'weekly_reflection' | 'persona_shift' | 'milestone_report';
+export type ContinuityRecordKind = 'persona_direction' | 'daily_rhythm' | 'weekly_theme';
+
+export interface EventNode {
+  id: string;
+  sourceReintegrationId: string;
+  sourceNoteId: string | null;
+  sourceSoulActionId: string | null;
+  promotionSoulActionId: string;
+  eventKind: EventKind;
+  title: string;
+  summary: string;
+  threshold: 'high';
+  status: 'active';
+  evidence: Record<string, unknown>;
+  explanation: Record<string, unknown>;
+  occurredAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListEventNodesResponse {
+  eventNodes: EventNode[];
+}
+
+export interface ContinuityRecord {
+  id: string;
+  sourceReintegrationId: string;
+  sourceNoteId: string | null;
+  sourceSoulActionId: string | null;
+  promotionSoulActionId: string;
+  continuityKind: ContinuityRecordKind;
+  target: ContinuityTarget;
+  strength: 'medium';
+  summary: string;
+  continuity: Record<string, unknown>;
+  evidence: Record<string, unknown>;
+  explanation: Record<string, unknown>;
+  recordedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListContinuityRecordsResponse {
+  continuityRecords: ContinuityRecord[];
+}
+
 export interface WorkerTaskListFilters {
   sourceNoteId?: string;
   status?: WorkerTaskStatus;
