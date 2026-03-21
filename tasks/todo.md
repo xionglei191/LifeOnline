@@ -307,3 +307,25 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 accept websocket follow-up filter convergence contract 补强。
   - 若还要继续补一轮，可评估 approve 阶段 websocket 广播后 follow-up filtered list 是否也值得补成同类 contract。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:1584` 新增 approve websocket + follow-up filter convergence contract test，锁定单条 action 在 approve 后收到 `soul-action-updated` 事件时，其 `governanceStatus=approved` / `executionStatus=not_dispatched` 会与随后 `pending_review + not_dispatched`、`approved + not_dispatched` 两个过滤列表及 full list 成员收敛保持一致。
+  - 这次继续停留在 server contract 事实源，不扩 UI、不改 runtime 行为，直接把 accept / approve / dispatch 三段 websocket 后续过滤收敛链补齐。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，17/17。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 approve websocket follow-up filter convergence contract 补强。
+  - 若还要继续补一轮，可评估是否值得把 approve / dispatch 两阶段 websocket 收敛再压成更通用的 helper 断言，但优先级低于继续找新的事实源缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:1821` 新增 sequential approve websocket + grouped follow-up filter convergence contract test，锁定同组两条 action 依次 approve 时，每次 `soul-action-updated` 事件都会与后续 `pending_review + not_dispatched`、`approved + not_dispatched` 过滤列表以及 full list 成员变化保持一致；首条批准后是 1 pending + 1 approved，第二条批准后收敛为 0 pending + 2 approved。
+  - 这次仍然只补 server contract 事实源，不扩 UI、不改 runtime 行为，进一步把 approve 阶段从“单条事件正确”补强到“组内顺序推进时的刷新收敛也正确”。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，18/18。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
+  - 若还要继续补一轮，可评估 approve / dispatch / accept 三阶段 websocket filter convergence 是否值得抽成共享断言 helper，但优先级低于继续寻找新的 contract 缺口。

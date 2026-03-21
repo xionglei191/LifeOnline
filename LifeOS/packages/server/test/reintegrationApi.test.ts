@@ -1581,6 +1581,253 @@ test('soul-action filters converge when governance and execution subsets are que
   }
 });
 
+test('approve websocket updates stay aligned with follow-up filtered lists for grouped settings refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-approve-ws-filter-followup-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-approve-ws-filter-followup',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api approve websocket filter follow-up summary',
+      evidence: { source: 'api-approve-ws-filter-followup-test' },
+      now: '2026-03-22T00:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-approve-ws-filter-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for approve websocket filter follow-up test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    const firstAction = accepted.soulActions[0]!;
+    const secondAction = accepted.soulActions[1]!;
+    const wsEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
+    );
+
+    const firstApprove = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for websocket filter follow-up test' }),
+      },
+    );
+
+    const wsEvent = await wsEventPromise;
+    assert.equal(wsEvent.type, 'soul-action-updated');
+    assert.equal(wsEvent.data.id, firstAction.id);
+    assert.equal(wsEvent.data.sourceNoteId, record!.id);
+    assert.equal(wsEvent.data.governanceStatus, firstApprove.soulAction.governanceStatus);
+    assert.equal(wsEvent.data.governanceStatus, 'approved');
+    assert.equal(wsEvent.data.executionStatus, 'not_dispatched');
+
+    const fullAfterApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const pendingAfterApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    const approvedReadyAfterApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+
+    assert.equal(fullAfterApprove.soulActions.length, 2);
+    assert.equal(pendingAfterApprove.soulActions.length, 1);
+    assert.equal(pendingAfterApprove.soulActions[0]?.id, secondAction.id);
+    assert.equal(approvedReadyAfterApprove.soulActions.length, 1);
+    assert.equal(approvedReadyAfterApprove.soulActions[0]?.id, firstAction.id);
+    assert.equal(approvedReadyAfterApprove.soulActions[0]?.governanceStatus, wsEvent.data.governanceStatus);
+    assert.equal(approvedReadyAfterApprove.soulActions[0]?.executionStatus, wsEvent.data.executionStatus);
+
+    const filteredIds = [
+      ...pendingAfterApprove.soulActions.map((action) => action.id),
+      ...approvedReadyAfterApprove.soulActions.map((action) => action.id),
+    ].sort();
+    const fullIds = fullAfterApprove.soulActions.map((action) => action.id).sort();
+    assert.deepEqual(filteredIds, fullIds);
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('sequential approve websocket updates stay aligned with grouped follow-up filtered lists for settings refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-approve-ws-sequential-filter-followup-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-approve-ws-sequential-filter-followup',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api sequential approve websocket filter follow-up summary',
+      evidence: { source: 'api-approve-ws-sequential-filter-followup-test' },
+      now: '2026-03-22T00:30:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-approve-ws-sequential-filter-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for sequential approve websocket filter follow-up test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    const firstAction = accepted.soulActions[0]!;
+    const secondAction = accepted.soulActions[1]!;
+
+    const firstWsEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
+    );
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve first for sequential websocket filter follow-up test' }),
+      },
+    );
+    const firstWsEvent = await firstWsEventPromise;
+    assert.equal(firstWsEvent.data.governanceStatus, 'approved');
+    assert.equal(firstWsEvent.data.executionStatus, 'not_dispatched');
+
+    const pendingAfterFirstApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    const approvedAfterFirstApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+
+    assert.equal(pendingAfterFirstApprove.soulActions.length, 1);
+    assert.equal(pendingAfterFirstApprove.soulActions[0]?.id, secondAction.id);
+    assert.equal(approvedAfterFirstApprove.soulActions.length, 1);
+    assert.equal(approvedAfterFirstApprove.soulActions[0]?.id, firstAction.id);
+
+    const secondWsEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === secondAction.id,
+    );
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve second for sequential websocket filter follow-up test' }),
+      },
+    );
+    const secondWsEvent = await secondWsEventPromise;
+    assert.equal(secondWsEvent.data.governanceStatus, 'approved');
+    assert.equal(secondWsEvent.data.executionStatus, 'not_dispatched');
+
+    const fullAfterSecondApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const pendingAfterSecondApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    const approvedAfterSecondApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+
+    assert.equal(pendingAfterSecondApprove.soulActions.length, 0);
+    assert.equal(approvedAfterSecondApprove.soulActions.length, 2);
+    assert.deepEqual(
+      approvedAfterSecondApprove.soulActions.map((action) => action.id).sort(),
+      [firstWsEvent.data.id, secondWsEvent.data.id].sort(),
+    );
+    assert.deepEqual(
+      approvedAfterSecondApprove.soulActions.map((action) => action.id).sort(),
+      fullAfterSecondApprove.soulActions.map((action) => action.id).sort(),
+    );
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dispatch websocket updates stay aligned with follow-up filtered lists for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-filter-followup-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
@@ -1705,7 +1952,6 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     await env.cleanup();
   }
 });
-
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
