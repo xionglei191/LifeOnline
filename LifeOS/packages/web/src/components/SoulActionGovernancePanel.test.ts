@@ -195,14 +195,18 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.emitted('dispatch-group')).toEqual([[readyGroup]]);
   });
 
-  it('emits the selected action payload for approve-action and dispatch-action controls', async () => {
+  it('emits the selected action payload for approve, defer, discard, and dispatch controls', async () => {
     const wrapper = mountPanel('pending_only');
 
     const actionRows = wrapper.findAll('.soul-action-item');
     await actionRows[0]!.find('.btn-worker').trigger('click');
+    await actionRows[0]!.find('.btn-secondary').trigger('click');
+    await actionRows[0]!.find('.btn-danger-sm').trigger('click');
     await actionRows[1]!.find('.btn-cancel').trigger('click');
 
     expect(wrapper.emitted('approve-action')).toEqual([[mixedGroup.actions[0]]]);
+    expect(wrapper.emitted('defer-action')).toEqual([[mixedGroup.actions[0]]]);
+    expect(wrapper.emitted('discard-action')).toEqual([[mixedGroup.actions[0]]]);
     expect(wrapper.emitted('dispatch-action')).toEqual([[mixedGroup.actions[1]]]);
   });
 

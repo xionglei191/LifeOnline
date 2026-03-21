@@ -136,6 +136,20 @@
                 {{ actionId === action.id ? '处理中...' : '批准' }}
               </button>
               <button
+                class="btn-secondary"
+                :disabled="actionId === action.id || action.governanceStatus !== 'pending_review'"
+                @click="emit('defer-action', action)"
+              >
+                {{ actionId === action.id ? '处理中...' : '延后' }}
+              </button>
+              <button
+                class="btn-danger-sm"
+                :disabled="actionId === action.id || action.governanceStatus !== 'pending_review'"
+                @click="emit('discard-action', action)"
+              >
+                {{ actionId === action.id ? '处理中...' : '丢弃' }}
+              </button>
+              <button
                 class="btn-cancel"
                 :disabled="actionId === action.id || action.governanceStatus !== 'approved' || action.executionStatus !== 'not_dispatched'"
                 @click="emit('dispatch-action', action)"
@@ -195,6 +209,8 @@ const emit = defineEmits<{
   (event: 'dispatch-group', group: SoulActionGroup): void;
   (event: 'toggle-collapsed', sourceNoteId: string): void;
   (event: 'approve-action', action: SoulAction): void;
+  (event: 'defer-action', action: SoulAction): void;
+  (event: 'discard-action', action: SoulAction): void;
   (event: 'dispatch-action', action: SoulAction): void;
 }>();
 </script>

@@ -15,6 +15,8 @@ const apiMocks = vi.hoisted(() => ({
   fetchAiPrompts: vi.fn(),
   fetchAiProviderSettings: vi.fn(),
   approveSoulAction: vi.fn(),
+  deferSoulAction: vi.fn(),
+  discardSoulAction: vi.fn(),
   dispatchSoulAction: vi.fn(),
 }));
 
@@ -49,6 +51,8 @@ vi.mock('../api/client', () => ({
   fetchEventNodes: apiMocks.fetchEventNodes,
   fetchContinuityRecords: apiMocks.fetchContinuityRecords,
   approveSoulAction: apiMocks.approveSoulAction,
+  deferSoulAction: apiMocks.deferSoulAction,
+  discardSoulAction: apiMocks.discardSoulAction,
   dispatchSoulAction: apiMocks.dispatchSoulAction,
 }));
 
@@ -2255,6 +2259,98 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('standalone-note-action', {
       reason: 'Approved from settings reintegration governance panel for source note note-standalone',
     });
+
+    wrapper.unmount();
+  });
+
+  it('shows success feedback and refreshes soul actions after defer-action emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.deferSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('defer-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.deferSoulAction).toHaveBeenCalledWith('mixed-1', {
+      reason: 'Deferred from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
+    });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(panel.props('message')).toBe('Soul action 已延后');
+    expect(panel.props('messageType')).toBe('success');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows success feedback and refreshes soul actions after discard-action emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.discardSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('discard-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.discardSoulAction).toHaveBeenCalledWith('mixed-1', {
+      reason: 'Discarded from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
+    });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(panel.props('message')).toBe('Soul action 已丢弃');
+    expect(panel.props('messageType')).toBe('success');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing soul actions when defer-action fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.deferSoulAction.mockRejectedValueOnce(new Error('defer failed'));
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('defer-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(panel.props('message')).toBe('defer failed');
+    expect(panel.props('messageType')).toBe('error');
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing soul actions when discard-action fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.discardSoulAction.mockRejectedValueOnce(new Error('discard failed'));
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('discard-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(panel.props('message')).toBe('discard failed');
+    expect(panel.props('messageType')).toBe('error');
 
     wrapper.unmount();
   });

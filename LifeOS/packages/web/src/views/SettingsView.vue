@@ -469,6 +469,8 @@
       @dispatch-group="handleDispatchSoulActionGroup"
       @toggle-collapsed="toggleSoulActionGroupCollapsed"
       @approve-action="handleApproveSoulAction"
+      @defer-action="handleDeferSoulAction"
+      @discard-action="handleDiscardSoulAction"
       @dispatch-action="handleDispatchSoulAction"
     />
 
@@ -774,7 +776,7 @@ import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
 import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, fetchEventNodes, fetchContinuityRecords, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodes, fetchContinuityRecords, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -1366,6 +1368,42 @@ async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; acti
     soulActionMessageType.value = 'error';
   } finally {
     soulActionGroupDispatchId.value = null;
+  }
+}
+
+async function handleDeferSoulAction(action: SoulAction) {
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    await deferSoulAction(action.id, {
+      reason: `Deferred from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
+    });
+    soulActionMessage.value = 'Soul action 已延后';
+    soulActionMessageType.value = 'success';
+    await loadSoulActions({ preserveMessage: true });
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '延后 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
+  }
+}
+
+async function handleDiscardSoulAction(action: SoulAction) {
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    await discardSoulAction(action.id, {
+      reason: `Discarded from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
+    });
+    soulActionMessage.value = 'Soul action 已丢弃';
+    soulActionMessageType.value = 'success';
+    await loadSoulActions({ preserveMessage: true });
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '丢弃 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
   }
 }
 
