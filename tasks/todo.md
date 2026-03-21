@@ -217,13 +217,13 @@
 - 当前未完成项再补充：
   - 本轮 web 变更仍未提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一条高价值主线推进，优先检查 `SettingsView`/`SoulActionGovernancePanel` 上仍直接展示 `sourceNoteId` 的位置，是否需要最小范围切到同时展示或优先展示 `sourceReintegrationId`，继续减少 UI 层把 reintegration id 当 note id 的语义泄漏。
-  - 若本轮就收口，也可以直接提交当前 web grouping 收口增量，把 shared/server 新增的 `sourceReintegrationId` 真实接到前端分组逻辑。
+  - 若继续沿同一条高价值主线推进，优先检查 `SettingsView` 父层 message / reason 文案里是否还在直接拼接 `sourceNoteId`，是否需要最小范围切到显式 reintegration source 标签，继续减少用户可见层的语义歧义。
+  - 若本轮就收口，也可以直接提交当前 governance panel 的 source 语义投射增量，把 helper 层已收口的 `sourceReintegrationId` 真正显示到 UI。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/utils/soulActionGroups.ts` 新增统一的 promotion grouping key 逻辑：优先使用 `sourceReintegrationId`，没有时再回退到 `sourceNoteId`，使 PR6 promotion actions 在 web grouped governance 侧不再继续依赖 `sourceNoteId` 的过载语义来完成分组与 reintegration record 对齐。
-  - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 用更贴近真实 contract 的 fixture 重写分组测试：promotion actions 现在使用不同 `sourceNoteId` 但相同 `sourceReintegrationId` 仍应归为同一组；同时新增非-promotion action 的 fallback 覆盖，锁住原有 worker/action 路径继续按 `sourceNoteId` 分组。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 将组级主标签从裸 `sourceNoteId` 调整为显式 `Reintegration {{ group.sourceNoteId }}`，并在 group meta 中补充 `Source note: {{ group.reintegrationRecord.sourceNoteId }}`，把“分组来源是 reintegration record、原始 note 是另一层事实源”真正投射到用户可见层。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 同步切到更贴近当前 shared/server contract 的 promotion fixture（不同 `sourceNoteId`、相同 `sourceReintegrationId`），并新增 UI 断言锁定 panel 展示 reintegration source label，同时不再误泄漏单条 promotion action 的内部 note-level grouping key。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/soulActionGroups.test.ts` 通过；Vitest 合计 9 files / 109 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/SoulActionGovernancePanel.test.ts` 通过；Vitest 合计 9 files / 110 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
   - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
 - 本轮继续完成的真实实现再补充：

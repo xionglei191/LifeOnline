@@ -66,7 +66,7 @@
             <span class="worker-pill">{{ group.actions.length }} actions</span>
             <span class="worker-pill">pending {{ group.pendingCount }}</span>
             <span class="worker-pill">ready {{ group.dispatchReadyCount }}</span>
-            <span class="worker-pill">{{ group.sourceNoteId }}</span>
+            <span class="worker-pill source-pill">Reintegration {{ group.sourceNoteId }}</span>
           </div>
           <div class="reintegration-head-actions soul-action-group-toolbar">
             <button
@@ -91,6 +91,7 @@
 
         <div class="reintegration-meta-grid soul-action-group-meta">
           <span v-if="group.reintegrationRecord">Reintegration: {{ group.reintegrationRecord.summary }}</span>
+          <span v-if="group.reintegrationRecord?.sourceNoteId">Source note: {{ group.reintegrationRecord.sourceNoteId }}</span>
           <span v-if="group.reintegrationRecord">Signal: {{ group.reintegrationRecord.signalKind }}</span>
           <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
         </div>

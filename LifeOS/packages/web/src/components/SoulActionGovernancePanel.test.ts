@@ -11,7 +11,9 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     actionKind: overrides.actionKind ?? 'promote_event_node',
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
+    status: overrides.status ?? overrides.executionStatus ?? 'not_dispatched',
     sourceNoteId: overrides.sourceNoteId,
+    sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     workerTaskId: overrides.workerTaskId ?? null,
     governanceReason: overrides.governanceReason ?? null,
     resultSummary: overrides.resultSummary ?? null,
@@ -19,6 +21,9 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     createdAt: overrides.createdAt,
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     approvedAt: overrides.approvedAt ?? null,
+    deferredAt: overrides.deferredAt ?? null,
+    discardedAt: overrides.discardedAt ?? null,
+    startedAt: overrides.startedAt ?? null,
     finishedAt: overrides.finishedAt ?? null,
   };
 }
@@ -50,11 +55,11 @@ const reintegrationRecords: ReintegrationRecord[] = [
 ];
 
 const soulActions: SoulAction[] = [
-  createSoulAction({ id: 'ready-1', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
-  createSoulAction({ id: 'ready-2', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
-  createSoulAction({ id: 'mixed-1', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
-  createSoulAction({ id: 'mixed-2', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
-  createSoulAction({ id: 'done-1', sourceNoteId: 'record-done', createdAt: '2026-03-19T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'succeeded' }),
+  createSoulAction({ id: 'ready-1', sourceNoteId: 'note-ready-1', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+  createSoulAction({ id: 'ready-2', sourceNoteId: 'note-ready-2', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
+  createSoulAction({ id: 'mixed-1', sourceNoteId: 'note-mixed-1', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+  createSoulAction({ id: 'mixed-2', sourceNoteId: 'note-mixed-2', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
+  createSoulAction({ id: 'done-1', sourceNoteId: 'note-done-1', sourceReintegrationId: 'record-done', createdAt: '2026-03-19T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'succeeded' }),
 ];
 
 const readyGroup = buildSoulActionGroups(soulActions, reintegrationRecords, 'dispatch_ready_only')[0]!;
@@ -102,6 +107,15 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.text()).toContain('当前分组');
     expect(wrapper.text()).toContain('3 / 3');
     expect(wrapper.findAll('.soul-action-group')).toHaveLength(3);
+  });
+
+  it('renders reintegration source labels and source note metadata for grouped promotion actions', () => {
+    const wrapper = mountPanel('dispatch_ready_only');
+
+    expect(wrapper.text()).toContain('Reintegration record-ready');
+    expect(wrapper.text()).toContain('Source note: note-1');
+    expect(wrapper.text()).not.toContain('note-ready-1');
+    expect(wrapper.text()).not.toContain('note-ready-2');
   });
 
   it('renders only pending groups with synced label and stats in pending_only mode', () => {
