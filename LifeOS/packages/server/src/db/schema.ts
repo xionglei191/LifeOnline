@@ -55,7 +55,7 @@ export const SOUL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   finished_at TEXT,
   error TEXT,
   result_summary TEXT,
-  UNIQUE(source_note_id, action_kind),
+  UNIQUE(source_note_id, action_kind, source_reintegration_id),
   UNIQUE(worker_task_id)`;
 
 export const SOUL_ACTION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_soul_actions_source_note_id ON soul_actions(source_note_id);

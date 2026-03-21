@@ -114,16 +114,36 @@ function ensureSoulActionsTable(database: Database.Database): void {
     'result_summary',
   ];
 
+  const hasSourceReintegrationIdColumn = columns.some((column) => column.name === 'source_reintegration_id');
+  const createTableStatement = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'soul_actions'").get() as { sql?: string } | undefined;
+  const currentCreateTableSql = createTableStatement?.sql ?? '';
   const hasLegacyStatusOnly = columns.some((column) => column.name === 'status')
     && !columns.some((column) => column.name === 'governance_status')
     && !columns.some((column) => column.name === 'execution_status');
-  const needsRebuild = hasLegacyStatusOnly || requiredColumns.some((name) => !columns.some((column) => column.name === name));
+  const needsRebuild = hasLegacyStatusOnly
+    || requiredColumns.some((name) => !columns.some((column) => column.name === name))
+    || !currentCreateTableSql.includes('UNIQUE(source_note_id, action_kind, source_reintegration_id)');
   if (!needsRebuild) {
     database.exec(indexesSql);
     return;
   }
 
   console.log('Migration: rebuilding soul_actions table with latest schema...');
+  const executionStatusSelectSql = hasLegacyStatusOnly
+    ? `CASE
+        WHEN status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled') THEN status
+        ELSE 'not_dispatched'
+      END`
+    : 'execution_status';
+  const governanceStatusSelectSql = hasLegacyStatusOnly
+    ? `'approved'`
+    : 'governance_status';
+  const approvedAtSelectSql = hasLegacyStatusOnly
+    ? 'created_at'
+    : 'approved_at';
+  const sourceReintegrationColumnSql = hasSourceReintegrationIdColumn
+    ? 'source_reintegration_id'
+    : 'NULL';
   database.exec(`
     CREATE TABLE soul_actions_new (
 ${SOUL_ACTION_TABLE_COLUMNS_SQL}
@@ -135,24 +155,37 @@ ${SOUL_ACTION_TABLE_COLUMNS_SQL}
     )
     SELECT
       id,
-      source_note_id,
       CASE
-        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN source_note_id
-        ELSE NULL
+        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN COALESCE(
+          CASE
+            WHEN source_note_id LIKE 'reint:%' THEN NULL
+            ELSE source_note_id
+          END,
+          id
+        )
+        ELSE source_note_id
+      END,
+      CASE
+        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN COALESCE(
+          CASE
+            WHEN source_note_id LIKE 'reint:%' THEN source_note_id
+            ELSE NULL
+          END,
+          ${sourceReintegrationColumnSql},
+          id
+        )
+        ELSE ${sourceReintegrationColumnSql}
       END,
       action_kind,
-      'approved',
-      CASE
-        WHEN status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled') THEN status
-        ELSE 'not_dispatched'
-      END,
-      NULL,
+      ${governanceStatusSelectSql},
+      ${executionStatusSelectSql},
+      governance_reason,
       worker_task_id,
       created_at,
       updated_at,
-      created_at,
-      NULL,
-      NULL,
+      ${approvedAtSelectSql},
+      deferred_at,
+      discarded_at,
       started_at,
       finished_at,
       error,

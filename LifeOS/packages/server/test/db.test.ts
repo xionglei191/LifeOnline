@@ -28,9 +28,8 @@ test('initDatabase creates key tables and columns', async () => {
     assert.deepEqual(columnNames(db, 'notes').includes('inbox_origin'), true);
     assert.deepEqual(columnNames(db, 'task_schedules').includes('consecutive_failures'), true);
     assert.deepEqual(columnNames(db, 'task_schedules').includes('last_error'), true);
-    assert.deepEqual(columnNames(db, 'soul_actions').includes('governance_status'), true);
-    assert.deepEqual(columnNames(db, 'soul_actions').includes('execution_status'), true);
-    assert.deepEqual(columnNames(db, 'soul_actions').includes('governance_reason'), true);
+    const soulActionsSql = (db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'soul_actions'").get() as { sql: string }).sql;
+    assert.match(soulActionsSql, /UNIQUE\(source_note_id, action_kind, source_reintegration_id\)/);
     assert.deepEqual(columnNames(db, 'persona_snapshots').includes('snapshot_json'), true);
     assert.deepEqual(columnNames(db, 'reintegration_records').includes('worker_task_id'), true);
     assert.deepEqual(columnNames(db, 'reintegration_records').includes('signal_kind'), true);
@@ -125,6 +124,83 @@ test('initDatabase migrates legacy task type rows to openclaw_task', async () =>
     for (const taskType of SUPPORTED_WORKER_TASK_TYPES) {
       assert.match(workerSql, new RegExp(`'${taskType}'`));
     }
+  } finally {
+    await env.cleanup();
+  }
+});
+
+test('initDatabase migrates legacy PR6 promotion actions to explicit reintegration source ids', async () => {
+  const env = await createTestEnv('lifeos-db-legacy-pr6-promotion-');
+  try {
+    closeDb();
+    const legacyDb = new Database(env.dbPath);
+    legacyDb.exec(`
+      CREATE TABLE soul_actions (
+        id TEXT PRIMARY KEY,
+        source_note_id TEXT NOT NULL,
+        action_kind TEXT NOT NULL,
+        governance_status TEXT NOT NULL CHECK(governance_status IN ('pending_review', 'approved', 'deferred', 'discarded')),
+        execution_status TEXT NOT NULL CHECK(execution_status IN ('not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled')),
+        governance_reason TEXT,
+        worker_task_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        approved_at TEXT,
+        deferred_at TEXT,
+        discarded_at TEXT,
+        started_at TEXT,
+        finished_at TEXT,
+        error TEXT,
+        result_summary TEXT,
+        UNIQUE(source_note_id, action_kind),
+        UNIQUE(worker_task_id)
+      );
+    `);
+    legacyDb.prepare(`
+      INSERT INTO soul_actions (
+        id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+        created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'soul:promote_event_node:reint:legacy-pr6-record',
+      'reint:legacy-pr6-record',
+      'promote_event_node',
+      'approved',
+      'not_dispatched',
+      'legacy promotion action',
+      null,
+      '2026-03-22T03:00:00.000Z',
+      '2026-03-22T03:00:00.000Z',
+      '2026-03-22T03:00:00.000Z',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    );
+    legacyDb.close();
+
+    initDatabase();
+    const db = getDb();
+    const migrated = db.prepare(`
+      SELECT source_note_id, source_reintegration_id, action_kind, governance_status, execution_status
+      FROM soul_actions
+      WHERE id = ?
+    `).get('soul:promote_event_node:reint:legacy-pr6-record') as {
+      source_note_id: string;
+      source_reintegration_id: string | null;
+      action_kind: string;
+      governance_status: string;
+      execution_status: string;
+    } | undefined;
+
+    assert.ok(migrated);
+    assert.equal(migrated?.source_note_id, 'soul:promote_event_node:reint:legacy-pr6-record');
+    assert.equal(migrated?.source_reintegration_id, 'reint:legacy-pr6-record');
+    assert.equal(migrated?.action_kind, 'promote_event_node');
+    assert.equal(migrated?.governance_status, 'approved');
+    assert.equal(migrated?.execution_status, 'not_dispatched');
   } finally {
     await env.cleanup();
   }

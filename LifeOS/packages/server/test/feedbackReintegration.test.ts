@@ -2185,6 +2185,86 @@ test('acceptReintegrationRecordAndPlanPromotions reuses existing PR6 promotion a
   assert.equal(promotionActions.total, 2);
 });
 
+test('acceptReintegrationRecordAndPlanPromotions keeps promotion actions distinct across multiple reintegration records for the same source note', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-multi-reintegration-same-note-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-same-note-a',
+    sourceNoteId: 'note-pr6-shared-source',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'first reintegration for shared note',
+    evidence: { source: 'test', run: 'a' },
+    now: '2026-03-22T01:00:00.000Z',
+  });
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-same-note-b',
+    sourceNoteId: 'note-pr6-shared-source',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'second reintegration for shared note',
+    evidence: { source: 'test', run: 'b' },
+    now: '2026-03-22T02:00:00.000Z',
+  });
+
+  const recordA = getReintegrationRecordByWorkerTaskId('manual-task-pr6-same-note-a');
+  const recordB = getReintegrationRecordByWorkerTaskId('manual-task-pr6-same-note-b');
+  assert.ok(recordA);
+  assert.ok(recordB);
+  assert.notEqual(recordA?.id, recordB?.id);
+
+  const acceptedA = acceptReintegrationRecordAndPlanPromotions(recordA!.id, 'accept first shared-note reintegration');
+  const acceptedB = acceptReintegrationRecordAndPlanPromotions(recordB!.id, 'accept second shared-note reintegration');
+  assert.ok(acceptedA);
+  assert.ok(acceptedB);
+  assert.equal(acceptedA?.soulActions.length, 2);
+  assert.equal(acceptedB?.soulActions.length, 2);
+  assert.ok(acceptedA?.soulActions.every((action) => action.sourceNoteId === 'note-pr6-shared-source'));
+  assert.ok(acceptedB?.soulActions.every((action) => action.sourceNoteId === 'note-pr6-shared-source'));
+  assert.ok(acceptedA?.soulActions.every((action) => action.sourceReintegrationId === recordA!.id));
+  assert.ok(acceptedB?.soulActions.every((action) => action.sourceReintegrationId === recordB!.id));
+
+  const plannedActions = getDb().prepare(`
+    SELECT id, source_note_id, source_reintegration_id, action_kind
+    FROM soul_actions
+    WHERE source_note_id = ?
+      AND action_kind IN ('promote_event_node', 'promote_continuity_record')
+    ORDER BY source_reintegration_id, action_kind
+  `).all('note-pr6-shared-source') as Array<{
+    id: string;
+    source_note_id: string;
+    source_reintegration_id: string;
+    action_kind: string;
+  }>;
+
+  assert.equal(plannedActions.length, 4);
+  assert.deepEqual(
+    plannedActions.map((action) => `${action.source_reintegration_id}:${action.action_kind}`),
+    [
+      `${recordA!.id}:promote_continuity_record`,
+      `${recordA!.id}:promote_event_node`,
+      `${recordB!.id}:promote_continuity_record`,
+      `${recordB!.id}:promote_event_node`,
+    ],
+  );
+});
+
 test('accepted persona reintegration can plan and dispatch PR6 event and continuity promotions', async (t) => {
   const env = await createTestEnv('lifeos-pr6-persona-promotion-');
 

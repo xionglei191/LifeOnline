@@ -1117,3 +1117,27 @@
 - 下一步建议再补充：
   - 若继续沿“worker task contract 直接投射到 UI”这条线推进，下一步优先检查 `NoteDetail` 下方关联任务列表/详情以外，是否还有创建入口或 toast 仍在复用泛化提示文案。
   - 若没有新的真实 contract 缺口，就应结束这一轮，避免再回到 grouped governance / worker-task filter 的低边际对称补强。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/db/schema.ts` 将 `soul_actions` 的唯一约束从 `UNIQUE(source_note_id, action_kind)` 收紧为 `UNIQUE(source_note_id, action_kind, source_reintegration_id)`，使 promotion action 的幂等键真正落在“原始 source note + action kind + 显式 reintegration source”三元组上，不再把不同 reintegration 误撞成同一条 action。
+  - `LifeOS/packages/server/src/db/client.ts` 同步把 `ensureSoulActionsTable()` 的 rebuild 判定扩到唯一约束形态；旧库即使已经有 `source_reintegration_id` 列，只要仍保留旧的二元唯一键，也会被自动重建到新 schema，避免运行时继续被历史约束卡住。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增同一 `sourceNoteId` 下两条不同 reintegration record 的回归测试，锁定 `acceptReintegrationRecordAndPlanPromotions()` 会为两条 record 各自产生独立的 event/continuity promotion actions，而不是被旧唯一键错误复用或冲突。
+  - `LifeOS/packages/server/test/db.test.ts` 同步补一条 schema 级断言，直接锁定 `soul_actions` 表的建表 SQL 中包含新的三元唯一约束。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/db.test.ts test/feedbackReintegration.test.ts` 通过，54/54。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮定向测试与构建均通过。
+- 当前未完成项再补充：
+  - planner / API 主链虽然已经能稳定携带 `sourceReintegrationId`，但 `sourceNoteId = record.sourceNoteId ?? record.id` 的兼容回退仍在；若下一轮继续沿同一主线推进，可再评估是否要把“promotion action 的 sourceNoteId 始终回到真实 note id”进一步从 planner 层彻底收口。
+  - 本轮 server 变更仍未提交 git commit。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/db/client.ts` 继续把 `soul_actions` rebuild 迁移收紧到“事实源一致性”层：对历史 PR6 promotion action，若旧库把 reintegration id 暂存在 `source_note_id`，迁移时会自动拆分成 `source_reintegration_id = reint:*`，并把 `source_note_id` 收回到稳定主键 `id`，不再把兼容占位值继续留在主事实字段里。
+  - 这样旧的 `sourceNoteId = reint:*` fallback 仍可被 executor 兼容读取，但数据库重建后新增 schema 会尽量把 promotion source 的真实语义放回显式列，而不是继续让 `source_note_id`/`source_reintegration_id` 双字段语义缠绕。
+  - `LifeOS/packages/server/test/db.test.ts` 新增 legacy migration 回归测试，直接构造仅有旧二元唯一键、且把 reintegration id 塞在 `source_note_id` 的历史 `soul_actions` 表，锁定 `initDatabase()` 重建后会把该 promotion action 收敛为显式 `source_reintegration_id`。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/db.test.ts test/feedbackReintegration.test.ts` 通过，55/55。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - planner 侧 `record.sourceNoteId ?? record.id` 兼容回退仍保留；当前 schema/migration 已把旧库历史 promotion action 尽量收口到显式 `source_reintegration_id`，但新建 planning 路径尚未彻底去掉该 fallback。
+  - 本轮 server 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 下一轮优先检查 `plan/list/API/web label` 这条新事实源链上，是否还能在用户可见层误把 reintegration id 当作 source note 展示；若没有新的真实 gap，就直接提交这一轮 schema + migration 根因修复，不再回去深挖 grouped governance 的同类补强。
