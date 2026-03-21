@@ -784,6 +784,55 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps batch dispatch feedback visible across consecutive worker-task and soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    expect(readyGroup).toBeTruthy();
+
+    panel.vm.$emit('dispatch-group', readyGroup);
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+
+    wrapper.unmount();
+  });
+
   it('shows error feedback without refreshing related views when dispatch-group fails', async () => {
     const wrapper = mountSettingsView();
 
