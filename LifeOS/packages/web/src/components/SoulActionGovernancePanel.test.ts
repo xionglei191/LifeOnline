@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { VueWrapper } from '@vue/test-utils';
 import { mount } from '@vue/test-utils';
 import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import SoulActionGovernancePanel from './SoulActionGovernancePanel.vue';
@@ -56,7 +57,7 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'done-1', sourceNoteId: 'record-done', createdAt: '2026-03-19T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'succeeded' }),
 ];
 
-function mountPanel(quickFilter: SoulActionGroupQuickFilter) {
+function mountPanel(quickFilter: SoulActionGroupQuickFilter, overrides?: Partial<InstanceType<typeof SoulActionGovernancePanel>['$props']>): VueWrapper {
   return mount(SoulActionGovernancePanel, {
     props: {
       filterStatus: 'pending_review',
@@ -84,6 +85,7 @@ function mountPanel(quickFilter: SoulActionGroupQuickFilter) {
       soulActionStatusClass: () => 'default',
       soulActionStatusText: (action: SoulAction) => action.governanceStatus,
       formatTime: () => '2026/03/21',
+      ...overrides,
     },
   });
 }
@@ -118,5 +120,34 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.text()).toContain('record-ready');
     expect(wrapper.text()).not.toContain('record-mixed');
     expect(wrapper.text()).toContain('派发本组已批准项 (2)');
+  });
+
+  it('emits quick-filter updates when the quick filter changes', async () => {
+    const wrapper = mountPanel('all');
+
+    const selects = wrapper.findAll('select');
+    await selects[2]!.setValue('dispatch_ready_only');
+
+    expect(wrapper.emitted('update:quickFilter')).toEqual([['dispatch_ready_only']]);
+  });
+
+  it('disables group dispatch unless the whole group is dispatch-ready', () => {
+    const mixedWrapper = mountPanel('pending_only');
+    const mixedButton = mixedWrapper.find('.soul-action-group-toolbar .btn-cancel');
+    expect(mixedButton.attributes('disabled')).toBeDefined();
+
+    const readyWrapper = mountPanel('dispatch_ready_only');
+    const readyButton = readyWrapper.find('.soul-action-group-toolbar .btn-cancel');
+    expect(readyButton.attributes('disabled')).toBeUndefined();
+  });
+
+  it('disables group dispatch while the matching group is processing', () => {
+    const wrapper = mountPanel('dispatch_ready_only', {
+      groupDispatchId: 'record-ready',
+    });
+
+    const readyButton = wrapper.find('.soul-action-group-toolbar .btn-cancel');
+    expect(readyButton.attributes('disabled')).toBeDefined();
+    expect(readyButton.text()).toContain('处理中...');
   });
 });
