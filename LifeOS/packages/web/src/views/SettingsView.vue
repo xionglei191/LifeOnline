@@ -472,6 +472,16 @@
       @dispatch-action="handleDispatchSoulAction"
     />
 
+    <PromotionProjectionPanel
+      :event-nodes="eventNodes"
+      :continuity-records="continuityRecords"
+      :loading="projectionLoading"
+      :message="projectionMessage"
+      :message-type="projectionMessageType"
+      :format-time="formatTime"
+      @refresh="loadPromotionProjections"
+    />
+
     <div class="settings-card">
       <h3>定时任务</h3>
       <p class="hint" style="margin-bottom:16px">配置周期性自动执行的任务，如每天定时采集热门新闻。</p>
@@ -763,9 +773,10 @@ import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
 import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
 import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, fetchEventNodes, fetchContinuityRecords, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
-import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -895,6 +906,11 @@ const soulActionActionId = ref<string | null>(null);
 const soulActionGroupActionId = ref<string | null>(null);
 const soulActionGroupDispatchId = ref<string | null>(null);
 const soulActionCollapsedGroupIds = ref<string[]>([]);
+const eventNodes = ref<EventNode[]>([]);
+const continuityRecords = ref<ContinuityRecord[]>([]);
+const projectionLoading = ref(false);
+const projectionMessage = ref('');
+const projectionMessageType = ref<'success' | 'error'>('success');
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
 const schedulePreset = ref('0 9 * * *');
@@ -1053,6 +1069,42 @@ async function loadSoulActions(options?: { preserveMessage?: boolean }) {
     soulActionMessageType.value = 'error';
   } finally {
     soulActionLoading.value = false;
+  }
+}
+
+async function loadPromotionProjections(options?: { preserveMessage?: boolean }) {
+  projectionLoading.value = true;
+  if (!options?.preserveMessage) {
+    projectionMessage.value = '';
+  }
+  try {
+    const [eventNodeResult, continuityResult] = await Promise.allSettled([
+      fetchEventNodes(),
+      fetchContinuityRecords(),
+    ]);
+
+    const projectionErrors: string[] = [];
+
+    if (eventNodeResult.status === 'fulfilled') {
+      eventNodes.value = eventNodeResult.value;
+    } else {
+      eventNodes.value = [];
+      projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
+    }
+
+    if (continuityResult.status === 'fulfilled') {
+      continuityRecords.value = continuityResult.value;
+    } else {
+      continuityRecords.value = [];
+      projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');
+    }
+
+    if (projectionErrors.length) {
+      projectionMessage.value = projectionErrors.join('；');
+      projectionMessageType.value = 'error';
+    }
+  } finally {
+    projectionLoading.value = false;
   }
 }
 
@@ -1582,6 +1634,7 @@ onMounted(async () => {
   await loadSchedules();
   await loadReintegrationRecords();
   await loadSoulActions();
+  await loadPromotionProjections();
   await loadPrompts();
   await loadAiProviderSettings();
   document.addEventListener('ws-update', handleWsUpdate);
@@ -1605,6 +1658,7 @@ function handleWsUpdate(event: Event) {
   if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated' || wsEvent.type === 'reintegration-record-updated') {
     loadReintegrationRecords({ preserveMessage: preserveReintegrationMessage });
     loadSoulActions({ preserveMessage: preserveSoulActionMessage });
+    loadPromotionProjections();
   }
 }
 

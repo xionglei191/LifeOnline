@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
-import type { PromptRecord, ReintegrationRecord, SoulAction } from '@lifeos/shared';
+import type { PromptRecord, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchConfig: vi.fn(),
@@ -10,6 +10,8 @@ const apiMocks = vi.hoisted(() => ({
   fetchTaskSchedules: vi.fn(),
   fetchReintegrationRecords: vi.fn(),
   fetchSoulActions: vi.fn(),
+  fetchEventNodes: vi.fn(),
+  fetchContinuityRecords: vi.fn(),
   fetchAiPrompts: vi.fn(),
   fetchAiProviderSettings: vi.fn(),
   approveSoulAction: vi.fn(),
@@ -44,6 +46,8 @@ vi.mock('../api/client', () => ({
   rejectReintegrationRecord: vi.fn(),
   planReintegrationPromotions: vi.fn(),
   fetchSoulActions: apiMocks.fetchSoulActions,
+  fetchEventNodes: apiMocks.fetchEventNodes,
+  fetchContinuityRecords: apiMocks.fetchContinuityRecords,
   approveSoulAction: apiMocks.approveSoulAction,
   dispatchSoulAction: apiMocks.dispatchSoulAction,
 }));
@@ -118,6 +122,46 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'ready-1', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
   createSoulAction({ id: 'ready-2', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
   createSoulAction({ id: 'mixed-1', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+];
+
+const eventNodes: EventNode[] = [
+  {
+    id: 'event:record-ready',
+    sourceReintegrationId: 'record-ready',
+    sourceNoteId: null,
+    sourceSoulActionId: null,
+    promotionSoulActionId: 'ready-1',
+    eventKind: 'weekly_reflection',
+    title: 'Ready event node',
+    summary: 'ready group',
+    threshold: 'high',
+    status: 'active',
+    evidence: { source: 'settings-test' },
+    explanation: { reason: 'projection' },
+    occurredAt: '2026-03-21T10:03:00.000Z',
+    createdAt: '2026-03-21T10:03:00.000Z',
+    updatedAt: '2026-03-21T10:03:00.000Z',
+  },
+];
+
+const continuityRecords: ContinuityRecord[] = [
+  {
+    id: 'continuity:record-ready',
+    sourceReintegrationId: 'record-ready',
+    sourceNoteId: null,
+    sourceSoulActionId: null,
+    promotionSoulActionId: 'ready-2',
+    continuityKind: 'daily_rhythm',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'ready continuity',
+    continuity: { trend: 'stable' },
+    evidence: { source: 'settings-test' },
+    explanation: { reason: 'projection' },
+    recordedAt: '2026-03-21T10:04:00.000Z',
+    createdAt: '2026-03-21T10:04:00.000Z',
+    updatedAt: '2026-03-21T10:04:00.000Z',
+  },
 ];
 
 function createPromptRecord(overrides: Partial<PromptRecord> & Pick<PromptRecord, 'key' | 'label' | 'description' | 'requiredPlaceholders' | 'defaultContent' | 'effectiveContent' | 'enabled' | 'isOverridden'>): PromptRecord {
@@ -216,6 +260,8 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchTaskSchedules.mockResolvedValue([]);
     apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
     apiMocks.fetchSoulActions.mockResolvedValue(soulActions);
+    apiMocks.fetchEventNodes.mockResolvedValue(eventNodes);
+    apiMocks.fetchContinuityRecords.mockResolvedValue(continuityRecords);
     apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
     apiMocks.fetchAiProviderSettings.mockResolvedValue({
       baseUrl: 'http://localhost:3000',
@@ -374,6 +420,109 @@ describe('SettingsView soul action governance wiring', () => {
     expect((wrapper.find('.prompt-editor .prompt-textarea').element as HTMLTextAreaElement).value).toBe('suggest override {dashboardData} {recentNotes}');
   });
 
+  it('refreshes the suggest prompt status and editor content after toggling the override state', async () => {
+    const wrapper = mountSettingsView();
+    const clientMocks = vi.mocked(client);
+    const overriddenPromptRecords: PromptRecord[] = [
+      promptRecords[0]!,
+      createPromptRecord({
+        key: 'suggest',
+        label: '洞察建议',
+        description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+        requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+        defaultContent: 'suggest default {dashboardData} {recentNotes}',
+        overrideContent: 'suggest override {dashboardData} {recentNotes}',
+        effectiveContent: 'suggest override {dashboardData} {recentNotes}',
+        enabled: true,
+        isOverridden: true,
+        updatedAt: '2026-03-21T10:21:00.000Z',
+        notes: 'saved from settings test',
+      }),
+    ];
+    const disabledPromptRecords: PromptRecord[] = [
+      promptRecords[0]!,
+      createPromptRecord({
+        key: 'suggest',
+        label: '洞察建议',
+        description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+        requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+        defaultContent: 'suggest default {dashboardData} {recentNotes}',
+        overrideContent: 'suggest override {dashboardData} {recentNotes}',
+        effectiveContent: 'suggest default {dashboardData} {recentNotes}',
+        enabled: false,
+        isOverridden: true,
+        updatedAt: '2026-03-21T10:22:00.000Z',
+        notes: 'saved from settings test',
+      }),
+    ];
+
+    clientMocks.updateAiPrompt.mockResolvedValue(disabledPromptRecords[1]!);
+    apiMocks.fetchAiPrompts
+      .mockResolvedValueOnce(overriddenPromptRecords)
+      .mockResolvedValueOnce(disabledPromptRecords);
+
+    await flushPromises();
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    await promptButtons[1]!.trigger('click');
+    await flushPromises();
+
+    const toggleButton = wrapper.findAll('.prompt-actions button').find((button) => button.text().includes('已启用 override'));
+    expect(toggleButton).toBeTruthy();
+    await toggleButton!.trigger('click');
+    await flushPromises();
+
+    expect(clientMocks.updateAiPrompt).toHaveBeenCalledWith('suggest', {
+      content: 'suggest override {dashboardData} {recentNotes}',
+      enabled: false,
+      notes: 'saved from settings test',
+    });
+    expect(wrapper.text()).toContain('Override 已禁用，运行时将回退默认 Prompt');
+    expect(wrapper.find('.prompt-list-item.active .prompt-status').text()).toBe('已禁用覆盖');
+    expect((wrapper.find('.prompt-editor .prompt-textarea').element as HTMLTextAreaElement).value).toBe('suggest override {dashboardData} {recentNotes}');
+  });
+
+  it('keeps the suggest prompt selected and restores default content after reset', async () => {
+    const wrapper = mountSettingsView();
+    const clientMocks = vi.mocked(client);
+    const overriddenPromptRecords: PromptRecord[] = [
+      promptRecords[0]!,
+      createPromptRecord({
+        key: 'suggest',
+        label: '洞察建议',
+        description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+        requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+        defaultContent: 'suggest default {dashboardData} {recentNotes}',
+        overrideContent: 'suggest override {dashboardData} {recentNotes}',
+        effectiveContent: 'suggest override {dashboardData} {recentNotes}',
+        enabled: true,
+        isOverridden: true,
+        updatedAt: '2026-03-21T10:22:00.000Z',
+        notes: 'reset from settings test',
+      }),
+    ];
+
+    clientMocks.resetAiPrompt.mockResolvedValue(undefined);
+    apiMocks.fetchAiPrompts
+      .mockResolvedValueOnce(overriddenPromptRecords)
+      .mockResolvedValueOnce(promptRecords);
+
+    await flushPromises();
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    await promptButtons[1]!.trigger('click');
+    await flushPromises();
+
+    const resetButton = wrapper.findAll('.prompt-actions button').find((button) => button.text().includes('重置为默认'));
+    expect(resetButton).toBeTruthy();
+    await resetButton!.trigger('click');
+    await flushPromises();
+
+    expect(clientMocks.resetAiPrompt).toHaveBeenCalledWith('suggest');
+    expect(wrapper.text()).toContain('已恢复默认 Prompt');
+    expect(wrapper.find('.prompt-list-item.active .prompt-key').text()).toBe('suggest');
+    expect(wrapper.find('.prompt-list-item.active .prompt-status').text()).toBe('默认');
+    expect((wrapper.find('.prompt-editor .prompt-textarea').element as HTMLTextAreaElement).value).toBe('suggest default {dashboardData} {recentNotes}');
+  });
+
   it('keeps the suggest prompt selected after prompt records load', async () => {
     const wrapper = mountSettingsView();
 
@@ -405,6 +554,82 @@ describe('SettingsView soul action governance wiring', () => {
       approved: 2,
       dispatched: 0,
     });
+
+    wrapper.unmount();
+  });
+
+  it('renders promotion projections after initial load and refreshes them on websocket updates', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Promotion Projections');
+    expect(wrapper.text()).toContain('Event Nodes');
+    expect(wrapper.text()).toContain('Continuity Records');
+    expect(wrapper.text()).toContain('Ready event node');
+    expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).toContain('Promotion: ready-1');
+    expect(wrapper.text()).toContain('Promotion: ready-2');
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+
+    apiMocks.fetchEventNodes.mockClear();
+    apiMocks.fetchContinuityRecords.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('shows projection errors without breaking the rest of settings load', async () => {
+    apiMocks.fetchContinuityRecords.mockRejectedValueOnce(new Error('continuity fetch failed'));
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    expect(wrapper.text()).toContain('Promotion Projections');
+    expect(wrapper.text()).toContain('Ready event node');
+    expect(wrapper.text()).toContain('continuity fetch failed');
+    expect(wrapper.text()).toContain('Reintegration Review');
+    expect(wrapper.text()).toContain('Soul Action Governance');
+
+    wrapper.unmount();
+  });
+
+  it('keeps partial promotion projections when only event-node fetch fails', async () => {
+    apiMocks.fetchEventNodes.mockRejectedValueOnce(new Error('event nodes fetch failed'));
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    expect(wrapper.text()).toContain('Promotion Projections');
+    expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).toContain('event nodes fetch failed');
+    expect(wrapper.text()).toContain('暂无 event nodes');
+
+    wrapper.unmount();
+  });
+
+  it('reloads promotion projections when the panel emits refresh', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchEventNodes.mockClear();
+    apiMocks.fetchContinuityRecords.mockClear();
+
+    const refreshButton = wrapper.findAll('button').find((button) => button.text() === '刷新' && button.element.closest('.projection-card'));
+    expect(refreshButton).toBeTruthy();
+    await refreshButton!.trigger('click');
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });
