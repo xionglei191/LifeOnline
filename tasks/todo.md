@@ -443,6 +443,12 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 filter event contract 对齐修复。
   - 若还要继续补一轮，可检查 `toggle-collapsed` 等其余 emits 在模板监听、单测触发、组件声明之间是否还存在类似的命名漂移。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把 grouped dispatch worker-task contract 补到 status filter：在同一 `sourceNoteId` 下连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 两条 action 后，额外校验 `/api/worker-tasks?sourceNoteId=...&taskType=...&status=...` 仍能稳定命中各自 task，且返回 filters 与 dispatch response/task websocket 的 status 保持一致。
+  - 这次补的是 grouped settings 继续细化 worker-task filter 刷新依赖：不仅 taskType / worker 不串，连 taskType + status 组合过滤也不会在同组连续 dispatch 后漂移。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:210` 新增 collapsed group ids 父层状态断言，锁定 grouped governance 面板触发 `toggle-collapsed` 时，`SettingsView` 会正确维护 `collapsedGroupIds`：首次折叠加入 id，继续折叠第二组追加，重复触发同组则正确移除。
   - 这次补的是一个此前确实存在但未被 view 级回归覆盖的父层状态面：`collapsedGroupIds` 已作为真实运行时状态传给 panel，却没有测试防止后续 wiring 退化。
 - 本轮验证再补充：

@@ -921,6 +921,14 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
       baseUrl,
       `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=update_persona_snapshot`,
     );
+    const extractStatusFilteredWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=extract_tasks&status=${encodeURIComponent(firstDispatched.task!.status)}`,
+    );
+    const personaStatusFilteredWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=update_persona_snapshot&status=${encodeURIComponent(secondDispatched.task!.status)}`,
+    );
     const workerFilteredWorkerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
       `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&worker=lifeos`,
@@ -929,6 +937,8 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     const allTaskIds = workerTasksAfterDispatch.tasks.map((task) => task.id);
     const extractTask = extractTaskFilteredWorkerTasks.tasks.find((task) => task.id === firstDispatched.result.workerTaskId);
     const personaTask = personaTaskFilteredWorkerTasks.tasks.find((task) => task.id === secondDispatched.result.workerTaskId);
+    const extractStatusFilteredTask = extractStatusFilteredWorkerTasks.tasks.find((task) => task.id === firstDispatched.result.workerTaskId);
+    const personaStatusFilteredTask = personaStatusFilteredWorkerTasks.tasks.find((task) => task.id === secondDispatched.result.workerTaskId);
     const workerFilteredFirstTask = workerFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === firstDispatched.result.workerTaskId);
     const workerFilteredSecondTask = workerFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === secondDispatched.result.workerTaskId);
 
@@ -937,6 +947,12 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(extractTaskFilteredWorkerTasks.filters.taskType, 'extract_tasks');
     assert.equal(personaTaskFilteredWorkerTasks.filters.sourceNoteId, sourceNoteId);
     assert.equal(personaTaskFilteredWorkerTasks.filters.taskType, 'update_persona_snapshot');
+    assert.equal(extractStatusFilteredWorkerTasks.filters.sourceNoteId, sourceNoteId);
+    assert.equal(extractStatusFilteredWorkerTasks.filters.taskType, 'extract_tasks');
+    assert.equal(extractStatusFilteredWorkerTasks.filters.status, firstDispatched.task!.status);
+    assert.equal(personaStatusFilteredWorkerTasks.filters.sourceNoteId, sourceNoteId);
+    assert.equal(personaStatusFilteredWorkerTasks.filters.taskType, 'update_persona_snapshot');
+    assert.equal(personaStatusFilteredWorkerTasks.filters.status, secondDispatched.task!.status);
     assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.sourceNoteId, sourceNoteId);
     assert.equal(workerFilteredWorkerTasksAfterDispatch.filters.worker, 'lifeos');
 
@@ -944,6 +960,8 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.ok(allTaskIds.includes(secondDispatched.result.workerTaskId!));
     assert.ok(extractTask);
     assert.ok(personaTask);
+    assert.ok(extractStatusFilteredTask);
+    assert.ok(personaStatusFilteredTask);
     assert.ok(workerFilteredFirstTask);
     assert.ok(workerFilteredSecondTask);
 
@@ -959,9 +977,13 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(extractTask?.id, firstDispatched.task?.id);
     assert.equal(extractTask?.sourceNoteId, firstDispatched.task?.sourceNoteId);
     assert.equal(extractTask?.taskType, firstDispatched.task?.taskType);
+    assert.equal(extractStatusFilteredTask?.id, firstDispatched.task?.id);
+    assert.equal(extractStatusFilteredTask?.status, firstDispatched.task?.status);
     assert.equal(personaTask?.id, secondDispatched.task?.id);
     assert.equal(personaTask?.sourceNoteId, secondDispatched.task?.sourceNoteId);
     assert.equal(personaTask?.taskType, secondDispatched.task?.taskType);
+    assert.equal(personaStatusFilteredTask?.id, secondDispatched.task?.id);
+    assert.equal(personaStatusFilteredTask?.status, secondDispatched.task?.status);
 
     assert.equal(workerFilteredFirstTask?.worker, firstDispatched.task?.worker);
     assert.equal(workerFilteredSecondTask?.worker, secondDispatched.task?.worker);
