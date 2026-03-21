@@ -317,9 +317,16 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: { type: 'index-queue-complete' },
@@ -332,9 +339,16 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
 
     wrapper.unmount();
   });

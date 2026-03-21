@@ -463,8 +463,13 @@
   - 这次补的是 `SettingsView` 三路刷新中的一条组合 contract：此前只在 `soul-action-updated` 下锁过 grouped 聚合/过滤收敛，还没有覆盖 `worker-task-updated` 这条更宽的联动刷新分支。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 53 tests。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:300` 将既有 `index-queue-complete` 回归从“state/filter/groups 不漂移”收紧为“state/filter/groups + quickFilterStats + groupCount + summary 全部不漂移”，并继续锁定这条非治理事件不会误触发 worker/reintegration/soul-action loaders。
+  - 这次补的是 grouped governance 的非治理刷新边界：即使全局 index 队列事件到来，面板当前聚合统计也不应被悄悄改写或重算成不同语义。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 53 tests。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task websocket grouped summary convergence 回归补强。
-  - 若还要继续补一轮，可检查 `index-queue-complete` 这类非治理刷新事件下，grouped summary / filtered groups 是否也值得补同级“不会误漂移”的保护；若价值不足，再回到新的 server/web/shared contract 缺口。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh grouped summary stability 回归补强。
+  - 若还要继续补一轮，应切回新的 server/web/shared contract 缺口，而不是继续在同一 grouped summary stability 链上做低边际对称扩张。
