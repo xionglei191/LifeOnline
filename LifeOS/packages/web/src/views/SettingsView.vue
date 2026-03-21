@@ -439,158 +439,38 @@
       </div>
     </div>
 
-    <div class="settings-card soul-action-card">
-      <div class="reintegration-head">
-        <div>
-          <h3>Soul Action Governance</h3>
-          <p class="hint reintegration-subtitle">承接 accept 后自动规划出的 PR6 promotion actions，并在 web 端完成 approve / dispatch。</p>
-        </div>
-        <div class="reintegration-head-actions soul-action-filters">
-          <select v-model="soulActionFilterStatus" class="worker-filter" @change="loadSoulActions">
-            <option value="">全部治理状态</option>
-            <option value="pending_review">待治理</option>
-            <option value="approved">已批准</option>
-            <option value="deferred">已延后</option>
-            <option value="discarded">已丢弃</option>
-          </select>
-          <select v-model="soulActionExecutionFilter" class="worker-filter" @change="loadSoulActions">
-            <option value="">全部执行状态</option>
-            <option value="not_dispatched">未派发</option>
-            <option value="pending">已入队</option>
-            <option value="running">执行中</option>
-            <option value="succeeded">已执行</option>
-            <option value="failed">执行失败</option>
-            <option value="cancelled">已取消</option>
-          </select>
-          <select v-model="soulActionGroupQuickFilter" class="worker-filter">
-            <option value="all">全部分组</option>
-            <option value="pending_only">仅待治理分组</option>
-            <option value="dispatch_ready_only">仅可派发分组</option>
-          </select>
-          <button class="btn-link" @click="loadSoulActions">刷新</button>
-        </div>
-      </div>
-
-      <div class="reintegration-filter-state soul-action-filter-state">
-        当前分组视图：{{ soulActionGroupQuickFilterLabel }}
-        <span class="worker-pill soul-action-filter-pill">{{ soulActionGroupQuickFilterStats }}</span>
-      </div>
-
-      <div class="reintegration-summary-strip soul-action-summary-strip">
-        <div class="reintegration-summary-item">
-          <span>待治理</span>
-          <strong>{{ soulActionSummary.pendingReview }}</strong>
-        </div>
-        <div class="reintegration-summary-item">
-          <span>已批准</span>
-          <strong>{{ soulActionSummary.approved }}</strong>
-        </div>
-        <div class="reintegration-summary-item">
-          <span>已执行</span>
-          <strong>{{ soulActionSummary.dispatched }}</strong>
-        </div>
-        <div class="reintegration-summary-item">
-          <span>当前分组</span>
-          <strong>{{ soulActionGroups.length }} / {{ soulActionGroupCount }}</strong>
-        </div>
-      </div>
-
-      <div v-if="soulActionMessage" :class="['message', soulActionMessageType]">{{ soulActionMessage }}</div>
-
-      <div v-if="soulActionLoading" class="worker-empty-state">加载中...</div>
-      <div v-else-if="soulActionGroups.length" class="reintegration-list soul-action-group-list">
-        <section v-for="group in soulActionGroups" :key="group.sourceNoteId" class="reintegration-item soul-action-group">
-          <div class="reintegration-item-top">
-            <div class="reintegration-item-title-row">
-              <strong>{{ group.reintegrationRecord ? taskTypeLabel(group.reintegrationRecord.taskType) : 'Promotion actions' }}</strong>
-              <span class="worker-pill">{{ group.actions.length }} actions</span>
-              <span class="worker-pill">pending {{ group.pendingCount }}</span>
-              <span class="worker-pill">ready {{ group.dispatchReadyCount }}</span>
-              <span class="worker-pill">{{ group.sourceNoteId }}</span>
-            </div>
-            <div class="reintegration-head-actions soul-action-group-toolbar">
-              <button
-                class="btn-worker"
-                :disabled="soulActionGroupActionId === group.sourceNoteId || group.pendingCount === 0"
-                @click="handleApproveSoulActionGroup(group)"
-              >
-                {{ soulActionGroupActionId === group.sourceNoteId ? '处理中...' : `批准本组待治理项 (${group.pendingCount})` }}
-              </button>
-              <button
-                class="btn-cancel"
-                :disabled="soulActionGroupDispatchId === group.sourceNoteId || group.dispatchReadyCount !== group.actions.length || group.dispatchReadyCount === 0"
-                @click="handleDispatchSoulActionGroup(group)"
-              >
-                {{ soulActionGroupDispatchId === group.sourceNoteId ? '处理中...' : `派发本组已批准项 (${group.dispatchReadyCount})` }}
-              </button>
-              <button class="btn-link" @click="toggleSoulActionGroupCollapsed(group.sourceNoteId)">
-                {{ soulActionCollapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
-              </button>
-            </div>
-          </div>
-
-          <div class="reintegration-meta-grid soul-action-group-meta">
-            <span v-if="group.reintegrationRecord">Reintegration: {{ group.reintegrationRecord.summary }}</span>
-            <span v-if="group.reintegrationRecord">Signal: {{ group.reintegrationRecord.signalKind }}</span>
-            <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
-          </div>
-
-          <div v-if="!soulActionCollapsedGroupIds.includes(group.sourceNoteId)" class="soul-action-group-actions">
-            <article v-for="action in group.actions" :key="action.id" class="reintegration-item soul-action-item">
-              <div class="reintegration-item-top">
-                <div class="reintegration-item-title-row">
-                  <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
-                  <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
-                  <span class="worker-pill">{{ action.actionKind }}</span>
-                  <span class="worker-pill">{{ action.executionStatus }}</span>
-                </div>
-              </div>
-
-              <div class="reintegration-meta-grid soul-action-meta-grid">
-                <span>治理: {{ action.governanceStatus }}</span>
-                <span v-if="action.workerTaskId">Worker: {{ action.workerTaskId }}</span>
-                <span>创建于 {{ formatTime(action.createdAt) }}</span>
-                <span v-if="action.approvedAt">批准于 {{ formatTime(action.approvedAt) }}</span>
-                <span v-if="action.finishedAt">完成于 {{ formatTime(action.finishedAt) }}</span>
-              </div>
-
-              <div v-if="action.governanceReason || action.resultSummary || action.error" class="soul-action-detail-grid">
-                <div v-if="action.governanceReason" class="reintegration-review-reason">
-                  治理理由：{{ action.governanceReason }}
-                </div>
-                <div v-if="action.resultSummary" class="reintegration-review-reason">
-                  执行摘要：{{ action.resultSummary }}
-                </div>
-                <div v-if="action.error" class="reintegration-review-reason soul-action-error">
-                  执行错误：{{ action.error }}
-                </div>
-              </div>
-
-              <div class="soul-action-controls">
-                <button
-                  class="btn-worker"
-                  :disabled="soulActionActionId === action.id || action.governanceStatus !== 'pending_review'"
-                  @click="handleApproveSoulAction(action)"
-                >
-                  {{ soulActionActionId === action.id ? '处理中...' : '批准' }}
-                </button>
-                <button
-                  class="btn-cancel"
-                  :disabled="soulActionActionId === action.id || action.governanceStatus !== 'approved' || action.executionStatus !== 'not_dispatched'"
-                  @click="handleDispatchSoulAction(action)"
-                >
-                  {{ soulActionActionId === action.id ? '处理中...' : '派发执行' }}
-                </button>
-              </div>
-            </article>
-          </div>
-        </section>
-      </div>
-      <div v-else class="worker-empty-state">
-        当前筛选下没有 soul actions
-        <span class="worker-empty-hint">可尝试切换为“全部分组”或检查是否还有已批准但未派发的分组。</span>
-      </div>
-    </div>
+    <SoulActionGovernancePanel
+      :filter-status="soulActionFilterStatus"
+      :execution-filter="soulActionExecutionFilter"
+      :quick-filter="soulActionGroupQuickFilter"
+      :quick-filter-label="soulActionGroupQuickFilterLabel"
+      :quick-filter-stats="soulActionGroupQuickFilterStats"
+      :group-count="soulActionGroupCount"
+      :groups="soulActionGroups"
+      :summary="soulActionSummary"
+      :loading="soulActionLoading"
+      :message="soulActionMessage"
+      :message-type="soulActionMessageType"
+      :action-id="soulActionActionId"
+      :group-action-id="soulActionGroupActionId"
+      :group-dispatch-id="soulActionGroupDispatchId"
+      :collapsed-group-ids="soulActionCollapsedGroupIds"
+      :task-type-label="taskTypeLabel"
+      :reintegration-status-text="reintegrationStatusText"
+      :promotion-action-label="promotionActionLabel"
+      :soul-action-status-class="soulActionStatusClass"
+      :soul-action-status-text="soulActionStatusText"
+      :format-time="formatTime"
+      @update:filter-status="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
+      @update:execution-filter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
+      @update:quick-filter="soulActionGroupQuickFilter = $event"
+      @refresh="loadSoulActions"
+      @approve-group="handleApproveSoulActionGroup"
+      @dispatch-group="handleDispatchSoulActionGroup"
+      @toggle-collapsed="toggleSoulActionGroupCollapsed"
+      @approve-action="handleApproveSoulAction"
+      @dispatch-action="handleDispatchSoulAction"
+    />
 
     <div class="settings-card">
       <h3>定时任务</h3>
@@ -882,10 +762,13 @@ import NoteDetail from '../components/NoteDetail.vue';
 import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
 import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
+import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
+import { buildSoulActionGroups, getSoulActionGroupCount, getSoulActionGroupQuickFilterLabel, getSoulActionGroupQuickFilterStats, type SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
 
 const router = useRouter();
 const { isConnected } = useWebSocket();
@@ -1103,56 +986,19 @@ const soulActionSummary = computed(() => {
     dispatched: 0,
   });
 });
-const soulActionGroupQuickFilter = ref<'all' | 'pending_only' | 'dispatch_ready_only'>('all');
-const soulActionGroupQuickFilterLabel = computed(() => {
-  switch (soulActionGroupQuickFilter.value) {
-    case 'pending_only':
-      return '仅待治理分组';
-    case 'dispatch_ready_only':
-      return '仅可派发分组';
-    default:
-      return '全部分组';
-  }
-});
-const soulActionGroupQuickFilterStats = computed(() => `${soulActionGroups.value.length} / ${soulActionGroupCount.value} 分组命中`);
-const soulActionGroupCount = computed(() => {
-  const groupIds = new Set(soulActions.value.map((action) => action.sourceNoteId));
-  return groupIds.size;
-});
-const soulActionGroups = computed(() => {
-  const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
-  for (const action of soulActions.value) {
-    const key = action.sourceNoteId;
-    const existing = grouped.get(key);
-    if (existing) {
-      existing.actions.push(action);
-      continue;
-    }
-    grouped.set(key, {
-      sourceNoteId: key,
-      actions: [action],
-      reintegrationRecord: reintegrationRecords.value.find((record) => record.id === key) || null,
-    });
-  }
-
-  const groups = Array.from(grouped.values()).map((group) => ({
-    ...group,
-    pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
-    dispatchReadyCount: group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched').length,
-  }));
-
-  const filteredGroups = soulActionGroupQuickFilter.value === 'pending_only'
-    ? groups.filter((group) => group.pendingCount > 0)
-    : soulActionGroupQuickFilter.value === 'dispatch_ready_only'
-      ? groups.filter((group) => group.dispatchReadyCount === group.actions.length && group.dispatchReadyCount > 0)
-      : groups;
-
-  return filteredGroups.sort((left, right) => {
-    const leftTime = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
-    const rightTime = right.reintegrationRecord?.createdAt || right.actions[0]?.createdAt || '';
-    return rightTime.localeCompare(leftTime);
-  });
-});
+const soulActionGroupQuickFilter = ref<SoulActionGroupQuickFilter>('all');
+const soulActionGroupQuickFilterLabel = computed(() => getSoulActionGroupQuickFilterLabel(soulActionGroupQuickFilter.value));
+const soulActionGroupQuickFilterStats = computed(() => getSoulActionGroupQuickFilterStats(
+  soulActions.value,
+  reintegrationRecords.value,
+  soulActionGroupQuickFilter.value,
+));
+const soulActionGroupCount = computed(() => getSoulActionGroupCount(soulActions.value));
+const soulActionGroups = computed(() => buildSoulActionGroups(
+  soulActions.value,
+  reintegrationRecords.value,
+  soulActionGroupQuickFilter.value,
+));
 
 async function loadStatus() {
   try {

@@ -135,3 +135,22 @@
 - 下一步建议：
   - 若继续沿 PR6 保守推进，优先检查 `feedbackReintegration.ts` / `continuityIntegrator.ts` 与 PR6 promotion 规则之间是否还存在可进一步集中但不扩 scope 的重复 target/kind 语义。
   - 若没有新重复点，再回到更高价值的真实 coverage 缺口，而不是继续为了“更干净”做纯形式抽象。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/package.json` 引入最小 web 测试脚本 `pnpm --filter web test`，并增加 `vitest` 依赖，补上此前完全缺失的前端测试入口。
+  - `LifeOS/packages/web/src/utils/soulActionGroups.ts` 新增 grouped soul-action 纯函数，把 `SettingsView.vue` 中 `soulActionGroupQuickFilterLabel`、`soulActionGroupCount`、`soulActionGroups`、`soulActionGroupQuickFilterStats` 的核心语义抽离为可直接测试的最小 seam。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 改为复用这组纯函数，保持现有 UI 行为不变，但不再把 grouped governance 规则内联死在单个大视图里。
+  - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 新增 5 条最小前端语义测试，覆盖分组计数、`pending_only` 过滤、`dispatch_ready_only` 过滤、按 reintegration 时间排序，以及 filter label/stats 文案一致性。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 8 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现补充：
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 新增独立治理面板组件，把 grouped governance 的筛选栏、摘要条、分组列表与组级/单条 action 控件从 `SettingsView.vue` 中局部拆出，缩小组件测试范围，但不改变 approve / dispatch 现有语义。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 改为委托 `SoulActionGovernancePanel` 渲染 soul-action 治理区域，保留现有状态与 handler 在父层集中管理。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条组件挂载测试，直接验证 `all` / `pending_only` / `dispatch_ready_only` 三种 quick filter 下的分组可见性，以及 label / stats / 摘要文案联动。
+  - `LifeOS/packages/web/package.json` 与 `LifeOS/packages/web/vite.config.ts` 补入 `@vue/test-utils`、`jsdom` 与 Vitest `jsdom` 环境配置，使 web 包具备最小组件测试能力。
+- 当前未完成项：
+  - 当前组件测试仍聚焦 quick filter 可见性与摘要联动，还没有覆盖按钮点击后的事件派发、禁用态切换与父层异步刷新链路。
+  - 本轮 web 变更尚未提交 git commit。
+- 下一步建议：
+  - 若继续沿同一主线推进，优先为 `SoulActionGovernancePanel.vue` 再补一条交互测试，验证 quick filter 切换事件和组级 dispatch 按钮禁用条件，继续降低 Settings 治理 UI 的隐性回归风险。
+  - 也可以先提交当前这轮；因为现在已经同时具备纯函数语义回归和最小组件渲染回归，前端 grouped governance 的保护面已比之前实质扩大。
