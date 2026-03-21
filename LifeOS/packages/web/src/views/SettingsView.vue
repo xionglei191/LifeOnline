@@ -484,55 +484,72 @@
       <div v-if="soulActionMessage" :class="['message', soulActionMessageType]">{{ soulActionMessage }}</div>
 
       <div v-if="soulActionLoading" class="worker-empty-state">加载中...</div>
-      <div v-else-if="soulActions.length" class="reintegration-list">
-        <article v-for="action in soulActions" :key="action.id" class="reintegration-item soul-action-item">
+      <div v-else-if="soulActionGroups.length" class="reintegration-list soul-action-group-list">
+        <section v-for="group in soulActionGroups" :key="group.sourceNoteId" class="reintegration-item soul-action-group">
           <div class="reintegration-item-top">
             <div class="reintegration-item-title-row">
-              <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
-              <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
-              <span class="worker-pill">{{ action.actionKind }}</span>
-              <span class="worker-pill">{{ action.executionStatus }}</span>
+              <strong>{{ group.reintegrationRecord ? taskTypeLabel(group.reintegrationRecord.taskType) : 'Promotion actions' }}</strong>
+              <span class="worker-pill">{{ group.actions.length }} actions</span>
+              <span class="worker-pill">{{ group.sourceNoteId }}</span>
             </div>
           </div>
 
-          <div class="reintegration-meta-grid soul-action-meta-grid">
-            <span>治理: {{ action.governanceStatus }}</span>
-            <span>Source: {{ action.sourceNoteId }}</span>
-            <span v-if="action.workerTaskId">Worker: {{ action.workerTaskId }}</span>
-            <span>创建于 {{ formatTime(action.createdAt) }}</span>
-            <span v-if="action.approvedAt">批准于 {{ formatTime(action.approvedAt) }}</span>
-            <span v-if="action.finishedAt">完成于 {{ formatTime(action.finishedAt) }}</span>
+          <div class="reintegration-meta-grid soul-action-group-meta">
+            <span v-if="group.reintegrationRecord">Reintegration: {{ group.reintegrationRecord.summary }}</span>
+            <span v-if="group.reintegrationRecord">Signal: {{ group.reintegrationRecord.signalKind }}</span>
+            <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
           </div>
 
-          <div v-if="action.governanceReason || action.resultSummary || action.error" class="soul-action-detail-grid">
-            <div v-if="action.governanceReason" class="reintegration-review-reason">
-              治理理由：{{ action.governanceReason }}
-            </div>
-            <div v-if="action.resultSummary" class="reintegration-review-reason">
-              执行摘要：{{ action.resultSummary }}
-            </div>
-            <div v-if="action.error" class="reintegration-review-reason soul-action-error">
-              执行错误：{{ action.error }}
-            </div>
-          </div>
+          <div class="soul-action-group-actions">
+            <article v-for="action in group.actions" :key="action.id" class="reintegration-item soul-action-item">
+              <div class="reintegration-item-top">
+                <div class="reintegration-item-title-row">
+                  <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
+                  <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
+                  <span class="worker-pill">{{ action.actionKind }}</span>
+                  <span class="worker-pill">{{ action.executionStatus }}</span>
+                </div>
+              </div>
 
-          <div class="soul-action-controls">
-            <button
-              class="btn-worker"
-              :disabled="soulActionActionId === action.id || action.governanceStatus !== 'pending_review'"
-              @click="handleApproveSoulAction(action)"
-            >
-              {{ soulActionActionId === action.id ? '处理中...' : '批准' }}
-            </button>
-            <button
-              class="btn-cancel"
-              :disabled="soulActionActionId === action.id || action.governanceStatus !== 'approved' || action.executionStatus !== 'not_dispatched'"
-              @click="handleDispatchSoulAction(action)"
-            >
-              {{ soulActionActionId === action.id ? '处理中...' : '派发执行' }}
-            </button>
+              <div class="reintegration-meta-grid soul-action-meta-grid">
+                <span>治理: {{ action.governanceStatus }}</span>
+                <span v-if="action.workerTaskId">Worker: {{ action.workerTaskId }}</span>
+                <span>创建于 {{ formatTime(action.createdAt) }}</span>
+                <span v-if="action.approvedAt">批准于 {{ formatTime(action.approvedAt) }}</span>
+                <span v-if="action.finishedAt">完成于 {{ formatTime(action.finishedAt) }}</span>
+              </div>
+
+              <div v-if="action.governanceReason || action.resultSummary || action.error" class="soul-action-detail-grid">
+                <div v-if="action.governanceReason" class="reintegration-review-reason">
+                  治理理由：{{ action.governanceReason }}
+                </div>
+                <div v-if="action.resultSummary" class="reintegration-review-reason">
+                  执行摘要：{{ action.resultSummary }}
+                </div>
+                <div v-if="action.error" class="reintegration-review-reason soul-action-error">
+                  执行错误：{{ action.error }}
+                </div>
+              </div>
+
+              <div class="soul-action-controls">
+                <button
+                  class="btn-worker"
+                  :disabled="soulActionActionId === action.id || action.governanceStatus !== 'pending_review'"
+                  @click="handleApproveSoulAction(action)"
+                >
+                  {{ soulActionActionId === action.id ? '处理中...' : '批准' }}
+                </button>
+                <button
+                  class="btn-cancel"
+                  :disabled="soulActionActionId === action.id || action.governanceStatus !== 'approved' || action.executionStatus !== 'not_dispatched'"
+                  @click="handleDispatchSoulAction(action)"
+                >
+                  {{ soulActionActionId === action.id ? '处理中...' : '派发执行' }}
+                </button>
+              </div>
+            </article>
           </div>
-        </article>
+        </section>
       </div>
       <div v-else class="worker-empty-state">
         当前筛选下没有 soul actions
@@ -1045,6 +1062,28 @@ const soulActionSummary = computed(() => {
     pendingReview: 0,
     approved: 0,
     dispatched: 0,
+  });
+});
+const soulActionGroups = computed(() => {
+  const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
+  for (const action of soulActions.value) {
+    const key = action.sourceNoteId;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.actions.push(action);
+      continue;
+    }
+    grouped.set(key, {
+      sourceNoteId: key,
+      actions: [action],
+      reintegrationRecord: reintegrationRecords.value.find((record) => record.id === key) || null,
+    });
+  }
+
+  return Array.from(grouped.values()).sort((left, right) => {
+    const leftTime = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
+    const rightTime = right.reintegrationRecord?.createdAt || right.actions[0]?.createdAt || '';
+    return rightTime.localeCompare(leftTime);
   });
 });
 
@@ -2108,9 +2147,29 @@ async function handleReindex() {
   margin-bottom: 14px;
 }
 
+.soul-action-group-list {
+  gap: 12px;
+}
+
+.soul-action-group {
+  display: grid;
+  gap: 12px;
+  border-style: dashed;
+}
+
+.soul-action-group-meta {
+  margin-top: 0;
+}
+
+.soul-action-group-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .soul-action-item {
   display: grid;
   gap: 12px;
+  background: color-mix(in oklch, var(--card-bg) 88%, oklch(98% 0.012 150) 12%);
 }
 
 .soul-action-meta-grid {
