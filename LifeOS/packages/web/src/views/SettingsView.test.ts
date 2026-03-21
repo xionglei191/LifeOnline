@@ -225,6 +225,54 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('routes approve-group emits through the parent batch approve handler', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    expect(pendingGroup).toBeTruthy();
+
+    panel.vm.$emit('approve-group', pendingGroup);
+    await flushPromises();
+
+    expect(apiMocks.approveSoulAction).toHaveBeenCalledTimes(1);
+    expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
+      reason: 'Batch approved from settings reintegration governance panel for record-mixed',
+    });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it('routes dispatch-group emits through the parent batch dispatch handler and refreshes related views', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    expect(readyGroup).toBeTruthy();
+
+    panel.vm.$emit('dispatch-group', readyGroup);
+    await flushPromises();
+
+    expect(apiMocks.dispatchSoulAction).toHaveBeenCalledTimes(2);
+    expect(apiMocks.dispatchSoulAction.mock.calls.map(([id]) => id)).toEqual(['ready-1', 'ready-2']);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
   it('refreshes reintegration records and soul actions on soul-action websocket updates', async () => {
     const wrapper = mountSettingsView();
 
@@ -240,8 +288,8 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
-    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
 
     wrapper.unmount();

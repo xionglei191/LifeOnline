@@ -181,3 +181,18 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，下一步优先补 `approve-group` / `dispatch-group` 的父层调用链测试，直接锁定批量 approve/dispatch 与刷新行为。
   - 若继续补 websocket 分支，则再加一条 `worker-task-updated` 事件测试，覆盖 `loadWorkerTasks()` 也会被联动触发的路径。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条父层 handler coverage，直接通过 `SoulActionGovernancePanel` 的 `approve-group` / `dispatch-group` emit 驱动 `SettingsView.vue` 的批量 approve / dispatch 路径。
+  - 新增断言锁定批量 approve 会按 pending action 调用 `approveSoulAction()`，批量 dispatch 会遍历整组 ready actions 调用 `dispatchSoulAction()`，并在成功后刷新对应的 soul-action / reintegration 列表。
+  - 这次继续保持 view 级最小回归面，只验证父层接线与刷新行为，不引入更重的端到端 harness。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，5 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，3 files / 25 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项最后补充：
+  - 还没有覆盖 `worker-task-updated` 事件分支下 `loadWorkerTasks()` 与 grouped governance 刷新同时发生的路径。
+  - 还没有覆盖单条 `approve-action` / `dispatch-action` 在父层成功/失败提示上的 view 级断言。
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议最后补充：
+  - 若继续沿这条主线推进，优先补 `worker-task-updated` websocket 分支测试，锁定 `SettingsView.vue:1584` 与 `SettingsView.vue:1590` 的联合刷新语义。
+  - 然后补单条 action handler 的成功/失败 view 级断言，进一步锁住 message 与 refresh 行为。
