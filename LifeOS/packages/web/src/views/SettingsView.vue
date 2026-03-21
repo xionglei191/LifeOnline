@@ -1207,6 +1207,17 @@ function soulActionStatusText(action: SoulAction) {
   return '待治理';
 }
 
+function workerTaskStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending: '等待执行',
+    running: '执行中',
+    succeeded: '已完成',
+    failed: '失败',
+    cancelled: '已取消',
+  };
+  return labels[status] || status;
+}
+
 function toggleReintegrationExpanded(id: string) {
   if (reintegrationExpandedIds.value.includes(id)) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
@@ -1309,8 +1320,10 @@ async function handleDispatchSoulAction(action: SoulAction) {
   try {
     const result = await dispatchSoulAction(action.id);
     const workerTaskLabel = result.task ? taskTypeLabel(result.task.taskType) : null;
+    const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
+    const workerTaskMeta = [workerTaskLabel, workerTaskStatus].filter(Boolean).join(' · ');
     const workerTaskSuffix = result.result.workerTaskId
-      ? `（Worker Task: ${result.result.workerTaskId}${workerTaskLabel ? ` · ${workerTaskLabel}` : ''}）`
+      ? `（Worker Task: ${result.result.workerTaskId}${workerTaskMeta ? ` · ${workerTaskMeta}` : ''}）`
       : '';
     soulActionMessage.value = `${result.result.reason}${workerTaskSuffix}`;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';

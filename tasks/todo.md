@@ -337,6 +337,17 @@
   - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 继续把单条 dispatch 成功提示向 shared/server worker task contract 收敛：在已展示 `workerTaskId` 与 `taskType` 的基础上，再直接消费 `DispatchSoulActionResponse.task.status`，把 worker task 当前状态一起拼进用户可见反馈。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `workerTaskStatusLabel()`，把 `pending/running/succeeded/failed/cancelled` 统一映射为中文状态文案，避免 success message 直接暴露底层枚举值。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步收紧单条 dispatch 成功提示与两条 websocket retention 断言，锁定 `等待执行` 状态会在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下保持可见。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交这条 dispatch status feedback 收敛增量；若还要继续补一轮，再找下一处 server/shared 已锁住但 web/client 尚未直接消费的 worker task contract 细节。
   - 若还要继续补一轮，可评估 approve / dispatch / accept 三阶段 websocket filter convergence 是否值得抽成共享断言 helper，但优先级低于继续寻找新的 contract 缺口。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:802` 新增 dispatch response worker-task convergence contract test，改用真实会走 worker host 的 `update_persona_snapshot` soul action，锁定 dispatch 返回的 `result.workerTaskId` 会与随后 `worker-task-updated` websocket 事件以及 `/api/worker-tasks?sourceNoteId=...` follow-up 列表中的同一 task id / sourceNoteId / taskType 保持一致。
