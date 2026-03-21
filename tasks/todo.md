@@ -1,3 +1,46 @@
+# schedule CRUD shared contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 `/api/schedules` 主路径剩余 response shape，确认 create/list/get/update/delete/run 是否仍停留在 server-local / web-local `{ schedule }`、`{ schedules }`、`{ success: true }` 结构。
+- [x] 把 `TaskScheduleResponse`、`TaskScheduleListResponse`、`DeleteTaskScheduleResponse` 提升到 `packages/shared`，并让 web client / server handlers 直接复用。
+- [x] 补最小 web + server 回归，锁定 schedule CRUD 主路径已经切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `TaskScheduleResponse`
+    - `TaskScheduleListResponse`
+    - `DeleteTaskScheduleResponse`
+  - `LifeOS/packages/web/src/api/client.ts`：
+    - `createTaskSchedule()` 改为消费 shared `TaskScheduleResponse`
+    - `fetchTaskSchedules()` 改为消费 shared `TaskScheduleListResponse`
+    - `updateTaskSchedule()` 改为消费 shared `TaskScheduleResponse`
+    - `deleteTaskSchedule()` 改为按 shared `DeleteTaskScheduleResponse` 解析错误分支
+    - `runTaskScheduleNow()` 改为按 shared `TaskScheduleResponse` 解析错误分支
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `createScheduleHandler()` / `listSchedulesHandler()` / `getScheduleHandler()` / `updateScheduleHandler()` / `deleteScheduleHandler()` / `runScheduleNowHandler()` 全部显式接回 shared schedule CRUD response contract。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 schedule CRUD shared contract 回归，并修正测试样例以匹配当前真实 `TaskSchedule` / `CreateTaskScheduleRequest` contract。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `schedule APIs respond with shared schedule contracts`。
+- 这次修的不是 SettingsView 的对称补强，而是 schedule 主路径仍然保留的 response wrapper duplication：server 与 web 都在各自内联 `{ schedule }` / `{ schedules }` / `{ success: true }` shape，却没有 shared 单一事实源。
+
+## 本轮选择依据
+- 用户要求继续优先找新的高价值 `server/web/shared contract gap`。
+- stats 收口后，下一条仍直接服务 Settings 定时任务主路径的明显漂移点就是 schedule CRUD：response wrapper 已稳定存在，但 shared 尚未承载，web/client 与 server/handler 只能各自重复约定。
+- 这条线能继续减少 schedule 主路径 response contract 重复源和未来页面/handler 调整时的漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 124 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "schedule APIs respond with shared schedule contracts|schedule health API responds with shared schedule health contract" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- schedule CRUD contract 收口后，下一步可继续检查 Dashboard / Timeline / Calendar 等主路径是否还存在 shared 之外的稳定 response shape。
+
+
 # stats shared contract 收口
 
 ## 计划

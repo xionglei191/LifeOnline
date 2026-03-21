@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -963,9 +963,9 @@ export async function getStatsTags(_req: Request<Record<string, never>, StatsTag
 }
 
 // POST /api/schedules
-export async function createScheduleHandler(req: Request, res: Response): Promise<void> {
+export async function createScheduleHandler(req: Request<Record<string, never>, TaskScheduleResponse, CreateTaskScheduleRequest>, res: Response<TaskScheduleResponse>): Promise<void> {
   try {
-    const body = req.body as CreateTaskScheduleRequest;
+    const body = req.body;
     if (!body?.taskType || !isSupportedWorkerTaskType(body.taskType)) {
       res.status(400).json({ error: 'Invalid or missing taskType' });
       return;
@@ -983,7 +983,8 @@ export async function createScheduleHandler(req: Request, res: Response): Promis
       ...body,
       taskType: body.taskType,
     });
-    res.status(201).json({ schedule });
+    const response: TaskScheduleResponse = { schedule };
+    res.status(201).json(response);
   } catch (error) {
     if (isTaskInputValidationError(error)) {
       res.status(400).json({ error: error instanceof Error ? error.message : String(error) });
@@ -995,29 +996,31 @@ export async function createScheduleHandler(req: Request, res: Response): Promis
 }
 
 // GET /api/schedules
-export async function listSchedulesHandler(_req: Request, res: Response): Promise<void> {
+export async function listSchedulesHandler(_req: Request<Record<string, never>, TaskScheduleListResponse>, res: Response<TaskScheduleListResponse>): Promise<void> {
   try {
-    res.json({ schedules: listSchedules() });
+    const response: TaskScheduleListResponse = { schedules: listSchedules() };
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }
 }
 
 // GET /api/schedules/:id
-export async function getScheduleHandler(req: Request, res: Response): Promise<void> {
+export async function getScheduleHandler(req: Request<{ id: string }, TaskScheduleResponse>, res: Response<TaskScheduleResponse>): Promise<void> {
   try {
     const schedule = getSchedule(req.params.id);
     if (!schedule) { res.status(404).json({ error: 'Schedule not found' }); return; }
-    res.json({ schedule });
+    const response: TaskScheduleResponse = { schedule };
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }
 }
 
 // PATCH /api/schedules/:id
-export async function updateScheduleHandler(req: Request, res: Response): Promise<void> {
+export async function updateScheduleHandler(req: Request<{ id: string }, TaskScheduleResponse, UpdateTaskScheduleRequest>, res: Response<TaskScheduleResponse>): Promise<void> {
   try {
-    const body = req.body as UpdateTaskScheduleRequest;
+    const body = req.body;
     if (body.cronExpression !== undefined && !cronValidate(body.cronExpression)) {
       res.status(400).json({ error: 'Invalid cron expression' });
       return;
@@ -1027,7 +1030,8 @@ export async function updateScheduleHandler(req: Request, res: Response): Promis
       return;
     }
     const schedule = updateSchedule(req.params.id, body);
-    res.json({ schedule });
+    const response: TaskScheduleResponse = { schedule };
+    res.json(response);
   } catch (error: any) {
     if (error?.message === 'Schedule not found') {
       res.status(404).json({ error: error.message });
@@ -1042,20 +1046,22 @@ export async function updateScheduleHandler(req: Request, res: Response): Promis
 }
 
 // DELETE /api/schedules/:id
-export async function deleteScheduleHandler(req: Request, res: Response): Promise<void> {
+export async function deleteScheduleHandler(req: Request<{ id: string }, DeleteTaskScheduleResponse>, res: Response<DeleteTaskScheduleResponse>): Promise<void> {
   try {
     deleteSchedule(req.params.id);
-    res.json({ success: true });
+    const response: DeleteTaskScheduleResponse = { success: true };
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }
 }
 
 // POST /api/schedules/:id/run
-export async function runScheduleNowHandler(req: Request, res: Response): Promise<void> {
+export async function runScheduleNowHandler(req: Request<{ id: string }, TaskScheduleResponse>, res: Response<TaskScheduleResponse>): Promise<void> {
   try {
     const schedule = runScheduleNow(req.params.id);
-    res.json({ schedule });
+    const response: TaskScheduleResponse = { schedule };
+    res.json(response);
   } catch (error: any) {
     if (error?.message === 'Schedule not found') {
       res.status(404).json({ error: error.message });

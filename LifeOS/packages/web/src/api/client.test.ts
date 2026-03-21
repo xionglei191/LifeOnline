@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -139,6 +139,82 @@ describe('api client promotion projections', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vaultPath: '/vault' }),
     });
+  });
+
+  it('fetches typed schedule contracts from shared response shapes', async () => {
+    const schedule: TaskSchedule = {
+      id: 'schedule-1',
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      cronExpression: '0 9 * * *',
+      enabled: true,
+      label: 'Daily reflection',
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      lastRunAt: null,
+      lastTaskId: null,
+      consecutiveFailures: 0,
+      lastError: null,
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ schedules: [schedule] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule: { ...schedule, label: 'Updated reflection' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule }) }));
+
+    await expect(createTaskSchedule({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      cronExpression: '0 9 * * *',
+      label: 'Daily reflection',
+    })).resolves.toEqual(schedule);
+    await expect(fetchTaskSchedules()).resolves.toEqual([schedule]);
+    await expect(updateTaskSchedule('schedule-1', { label: 'Updated reflection' })).resolves.toEqual({ ...schedule, label: 'Updated reflection' });
+    await expect(deleteTaskSchedule('schedule-1')).resolves.toBeUndefined();
+    await expect(runTaskScheduleNow('schedule-1')).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskType: 'openclaw_task',
+        input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+        cronExpression: '0 9 * * *',
+        label: 'Daily reflection',
+      }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/schedules');
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/schedules/schedule-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: 'Updated reflection' }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(4, '/api/schedules/schedule-1', {
+      method: 'DELETE',
+    });
+    expect(fetch).toHaveBeenNthCalledWith(5, '/api/schedules/schedule-1/run', {
+      method: 'POST',
+    });
+  });
+
+  it('surfaces API errors for schedule contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'create failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'list failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'update failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'delete failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'run failed' }) }));
+
+    await expect(createTaskSchedule({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      cronExpression: '0 9 * * *',
+      label: 'Daily reflection',
+    })).rejects.toThrow('create failed');
+    await expect(fetchTaskSchedules()).rejects.toThrow('list failed');
+    await expect(updateTaskSchedule('schedule-1', { label: 'Updated reflection' })).rejects.toThrow('update failed');
+    await expect(deleteTaskSchedule('schedule-1')).rejects.toThrow('delete failed');
+    await expect(runTaskScheduleNow('schedule-1')).rejects.toThrow('run failed');
   });
 
   it('fetches typed schedule health from the shared response shape', async () => {

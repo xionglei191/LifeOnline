@@ -110,6 +110,64 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('schedule APIs respond with shared schedule contracts', async () => {
+  const env = await createTestEnv('lifeos-schedule-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const created = await api<import('../../shared/src/types.js').TaskScheduleResponse>(baseUrl, '/api/schedules', {
+      method: 'POST',
+      body: JSON.stringify({
+        taskType: 'openclaw_task',
+        input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+        cronExpression: '0 9 * * *',
+        label: 'Daily reflection',
+      } satisfies import('../../shared/src/types.js').CreateTaskScheduleRequest),
+    });
+    assert.equal(created.schedule.label, 'Daily reflection');
+
+    const listed = await api<import('../../shared/src/types.js').TaskScheduleListResponse>(baseUrl, '/api/schedules');
+    assert.ok(listed.schedules.some((schedule) => schedule.id === created.schedule.id));
+
+    const fetched = await api<import('../../shared/src/types.js').TaskScheduleResponse>(baseUrl, `/api/schedules/${created.schedule.id}`);
+    assert.equal(fetched.schedule.id, created.schedule.id);
+
+    const updated = await api<import('../../shared/src/types.js').TaskScheduleResponse>(baseUrl, `/api/schedules/${created.schedule.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ label: 'Daily reflection updated' } satisfies import('../../shared/src/types.js').UpdateTaskScheduleRequest),
+    });
+    assert.equal(updated.schedule.label, 'Daily reflection updated');
+
+    const runNow = await api<import('../../shared/src/types.js').TaskScheduleResponse>(baseUrl, `/api/schedules/${created.schedule.id}/run`, {
+      method: 'POST',
+    });
+    assert.equal(runNow.schedule.id, created.schedule.id);
+
+    const deleted = await api<import('../../shared/src/types.js').DeleteTaskScheduleResponse>(baseUrl, `/api/schedules/${created.schedule.id}`, {
+      method: 'DELETE',
+    });
+    assert.equal(deleted.success, true);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('stats APIs respond with shared stats contracts', async () => {
   const env = await createTestEnv('lifeos-stats-contract-');
   const configFile = CONFIG_FILE;

@@ -536,6 +536,18 @@ export interface CreateTaskScheduleRequest {
   label: string;
 }
 
+export interface TaskScheduleResponse {
+  schedule: TaskSchedule;
+}
+
+export interface TaskScheduleListResponse {
+  schedules: TaskSchedule[];
+}
+
+export interface DeleteTaskScheduleResponse {
+  success: true;
+}
+
 export interface UpdateTaskScheduleRequest {
   enabled?: boolean;
   cronExpression?: string;

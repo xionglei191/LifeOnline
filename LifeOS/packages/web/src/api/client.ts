@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -519,14 +519,14 @@ export async function createTaskSchedule(req: CreateTaskScheduleRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to create schedule');
-  return data.schedule;
+  return data.schedule as TaskSchedule;
 }
 
 export async function fetchTaskSchedules(): Promise<TaskSchedule[]> {
   const res = await fetch(`${API_BASE}/schedules`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<TaskScheduleListResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to fetch schedules');
   return data.schedules || [];
 }
@@ -537,9 +537,9 @@ export async function updateTaskSchedule(id: string, updates: UpdateTaskSchedule
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to update schedule');
-  return data.schedule;
+  return data.schedule as TaskSchedule;
 }
 
 export async function deleteTaskSchedule(id: string): Promise<void> {
@@ -547,7 +547,7 @@ export async function deleteTaskSchedule(id: string): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({} as Partial<DeleteTaskScheduleResponse> & { error?: string }));
     throw new Error(data.error || 'Failed to delete schedule');
   }
 }
@@ -556,8 +556,8 @@ export async function runTaskScheduleNow(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}/run`, {
     method: 'POST',
   });
+  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to run schedule');
   }
 }
