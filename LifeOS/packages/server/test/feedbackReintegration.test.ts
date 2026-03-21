@@ -119,6 +119,42 @@ test('createOrReuseSoulAction reuses promotion actions by legacy reintegration s
   assert.equal(reloaded?.sourceNoteId, 'reint:legacy-identity-source');
 });
 
+test('createOrReuseSoulAction reuses create_event_node actions by legacy reintegration source encoded in sourceNoteId', async (t) => {
+  const env = await createTestEnv('lifeos-create-event-node-legacy-source-identity-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  const first = createOrReuseSoulAction({
+    sourceNoteId: 'reint:legacy-create-event-node-source',
+    sourceReintegrationId: null,
+    actionKind: 'create_event_node',
+    governanceReason: 'legacy create_event_node identity seed',
+  });
+
+  const reused = createOrReuseSoulAction({
+    sourceNoteId: 'reint:legacy-create-event-node-source',
+    sourceReintegrationId: null,
+    actionKind: 'create_event_node',
+    governanceReason: 'legacy create_event_node identity second pass',
+  });
+
+  const reloaded = getSoulActionByIdentityAndKind({
+    sourceNoteId: 'reint:legacy-create-event-node-source',
+    sourceReintegrationId: null,
+    actionKind: 'create_event_node',
+  });
+
+  assert.equal(first.id, 'soul:create_event_node:reint:legacy-create-event-node-source');
+  assert.equal(reused.id, first.id);
+  assert.equal(reloaded?.id, first.id);
+  assert.equal(reloaded?.sourceReintegrationId, 'reint:legacy-create-event-node-source');
+  assert.equal(reloaded?.sourceNoteId, 'reint:legacy-create-event-node-source');
+});
+
 test('createReintegrationRecordInput centralizes record assembly for terminal tasks', () => {
   const task = buildTerminalTask('update_persona_snapshot', {
     id: 'task-record-input',

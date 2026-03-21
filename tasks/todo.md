@@ -1,4 +1,44 @@
-# PR6 daily-report continuity promotion 扩展
+# PR6 grouped governance 命名语义收口
+
+## 计划
+- [x] 复核当前仓库未提交状态，确认本轮不去碰并行中的 `CLAUDE.md` / worker 草稿，只在产品代码内继续推进。
+- [x] 基于 `README` / `tasks/todo.md` / `CLAUDE.md` / 当前代码搜索，判断是否仍有必要继续本轮，并避开已补得很深的 grouped governance websocket/filter/retention 同类对称补强。
+- [x] 锁定新的真实缺口：web grouped governance 明明在按 reintegration 分组，却仍把组键命名成 `sourceNoteId`，容易把已分离的 `sourceReintegrationId` / `sourceNoteId` 双事实源再次混淆。
+- [x] 仅在 web 侧做最小语义收口：将 `SoulActionGroup` 与 `SoulActionGovernancePanel` / `SettingsView` / 对应 tests 中承载“分组键”的字段统一改名为 `groupKey`，不扩大功能面、不改变现有治理规则。
+- [x] 跑 web 定向测试与 build 验证回归。
+- [x] 更新本文件，记录本轮选择依据、验证结果与下一步建议。
+
+## 当前执行
+- 已确认本轮继续推进是有必要的，但不应该再重复补 grouped governance 的 websocket/filter/retention 同类对称用例。
+- 仓库当前仍有与本轮无关的未提交改动：根目录 `CLAUDE.md` 被本地收紧、根目录存在 `lifeonline-claude-worker-v2.sh` 草稿；本轮未触碰它们，也未尝试混入提交。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/utils/soulActionGroups.ts` 中 `SoulActionGroup` 的分组主键由误导性的 `sourceNoteId` 改为 `groupKey`；内部 grouped map 也同步改名，明确表达“这里承载的是 reintegration group key（promotion 时优先 `sourceReintegrationId`，否则才回退 note id）”，而不是原始 source note 本身。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 所有组级 `key`、label、loading/disabled 判定、collapse emit 与 group toolbar 接线，全部同步切到 `group.groupKey`，避免组件继续在用户可见文案和事件层误传播 `sourceNoteId` 这一错误语义。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 的组级 approve / dispatch handler 形参与 in-flight id 跟踪同步改为 `groupKey`，把父层状态机与 panel/utility 侧语义对齐。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts`、`LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts`、`LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 中所有依赖该分组键的 props / emit / 断言同步改为 `groupKey`，保持 view + component + utility 三层回归保护一致。
+- 本轮没有新增接口、没有改 shared/server contract、没有扩治理动作；只是把 web 里已经实际存在的“按 reintegration 分组”语义正式说清楚，避免以后又把 `sourceReintegrationId` / `sourceNoteId` 混回同一个名字里。
+
+## 本轮选择依据
+- `tasks/todo.md` 里已经明确记录：grouped governance / SettingsView 的 websocket/filter/retention 收敛链补得很深，继续同类测试边际收益低。
+- 当前代码搜索显示，server/shared 侧已经把 `sourceReintegrationId` 与 `sourceNoteId` 区分开了，但 web grouped governance 这层仍在用 `sourceNoteId` 指代分组键；这会持续误导后续实现者，也容易让刚分离好的双事实源在 UI 层再次语义漂移。
+- 所以本轮选择的是“命名与接线语义收口”这个真实缺口，而不是再做一轮对称性 coverage 补强。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/soulActionGroups.test.ts src/components/SoulActionGovernancePanel.test.ts src/views/SettingsView.test.ts` 通过，9 files / 115 tests。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前环境仍有 Node engine warning（包声明 `>=20 <21`，实际 `v25.8.1`），但本轮测试与构建均通过。
+
+## 当前未完成项
+- 本轮 web 命名收口改动尚未提交 git commit。
+- server / API 主链里是否还存在把 `sourceNoteId = record.id` 当主语义承载的兼容路径，仍值得后续继续排查；这比继续补 web 对称测试更有价值。
+- 仓库仍有与本轮无关的未提交改动（`CLAUDE.md`、`lifeonline-claude-worker-v2.sh`），若后续要提交，需要先决定是否拆分或继续避开。
+
+## 下一步建议
+- 优先转回 server/shared contract 主链，继续检查 `reintegrationPromotionPlanner`、accept API 返回链、以及 related soul-action list 是否还残留“`sourceNoteId = record.id` 承载 reintegration 语义”的现实路径。
+- 若确认主链还没完全切回“双字段分离”，下一步就直接补那条根因，而不是回头继续做 grouped governance 的 UI 微调。
+- 若短期不继续扩实现，也可以先把本轮 web 语义收口单独提交，避免它长时间和无关 worker/CLAUDE 草稿混在未提交状态里。
+
+
 
 ## 计划
 - [x] 读取 README / vision / tasks / CLAUDE.md 并复核当前 PR1–PR6 边界。
@@ -272,14 +312,57 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
   - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
-- 本轮额外记录：
-  - 本次续跑确认 `vision/00-权威基线` 与 `vision/01-当前进度` 现在是目录而不是单文件；后续续跑应直接读取目录内正式文稿，避免把 `ENOENT` 误当成阻塞。
-  - 仓库当前仍有与本轮无关的未提交改动：`CLAUDE.md` 被本地收紧、根目录存在 `lifeonline-claude-worker-v2.sh` 草稿；本轮未触碰它们，也未贸然提交，以免把并行中的 worker/策略试验混入当前 web 收敛改动。
 - 当前未完成项再补充：
   - 本轮 web 变更仍未提交 git commit。
 - 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接转向 server 侧剩余的事实源一致性缺口，优先检查 migration / list / filter 读路径里是否还把 legacy `sourceNoteId = reint:...` 当作主身份继续外溢。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/src/db/client.ts` 收紧 `soul_actions` 迁移逻辑：对 `create_event_node` / `promote_event_node` / `promote_continuity_record` 这类 PR6 promotion action，不再把 legacy 行的 `source_note_id` 重写成 action id，而是保留原始 note 维度，仅把 reintegration 身份规范化写入 `source_reintegration_id`。
+  - 这样迁移后的持久化语义与当前运行时 `createOrReuseSoulAction()` / `getSoulActionByIdentityAndKind()` 已集中出的规则对齐：显式 `sourceReintegrationId` 是主身份，legacy `sourceNoteId = reint:...` 只作为兼容 fallback，不再把 note/source 两个维度混成同一个 action id。
+  - `LifeOS/packages/server/test/db.test.ts` 同步收紧断言，确认 legacy PR6 promotion 迁移后会保留 `source_note_id = reint:legacy-pr6-record`，并新增一条显式 `source_reintegration_id` 旧行迁移测试，锁定迁移不会覆盖已存在的 note 维度。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/db.test.ts test/feedbackReintegration.test.ts` 通过，59/59。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建成功）。
+- 当前未完成项补充：
+  - 还未继续检查 API/list/filter 层是否仍有把 legacy `sourceNoteId = reint:...` 当主语义暴露给上层的读路径。
+- 下一步建议补充：
+  - 优先沿同一事实源主线检查 `listSoulActions()` / API filter 语义与 web 端展示，确认上层读取不会把 legacy fallback 误当成主身份字段继续扩散。
   - 若继续沿“worker task contract 直接投射到 UI”这条主线推进，优先检查 `SettingsView` / 其他入口里是否还存在少数泛化 worker-task 成功提示没有走统一 helper；若没有，就该直接提交当前最小收敛增量，而不是继续做对称性补强。
   - 由于仓库里已有并行未提交的 worker/CLAUDE 调整，下一轮若要提交，先分辨是否需要拆分提交范围，避免把无关脚本和当前产品代码改动混在一起。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/src/soul/soulActions.ts` 把 `create_event_node` 也纳入与 PR6 promotion 相同的 reintegration identity 规则：`getSoulActionIdentityKey()`、`getSoulActionByIdentityAndKind()`、`createOrReuseSoulAction()` 现在都会优先用 `resolveSoulActionSourceReintegrationId()` 统一归一到 reintegration 身份，而不是仅对两类 promotion action 特判。
+  - 这样 `create_event_node` 的运行时 create/reuse 语义终于与 `db` migration、`dispatchApprovedSoulAction()` 最终执行口、以及 `pr6PromotionExecutor.ts` 的 reintegration source 解析保持一致，避免 legacy `sourceNoteId = reint:...` 输入在不同 actionKind 下再次分叉。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 `create_event_node` legacy source identity 回归，锁定同一 reintegration source 的重复建单会复用同一个 `soul:create_event_node:reint:...` action，并正确回填 `sourceReintegrationId`。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts test/db.test.ts` 通过，60/60。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建成功）。
+- 当前未完成项补充：
+  - 还没有继续确认 `/api/soul-actions` 的读路径在 `create_event_node` 这类 legacy 兼容输入下，是否需要额外提供更显式的主身份过滤语义。
+- 下一步建议补充：
+  - 优先检查 `listSoulActionsHandler()` / `listSoulActions()` 是否值得在 legacy `reint:` note 过滤场景下自动归一到 `sourceReintegrationId`，避免 API 读路径继续暴露“写路径已归一、查路径仍按 legacy note 维度猜”的不对称行为。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/src/soul/soulActions.ts` 继续收紧 `listSoulActions()`：当调用方只传 `sourceNoteId=reint:...` 时，会自动把 `create_event_node` / `promote_event_node` / `promote_continuity_record` 这类 reintegration-identity action 一并按 `source_reintegration_id` 命中，而不再只按 legacy `source_note_id` 猜测。
+  - `LifeOS/packages/server/src/api/handlers.ts` 同步把 `/api/soul-actions` 返回的 filters 归一化：如果这次查询实际命中的是 reintegration identity，会返回 `filters.sourceReintegrationId`，并清掉误导性的 `filters.sourceNoteId`，让 API contract 对“主身份”表达保持一致。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 API 回归，锁定 legacy `sourceNoteId = reint:...` 查询会正确返回 `create_event_node` 结果，并把响应 filters 规范化到 `sourceReintegrationId`。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts test/feedbackReintegration.test.ts test/db.test.ts` 通过，93/93。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建成功）。
+- 当前未完成项补充：
+  - 还没有继续检查 web 端是否有地方会把 `ListSoulActionsResponse.filters.sourceNoteId` 当作 reintegration group key 继续缓存或展示。
+- 下一步建议补充：
+  - 优先检查 `packages/web/src/api/client.ts` 与 `SettingsView` 里 soul-action filter 状态的消费方式，确认这次 API filter 归一化不会在前端形成新的字段假设；若消费端已经天然兼容，就可以开始整理并提交这一段 server 事实源一致性收敛改动。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/api/client.ts` 现在会在请求前就把 legacy `sourceNoteId = reint:...` 归一为 `sourceReintegrationId`，避免 web 端继续把兼容 fallback 当成主过滤字段发给 `/api/soul-actions`。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增回归，锁定 `fetchSoulActions({ sourceNoteId: 'reint:...' })` 实际请求的是 `?sourceReintegrationId=...`，从 web 入口与刚收紧的 server contract 保持一致。
+  - 这次没有继续深挖 SettingsView 同类 retention/filter 补强，而是把真正的 client->server 查询 contract 先统一，减少新的读路径分叉继续产生。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；Vitest 合计 9 files / 116 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项补充：
+  - 还没有继续确认是否存在别的 web 入口会手工构造 `/api/soul-actions?sourceNoteId=reint:...`，绕过 `fetchSoulActions()`。
+- 下一步建议补充：
+  - 优先全局检查 web 端是否还有绕过 typed client 的 soul-action 请求；如果没有，就可以开始整理当前这组 server+web 事实源一致性改动并考虑提交。
 单条 action loading/disabled 态在父层往返中的 view 级断言。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。

@@ -306,8 +306,13 @@ export async function fetchSoulActions(filters?: {
   actionKind?: SoulActionKind;
 }): Promise<SoulAction[]> {
   const params = new URLSearchParams();
-  if (filters?.sourceNoteId) params.set('sourceNoteId', filters.sourceNoteId);
-  if (filters?.sourceReintegrationId) params.set('sourceReintegrationId', filters.sourceReintegrationId);
+  const normalizedSourceReintegrationId = filters?.sourceReintegrationId
+    ?? (filters?.sourceNoteId?.startsWith('reint:') ? filters.sourceNoteId : undefined);
+  const normalizedSourceNoteId = normalizedSourceReintegrationId === filters?.sourceNoteId
+    ? undefined
+    : filters?.sourceNoteId;
+  if (normalizedSourceNoteId) params.set('sourceNoteId', normalizedSourceNoteId);
+  if (normalizedSourceReintegrationId) params.set('sourceReintegrationId', normalizedSourceReintegrationId);
   if (filters?.governanceStatus) params.set('governanceStatus', filters.governanceStatus);
   if (filters?.executionStatus) params.set('executionStatus', filters.executionStatus);
   if (filters?.actionKind) params.set('actionKind', filters.actionKind);

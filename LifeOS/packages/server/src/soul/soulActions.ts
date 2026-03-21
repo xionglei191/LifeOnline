@@ -60,8 +60,14 @@ function rowToSoulAction(row: SoulActionRow): SoulAction {
   };
 }
 
-function isPromotionSoulActionKind(actionKind: SoulActionKind): boolean {
-  return actionKind === 'promote_event_node' || actionKind === 'promote_continuity_record';
+function usesReintegrationSourceIdentity(actionKind: SoulActionKind): boolean {
+  return actionKind === 'create_event_node'
+    || actionKind === 'promote_event_node'
+    || actionKind === 'promote_continuity_record';
+}
+
+function getReintegrationIdentityActionKinds(): SoulActionKind[] {
+  return SUPPORTED_SOUL_ACTION_KINDS.filter(usesReintegrationSourceIdentity);
 }
 
 function getSoulActionIdentityKey(input: {
@@ -69,7 +75,7 @@ function getSoulActionIdentityKey(input: {
   sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
 }): string {
-  if (isPromotionSoulActionKind(input.actionKind)) {
+  if (usesReintegrationSourceIdentity(input.actionKind)) {
     return resolveSoulActionSourceReintegrationId(input) ?? input.sourceNoteId;
   }
   return input.sourceNoteId;
@@ -153,7 +159,7 @@ export function getSoulActionByIdentityAndKind(input: {
   sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
 }): SoulAction | null {
-  if (isPromotionSoulActionKind(input.actionKind)) {
+  if (usesReintegrationSourceIdentity(input.actionKind)) {
     const sourceReintegrationId = resolveSoulActionSourceReintegrationId(input);
     if (sourceReintegrationId) {
       return getSoulActionBySourceReintegrationIdAndKind(sourceReintegrationId, input.actionKind);
@@ -176,7 +182,7 @@ export function createOrReuseSoulAction(input: {
   executionStatus?: SoulActionExecutionStatus;
   governanceReason?: string | null;
 }): SoulAction {
-  const normalizedSourceReintegrationId = isPromotionSoulActionKind(input.actionKind)
+  const normalizedSourceReintegrationId = usesReintegrationSourceIdentity(input.actionKind)
     ? resolveSoulActionSourceReintegrationId(input)
     : input.sourceReintegrationId ?? null;
   const normalizedInput = {
@@ -372,8 +378,19 @@ export function listSoulActions(filters?: ListSoulActionsFilters): SoulAction[] 
     params.push(filters.executionStatus);
   }
   if (filters?.sourceNoteId) {
-    clauses.push('source_note_id = ?');
-    params.push(filters.sourceNoteId);
+    if (filters.sourceNoteId.startsWith('reint:') && !filters.sourceReintegrationId) {
+      clauses.push(`(
+        source_note_id = ?
+        OR (
+          action_kind IN (${getReintegrationIdentityActionKinds().map(() => '?').join(', ')})
+          AND source_reintegration_id = ?
+        )
+      )`);
+      params.push(filters.sourceNoteId, ...getReintegrationIdentityActionKinds(), filters.sourceNoteId);
+    } else {
+      clauses.push('source_note_id = ?');
+      params.push(filters.sourceNoteId);
+    }
   }
   if (filters?.sourceReintegrationId) {
     clauses.push('source_reintegration_id = ?');

@@ -465,6 +465,57 @@ test('soul-action list API supports sourceReintegrationId filtering independentl
   }
 });
 
+test('soul-action list API normalizes legacy reintegration note filters to sourceReintegrationId', async () => {
+  const env = await createTestEnv('lifeos-soul-action-legacy-reint-note-filter-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+
+    const legacyAction = createOrReuseSoulAction({
+      sourceNoteId: 'reint:legacy-filter-target',
+      sourceReintegrationId: null,
+      actionKind: 'create_event_node',
+      governanceReason: 'legacy reintegration note filter target',
+    });
+    createOrReuseSoulAction({
+      sourceNoteId: 'note-plain-target',
+      sourceReintegrationId: null,
+      actionKind: 'extract_tasks',
+      governanceReason: 'plain note filter control',
+    });
+
+    const filtered = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent('reint:legacy-filter-target')}`,
+    );
+
+    assert.deepEqual(filtered.soulActions.map((action) => action.id), [legacyAction.id]);
+    assert.equal(filtered.soulActions[0]?.sourceNoteId, 'reint:legacy-filter-target');
+    assert.equal(filtered.soulActions[0]?.sourceReintegrationId, 'reint:legacy-filter-target');
+    assert.equal(filtered.filters.sourceNoteId, undefined);
+    assert.equal(filtered.filters.sourceReintegrationId, 'reint:legacy-filter-target');
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('reintegration accept API returns reviewed record and planned soul actions', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-');
   const configFile = CONFIG_FILE;

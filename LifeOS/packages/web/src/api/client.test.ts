@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContinuityRecord, EventNode } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes } from './client';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -65,6 +65,16 @@ describe('api client promotion projections', () => {
 
     await expect(fetchContinuityRecords()).resolves.toEqual(continuityRecords);
     expect(fetch).toHaveBeenCalledWith('/api/continuity-records');
+  });
+
+  it('normalizes legacy reintegration note filters to sourceReintegrationId for soul-action fetches', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ soulActions: [] }),
+    }));
+
+    await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
+    expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
   });
 
   it('surfaces API errors for promotion projection fetches', async () => {

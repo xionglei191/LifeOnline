@@ -155,24 +155,14 @@ ${SOUL_ACTION_TABLE_COLUMNS_SQL}
     )
     SELECT
       id,
+      source_note_id,
       CASE
         WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN COALESCE(
-          CASE
-            WHEN source_note_id LIKE 'reint:%' THEN NULL
-            ELSE source_note_id
-          END,
-          id
-        )
-        ELSE source_note_id
-      END,
-      CASE
-        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN COALESCE(
+          ${sourceReintegrationColumnSql},
           CASE
             WHEN source_note_id LIKE 'reint:%' THEN source_note_id
             ELSE NULL
-          END,
-          ${sourceReintegrationColumnSql},
-          id
+          END
         )
         ELSE ${sourceReintegrationColumnSql}
       END,

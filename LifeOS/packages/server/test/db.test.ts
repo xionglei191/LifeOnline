@@ -196,9 +196,88 @@ test('initDatabase migrates legacy PR6 promotion actions to explicit reintegrati
     } | undefined;
 
     assert.ok(migrated);
-    assert.equal(migrated?.source_note_id, 'soul:promote_event_node:reint:legacy-pr6-record');
+    assert.equal(migrated?.source_note_id, 'reint:legacy-pr6-record');
     assert.equal(migrated?.source_reintegration_id, 'reint:legacy-pr6-record');
     assert.equal(migrated?.action_kind, 'promote_event_node');
+    assert.equal(migrated?.governance_status, 'approved');
+    assert.equal(migrated?.execution_status, 'not_dispatched');
+  } finally {
+    await env.cleanup();
+  }
+});
+
+test('initDatabase preserves explicit reintegration source ids on legacy PR6 promotion rows', async () => {
+  const env = await createTestEnv('lifeos-db-legacy-pr6-explicit-source-');
+  try {
+    closeDb();
+    const legacyDb = new Database(env.dbPath);
+    legacyDb.exec(`
+      CREATE TABLE soul_actions (
+        id TEXT PRIMARY KEY,
+        source_note_id TEXT NOT NULL,
+        source_reintegration_id TEXT,
+        action_kind TEXT NOT NULL,
+        governance_status TEXT NOT NULL CHECK(governance_status IN ('pending_review', 'approved', 'deferred', 'discarded')),
+        execution_status TEXT NOT NULL CHECK(execution_status IN ('not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled')),
+        governance_reason TEXT,
+        worker_task_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        approved_at TEXT,
+        deferred_at TEXT,
+        discarded_at TEXT,
+        started_at TEXT,
+        finished_at TEXT,
+        error TEXT,
+        result_summary TEXT,
+        UNIQUE(source_note_id, action_kind),
+        UNIQUE(worker_task_id)
+      );
+    `);
+    legacyDb.prepare(`
+      INSERT INTO soul_actions (
+        id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+        created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'soul:promote_continuity_record:reint:explicit-pr6-record',
+      'note-explicit-pr6-source',
+      'reint:explicit-pr6-record',
+      'promote_continuity_record',
+      'approved',
+      'not_dispatched',
+      'explicit promotion action',
+      null,
+      '2026-03-22T04:00:00.000Z',
+      '2026-03-22T04:00:00.000Z',
+      '2026-03-22T04:00:00.000Z',
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+    );
+    legacyDb.close();
+
+    initDatabase();
+    const db = getDb();
+    const migrated = db.prepare(`
+      SELECT source_note_id, source_reintegration_id, action_kind, governance_status, execution_status
+      FROM soul_actions
+      WHERE id = ?
+    `).get('soul:promote_continuity_record:reint:explicit-pr6-record') as {
+      source_note_id: string;
+      source_reintegration_id: string | null;
+      action_kind: string;
+      governance_status: string;
+      execution_status: string;
+    } | undefined;
+
+    assert.ok(migrated);
+    assert.equal(migrated?.source_note_id, 'note-explicit-pr6-source');
+    assert.equal(migrated?.source_reintegration_id, 'reint:explicit-pr6-record');
+    assert.equal(migrated?.action_kind, 'promote_continuity_record');
     assert.equal(migrated?.governance_status, 'approved');
     assert.equal(migrated?.execution_status, 'not_dispatched');
   } finally {

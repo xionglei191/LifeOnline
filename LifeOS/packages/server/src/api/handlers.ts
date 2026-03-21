@@ -462,7 +462,24 @@ export async function listSoulActionsHandler(req: Request, res: Response): Promi
       actionKind: parseSoulActionKind(req.query.actionKind),
     };
 
-    res.json({ soulActions: listSoulActions(filters), filters });
+    const soulActions = listSoulActions(filters);
+    const normalizedSourceNoteId = sourceNoteId?.startsWith('reint:') && !sourceReintegrationId
+      && soulActions.some((action) => action.sourceReintegrationId === sourceNoteId)
+      ? undefined
+      : sourceNoteId;
+    const normalizedSourceReintegrationId = sourceReintegrationId
+      ?? (sourceNoteId?.startsWith('reint:') && soulActions.some((action) => action.sourceReintegrationId === sourceNoteId)
+        ? sourceNoteId
+        : undefined);
+
+    res.json({
+      soulActions,
+      filters: {
+        ...filters,
+        sourceNoteId: normalizedSourceNoteId,
+        sourceReintegrationId: normalizedSourceReintegrationId,
+      },
+    });
   } catch (error) {
     console.error('List soul actions error:', error);
     res.status(500).json({ error: String(error) });
