@@ -439,6 +439,106 @@
       </div>
     </div>
 
+    <div class="settings-card soul-action-card">
+      <div class="reintegration-head">
+        <div>
+          <h3>Soul Action Governance</h3>
+          <p class="hint reintegration-subtitle">承接 accept 后自动规划出的 PR6 promotion actions，并在 web 端完成 approve / dispatch。</p>
+        </div>
+        <div class="reintegration-head-actions soul-action-filters">
+          <select v-model="soulActionFilterStatus" class="worker-filter" @change="loadSoulActions">
+            <option value="">全部治理状态</option>
+            <option value="pending_review">待治理</option>
+            <option value="approved">已批准</option>
+            <option value="deferred">已延后</option>
+            <option value="discarded">已丢弃</option>
+          </select>
+          <select v-model="soulActionExecutionFilter" class="worker-filter" @change="loadSoulActions">
+            <option value="">全部执行状态</option>
+            <option value="not_dispatched">未派发</option>
+            <option value="pending">已入队</option>
+            <option value="running">执行中</option>
+            <option value="succeeded">已执行</option>
+            <option value="failed">执行失败</option>
+            <option value="cancelled">已取消</option>
+          </select>
+          <button class="btn-link" @click="loadSoulActions">刷新</button>
+        </div>
+      </div>
+
+      <div class="reintegration-summary-strip soul-action-summary-strip">
+        <div class="reintegration-summary-item">
+          <span>待治理</span>
+          <strong>{{ soulActionSummary.pendingReview }}</strong>
+        </div>
+        <div class="reintegration-summary-item">
+          <span>已批准</span>
+          <strong>{{ soulActionSummary.approved }}</strong>
+        </div>
+        <div class="reintegration-summary-item">
+          <span>已执行</span>
+          <strong>{{ soulActionSummary.dispatched }}</strong>
+        </div>
+      </div>
+
+      <div v-if="soulActionMessage" :class="['message', soulActionMessageType]">{{ soulActionMessage }}</div>
+
+      <div v-if="soulActionLoading" class="worker-empty-state">加载中...</div>
+      <div v-else-if="soulActions.length" class="reintegration-list">
+        <article v-for="action in soulActions" :key="action.id" class="reintegration-item soul-action-item">
+          <div class="reintegration-item-top">
+            <div class="reintegration-item-title-row">
+              <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
+              <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
+              <span class="worker-pill">{{ action.actionKind }}</span>
+              <span class="worker-pill">{{ action.executionStatus }}</span>
+            </div>
+          </div>
+
+          <div class="reintegration-meta-grid soul-action-meta-grid">
+            <span>治理: {{ action.governanceStatus }}</span>
+            <span>Source: {{ action.sourceNoteId }}</span>
+            <span v-if="action.workerTaskId">Worker: {{ action.workerTaskId }}</span>
+            <span>创建于 {{ formatTime(action.createdAt) }}</span>
+            <span v-if="action.approvedAt">批准于 {{ formatTime(action.approvedAt) }}</span>
+            <span v-if="action.finishedAt">完成于 {{ formatTime(action.finishedAt) }}</span>
+          </div>
+
+          <div v-if="action.governanceReason || action.resultSummary || action.error" class="soul-action-detail-grid">
+            <div v-if="action.governanceReason" class="reintegration-review-reason">
+              治理理由：{{ action.governanceReason }}
+            </div>
+            <div v-if="action.resultSummary" class="reintegration-review-reason">
+              执行摘要：{{ action.resultSummary }}
+            </div>
+            <div v-if="action.error" class="reintegration-review-reason soul-action-error">
+              执行错误：{{ action.error }}
+            </div>
+          </div>
+
+          <div class="soul-action-controls">
+            <button
+              class="btn-worker"
+              :disabled="soulActionActionId === action.id || action.governanceStatus !== 'pending_review'"
+              @click="handleApproveSoulAction(action)"
+            >
+              {{ soulActionActionId === action.id ? '处理中...' : '批准' }}
+            </button>
+            <button
+              class="btn-cancel"
+              :disabled="soulActionActionId === action.id || action.governanceStatus !== 'approved' || action.executionStatus !== 'not_dispatched'"
+              @click="handleDispatchSoulAction(action)"
+            >
+              {{ soulActionActionId === action.id ? '处理中...' : '派发执行' }}
+            </button>
+          </div>
+        </article>
+      </div>
+      <div v-else class="worker-empty-state">
+        当前筛选下没有 soul actions
+      </div>
+    </div>
+
     <div class="settings-card">
       <h3>定时任务</h3>
       <p class="hint" style="margin-bottom:16px">配置周期性自动执行的任务，如每天定时采集热门新闻。</p>
@@ -729,7 +829,7 @@ import NoteDetail from '../components/NoteDetail.vue';
 import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
 import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -848,6 +948,13 @@ const reintegrationActionId = ref<string | null>(null);
 const reintegrationReasonDrafts = ref<Record<string, string>>({});
 const reintegrationPlannedActions = ref<Record<string, SoulAction[]>>({});
 const reintegrationExpandedIds = ref<string[]>([]);
+const soulActions = ref<SoulAction[]>([]);
+const soulActionLoading = ref(false);
+const soulActionMessage = ref('');
+const soulActionMessageType = ref<'success' | 'error'>('success');
+const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending_review');
+const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
+const soulActionActionId = ref<string | null>(null);
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
 const schedulePreset = ref('0 9 * * *');
@@ -928,6 +1035,18 @@ const reintegrationStatusSummary = computed(() => {
     rejected: 0,
   } as Record<ReintegrationRecord['reviewStatus'], number>);
 });
+const soulActionSummary = computed(() => {
+  return soulActions.value.reduce((acc, action) => {
+    acc.pendingReview += action.governanceStatus === 'pending_review' ? 1 : 0;
+    acc.approved += action.governanceStatus === 'approved' ? 1 : 0;
+    acc.dispatched += action.executionStatus === 'succeeded' ? 1 : 0;
+    return acc;
+  }, {
+    pendingReview: 0,
+    approved: 0,
+    dispatched: 0,
+  });
+});
 
 async function loadStatus() {
   try {
@@ -960,6 +1079,22 @@ async function loadReintegrationRecords() {
     reintegrationMessageType.value = 'error';
   } finally {
     reintegrationLoading.value = false;
+  }
+}
+
+async function loadSoulActions() {
+  soulActionLoading.value = true;
+  soulActionMessage.value = '';
+  try {
+    soulActions.value = await fetchSoulActions({
+      governanceStatus: soulActionFilterStatus.value || undefined,
+      executionStatus: soulActionExecutionFilter.value || undefined,
+    });
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '加载 soul actions 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionLoading.value = false;
   }
 }
 
@@ -1102,12 +1237,63 @@ function promotionActionLabel(actionKind: SoulAction['actionKind']) {
   return '提取行动项';
 }
 
+function soulActionStatusClass(action: SoulAction) {
+  if (action.executionStatus === 'succeeded') return 'overridden';
+  if (action.governanceStatus === 'approved') return 'warning';
+  if (action.governanceStatus === 'discarded' || action.executionStatus === 'failed') return 'disabled';
+  return 'default';
+}
+
+function soulActionStatusText(action: SoulAction) {
+  if (action.executionStatus === 'succeeded') return '已执行';
+  if (action.governanceStatus === 'approved') return '已批准';
+  if (action.governanceStatus === 'deferred') return '已延后';
+  if (action.governanceStatus === 'discarded') return '已丢弃';
+  if (action.executionStatus === 'failed') return '执行失败';
+  return '待治理';
+}
+
 function toggleReintegrationExpanded(id: string) {
   if (reintegrationExpandedIds.value.includes(id)) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
     return;
   }
   reintegrationExpandedIds.value = [...reintegrationExpandedIds.value, id];
+}
+
+async function handleApproveSoulAction(action: SoulAction) {
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    await approveSoulAction(action.id, {
+      reason: `Approved from settings reintegration governance panel for ${action.sourceNoteId}`,
+    });
+    soulActionMessage.value = 'Soul action 已批准';
+    soulActionMessageType.value = 'success';
+    await loadSoulActions();
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '批准 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
+  }
+}
+
+async function handleDispatchSoulAction(action: SoulAction) {
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    const result = await dispatchSoulAction(action.id);
+    soulActionMessage.value = result.result.reason;
+    soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
+    await loadSoulActions();
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '派发 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
+  }
 }
 
 async function handleAcceptReintegration(record: ReintegrationRecord) {
@@ -1129,6 +1315,7 @@ async function handleAcceptReintegration(record: ReintegrationRecord) {
       : '已接受，但当前没有可规划的 promotion actions';
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords();
+    await loadSoulActions();
   } catch (e: any) {
     reintegrationMessage.value = e.message || '接受 reintegration record 失败';
     reintegrationMessageType.value = 'error';
@@ -1172,6 +1359,7 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
       : '当前没有可规划的 promotion actions';
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords();
+    await loadSoulActions();
   } catch (e: any) {
     reintegrationMessage.value = e.message || '手动规划 promotion actions 失败';
     reintegrationMessageType.value = 'error';
@@ -1358,6 +1546,7 @@ onMounted(async () => {
   await loadWorkerTasks();
   await loadSchedules();
   await loadReintegrationRecords();
+  await loadSoulActions();
   await loadPrompts();
   await loadAiProviderSettings();
   document.addEventListener('ws-update', handleWsUpdate);
@@ -1378,6 +1567,7 @@ function handleWsUpdate(event: Event) {
   }
   if (wsEvent.type === 'worker-task-updated') {
     loadReintegrationRecords();
+    loadSoulActions();
   }
 }
 
@@ -1903,6 +2093,44 @@ async function handleReindex() {
 }
 
 
+.soul-action-card {
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(66% 0.05 150) 22%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(97% 0.015 150) 8%), var(--card-bg));
+}
+
+.soul-action-filters {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.soul-action-summary-strip {
+  margin-bottom: 14px;
+}
+
+.soul-action-item {
+  display: grid;
+  gap: 12px;
+}
+
+.soul-action-meta-grid {
+  margin-top: 0;
+}
+
+.soul-action-detail-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.soul-action-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.soul-action-error {
+  color: #f56c6c;
+}
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -2744,6 +2972,10 @@ async function handleReindex() {
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
+  }
+
+  .soul-action-controls {
+    flex-direction: column;
   }
 
   .prompt-center {

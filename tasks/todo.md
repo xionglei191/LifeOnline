@@ -42,12 +42,18 @@
 - 本轮验证补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts test/feedbackReintegration.test.ts` 通过，47/47。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 补齐 soul-action list / approve / dispatch 的共享 contract，避免 settings 侧继续用松散内联响应类型。
+  - `LifeOS/packages/web/src/api/client.ts` 新增 `fetchSoulActions()`、`approveSoulAction()`、`dispatchSoulAction()`，把 soul-action 治理入口收进现有 typed client。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 在 reintegration review 面板旁补上最小 soul-action governance 面板，支持按 governance / execution status 筛选、刷新、批准与派发执行。
+  - reintegration accept / 手动补规划、以及 websocket 的 `worker-task-updated` 现在都会联动刷新 soul actions，让 accept -> planned -> approve / dispatch 在同一 settings 入口形成连续链路。
+  - soul-action 区块保留保守边界：只消费已有 approve / dispatch API，不新增 defer/discard 等更大治理面。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - accept 后只是展示 auto-planned soul actions；后续若要真正闭环，还可以继续把 soul action approve/dispatch 入口也接到同一面板或相邻面板。
+  - soul-action 面板目前还是列表级操作台，尚未提供更细的 source-note drilldown 或按 reintegration record 分组视图。
 - 下一步建议：
-  - 优先补最小 soul-action review 区块，让 accept -> planned soul actions -> approve/dispatch 在 web 端形成一条连续治理链路。
-  - 若暂不扩 UI，可先补一条 web 层测试，锁定 reintegration 面板的 accept/filter/render 主路径，避免后续回归。
+  - 优先补一条 web 层测试，锁定 reintegration + soul-action 面板的 accept / approve / dispatch 主路径，避免 UI 回归。
+  - 若继续扩 PR6 web 治理面，下一步优先做 source-note / reintegration 关联视图，而不是继续堆新的治理状态按钮。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。

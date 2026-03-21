@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind } from '@lifeos/shared';
 
 export interface SearchResult {
   notes: Note[];
@@ -305,6 +305,50 @@ export async function planReintegrationPromotions(id: string): Promise<SoulActio
     throw new Error(data.error || 'Failed to plan reintegration promotions');
   }
   return data.soulActions || [];
+}
+
+export async function fetchSoulActions(filters?: {
+  sourceNoteId?: string;
+  governanceStatus?: SoulActionGovernanceStatus;
+  executionStatus?: SoulActionExecutionStatus;
+  actionKind?: SoulActionKind;
+}): Promise<SoulAction[]> {
+  const params = new URLSearchParams();
+  if (filters?.sourceNoteId) params.set('sourceNoteId', filters.sourceNoteId);
+  if (filters?.governanceStatus) params.set('governanceStatus', filters.governanceStatus);
+  if (filters?.executionStatus) params.set('executionStatus', filters.executionStatus);
+  if (filters?.actionKind) params.set('actionKind', filters.actionKind);
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/soul-actions${query ? `?${query}` : ''}`);
+  const data = await res.json().catch(() => ({} as Partial<ListSoulActionsResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch soul actions');
+  }
+  return data.soulActions || [];
+}
+
+export async function approveSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to approve soul action');
+  }
+  return data.soulAction as SoulAction;
+}
+
+export async function dispatchSoulAction(id: string): Promise<DispatchSoulActionResponse> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/dispatch`, {
+    method: 'POST',
+  });
+  const data = await res.json().catch(() => ({} as Partial<DispatchSoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to dispatch soul action');
+  }
+  return data as DispatchSoulActionResponse;
 }
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {

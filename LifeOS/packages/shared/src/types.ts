@@ -382,6 +382,31 @@ export interface UpdateTaskScheduleRequest {
   input?: WorkerTaskInputMap[WorkerTaskType];
 }
 
+export interface ListSoulActionsResponse {
+  soulActions: SoulAction[];
+  filters: {
+    sourceNoteId?: string;
+    governanceStatus?: SoulActionGovernanceStatus;
+    executionStatus?: SoulActionExecutionStatus;
+    actionKind?: SoulActionKind;
+  };
+}
+
+export interface SoulActionResponse {
+  soulAction: SoulAction;
+}
+
+export interface DispatchSoulActionResponse {
+  result: {
+    dispatched: boolean;
+    reason: string;
+    soulActionId?: string;
+    workerTaskId?: string | null;
+  };
+  soulAction: SoulAction | null;
+  task: WorkerTask | null;
+}
+
 export interface ListReintegrationRecordsResponse {
   reintegrationRecords: ReintegrationRecord[];
 }
