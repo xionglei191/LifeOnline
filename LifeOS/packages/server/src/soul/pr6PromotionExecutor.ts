@@ -2,15 +2,14 @@ import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
 import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
-import type { SoulAction } from './types.js';
+import { resolveSoulActionSourceReintegrationId, type SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
   summary: string;
 }
 
 export function executePromotionSoulAction(action: SoulAction): PromotionExecutionResult {
-  const sourceReintegrationId = action.sourceReintegrationId
-    ?? (action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null);
+  const sourceReintegrationId = resolveSoulActionSourceReintegrationId(action);
   if (!sourceReintegrationId) {
     throw new Error('PR6 promotion soul action requires sourceReintegrationId or reintegration-record sourceNoteId');
   }

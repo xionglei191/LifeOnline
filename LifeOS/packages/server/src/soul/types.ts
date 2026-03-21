@@ -16,6 +16,11 @@ export type SoulActionExecutionStatus = typeof SUPPORTED_SOUL_ACTION_EXECUTION_S
 export type EventKind = 'weekly_reflection' | 'persona_shift' | 'milestone_report';
 export type ContinuityRecordKind = 'persona_direction' | 'daily_rhythm' | 'weekly_theme';
 
+export function resolveSoulActionSourceReintegrationId(action: Pick<SoulAction, 'sourceReintegrationId' | 'sourceNoteId'>): string | null {
+  return action.sourceReintegrationId
+    ?? (action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null);
+}
+
 export interface SoulAction {
   id: string;
   sourceNoteId: string;

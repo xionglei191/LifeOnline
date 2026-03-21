@@ -26,6 +26,7 @@ import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js'
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
 import { executePromotionSoulAction } from '../src/soul/pr6PromotionExecutor.js';
+import { resolveSoulActionSourceReintegrationId } from '../src/soul/types.js';
 import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../src/soul/postIndexPersonaTrigger.js';
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
@@ -179,6 +180,23 @@ function buildNoteMarkdown(frontmatter: Record<string, unknown>, content: string
   lines.push('---', '', content);
   return `${lines.join('\n')}\n`;
 }
+
+test('resolveSoulActionSourceReintegrationId prefers explicit sourceReintegrationId and falls back to legacy reint sourceNoteId', () => {
+  assert.equal(resolveSoulActionSourceReintegrationId({
+    sourceNoteId: 'note-plain-source',
+    sourceReintegrationId: 'reint:explicit-source',
+  }), 'reint:explicit-source');
+
+  assert.equal(resolveSoulActionSourceReintegrationId({
+    sourceNoteId: 'reint:legacy-source',
+    sourceReintegrationId: null,
+  }), 'reint:legacy-source');
+
+  assert.equal(resolveSoulActionSourceReintegrationId({
+    sourceNoteId: 'note-without-reintegration-prefix',
+    sourceReintegrationId: null,
+  }), null);
+});
 
 test('executePromotionSoulAction reports the explicit reintegration source contract when missing promotion source ids', () => {
   assert.throws(
