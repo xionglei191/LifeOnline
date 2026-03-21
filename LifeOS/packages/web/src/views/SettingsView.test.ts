@@ -342,6 +342,46 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps grouped governance filters stable across worker-task websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchIndexStatus.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    await flushPromises();
+    panel.vm.$emit('update:filterStatus', 'approved');
+    await flushPromises();
+    panel.vm.$emit('update:executionFilter', 'not_dispatched');
+    await flushPromises();
+
+    apiMocks.fetchSoulActions.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchSoulActions).toHaveBeenLastCalledWith({
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+    });
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
   it('refreshes reintegration records and soul actions on soul-action websocket updates', async () => {
     const wrapper = mountSettingsView();
 

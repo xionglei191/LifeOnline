@@ -340,3 +340,14 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task convergence contract 补强。
   - 若还要继续补一轮，可检查 web 侧是否已有对 worker task websocket 刷新语义的回归保护；若没有，再决定是补 view 级测试还是继续找 server contract 缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:345` 新增 worker-task websocket refresh filter retention 断言，锁定在 grouped governance 面板已选中 `quickFilter=dispatch_ready_only`、`governanceStatus=approved`、`executionStatus=not_dispatched` 的情况下，收到 `worker-task-updated` 后父层刷新仍会按当前筛选条件重新请求 `fetchSoulActions`，且 panel 上下文不会丢失。
+  - 这次补的是 web 侧真正对应上一轮 server contract 的监听链回归保护，防止 websocket 刷新把 grouped governance 当前 filter 上下文重置成默认态。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 44 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task websocket filter retention 回归补强。
+  - 若还要继续补一轮，可检查 `soul-action-updated` 刷新路径是否也缺同级“保留当前 filter 上下文”的断言，若缺则可用同样方式补齐。
