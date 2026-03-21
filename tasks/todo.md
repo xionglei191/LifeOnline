@@ -277,6 +277,16 @@
   - 这次继续只补最窄的父层状态回归面，不新增功能、不改 contract；目标是把 grouped governance 面板中最后一段仍未在 view 级锁住的筛选组合语义补成可回归保护。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 43 tests。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 `mixed worker-host dispatch response tasks stay aligned with websocket events and filtered follow-up worker-task lists` contract test，把真正走 worker host 的 mixed-order dispatch 场景进一步收紧到三方一致：`DispatchSoulActionResponse.task`、`worker-task-updated` 事件、以及按 `sourceNoteId + taskType + worker + status` 过滤后的 `/api/worker-tasks` follow-up 子表必须对齐。
+  - 这次继续保持保守边界，只覆盖 `extract_tasks` / `update_persona_snapshot` 两类真实会产生 worker task 的 actionKinds，不把 promotion dispatch 错误混入 worker-task contract。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，25/25。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建完成）。
+- 当前未完成项再补充：
+  - 本轮 server 测试增量尚未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，优先检查这条三方对齐测试是否还需要再补 mixed status / repeated websocket 顺序边界；若没有新的真实 contract gap，就直接提交当前 server 增量。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更仍未提交 git commit。
