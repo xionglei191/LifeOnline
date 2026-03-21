@@ -59,6 +59,18 @@ export interface PromptRecord {
   isOverridden: boolean;
 }
 
+export interface ListAiPromptsResponse {
+  prompts: PromptRecord[];
+}
+
+export interface AiPromptResponse {
+  prompt: PromptRecord;
+}
+
+export interface ResetAiPromptResponse {
+  success: true;
+}
+
 export interface UpdatePromptRequest {
   content: string;
   enabled?: boolean;

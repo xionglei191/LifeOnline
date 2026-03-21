@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -354,16 +354,23 @@ export async function updateConfig(req: Request<Record<string, never>, UpdateCon
   }
 }
 
-export async function listAiPrompts(_req: Request, res: Response): Promise<void> {
+export async function listAiPrompts(
+  _req: Request<Record<string, never>, ListAiPromptsResponse>,
+  res: Response<ListAiPromptsResponse>,
+): Promise<void> {
   try {
-    res.json({ prompts: listPromptRecords() });
+    const response: ListAiPromptsResponse = { prompts: listPromptRecords() };
+    res.json(response);
   } catch (error) {
     console.error('List AI prompts error:', error);
     res.status(500).json({ error: 'Failed to list AI prompts' });
   }
 }
 
-export async function updateAiPrompt(req: Request, res: Response): Promise<void> {
+export async function updateAiPrompt(
+  req: Request<{ key: string }, AiPromptResponse, UpdatePromptRequest>,
+  res: Response<AiPromptResponse>,
+): Promise<void> {
   try {
     const { key } = req.params;
     if (!isValidPromptKey(key)) {
@@ -371,14 +378,15 @@ export async function updateAiPrompt(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const body = req.body as UpdatePromptRequest;
+    const body = req.body;
     if (typeof body?.content !== 'string') {
       res.status(400).json({ error: 'content is required' });
       return;
     }
 
     const record = upsertPromptOverride(key, body.content, body.enabled ?? true, body.notes ?? null);
-    res.json({ prompt: record });
+    const response: AiPromptResponse = { prompt: record };
+    res.json(response);
   } catch (error: any) {
     const message = error?.message || 'Failed to update AI prompt';
     if (message.includes('Prompt content') || message.includes('placeholder')) {
@@ -390,7 +398,10 @@ export async function updateAiPrompt(req: Request, res: Response): Promise<void>
   }
 }
 
-export async function resetAiPrompt(req: Request, res: Response): Promise<void> {
+export async function resetAiPrompt(
+  req: Request<{ key: string }, ResetAiPromptResponse>,
+  res: Response<ResetAiPromptResponse>,
+): Promise<void> {
   try {
     const { key } = req.params;
     if (!isValidPromptKey(key)) {
@@ -399,7 +410,8 @@ export async function resetAiPrompt(req: Request, res: Response): Promise<void> 
     }
 
     resetPromptOverride(key);
-    res.json({ success: true });
+    const response: ResetAiPromptResponse = { success: true };
+    res.json(response);
   } catch (error) {
     console.error('Reset AI prompt error:', error);
     res.status(500).json({ error: 'Failed to reset AI prompt' });

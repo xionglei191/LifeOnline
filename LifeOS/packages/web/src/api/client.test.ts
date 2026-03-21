@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,50 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('fetches typed AI prompt contracts from shared response shapes', async () => {
+    const prompt: PromptRecord = {
+      key: 'classify',
+      label: 'Classify',
+      description: 'Classify inbox notes',
+      requiredPlaceholders: ['{{content}}'],
+      defaultContent: 'default prompt',
+      overrideContent: 'override prompt',
+      effectiveContent: 'override prompt',
+      enabled: true,
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      notes: 'test note',
+      isOverridden: true,
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ prompts: [prompt] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ prompt }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) }));
+
+    await expect(fetchAiPrompts()).resolves.toEqual([prompt]);
+    await expect(updateAiPrompt('classify', { content: 'override prompt', enabled: true, notes: 'test note' })).resolves.toEqual(prompt);
+    await expect(resetAiPrompt('classify')).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/ai/prompts');
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/ai/prompts/classify', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'override prompt', enabled: true, notes: 'test note' }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/ai/prompts/classify', {
+      method: 'DELETE',
+    });
+  });
+
+  it('surfaces API errors for AI prompt contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'prompt list failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'prompt update failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'prompt reset failed' }) }));
+
+    await expect(fetchAiPrompts()).rejects.toThrow('prompt list failed');
+    await expect(updateAiPrompt('classify', { content: 'override prompt' })).rejects.toThrow('prompt update failed');
+    await expect(resetAiPrompt('classify')).rejects.toThrow('prompt reset failed');
   });
 
   it('fetches typed worker-task contracts from shared response shapes', async () => {

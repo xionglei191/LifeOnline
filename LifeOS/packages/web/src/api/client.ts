@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, CreateWorkerTaskResponse, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, CreateWorkerTaskResponse, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -110,7 +110,7 @@ export interface ExtractTasksResult {
 
 export async function fetchAiPrompts(): Promise<PromptRecord[]> {
   const res = await fetch(`${API_BASE}/ai/prompts`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<ListAiPromptsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch AI prompts');
   }
@@ -123,18 +123,18 @@ export async function updateAiPrompt(key: PromptKey, payload: UpdatePromptReques
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<AiPromptResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to update AI prompt');
   }
-  return data.prompt;
+  return data.prompt as PromptRecord;
 }
 
 export async function resetAiPrompt(key: PromptKey): Promise<void> {
   const res = await fetch(`${API_BASE}/ai/prompts/${encodeURIComponent(key)}`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<ResetAiPromptResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to reset AI prompt');
   }

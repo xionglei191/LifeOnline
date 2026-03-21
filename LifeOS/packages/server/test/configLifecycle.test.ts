@@ -111,6 +111,50 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('AI prompt APIs respond with shared prompt contracts', async () => {
+  const env = await createTestEnv('lifeos-ai-prompt-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const listed = await api<import('../../shared/src/types.js').ListAiPromptsResponse>(baseUrl, '/api/ai/prompts');
+    assert.ok(Array.isArray(listed.prompts));
+
+    const updated = await api<import('../../shared/src/types.js').AiPromptResponse>(baseUrl, '/api/ai/prompts/classify', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        content: 'Classify content: {{content}}',
+        enabled: true,
+        notes: 'test override',
+      } satisfies import('../../shared/src/types.js').UpdatePromptRequest),
+    });
+    assert.equal(updated.prompt.key, 'classify');
+    assert.equal(updated.prompt.overrideContent, 'Classify content: {{content}}');
+
+    const reset = await api<import('../../shared/src/types.js').ResetAiPromptResponse>(baseUrl, '/api/ai/prompts/classify', {
+      method: 'DELETE',
+    });
+    assert.equal(reset.success, true);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('worker task APIs respond with shared worker task contracts', async () => {
   const env = await createTestEnv('lifeos-worker-task-contract-');
   const configFile = CONFIG_FILE;

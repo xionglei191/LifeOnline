@@ -1,3 +1,43 @@
+# AI prompt shared response contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 AI prompt 主路径的 response wrapper，确认 `/api/ai/prompts` list/update/reset 是否仍停留在 shared 外的 server-local / web-local shape。
+- [x] 把 AI prompt response wrappers 提升到 `packages/shared`，并让 web client / server handlers 直接复用。
+- [x] 补最小 web + server 回归，锁定 AI prompt 主路径已经切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `ListAiPromptsResponse`
+    - `AiPromptResponse`
+    - `ResetAiPromptResponse`
+  - `LifeOS/packages/web/src/api/client.ts` 让 `fetchAiPrompts()` / `updateAiPrompt()` / `resetAiPrompt()` 直接消费 shared AI prompt response contract，而不再使用无类型 `{}` fallback。
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `listAiPrompts()` 显式接回 shared `ListAiPromptsResponse`
+    - `updateAiPrompt()` 显式接回 shared `AiPromptResponse`
+    - `resetAiPrompt()` 显式接回 shared `ResetAiPromptResponse`
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 AI prompt shared contract 回归。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `AI prompt APIs respond with shared prompt contracts`。
+- 这次修的不是 UI 同类补强，而是 AI prompt 主路径仍保留的 response wrapper duplication：web/client 与 server/handler 都在内联 `{ prompts }` / `{ prompt }` / `{ success: true }`，但 shared 之前没有单一事实源。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- worker task 收口后，AI prompt 主路径仍直接服务当前 Settings 中的真实功能，而且 server/web 都在重复稳定 wrapper shape；provider settings 本身直接返回 shared 类型本体，价值低于 prompt wrapper 收口。
+- 这条线可以继续减少 AI prompt 主路径 response contract 的重复源和未来改动时的漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 128 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "AI prompt APIs respond with shared prompt contracts|worker task APIs respond with shared worker task contracts" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- AI prompt 主路径收口后，下一步可继续检查 AI provider test/list 或 reintegration 主路径是否仍有 shared 外稳定 response shape。
+
+
 # worker task shared response contract 收口
 
 ## 计划
