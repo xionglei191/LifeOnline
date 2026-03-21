@@ -1879,6 +1879,188 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
   }
 });
 
+test('event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-event-node-list-followup-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-event-node-list-followup',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api event node list follow-up summary',
+      evidence: { source: 'api-event-node-list-followup-test' },
+      now: '2026-03-22T09:00:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-event-node-list-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for event-node list api test' }),
+      },
+    );
+
+    const action = accepted.soulActions.find((item) => item.actionKind === 'promote_event_node') ?? accepted.soulActions.find((item) => item.actionKind === 'create_event_node');
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for event-node list api test' }),
+      },
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    const listedEventNodes = await api<{ eventNodes: Array<{
+      id: string;
+      sourceReintegrationId: string;
+      sourceSoulActionId: string | null;
+      promotionSoulActionId: string | null;
+      eventKind: string;
+      summary: string;
+    }> }>(baseUrl, '/api/event-nodes');
+    const eventNode = listedEventNodes.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
+
+    assert.ok(eventNode);
+    assert.equal(eventNode?.promotionSoulActionId, action!.id);
+    assert.equal(eventNode?.sourceReintegrationId, record!.id);
+    assert.equal(eventNode?.summary, record!.summary);
+    assert.equal(dispatched.soulAction?.resultSummary, dispatched.result.reason);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-continuity-list-followup-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-continuity-list-followup',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api continuity list follow-up summary',
+      evidence: { source: 'api-continuity-list-followup-test' },
+      now: '2026-03-22T09:10:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-continuity-list-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for continuity list api test' }),
+      },
+    );
+
+    const action = accepted.soulActions.find((item) => item.actionKind === 'promote_continuity_record');
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for continuity list api test' }),
+      },
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    const listedContinuity = await api<{ continuityRecords: Array<{
+      id: string;
+      sourceReintegrationId: string;
+      sourceSoulActionId: string | null;
+      promotionSoulActionId: string | null;
+      continuityKind: string;
+      summary: string;
+    }> }>(baseUrl, '/api/continuity-records');
+    const continuity = listedContinuity.continuityRecords.find((item) => item.sourceReintegrationId === record!.id);
+
+    assert.ok(continuity);
+    assert.equal(continuity?.promotionSoulActionId, action!.id);
+    assert.equal(continuity?.sourceReintegrationId, record!.id);
+    assert.equal(continuity?.summary, record!.summary);
+    assert.equal(dispatched.soulAction?.resultSummary, dispatched.result.reason);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dispatch API response and follow-up list stay aligned for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-dispatch-list-');
   const configFile = CONFIG_FILE;

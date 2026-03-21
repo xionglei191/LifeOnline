@@ -752,7 +752,11 @@
   - 若定向测试与 build 通过，可直接提交当前 worker-task status-only filtered refresh 收敛补强。
   - 若继续往下补，应转去寻找新的 fact-source gap，而不是继续在当前 worker-task filter 维度做低边际对称扩张。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 accept API contract 旁新增 reintegration review-status follow-up list 收敛断言：锁定 `/api/reintegration-records?reviewStatus=accepted` 会稳定返回刚 accept 的 record，`/api/reintegration-records?reviewStatus=pending_review` 则不会再包含它。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 2 条 PR6 promotion follow-up object-list contract 回归，分别锁定本地 `promote_event_node` / `create_event_node` dispatch 后，`/api/event-nodes` 能读到与同一 reintegration source、promotion soul action、summary 对齐的 event node；以及 `promote_continuity_record` dispatch 后，`/api/continuity-records` 能读到与同一 reintegration source、promotion soul action、summary 对齐的 continuity record。
+  - 这次补的是新的对象层事实源一致性缺口，而不再只是 soul-action list 自身：dispatch 成功不仅要让 soul action 状态收敛，还要保证真正被写出的 event/continuity 对象能通过现有 list API 被后续消费者稳定读到。
+- 本轮验证结果补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record|continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record" test/reintegrationApi.test.ts` 通过，2/2。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
   - 断言直接对齐 shared contract 的真实返回形状，只验证 `reintegrationRecords` 成员收敛与 `id/reviewStatus/reviewedAt` 和 accept response 保持一致，不再错误假设 list 响应额外暴露 `filters` 字段。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
