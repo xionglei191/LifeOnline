@@ -471,6 +471,10 @@
         </div>
       </div>
 
+      <div class="reintegration-filter-state soul-action-filter-state">
+        当前分组视图：{{ soulActionGroupQuickFilterLabel }}
+      </div>
+
       <div class="reintegration-summary-strip soul-action-summary-strip">
         <div class="reintegration-summary-item">
           <span>待治理</span>
@@ -1099,6 +1103,16 @@ const soulActionSummary = computed(() => {
   });
 });
 const soulActionGroupQuickFilter = ref<'all' | 'pending_only' | 'dispatch_ready_only'>('all');
+const soulActionGroupQuickFilterLabel = computed(() => {
+  switch (soulActionGroupQuickFilter.value) {
+    case 'pending_only':
+      return '仅待治理分组';
+    case 'dispatch_ready_only':
+      return '仅可派发分组';
+    default:
+      return '全部分组';
+  }
+});
 const soulActionGroupCount = computed(() => {
   const groupIds = new Set(soulActions.value.map((action) => action.sourceNoteId));
   return groupIds.size;
@@ -2129,6 +2143,12 @@ async function handleReindex() {
 .reintegration-summary-item strong {
   font-size: 18px;
   color: var(--text);
+}
+
+.reintegration-filter-state {
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .reintegration-list {
