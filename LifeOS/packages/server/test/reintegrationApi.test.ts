@@ -416,6 +416,129 @@ test('soul-action sourceNoteId stays aligned with reintegration ids for grouped 
   }
 });
 
+test('soul-action API preserves group-level pending and dispatch-ready semantics for settings view', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-group-semantics-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-group-semantics-a',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api group semantics summary a',
+      evidence: { source: 'api-group-semantics-a' },
+      now: '2026-03-21T15:00:00.000Z',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-group-semantics-b',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api group semantics summary b',
+      evidence: { source: 'api-group-semantics-b' },
+      now: '2026-03-21T15:05:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const recordA = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-semantics-a');
+    const recordB = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-semantics-b');
+    assert.ok(recordA);
+    assert.ok(recordB);
+
+    const acceptedA = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordA!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept group semantics record a' }),
+      },
+    );
+    const acceptedB = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordB!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept group semantics record b' }),
+      },
+    );
+
+    for (const action of acceptedA.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve full dispatch-ready group a' }),
+        },
+      );
+    }
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(acceptedB.soulActions[0]!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve partial group b' }),
+      },
+    );
+
+    const allSoulActions = await api<ListSoulActionsResponse>(baseUrl, '/api/soul-actions');
+    const groups = new Map<string, { totalCount: number; pendingCount: number; dispatchReadyCount: number }>();
+    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id)) {
+      const current = groups.get(action.sourceNoteId) ?? { totalCount: 0, pendingCount: 0, dispatchReadyCount: 0 };
+      current.totalCount += 1;
+      if (action.governanceStatus === 'pending_review') {
+        current.pendingCount += 1;
+      }
+      if (action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched') {
+        current.dispatchReadyCount += 1;
+      }
+      groups.set(action.sourceNoteId, current);
+    }
+
+    assert.deepEqual(groups.get(recordA!.id), {
+      totalCount: acceptedA.soulActions.length,
+      pendingCount: 0,
+      dispatchReadyCount: acceptedA.soulActions.length,
+    });
+    assert.deepEqual(groups.get(recordB!.id), {
+      totalCount: acceptedB.soulActions.length,
+      pendingCount: acceptedB.soulActions.length - 1,
+      dispatchReadyCount: 1,
+    });
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
