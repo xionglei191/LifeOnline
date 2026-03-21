@@ -82,13 +82,16 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续扩 grouped settings 语义测试，新增“整组已 approve 且已全部 dispatch 后，dispatchReadyCount 必须回落为 0”这一条 contract 断言。
   - 这样一来，当前测试同时锁住了三种关键分组状态：整组全 approved 可派发、部分 approved 混合 pending、以及整组已 dispatch 后的 ready 清零，直接覆盖 settings grouped governance 里最核心的分组统计语义。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 approve 阶段的 websocket contract test，锁定 settings 依赖的 `soul-action-updated` 事件不仅在 dispatch 后触发，也会在 approve 后触发，并且携带正确的 `sourceNoteId`、`id` 与 `governanceStatus=approved`。
+  - 这次继续走已有 server contract test 路径，不新增接口、不改 runtime 行为，而是把 grouped governance 刷新链路中“批准后也必须能实时刷新”的关键语义补成可回归保护。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。
 - 下一步建议：
-  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 grouped governance 相关 contract coverage，例如批量 approve 后成功提示对应的数量上下文，或 websocket 更新后列表刷新所依赖的状态变化。
+  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 grouped governance 刷新链路相关 coverage，例如 accept 后批量规划的 websocket/HTTP 可见性，或 dispatch 后再次 list 的状态收敛。
   - 若继续做实现，优先考虑引入最小前端测试设施，而不是回到低边际的 UI 微调。
-- 本轮选择依据：上一轮已经锁住了 pending / dispatch-ready 的基础组合，但 grouped dispatch 按钮是否应当在“已全部 dispatch”后自然失效，仍缺直接回归保护；先补这条 contract，更贴近当前 settings 真正依赖的行为边界。
+- 本轮选择依据：现有 websocket 测试只锁住了 dispatch 后的刷新语义，但 settings 视图同样依赖 approve 后的即时刷新；补这条 contract 比继续补文案或布局更直接地保护主线行为。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。

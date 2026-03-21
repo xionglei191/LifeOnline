@@ -587,6 +587,90 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
   }
 });
 
+test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-approve-ws-refresh',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api approve websocket summary',
+      evidence: { source: 'api-approve-ws-test' },
+      now: '2026-03-21T16:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-approve-ws-refresh');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for approve websocket api test' }),
+      },
+    );
+    const action = accepted.soulActions[0];
+    assert.ok(action);
+
+    const wsEventPromise = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === action!.id && event.data.governanceStatus === 'approved',
+    );
+
+    const approved = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for websocket api test' }),
+      },
+    );
+
+    const wsEvent = await wsEventPromise;
+    assert.equal(approved.soulAction.id, action!.id);
+    assert.equal(approved.soulAction.governanceStatus, 'approved');
+    assert.equal(wsEvent.type, 'soul-action-updated');
+    assert.equal(wsEvent.data.id, action!.id);
+    assert.equal(wsEvent.data.sourceNoteId, record!.id);
+    assert.equal(wsEvent.data.governanceStatus, 'approved');
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
