@@ -259,6 +259,51 @@
   - 若继续沿同一主线推进，可直接提交当前 view 级 in-flight 状态回归补强。
   - 若还要继续补一轮，可评估 groupActionId / groupDispatchId 的父层 in-flight 透传是否还值得锁一条 view 级断言。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 group in-flight 断言，分别用 deferred promise 锁定 `approve-group` / `dispatch-group` 进行中时，`SettingsView` 会把当前 `groupActionId` / `groupDispatchId` 透传给 `SoulActionGovernancePanel`，并在异步完成后正确回落为 `null`。
+  - 这次继续只补最窄父层接线回归面，把 panel 组件里已经存在的 group-level disabled/processing 语义，与父层真实 in-flight 状态来源正式锁在一起。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 将手动 Inbox 整理成功提示从泛化文案改为直接消费 `classifyInbox()` 返回的 `WorkerTask` contract，统一复用 `workerTaskActionMessage('created', task)`。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增一条 view 级回归，锁定手动 Inbox 整理入口在创建任务后会展示 `worker-task-classify · Inbox 整理 · 等待执行 · LifeOS`，并在后续 `worker-task-updated` websocket 刷新后继续保留该提示。
+  - 这次补的是 `SettingsView` 里最后一个明显还停留在泛化成功提示的 worker-task 创建入口，避免同页不同入口对同一 typed contract 的投射继续分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
+- 本轮额外记录：
+  - 本次续跑确认 `vision/00-权威基线` 与 `vision/01-当前进度` 现在是目录而不是单文件；后续续跑应直接读取目录内正式文稿，避免把 `ENOENT` 误当成阻塞。
+  - 仓库当前仍有与本轮无关的未提交改动：`CLAUDE.md` 被本地收紧、根目录存在 `lifeonline-claude-worker-v2.sh` 草稿；本轮未触碰它们，也未贸然提交，以免把并行中的 worker/策略试验混入当前 web 收敛改动。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿“worker task contract 直接投射到 UI”这条主线推进，优先检查 `SettingsView` / 其他入口里是否还存在少数泛化 worker-task 成功提示没有走统一 helper；若没有，就该直接提交当前最小收敛增量，而不是继续做对称性补强。
+  - 由于仓库里已有并行未提交的 worker/CLAUDE 调整，下一轮若要提交，先分辨是否需要拆分提交范围，避免把无关脚本和当前产品代码改动混在一起。
+单条 action loading/disabled 态在父层往返中的 view 级断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。
+  - 这次继续收敛在现有 grouped governance 主线上，只补真正减少误操作风险的最小 DOM 级保护，不新增接口、不改 contract，也不扩 UI 范围。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/SoulActionGovernancePanel.test.ts` 通过，3 files / 33 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前按钮状态回归补强。
+  - 若还要继续补一轮，可评估 `SettingsView` 父层是否还值得补“操作进行中 actionId 正确透传到 panel” 的 view 级断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 in-flight 断言，分别用 deferred promise 锁定单条 approve / dispatch 进行中时，`SettingsView` 会把当前 `actionId` 透传给 `SoulActionGovernancePanel`，并在异步完成后正确回落为 `null`。
+  - 这次继续只补最窄的父层接线回归面，不新增 UI 功能，也不改治理规则；目标是把前一轮组件层按钮禁用语义，与父层真实 in-flight 状态来源正式接上。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 35 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前 view 级 in-flight 状态回归补强。
+  - 若还要继续补一轮，可评估 groupActionId / groupDispatchId 的父层 in-flight 透传是否还值得锁一条 view 级断言。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再新增 2 条 group-level in-flight 断言，分别用 deferred promise 锁定批量 approve / dispatch 进行中时，`SettingsView` 会把 `groupActionId` / `groupDispatchId` 正确透传给 `SoulActionGovernancePanel`，并在异步完成后回落为 `null`。
   - 这次继续只补最窄的父层状态接线回归面，把前一轮单条 action 的 in-flight 语义补齐到组级 quick action，不新增 UI 功能，也不改变 approve / dispatch 分离边界。
 - 本轮验证再补充：
@@ -396,6 +441,16 @@
 - 当前未完成项再补充：
   - 批量 dispatch 路径当前仍只按 group 迭代派发，不需要额外 reason；若继续沿同一条 source 语义主线推进，可转回 server/shared contract 层继续排查新的 `sourceReintegrationId` / `sourceNoteId` 混用缺口。
   - 本轮 web 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 1 条 explicit-source contract test，直接锁定当 promotion action 的 `sourceNoteId` 已经回到真实 note id 时，只要显式提供 `sourceReintegrationId`，`executePromotionSoulAction()` 仍会按 reintegration record 成功派发，不会错误回退到 `sourceNoteId.startsWith('reint:')` 的兼容路径。
+  - 该测试同时断言生成的 `event_node` 保留 `sourceReintegrationId = reint:task-pr6-explicit-source`，并把真实原始 note id 投到 `sourceNoteId = note-original-source`，把“promotion 来源”和“原始 source note”两层事实源明确分开。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，48/48。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
+- 当前未完成项再补充：
+  - `pr6PromotionExecutor.ts` 的兼容 fallback 仍存在，但现在至少已有直接测试证明未来 planner 一旦把 `sourceNoteId` 真迁回 note id，显式 `sourceReintegrationId` 仍能维持 promotion dispatch 主路径。
+  - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
 - 本轮继续完成的真实实现再补充：
