@@ -611,6 +611,17 @@
 - 下一步建议再补充：
   - 若定向测试与 build 通过，可直接提交当前 worker-task worker+status filtered refresh 收敛补强。
   - 若继续往下补，同主线优先检查是否还缺少 `sourceNoteId + status` 非 worker 子表与 full list / websocket 的同级收敛保护。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把 grouped dispatch worker-task contract 从 `sourceNoteId + worker + status` 再补到 `sourceNoteId + status` 非 worker 子表：在同一 `sourceNoteId` 下连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 后，额外校验 `/api/worker-tasks?sourceNoteId=...&status=...` 仍能稳定命中对应 task，且返回 filters.status 与 dispatch response / websocket 的 status 保持一致。
+  - 这次补的是 worker-task filtered refresh 事实源中的最后一层 status-only 子表缺口，避免 future web/client 只按状态聚焦任务时出现“总表、worker 子表、taskType 子表都对，但纯 status 子表漏项或串 task”的分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若定向测试与 build 通过，可直接提交当前 worker-task status-only filtered refresh 收敛补强。
+  - 若继续往下补，应转去寻找新的 fact-source gap，而不是继续在当前 worker-task filter 维度做低边际对称扩张。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
