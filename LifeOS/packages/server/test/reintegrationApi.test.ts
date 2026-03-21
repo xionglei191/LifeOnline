@@ -618,7 +618,7 @@ test('soul-action list API keeps filters stable with multiple promotion actions 
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-filter-a',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-filter-a',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -632,7 +632,7 @@ test('soul-action list API keeps filters stable with multiple promotion actions 
     });
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-filter-b',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-filter-b',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -682,31 +682,36 @@ test('soul-action list API keeps filters stable with multiple promotion actions 
 
     const pendingForA = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordA!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(recordA!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
-    assert.equal(pendingForA.filters.sourceNoteId, recordA!.id);
+    assert.equal(pendingForA.filters.sourceReintegrationId, recordA!.id);
     assert.equal(pendingForA.filters.governanceStatus, 'pending_review');
     assert.equal(pendingForA.filters.executionStatus, 'not_dispatched');
     assert.equal(pendingForA.soulActions.length, 1);
-    assert.ok(pendingForA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
+    assert.ok(pendingForA.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-filter-a'));
+    assert.ok(pendingForA.soulActions.every((action) => action.sourceReintegrationId === recordA!.id));
     assert.ok(pendingForA.soulActions.every((action) => action.governanceStatus === 'pending_review'));
     assert.ok(pendingForA.soulActions.every((action) => action.executionStatus === 'not_dispatched'));
 
     const approvedForA = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordA!.id)}&governanceStatus=approved`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(recordA!.id)}&governanceStatus=approved`,
     );
+    assert.equal(approvedForA.filters.sourceReintegrationId, recordA!.id);
     assert.equal(approvedForA.soulActions.length, 1);
     assert.equal(approvedForA.soulActions[0]?.id, approvedAction.id);
-    assert.ok(approvedForA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
+    assert.ok(approvedForA.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-filter-a'));
+    assert.ok(approvedForA.soulActions.every((action) => action.sourceReintegrationId === recordA!.id));
     assert.ok(approvedForA.soulActions.every((action) => action.governanceStatus === 'approved'));
 
     const pendingForB = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordB!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(recordB!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
     );
+    assert.equal(pendingForB.filters.sourceReintegrationId, recordB!.id);
     assert.equal(pendingForB.soulActions.length, 2);
-    assert.ok(pendingForB.soulActions.every((action) => action.sourceNoteId === recordB!.id));
+    assert.ok(pendingForB.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-filter-b'));
+    assert.ok(pendingForB.soulActions.every((action) => action.sourceReintegrationId === recordB!.id));
     assert.ok(pendingForB.soulActions.every((action) => action.governanceStatus === 'pending_review'));
     assert.ok(pendingForB.soulActions.every((action) => action.executionStatus === 'not_dispatched'));
   } finally {

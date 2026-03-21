@@ -769,6 +769,18 @@
   - 若继续沿这条 reintegration websocket 主线推进，下一步优先检查 `planReintegrationPromotions` 在 server/shared contract 层是否也值得补一条 `reintegration-record-updated` 对齐断言，避免 web 已锁住而 server 事实源仍留空档。
   - 若不再继续补强，可直接提交当前 manual planning reintegration-record retention 回归增量。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 accepted-group filter contract 从旧的 `sourceNoteId = record.id` 查询语义切回显式 `sourceReintegrationId`：两条 fixture 现在携带真实 `sourceNoteId`（`note-api-pr6-filter-a` / `note-api-pr6-filter-b`），而 pending/approved follow-up list 改为按 reintegration group id 过滤。
+  - 同一条用例新增断言锁定 `pendingForA`、`approvedForA`、`pendingForB` 返回的 `filters.sourceReintegrationId`、`action.sourceNoteId`、`action.sourceReintegrationId` 一起保持正确，避免 accept 之后的治理筛选继续把 record id 当 note-level source key。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action API filters stay scoped to the accepted reintegration group" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - `reintegrationApi.test.ts` 中仍有少量 grouped-semantics / mixed-progress 场景可能残留 `sourceNoteId = record.id` 过滤锚点，需要继续逐条清理。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 继续优先扫 `reintegrationApi.test.ts` 中 grouped-semantics / mixed-progress 相关用例，找出还在按 `record.id` 过滤 soul actions 的残留点。
+  - 若本轮先收口，也可以直接提交当前 accepted-group filter contract 修正，避免 accept 后治理筛选再次漂回旧兼容语义。
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 将原先只适用于 create 路径的 `workerTaskCreatedMessage()` 收敛为 action-aware 的 `workerTaskActionMessage()`，让 create / retry / cancel 三条路径继续共用同一份本地化 worker-task 元信息拼装逻辑，同时修正 retry/cancel 成功反馈仍显示“已创建任务”的语义错误。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 将 retry/cancel 断言同步收紧为 `已重新入队任务` 与 `已取消任务`，避免 UI 在 contract 字段已正确消费后仍误导用户当前动作语义。
 - 本轮验证再补充：
