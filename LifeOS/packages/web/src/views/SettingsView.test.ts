@@ -1326,4 +1326,93 @@ describe('SettingsView soul action governance wiring', () => {
 
     wrapper.unmount();
   });
+
+  it('keeps worker-task create feedback visible across websocket refreshes', async () => {
+    const client = await import('../api/client');
+    const createWorkerTaskMock = vi.mocked(client.createWorkerTask);
+
+    apiMocks.fetchWorkerTasks
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-create',
+          taskType: 'openclaw_task',
+          worker: 'openclaw',
+          status: 'pending',
+          input: {
+            instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
+            outputDimension: 'career',
+          },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: null,
+          createdAt: '2026-03-21T10:06:00.000Z',
+          updatedAt: '2026-03-21T10:06:00.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-create',
+          taskType: 'openclaw_task',
+          worker: 'openclaw',
+          status: 'pending',
+          input: {
+            instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
+            outputDimension: 'career',
+          },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: null,
+          createdAt: '2026-03-21T10:06:00.000Z',
+          updatedAt: '2026-03-21T10:06:30.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ]);
+    createWorkerTaskMock.mockResolvedValue({
+      id: 'worker-task-create',
+      taskType: 'openclaw_task',
+      worker: 'openclaw',
+      status: 'pending',
+      input: {
+        instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
+        outputDimension: 'career',
+      },
+      outputNotes: [],
+      resultSummary: null,
+      error: null,
+      sourceNoteId: null,
+      createdAt: '2026-03-21T10:06:00.000Z',
+      updatedAt: '2026-03-21T10:06:00.000Z',
+      startedAt: null,
+      finishedAt: null,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.find('textarea').setValue('搜索最近一周 AI Agent 领域的重要进展并整理');
+    await wrapper.find('.worker-form select').setValue('career');
+    const createButton = wrapper.findAll('button').find((button) => button.text() === '执行任务');
+    expect(createButton).toBeTruthy();
+    await createButton!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('已创建任务 worker-task-create · OpenClaw 任务 · 等待执行 · OpenClaw');
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(wrapper.text()).toContain('已创建任务 worker-task-create · OpenClaw 任务 · 等待执行 · OpenClaw');
+
+    wrapper.unmount();
+  });
 });

@@ -344,6 +344,12 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 worker-task create websocket retention 回归，锁定手动创建 OpenClaw worker task 后的成功提示在 `worker-task-updated` 刷新后仍保持可见，补齐 SettingsView 中 create / retry / cancel 三条 action feedback 的同级保护面。
+  - 这次继续只补最窄的 view-level 可回归断言，不改运行时代码；目标是避免 create 路径在跨刷新保留语义上再次落后于已补齐的 retry / cancel。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 75 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 继续把单条 dispatch 成功提示向 shared/server worker task contract 收敛：在已展示 `workerTaskId` 与 `taskType` 的基础上，再直接消费 `DispatchSoulActionResponse.task.status`，把 worker task 当前状态一起拼进用户可见反馈。
   - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `workerTaskStatusLabel()`，把 `pending/running/succeeded/failed/cancelled` 统一映射为中文状态文案，避免 success message 直接暴露底层枚举值。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步收紧单条 dispatch 成功提示与两条 websocket retention 断言，锁定 `等待执行` 状态会在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下保持可见。
