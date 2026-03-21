@@ -717,6 +717,12 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 将 `approved create_event_node action reuses PR6 event promotion executor` 用例从旧的 `getSoulActionBySourceNoteIdAndKind('reint:...')` 误用，收回到显式 `getSoulActionBySourceReintegrationIdAndKind('reint:...')`。这让 `create_event_node` 的测试主语义与 promotion helper / identity lookup 现在一致，不再继续把 legacy `sourceNoteId = reint:...` 兼容路径当成主查询键。
+  - 这次补的是新的事实源一致性问题：runtime 已按 promotion action 的 `sourceReintegrationId` 优先查 identity，但这条 `create_event_node` 回归仍在测试层鼓励旧兼容路径，未来容易把新 contract 再拉回旧语义。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "approved create_event_node action reuses PR6 event promotion executor" test/feedbackReintegration.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action collapsedGroupIds retention 回归补强。
   - 若还要继续补一轮，可检查 index refresh 相关事件是否也会影响 grouped governance 折叠态；若会，则可补最后一条同级 retention 断言。

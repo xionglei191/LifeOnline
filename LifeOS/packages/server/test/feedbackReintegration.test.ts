@@ -6,7 +6,7 @@ import type { WorkerTask } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb, closeDb } from '../src/db/client.js';
 import { createWorkerTask, executeWorkerTask, cancelWorkerTask } from '../src/workers/workerTasks.js';
-import { approveSoulAction, createOrReuseSoulAction, getSoulActionByIdentityAndKind, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
+import { approveSoulAction, createOrReuseSoulAction, getSoulActionByIdentityAndKind, getSoulActionBySourceNoteIdAndKind, getSoulActionBySourceReintegrationIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
@@ -2119,7 +2119,7 @@ test('approved create_event_node action reuses PR6 event promotion executor', as
     'soul:create_event_node:reint:create-event-node',
     'approve create_event_node coverage',
     '2026-03-20T09:01:00.000Z',
-  ) ?? getSoulActionBySourceNoteIdAndKind('reint:create-event-node', 'create_event_node');
+  ) ?? getSoulActionBySourceReintegrationIdAndKind('reint:create-event-node', 'create_event_node');
 
   if (!soulAction) {
     getDb().prepare(`
@@ -2150,7 +2150,7 @@ test('approved create_event_node action reuses PR6 event promotion executor', as
 
   const dispatchResult = await dispatchApprovedSoulAction('soul:create_event_node:reint:create-event-node');
   const eventNodes = listEventNodes();
-  const createdAction = getSoulActionBySourceNoteIdAndKind('reint:create-event-node', 'create_event_node');
+  const createdAction = getSoulActionBySourceReintegrationIdAndKind('reint:create-event-node', 'create_event_node');
 
   assert.equal(dispatchResult.dispatched, true);
   assert.match(dispatchResult.reason, /已创建 event node|已更新 event node/);
