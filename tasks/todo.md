@@ -373,3 +373,14 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
   - 若还要继续补一轮，可检查其余 panel emit 名称在父层监听与测试中是否还有类似 camel/kebab 不一致的隐性契约缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
+  - 这次补的是同一条真实事件契约链上的剩余缺口：`SettingsView.test.ts:218` 与 `:222` 本就通过组件真实 camelCase emits 驱动父层，因此运行时代码也应与测试和组件声明保持一致，避免未来出现“测试通过但真实监听名漂移”的风险。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 45 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 filter event contract 对齐修复。
+  - 若还要继续补一轮，可检查 `toggle-collapsed` 等其余 emits 在模板监听、单测触发、组件声明之间是否还存在类似的命名漂移。
