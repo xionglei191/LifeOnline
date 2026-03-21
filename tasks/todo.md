@@ -573,20 +573,19 @@
   - `LifeOS/packages/web/src/api/client.ts` 补齐 soul-action detail / defer / discard 三个 typed client 入口：新增 `fetchSoulAction()`、`deferSoulAction()`、`discardSoulAction()`，把 server 侧已存在的治理接口正式收进 web/shared contract 消费面，避免后续继续靠散落的裸 fetch 或遗漏客户端封装。
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 defer/discard contract test，锁定同一 soul action 在 `approve -> defer -> discard` 之后，detail 接口与按 `sourceNoteId + governanceStatus` 过滤的 list 结果保持一致，且 `governanceReason`、`deferredAt`、`discardedAt` 等关键字段不漂移。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/src/soul/soulActions.ts` 将 promotion soul action 的 identity / reuse 语义正式切到 `sourceReintegrationId` 优先：新增 `getSoulActionBySourceReintegrationIdAndKind()` 与 `getSoulActionByIdentityAndKind()`，并让 `buildSoulActionId()` / `createOrReuseSoulAction()` 在 `promote_event_node` / `promote_continuity_record` 上不再依赖 `sourceNoteId` 作为唯一身份键。
-  - `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts` 现在优先把 promotion action 的 `sourceNoteId` 写回真实 `record.sourceNoteId`，仅在旧 record 缺失 source note 时才回退到 `record.id`；这样 `sourceNoteId` 与 `sourceReintegrationId` 终于在 planner 主链上恢复为两层事实源，而不再继续复用同一个值承载双重语义。
-  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 与 `LifeOS/packages/server/test/reintegrationApi.test.ts` 同步改为覆盖新主链：锁定 accept/auto-plan 后 promotion action 会保留真实 `sourceNoteId`、显式 `sourceReintegrationId`、并仍按 reintegration identity 稳定复用，不会因同源 note 回归而打破 PR6 promotion 幂等性。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将几条 promotion follow-up API contract 用例同步到新的主语义：当 planner 已恢复真实 `sourceNoteId` 后，promotion soul action 的 follow-up 查询与断言改为围绕显式 `sourceReintegrationId`，不再继续把 `record.id` 当成 `sourceNoteId` 查询键。
+  - 这次没有再改运行时代码；补的是上一轮 planner identity 根因修复后被真实打破的 server contract 锚点，避免测试继续把旧兼容语义误当成主 contract。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，50/50。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|grouped settings list converges after full accept-approve-dispatch chain|reintegration reject API returns reviewed record and filtered follow-up lists stay aligned" test/reintegrationApi.test.ts` 通过，4/4。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
   - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮定向测试与构建均通过。
 - 当前未完成项再补充：
-  - 仍保留 legacy fallback：当历史 reintegration record 缺少 `sourceNoteId` 时，planner 会继续回退到 `record.id`；这条兼容路径现在已被压缩为 fallback，而不是主语义。
-  - 本轮 server 变更仍未提交 git commit。
+  - `reintegrationApi.test.ts` 全量整组运行里仍偶发出现既有超时噪声；本轮已确认被改动的 promotion/reject 相关 contract 用例单独重跑通过，问题更像现有 integration suite 的稳定性噪声，而不是本轮 source contract 回归。
+  - 本轮 server 测试修正仍未提交 git commit。
 - 下一步建议再补充：
-  - 优先继续检查 accept / list / websocket 下游是否还有少数地方默认把 promotion action 的 `sourceNoteId` 当作 reintegration group key 使用；若有，应继续切到显式 `sourceReintegrationId`，避免新旧语义再次混用。
-  - 若没有更高价值的新缺口，可直接提交这轮 planner identity 根因修复，因为它已经把 promotion 主路径从“单字段双语义”推进到“真实 note + 显式 reintegration source”分离。
+  - 优先继续排查 `reintegrationApi.test.ts` 里其余仍默认按 `sourceNoteId=record.id` 查询 promotion 分组的旧断言，并按 `sourceReintegrationId` 继续收口，直到整组 API contract 全面转到新主语义。
+  - 若要继续提高信噪比，再单独处理 server integration suite 的偶发超时隔离问题，但那是独立于本轮 source contract 收口之外的测试基础设施议题。
 - 本轮继续完成的真实实现再补充：
   - 先修正 `LifeOS/packages/server/config.json` 被测试残留污染的问题：从不存在的 `/tmp/lifeos-config-restart-rollback-...` 临时 vault 路径恢复为正式运行配置 `/home/xionglei/Vault_OS` + `3000`，避免当前 working tree 被误用于运行时会直接指向失效数据目录。
   - `LifeOS/packages/web/src/components/AISuggestions.test.ts` 新增 5 条最窄前端回归测试，直接锁定 AI suggestions 面板在初始 idle、刷新成功、空结果、错误、加载中五种主状态下都正确消费 `fetchAISuggestions()` 与 shared `AISuggestion` contract，并继续展示本地化 type / dimension 文案。

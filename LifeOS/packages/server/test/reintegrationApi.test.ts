@@ -2251,7 +2251,7 @@ test('promotion dispatch response stays aligned with local-only execution result
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-promotion-dispatch-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-promotion-dispatch-followup',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -2301,7 +2301,7 @@ test('promotion dispatch response stays aligned with local-only execution result
 
     assert.equal(dispatched.result.dispatched, true);
     assert.equal(dispatched.soulAction?.id, action!.id);
-    assert.equal(dispatched.soulAction?.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction?.sourceNoteId, 'note-api-pr6-promotion-dispatch-followup');
     assert.equal(dispatched.soulAction?.sourceReintegrationId, record!.id);
     assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
     assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
@@ -2311,11 +2311,11 @@ test('promotion dispatch response stays aligned with local-only execution result
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
-    assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-promotion-dispatch-followup');
     assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, 'succeeded');
@@ -2350,7 +2350,7 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-event-node-dispatch-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-event-node-dispatch-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -2400,7 +2400,7 @@ test('event-node promotion dispatch response stays aligned with local-only execu
 
     assert.equal(dispatched.result.dispatched, true);
     assert.equal(dispatched.soulAction?.id, action!.id);
-    assert.equal(dispatched.soulAction?.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction?.sourceNoteId, 'note-api-pr6-event-node-dispatch-followup');
     assert.equal(dispatched.soulAction?.sourceReintegrationId, record!.id);
     assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
     assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
@@ -2410,11 +2410,11 @@ test('event-node promotion dispatch response stays aligned with local-only execu
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
-    assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-event-node-dispatch-followup');
     assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, 'succeeded');
@@ -2449,7 +2449,7 @@ test('grouped settings list converges after full accept-approve-dispatch chain',
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-group-convergence',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-group-convergence',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -2503,7 +2503,7 @@ test('grouped settings list converges after full accept-approve-dispatch chain',
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
     assert.equal(listedAfterDispatch.soulActions.length, accepted.soulActions.length);
 
@@ -2512,7 +2512,7 @@ test('grouped settings list converges after full accept-approve-dispatch chain',
       assert.ok(dispatched.soulAction);
       const refreshed = refreshedById.get(dispatched.soulAction!.id);
       assert.ok(refreshed);
-      assert.equal(refreshed?.sourceNoteId, record!.id);
+      assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-group-convergence');
       assert.equal(refreshed?.governanceStatus, 'approved');
       assert.equal(refreshed?.executionStatus, dispatched.soulAction!.executionStatus);
       assert.ok(['pending', 'running', 'succeeded'].includes(refreshed!.executionStatus));
