@@ -374,6 +374,17 @@
   - 这组 web 命名/投射收口改动还未单独提交。
 - 下一步建议补充：
   - 这批 web 改动已经形成独立变更集，可与无关 `CLAUDE.md` / `lifeonline-claude-worker-v2.sh` 继续隔离后直接单独提交。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 把 reintegration accept / 手动规划成功提示里的硬编码英文 `promotion actions` 收紧为中文 `候选动作`，让这条用户可见主路径文案与第一阶段“动作候选 → Gate / Review / Dispatch”语义保持一致，不再把 promotion implementation term 直接暴露到 UI。
+  - 同文件里单条 soul-action approve / defer / discard 成功提示也改为直接消费 `promotionActionLabel(action.actionKind)`，让用户看到的是“生成 Event Node 已批准 / 已延后 / 已丢弃”这类具体动作，而不是泛化的 `Soul action 已...`。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步更新回归断言，锁定这次文案收口在 websocket refresh 保留路径和单条治理路径上都成立。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过；Vitest 合计 9 files / 116 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项补充：
+  - 当前产品代码工作树未新增别的主线脏改动；仍只剩与本轮无关的 `CLAUDE.md` 与 `lifeonline-claude-worker-v2.sh`。
+- 下一步建议补充：
+  - 下一轮应继续转向新的 server/web/shared contract gap 或新的事实源一致性问题，不再回到 grouped governance 同类文案/retention 补强。
 单条 action loading/disabled 态在父层往返中的 view 级断言。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。

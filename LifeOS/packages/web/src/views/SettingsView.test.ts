@@ -1207,7 +1207,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1220,7 +1220,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1242,7 +1242,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1255,8 +1255,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1289,7 +1289,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1302,7 +1302,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1324,7 +1324,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1337,8 +1337,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1373,7 +1373,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1395,8 +1395,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1431,7 +1431,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1453,7 +1453,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1466,8 +1466,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1502,7 +1502,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1524,7 +1524,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1537,8 +1537,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1855,7 +1855,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1877,8 +1877,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -1918,7 +1918,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1940,7 +1940,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1953,8 +1953,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条 promotion actions');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条 promotion actions');
+    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
 
     wrapper.unmount();
   });
@@ -2210,7 +2210,7 @@ describe('SettingsView soul action governance wiring', () => {
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
-    expect(panel.props('message')).toBe('Soul action 已批准');
+    expect(panel.props('message')).toBe('生成 Event Node 已批准');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2281,7 +2281,7 @@ describe('SettingsView soul action governance wiring', () => {
       reason: 'Deferred from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('Soul action 已延后');
+    expect(panel.props('message')).toBe('生成 Event Node 已延后');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2306,7 +2306,7 @@ describe('SettingsView soul action governance wiring', () => {
       reason: 'Discarded from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('Soul action 已丢弃');
+    expect(panel.props('message')).toBe('生成 Event Node 已丢弃');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 

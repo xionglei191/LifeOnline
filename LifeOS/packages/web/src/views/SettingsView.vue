@@ -1308,7 +1308,7 @@ async function handleApproveSoulAction(action: SoulAction) {
     await approveSoulAction(action.id, {
       reason: `Approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = 'Soul action 已批准';
+    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已批准`;
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1391,7 +1391,7 @@ async function handleDeferSoulAction(action: SoulAction) {
     await deferSoulAction(action.id, {
       reason: `Deferred from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = 'Soul action 已延后';
+    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已延后`;
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1409,7 +1409,7 @@ async function handleDiscardSoulAction(action: SoulAction) {
     await discardSoulAction(action.id, {
       reason: `Discarded from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = 'Soul action 已丢弃';
+    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已丢弃`;
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1453,8 +1453,8 @@ async function handleAcceptReintegration(record: ReintegrationRecord) {
       ? reintegrationExpandedIds.value
       : [...reintegrationExpandedIds.value, record.id];
     reintegrationMessage.value = result.soulActions.length
-      ? `已接受并自动规划 ${result.soulActions.length} 条 promotion actions`
-      : '已接受，但当前没有可规划的 promotion actions';
+      ? `已接受并自动规划 ${result.soulActions.length} 条候选动作`
+      : '已接受，但当前没有可规划的候选动作';
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
@@ -1497,8 +1497,8 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
       ? reintegrationExpandedIds.value
       : [...reintegrationExpandedIds.value, record.id];
     reintegrationMessage.value = soulActions.length
-      ? `已规划 ${soulActions.length} 条 promotion actions`
-      : '当前没有可规划的 promotion actions';
+      ? `已规划 ${soulActions.length} 条候选动作`
+      : '当前没有可规划的候选动作';
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
