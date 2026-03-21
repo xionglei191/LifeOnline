@@ -153,3 +153,31 @@
 - 下一步建议：
   - 若继续沿同一主线推进，优先评估是否值得补一条 `SettingsView` 级最小联动测试，验证父层把状态与 handler 正确接到 `SoulActionGovernancePanel`。
   - 若保持当前低成本策略，也可以继续只在 panel 组件层补少量高价值显示/交互断言。
+- 本轮继续完成的真实实现：
+  - 新增 `LifeOS/packages/web/src/views/SettingsView.test.ts`，为 `SettingsView.vue` 补上最小父层联动测试，直接挂载真实 view 并校验 grouped governance panel 初始 props 是否正确下发。
+  - 同一测试文件再补一条 child -> parent round-trip 断言，锁定 `SoulActionGovernancePanel` 发出的 `update:filterStatus`、`update:executionFilter` 与 `refresh` 事件会回到父层并以更新后的过滤参数调用 `fetchSoulActions()`。
+  - 为了让这条 view 级测试稳定落地，测试里补了最小 `localStorage` stub，并继续只 mock 与本轮目标无关的 API/composable 依赖，没有扩大到整页端到端测试。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，3 files / 22 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项补充：
+  - 还没有覆盖 `SettingsView` 中 websocket 驱动的 grouped governance 自动刷新。
+  - 还没有覆盖父层 approve-group / dispatch-group handler 与 panel emit 之间的调用链。
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议补充：
+  - 若继续沿这条最小前端回归主线推进，优先补一条 `SettingsView` 级 websocket/update 驱动测试，确认 `soul-action-updated` 事件会同时刷新 reintegration records 与 soul actions。
+  - 若继续补父层交互，则优先覆盖 approve-group / dispatch-group emit 到父层 handler 的调用链，而不是回到低边际的纯展示微调。
+- 本轮继续完成的真实实现补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再补 1 条 websocket 驱动测试，直接派发 `ws-update` / `soul-action-updated` 事件，锁定 `SettingsView.vue` 会刷新 reintegration records 与 soul actions，而不会错误触发 worker task 刷新。
+  - 同一测试文件顺手收口了 `mountSettingsView()` helper 与 `afterEach` 中的 global cleanup，让这组 view 级测试在新增 document listener 场景下不会互相串扰。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，3 files / 23 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 还没有覆盖父层 approve-group / dispatch-group handler 与 panel emit 之间的调用链。
+  - 还没有覆盖 `worker-task-updated` 事件下 workerTasks / reintegration / soulActions 的联动刷新分支。
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，下一步优先补 `approve-group` / `dispatch-group` 的父层调用链测试，直接锁定批量 approve/dispatch 与刷新行为。
+  - 若继续补 websocket 分支，则再加一条 `worker-task-updated` 事件测试，覆盖 `loadWorkerTasks()` 也会被联动触发的路径。
