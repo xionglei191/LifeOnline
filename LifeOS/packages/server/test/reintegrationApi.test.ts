@@ -179,6 +179,23 @@ test('reintegration accept API returns reviewed record and planned soul actions'
     );
     assert.ok(accepted.soulActions.every((action) => action.sourceNoteId === record!.id));
 
+    const acceptedRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=accepted',
+    );
+    const pendingRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=pending_review',
+    );
+    const acceptedFollowUp = acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id);
+    const pendingFollowUp = pendingRecords.reintegrationRecords.find((item) => item.id === record!.id);
+
+    assert.ok(acceptedFollowUp);
+    assert.equal(acceptedFollowUp?.id, accepted.reintegrationRecord.id);
+    assert.equal(acceptedFollowUp?.reviewStatus, accepted.reintegrationRecord.reviewStatus);
+    assert.equal(acceptedFollowUp?.reviewedAt, accepted.reintegrationRecord.reviewedAt);
+    assert.equal(pendingFollowUp, undefined);
+
     const planned = await api<PlanReintegrationPromotionsResponse>(
       baseUrl,
       `/api/reintegration-records/${encodeURIComponent(record!.id)}/plan-promotions`,

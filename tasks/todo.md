@@ -541,6 +541,16 @@
   - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 server/shared 是否还有新的 worker task enum 值尚未被 web 侧共享 helper 与测试覆盖，优先补新增 contract 的集中事实源保护。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/utils/workerTaskLabels.ts` 改为用 `Record<WorkerTaskType, string>`、`Record<WorkerTaskStatus, string>`、`Record<WorkerName, string>` 显式声明 web 侧 worker task 本地化事实源，不再靠一串 if/return 维持；这样当 shared 新增 enum 值时，这里会在编译期直接暴露未覆盖项。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 accept API contract 旁新增 reintegration review-status follow-up list 收敛断言，锁定 accept 之后 `/api/reintegration-records?reviewStatus=accepted` 会稳定命中刚 review 完成的 record，而 `/api/reintegration-records?reviewStatus=pending_review` 不再包含同一条 record。
+  - 该断言继续直接对齐 shared contract 的真实返回形状，只验证 `reintegrationRecords` 成员收敛与 `id/reviewStatus/reviewedAt` 一致性，不再错误假设 list 响应额外暴露 `filters` 字段。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 reintegration review refresh 主线推进，可优先检查 reject 之后 `reviewStatus=rejected` / `pending_review` follow-up list 是否也缺同级 contract 保护。
   - `LifeOS/packages/web/src/utils/workerTaskLabels.test.ts` 进一步直接消费 shared 的 `SUPPORTED_WORKER_TASK_TYPES` / `SUPPORTED_WORKER_NAMES`，把 web helper 的覆盖范围与 shared 合约绑死，避免后续只更新 shared/server 而忘记补 web 标签映射。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/workerTaskLabels.test.ts` 通过，7 files / 65 tests。
@@ -622,9 +632,17 @@
 - 下一步建议再补充：
   - 若定向测试与 build 通过，可直接提交当前 worker-task status-only filtered refresh 收敛补强。
   - 若继续往下补，应转去寻找新的 fact-source gap，而不是继续在当前 worker-task filter 维度做低边际对称扩张。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 accept API contract 旁新增 reintegration review-status follow-up list 收敛断言：锁定 `/api/reintegration-records?reviewStatus=accepted` 会稳定返回刚 accept 的 record，`/api/reintegration-records?reviewStatus=pending_review` 则不会再包含它。
+  - 断言直接对齐 shared contract 的真实返回形状，只验证 `reintegrationRecords` 成员收敛与 `id/reviewStatus/reviewedAt` 和 accept response 保持一致，不再错误假设 list 响应额外暴露 `filters` 字段。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若定向测试与 build 通过，可直接提交当前 reintegration review-status follow-up list 收敛补强。
+  - 若继续沿同一条 refresh 主线推进，可检查 reject 之后 `reviewStatus=rejected` / `pending_review` follow-up list 是否也缺同级 contract 保护。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:1583` 将 soul-action websocket 刷新改成在当前 `soulActionMessageType === 'success'` 且已有消息时沿用 `preserveMessage`，避免刚显示出的 dispatch 成功反馈被随后的 `worker-task-updated` / `soul-action-updated` 自动刷新立即清空。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:926` 新增 view 级回归，锁定单条 dispatch 成功后即使立刻收到 `worker-task-updated`，`workerTasks` / `reintegration` / `soulActions` 会正常刷新，但 `Worker Task` 成功反馈仍保持可见。
