@@ -1,3 +1,36 @@
+# dashboard/timeline/calendar shared view contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 `DashboardView` / timeline / calendar 主路径是否仍停留在 server handler 未显式复用 shared `DashboardData` / `TimelineData` / `CalendarData` 的状态。
+- [x] 让对应 server handlers 的 request/response typing 显式接回 shared view contracts，并避免继续返回未类型化对象字面量。
+- [x] 补最小 server 回归，锁定三条主路径已接回 shared view contracts。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `getDashboard()` 改为显式声明 `Request<Record<string, never>, DashboardData>` / `Response<DashboardData>`。
+    - `getTimeline()` 改为显式声明 `Request<Record<string, never>, TimelineData, Record<string, never>, { start?: string; end?: string }>` / `Response<TimelineData>`，并先构造 `const response: TimelineData` 再统一 `res.json(response)`。
+    - `getCalendar()` 改为显式声明 `Request<Record<string, never>, CalendarData, Record<string, never>, { year?: string; month?: string }>` / `Response<CalendarData>`，并先构造 `const response: CalendarData` 再统一 `res.json(response)`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `dashboard, timeline, and calendar APIs respond with shared view contracts`。
+- 这次修的不是继续补 SettingsView 对称测试，而是 dashboard / timeline / calendar 三条稳定主路径已经有 shared view data contract，但 handler 层仍未显式接回 shared，仍存在 server 侧 contract 漂移缺口。
+
+## 本轮选择依据
+- 用户要求下一步优先处理新的高价值 `server/web/shared contract gap`。
+- schedule CRUD 收口后，下一条仍直接服务主面板浏览路径、且已经在 shared 中存在单一事实源的就是 `DashboardData` / `TimelineData` / `CalendarData`；但 server handlers 仍使用未类型化的 `Request` / `Response` 与内联对象返回。
+- 这条线可以继续减少主路径 view contract 在 handler 层再次漂移的风险，且不是低边际同类测试平移。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "dashboard, timeline, and calendar APIs respond with shared view contracts|schedule APIs respond with shared schedule contracts" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 这三条 view 主路径的 server handler 已接回 shared；若继续沿 contract 主线推进，下一步可检查 worker task / AI prompt / reintegration 等 response wrapper 是否仍有 shared 外的稳定 shape。
+
+
 # schedule CRUD shared contract 收口
 
 ## 计划

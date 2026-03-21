@@ -110,6 +110,47 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('dashboard, timeline, and calendar APIs respond with shared view contracts', async () => {
+  const env = await createTestEnv('lifeos-view-contracts-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const dashboard = await api<import('../../shared/src/types.js').DashboardData>(baseUrl, '/api/dashboard');
+    assert.ok(Array.isArray(dashboard.todayTodos));
+    assert.ok(Array.isArray(dashboard.weeklyHighlights));
+    assert.ok(Array.isArray(dashboard.dimensionStats));
+    assert.equal(typeof dashboard.inboxCount, 'number');
+
+    const timeline = await api<import('../../shared/src/types.js').TimelineData>(baseUrl, '/api/timeline?start=2026-01-01&end=2026-12-31');
+    assert.equal(timeline.startDate, '2026-01-01');
+    assert.equal(timeline.endDate, '2026-12-31');
+    assert.ok(Array.isArray(timeline.tracks));
+
+    const calendar = await api<import('../../shared/src/types.js').CalendarData>(baseUrl, '/api/calendar?year=2026&month=3');
+    assert.equal(calendar.year, 2026);
+    assert.equal(calendar.month, 3);
+    assert.ok(Array.isArray(calendar.days));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('schedule APIs respond with shared schedule contracts', async () => {
   const env = await createTestEnv('lifeos-schedule-contract-');
   const configFile = CONFIG_FILE;

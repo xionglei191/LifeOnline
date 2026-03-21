@@ -22,7 +22,7 @@ import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, Timel
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
-export async function getDashboard(req: Request, res: Response): Promise<void> {
+export async function getDashboard(_req: Request<Record<string, never>, DashboardData>, res: Response<DashboardData>): Promise<void> {
   try {
     const db = getDb();
     const today = getTodayDateString();
@@ -77,14 +77,14 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
       SELECT COUNT(*) as total FROM notes WHERE dimension = '_inbox' AND status != 'done'
     `).get() as any;
 
-    const data: DashboardData = {
+    const response: DashboardData = {
       todayTodos: todayTodos.map(parseNote),
       weeklyHighlights: weeklyHighlights.map(parseNote),
       dimensionStats,
       inboxCount: inboxStats?.total ?? 0
     };
 
-    res.json(data);
+    res.json(response);
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
@@ -209,7 +209,10 @@ function parseNote(row: any): Note {
 }
 
 // GET /api/timeline?start=2026-03-01&end=2026-03-31
-export async function getTimeline(req: Request, res: Response): Promise<void> {
+export async function getTimeline(
+  req: Request<Record<string, never>, TimelineData, Record<string, never>, { start?: string; end?: string }>,
+  res: Response<TimelineData>,
+): Promise<void> {
   try {
     const { start, end } = req.query;
     if (!start || !end) { res.status(400).json({ error: 'start and end date required' }); return; }
@@ -225,7 +228,8 @@ export async function getTimeline(req: Request, res: Response): Promise<void> {
       notes: notes.filter(note => note.dimension === dimension)
     }));
 
-    res.json({ startDate: start, endDate: end, tracks });
+    const response: TimelineData = { startDate: start, endDate: end, tracks };
+    res.json(response);
   } catch (error) {
     console.error('Timeline error:', error);
     res.status(500).json({ error: 'Failed to fetch timeline data' });
@@ -233,7 +237,10 @@ export async function getTimeline(req: Request, res: Response): Promise<void> {
 }
 
 // GET /api/calendar?year=2026&month=3
-export async function getCalendar(req: Request, res: Response): Promise<void> {
+export async function getCalendar(
+  req: Request<Record<string, never>, CalendarData, Record<string, never>, { year?: string; month?: string }>,
+  res: Response<CalendarData>,
+): Promise<void> {
   try {
     const { year, month } = req.query;
     if (!year || !month) { res.status(400).json({ error: 'year and month required' }); return; }
@@ -263,7 +270,8 @@ export async function getCalendar(req: Request, res: Response): Promise<void> {
       days.push({ date, notes: dayNotes, count: dayNotes.length });
     }
 
-    res.json({ year: y, month: m, days });
+    const response: CalendarData = { year: y, month: m, days };
+    res.json(response);
   } catch (error) {
     console.error('Calendar error:', error);
     res.status(500).json({ error: 'Failed to fetch calendar data' });
