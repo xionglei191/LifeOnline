@@ -1144,4 +1144,95 @@ describe('SettingsView soul action governance wiring', () => {
 
     wrapper.unmount();
   });
+
+  it('keeps worker-task retry feedback visible across websocket refreshes', async () => {
+    const client = await import('../api/client');
+    const retryWorkerTaskMock = vi.mocked(client.retryWorkerTask);
+
+    apiMocks.fetchWorkerTasks
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-retry',
+          taskType: 'extract_tasks',
+          worker: 'lifeos',
+          status: 'failed',
+          input: { noteId: 'note-1' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-1',
+          createdAt: '2026-03-21T10:03:00.000Z',
+          updatedAt: '2026-03-21T10:03:00.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-retry',
+          taskType: 'extract_tasks',
+          worker: 'lifeos',
+          status: 'pending',
+          input: { noteId: 'note-1' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-1',
+          createdAt: '2026-03-21T10:03:00.000Z',
+          updatedAt: '2026-03-21T10:05:00.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-retry',
+          taskType: 'extract_tasks',
+          worker: 'lifeos',
+          status: 'pending',
+          input: { noteId: 'note-1' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-1',
+          createdAt: '2026-03-21T10:03:00.000Z',
+          updatedAt: '2026-03-21T10:05:30.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ]);
+    retryWorkerTaskMock.mockResolvedValue({
+      id: 'worker-task-retry',
+      taskType: 'extract_tasks',
+      worker: 'lifeos',
+      status: 'pending',
+      input: { noteId: 'note-1' },
+      outputNotes: [],
+      resultSummary: null,
+      error: null,
+      sourceNoteId: 'note-1',
+      createdAt: '2026-03-21T10:03:00.000Z',
+      updatedAt: '2026-03-21T10:05:00.000Z',
+      startedAt: null,
+      finishedAt: null,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.find('.stub-retry').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('已重新入队任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(wrapper.text()).toContain('已重新入队任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
+
+    wrapper.unmount();
+  });
 });
