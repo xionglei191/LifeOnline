@@ -510,6 +510,16 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 server/shared 是否还有新的 worker task enum 值尚未被 web 侧共享 helper 与测试覆盖，优先补新增 contract 的集中事实源保护。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/utils/workerTaskLabels.ts` 改为用 `Record<WorkerTaskType, string>`、`Record<WorkerTaskStatus, string>`、`Record<WorkerName, string>` 显式声明 web 侧 worker task 本地化事实源，不再靠一串 if/return 维持；这样当 shared 新增 enum 值时，这里会在编译期直接暴露未覆盖项。
+  - `LifeOS/packages/web/src/utils/workerTaskLabels.test.ts` 进一步直接消费 shared 的 `SUPPORTED_WORKER_TASK_TYPES` / `SUPPORTED_WORKER_NAMES`，把 web helper 的覆盖范围与 shared 合约绑死，避免后续只更新 shared/server 而忘记补 web 标签映射。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/workerTaskLabels.test.ts` 通过，7 files / 65 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 worker-task contract 主线推进，可在 server/shared 新增 worker task 枚举时，同步补一条跨层回归，确认 web helper 与用户可见文案会在新值落地时第一时间被测试阻断。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
