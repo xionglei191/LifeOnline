@@ -253,6 +253,69 @@ test('soul-action defer and discard APIs keep governance detail and list views a
   }
 });
 
+test('soul-action list API supports sourceReintegrationId filtering independently from sourceNoteId', async () => {
+  const env = await createTestEnv('lifeos-soul-action-source-reintegration-filter-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+
+    const firstAction = createOrReuseSoulAction({
+      sourceNoteId: 'note-source-reintegration-filter-a',
+      sourceReintegrationId: 'reint:source-filter-target',
+      actionKind: 'promote_event_node',
+      governanceReason: 'source reintegration filter target a',
+    });
+    const secondAction = createOrReuseSoulAction({
+      sourceNoteId: 'note-source-reintegration-filter-b',
+      sourceReintegrationId: 'reint:source-filter-target',
+      actionKind: 'promote_continuity_record',
+      governanceReason: 'source reintegration filter target b',
+    });
+    createOrReuseSoulAction({
+      sourceNoteId: 'note-source-reintegration-filter-c',
+      sourceReintegrationId: 'reint:source-filter-other',
+      actionKind: 'promote_event_node',
+      governanceReason: 'source reintegration filter other',
+    });
+
+    const filtered = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent('reint:source-filter-target')}`,
+    );
+
+    assert.deepEqual(
+      filtered.soulActions.map((action) => action.id).sort(),
+      [firstAction.id, secondAction.id].sort(),
+    );
+    assert.ok(filtered.soulActions.every((action) => action.sourceReintegrationId === 'reint:source-filter-target'));
+    assert.deepEqual(
+      filtered.soulActions.map((action) => action.sourceNoteId).sort(),
+      ['note-source-reintegration-filter-a', 'note-source-reintegration-filter-b'],
+    );
+    assert.equal(filtered.filters.sourceReintegrationId, 'reint:source-filter-target');
+    assert.equal(filtered.filters.sourceNoteId, undefined);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('reintegration accept API returns reviewed record and planned soul actions', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-');
   const configFile = CONFIG_FILE;
@@ -311,6 +374,16 @@ test('reintegration accept API returns reviewed record and planned soul actions'
     );
     assert.ok(accepted.soulActions.every((action) => action.sourceNoteId === record!.id));
     assert.ok(accepted.soulActions.every((action) => action.sourceReintegrationId === record!.id));
+
+    const listedByReintegration = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
+    );
+    assert.deepEqual(
+      listedByReintegration.soulActions.map((action) => action.id).sort(),
+      accepted.soulActions.map((action) => action.id).sort(),
+    );
+    assert.equal(listedByReintegration.filters.sourceReintegrationId, record!.id);
 
     const acceptedRecords = await api<ListReintegrationRecordsResponse>(
       baseUrl,

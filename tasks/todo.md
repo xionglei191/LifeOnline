@@ -572,13 +572,19 @@
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/api/client.ts` 补齐 soul-action detail / defer / discard 三个 typed client 入口：新增 `fetchSoulAction()`、`deferSoulAction()`、`discardSoulAction()`，把 server 侧已存在的治理接口正式收进 web/shared contract 消费面，避免后续继续靠散落的裸 fetch 或遗漏客户端封装。
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 defer/discard contract test，锁定同一 soul action 在 `approve -> defer -> discard` 之后，detail 接口与按 `sourceNoteId + governanceStatus` 过滤的 list 结果保持一致，且 `governanceReason`、`deferredAt`、`discardedAt` 等关键字段不漂移。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/soul/soulActions.ts` 的 list 过滤正式补上 `sourceReintegrationId`，`LifeOS/packages/server/src/api/handlers.ts` 将 `/api/soul-actions` 查询参数同步扩展为 `sourceReintegrationId`，`LifeOS/packages/shared/src/types.ts` 与 `LifeOS/packages/web/src/api/client.ts` 也一起补齐同名 typed contract，避免当前 API 仍只能按 `sourceNoteId` 过滤，继续把 promotion 分组来源和原始 note 来源混成同一个查询维度。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 1 条最小 contract test，直接锁定 promotion soul actions 即使 `sourceNoteId` 已经与真实 note 分离，仍能通过 `sourceReintegrationId` filter 稳定列出；同时把 accept API 用例补上一条 follow-up list 断言，确认 accept 返回的 planned soul actions 能被新的 reintegration filter 原样取回。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，26/26。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮定向测试与构建均通过。
 - 当前未完成项再补充：
-  - `tasks/todo.md` 已补记本轮 contract 收敛与验证结果。
-  - 当前 dirty tree 里与 AI suggestions 相关的 server/shared/runtime 变更仍待继续串联核对。
+  - promotion planner 仍沿用 `sourceNoteId = record.id` 作为持久化 identity；不过在本轮后，API 已不再强制把 reintegration source 借道 `sourceNoteId` 查询，下一步可以更安全地继续推进 planner identity 收口。
+  - 本轮 server/shared/web 变更仍未提交 git commit。
 - 下一步建议再补充：
-  - 优先检查 `/api/ai/suggestions` 这条新链路在 `shared`、`server`、`web` 三侧是否已经完全对齐，并用最窄验证补上真正缺的 contract/runtime 保护。
+  - 优先继续检查 `createOrReuseSoulAction()` / planner reuse key 是否该对 promotion actions 改为以 `sourceReintegrationId` 为主键语义；这才是把 `sourceNoteId` 真正迁回原始 note id 的最后一段高价值根因。
+  - 若没有更高价值的新缺口，也可以先提交本轮 `sourceReintegrationId` list/filter contract 收口，避免 API 层继续落后于已完成的存储层显式字段。
 - 本轮继续完成的真实实现再补充：
   - 先修正 `LifeOS/packages/server/config.json` 被测试残留污染的问题：从不存在的 `/tmp/lifeos-config-restart-rollback-...` 临时 vault 路径恢复为正式运行配置 `/home/xionglei/Vault_OS` + `3000`，避免当前 working tree 被误用于运行时会直接指向失效数据目录。
   - `LifeOS/packages/web/src/components/AISuggestions.test.ts` 新增 5 条最窄前端回归测试，直接锁定 AI suggestions 面板在初始 idle、刷新成功、空结果、错误、加载中五种主状态下都正确消费 `fetchAISuggestions()` 与 shared `AISuggestion` contract，并继续展示本地化 type / dimension 文案。

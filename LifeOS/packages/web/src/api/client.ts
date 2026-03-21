@@ -300,12 +300,14 @@ export async function planReintegrationPromotions(id: string): Promise<SoulActio
 
 export async function fetchSoulActions(filters?: {
   sourceNoteId?: string;
+  sourceReintegrationId?: string;
   governanceStatus?: SoulActionGovernanceStatus;
   executionStatus?: SoulActionExecutionStatus;
   actionKind?: SoulActionKind;
 }): Promise<SoulAction[]> {
   const params = new URLSearchParams();
   if (filters?.sourceNoteId) params.set('sourceNoteId', filters.sourceNoteId);
+  if (filters?.sourceReintegrationId) params.set('sourceReintegrationId', filters.sourceReintegrationId);
   if (filters?.governanceStatus) params.set('governanceStatus', filters.governanceStatus);
   if (filters?.executionStatus) params.set('executionStatus', filters.executionStatus);
   if (filters?.actionKind) params.set('actionKind', filters.actionKind);

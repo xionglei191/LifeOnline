@@ -449,6 +449,7 @@ export interface ListSoulActionsResponse {
   soulActions: SoulAction[];
   filters: {
     sourceNoteId?: string;
+    sourceReintegrationId?: string;
     governanceStatus?: SoulActionGovernanceStatus;
     executionStatus?: SoulActionExecutionStatus;
     actionKind?: SoulActionKind;

@@ -450,9 +450,13 @@ export async function listSoulActionsHandler(req: Request, res: Response): Promi
     const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
       ? req.query.sourceNoteId.trim()
       : undefined;
+    const sourceReintegrationId = typeof req.query.sourceReintegrationId === 'string' && req.query.sourceReintegrationId.trim()
+      ? req.query.sourceReintegrationId.trim()
+      : undefined;
 
     const filters = {
       sourceNoteId,
+      sourceReintegrationId,
       governanceStatus: parseSoulActionGovernanceStatus(req.query.governanceStatus),
       executionStatus: parseSoulActionExecutionStatus(req.query.executionStatus),
       actionKind: parseSoulActionKind(req.query.actionKind),

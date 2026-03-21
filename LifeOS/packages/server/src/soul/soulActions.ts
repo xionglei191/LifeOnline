@@ -32,6 +32,7 @@ interface ListSoulActionsFilters {
   governanceStatus?: SoulActionGovernanceStatus;
   executionStatus?: SoulActionExecutionStatus;
   sourceNoteId?: string;
+  sourceReintegrationId?: string;
   actionKind?: SoulActionKind;
 }
 
@@ -325,6 +326,10 @@ export function listSoulActions(filters?: ListSoulActionsFilters): SoulAction[] 
   if (filters?.sourceNoteId) {
     clauses.push('source_note_id = ?');
     params.push(filters.sourceNoteId);
+  }
+  if (filters?.sourceReintegrationId) {
+    clauses.push('source_reintegration_id = ?');
+    params.push(filters.sourceReintegrationId);
   }
   if (filters?.actionKind) {
     clauses.push('action_kind = ?');
