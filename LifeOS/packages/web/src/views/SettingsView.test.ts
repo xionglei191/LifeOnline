@@ -1235,4 +1235,95 @@ describe('SettingsView soul action governance wiring', () => {
 
     wrapper.unmount();
   });
+
+  it('keeps worker-task cancel feedback visible across websocket refreshes', async () => {
+    const client = await import('../api/client');
+    const cancelWorkerTaskMock = vi.mocked(client.cancelWorkerTask);
+
+    apiMocks.fetchWorkerTasks
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-cancel',
+          taskType: 'openclaw_task',
+          worker: 'openclaw',
+          status: 'running',
+          input: { noteId: 'note-2' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-2',
+          createdAt: '2026-03-21T10:04:00.000Z',
+          updatedAt: '2026-03-21T10:04:00.000Z',
+          startedAt: '2026-03-21T10:04:30.000Z',
+          finishedAt: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-cancel',
+          taskType: 'openclaw_task',
+          worker: 'openclaw',
+          status: 'cancelled',
+          input: { noteId: 'note-2' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-2',
+          createdAt: '2026-03-21T10:04:00.000Z',
+          updatedAt: '2026-03-21T10:05:00.000Z',
+          startedAt: '2026-03-21T10:04:30.000Z',
+          finishedAt: '2026-03-21T10:05:00.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'worker-task-cancel',
+          taskType: 'openclaw_task',
+          worker: 'openclaw',
+          status: 'cancelled',
+          input: { noteId: 'note-2' },
+          outputNotes: [],
+          resultSummary: null,
+          error: null,
+          sourceNoteId: 'note-2',
+          createdAt: '2026-03-21T10:04:00.000Z',
+          updatedAt: '2026-03-21T10:05:30.000Z',
+          startedAt: '2026-03-21T10:04:30.000Z',
+          finishedAt: '2026-03-21T10:05:00.000Z',
+        },
+      ]);
+    cancelWorkerTaskMock.mockResolvedValue({
+      id: 'worker-task-cancel',
+      taskType: 'openclaw_task',
+      worker: 'openclaw',
+      status: 'cancelled',
+      input: { noteId: 'note-2' },
+      outputNotes: [],
+      resultSummary: null,
+      error: null,
+      sourceNoteId: 'note-2',
+      createdAt: '2026-03-21T10:04:00.000Z',
+      updatedAt: '2026-03-21T10:05:00.000Z',
+      startedAt: '2026-03-21T10:04:30.000Z',
+      finishedAt: '2026-03-21T10:05:00.000Z',
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    await wrapper.find('.stub-cancel').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(wrapper.text()).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
+
+    wrapper.unmount();
+  });
 });

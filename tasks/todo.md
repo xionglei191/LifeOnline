@@ -287,6 +287,12 @@
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 2 条 soul-action filter convergence contract test：一条锁定 mixed group progress 下 `approved` 总子集等于 `ready(not_dispatched)` 与 `dispatched(current executionStatus)` 两个子集并集；另一条锁定 same-status dispatch 场景下 `approved` 列表与 executionStatus 子集保持同一成员集合。
   - 这次明确转回 server contract 层，直接保护 settings grouped governance 真正依赖的 API 事实源，避免继续停留在 web view 低边际微补强。
 - 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，17/17。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 worker-task cancel websocket retention 回归，锁定取消成功提示在 `worker-task-updated` 刷新后仍保持可见，与上一轮 retry retention 保持同级保护。
+  - 这次没有再改运行时代码，只把当前 worker-task action feedback 主线最后一个同级缺口补成 view 级可回归断言，继续避免 `SettingsView` 与 `WorkerTaskDetail` 在 retention 保护上漂移。
+- 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，14/14。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
