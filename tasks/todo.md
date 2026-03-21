@@ -804,6 +804,19 @@
   - 继续优先扫 `reintegrationApi.test.ts` 中 grouped-semantics / mixed-progress 相关用例，找出还在按 `record.id` 过滤 soul actions 的残留点。
   - 若本轮先收口，也可以直接提交当前 grouped-semantics contract 修正，避免分组统计再次漂回旧兼容语义。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 event-node / continuity projection follow-up 两条 dispatch 用例的 reintegration fixture 改回真实 note source（`note-api-pr6-event-node-list-followup`、`note-api-pr6-continuity-list-followup`），不再继续靠 `sourceNoteId: null` 的 legacy fallback 把 projection 链跑通。
+  - continuity follow-up 用例新增断言锁定 accept 返回的 promotion action 已同时携带真实 `sourceNoteId` 与对应 `sourceReintegrationId`；event-node follow-up 虽然当前 projection 断言已足够通过，但 fixture 也已回到主语义，避免后续再把 fallback 当默认来源。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record|continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record" test/reintegrationApi.test.ts` 通过，2/2。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - `reintegrationApi.test.ts` 中前半段仍有 2 处 `sourceNoteId: null` fixture，需要继续判定是合法 fallback coverage 还是旧主语义残留。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 继续优先处理 `reintegrationApi.test.ts` 中剩余的两处 `sourceNoteId: null` fixture，确认是否还能切回真实 note source 而不丢失测试目标。
+  - 若本轮先收口，也可以直接提交当前 projection follow-up fixture 修正，避免 event-node / continuity projection 链继续默认走 fallback 语义。
+- 本轮继续完成的真实实现再补充：
   - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.ts`，集中维护 worker task 的 `taskType / status / worker` 本地化映射与 action-aware 成功反馈文案，避免 `NoteDetail.vue`、`WorkerTaskCard.vue`、`WorkerTaskDetail.vue`、`SettingsView.vue` 四处各自维护同一份 shared contract 解释而再次漂移。
   - `LifeOS/packages/web/src/components/WorkerTaskCard.vue`、`LifeOS/packages/web/src/components/WorkerTaskDetail.vue`、`LifeOS/packages/web/src/components/NoteDetail.vue`、`LifeOS/packages/web/src/views/SettingsView.vue` 全部改为复用该 helper；其中 `WorkerTaskDetail.vue` 的 retry/cancel 成功反馈也同步收敛为与 `NoteDetail` 一致的 action-aware 本地化文案。
   - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.test.ts`，把共享 helper 本身作为事实源锁住，直接覆盖 `人格快照更新 / 等待执行 / LifeOS` 等映射以及 create/retry/cancel 三条消息前缀。

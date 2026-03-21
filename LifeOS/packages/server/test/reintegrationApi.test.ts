@@ -2001,7 +2001,7 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-event-node-list-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-event-node-list-followup',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -2095,7 +2095,7 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-continuity-list-followup',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-continuity-list-followup',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -2123,6 +2123,8 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
 
     const action = accepted.soulActions.find((item) => item.actionKind === 'promote_continuity_record');
     assert.ok(action);
+    assert.equal(action?.sourceNoteId, 'note-api-pr6-continuity-list-followup');
+    assert.equal(action?.sourceReintegrationId, record!.id);
 
     await api<SoulActionResponse>(
       baseUrl,
