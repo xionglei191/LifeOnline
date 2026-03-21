@@ -2045,7 +2045,104 @@ test('promotion dispatch response stays aligned with local-only execution result
     assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
     assert.equal(dispatched.result.workerTaskId, null);
     assert.equal(dispatched.task, null);
-    assert.match(dispatched.result.reason, /continuity record|event node/);
+    assert.match(dispatched.result.reason, /continuity record/);
+
+    const listedAfterDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
+    assert.ok(refreshed);
+    assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.governanceStatus, 'approved');
+    assert.equal(refreshed?.executionStatus, 'succeeded');
+    assert.equal(refreshed?.workerTaskId, null);
+    assert.equal(refreshed?.resultSummary, dispatched.result.reason);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-event-node-dispatch-followup-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-event-node-dispatch-followup',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api event node dispatch follow-up summary',
+      evidence: { source: 'api-event-node-dispatch-followup-test' },
+      now: '2026-03-22T08:30:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-event-node-dispatch-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for event-node dispatch api test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    const action = accepted.soulActions.find((item) => item.actionKind === 'promote_event_node') ?? accepted.soulActions.find((item) => item.actionKind === 'create_event_node');
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for event-node dispatch api test' }),
+      },
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.equal(dispatched.result.dispatched, true);
+    assert.equal(dispatched.soulAction?.id, action!.id);
+    assert.equal(dispatched.soulAction?.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
+    assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
+    assert.equal(dispatched.result.workerTaskId, null);
+    assert.equal(dispatched.task, null);
+    assert.match(dispatched.result.reason, /event node/);
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
