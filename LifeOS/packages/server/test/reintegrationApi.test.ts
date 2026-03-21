@@ -259,6 +259,149 @@ test('soul-action defer and discard APIs keep governance detail and list views a
   }
 });
 
+test('soul-action defer and discard websocket events stay aligned with detail and list views', async () => {
+  const env = await createTestEnv('lifeos-soul-action-defer-discard-ws-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-soul-action-defer-discard-ws',
+      sourceNoteId: 'note-api-soul-action-defer-discard-ws',
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'accepted',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'defer discard websocket path',
+      evidence: { source: 'api-test-defer-discard-ws' },
+      reviewReason: 'ready for websocket governance api test',
+      now: '2026-03-22T09:00:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records?reviewStatus=accepted');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-soul-action-defer-discard-ws');
+    assert.ok(record);
+
+    const planned = await api<PlanReintegrationPromotionsResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/plan-promotions`,
+      { method: 'POST' },
+    );
+    assert.equal(planned.soulActions.length, 2);
+
+    const targetAction = planned.soulActions.find((action) => action.actionKind === 'promote_continuity_record') ?? planned.soulActions[0]!;
+
+    const approved = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(targetAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve before defer websocket test' }),
+      },
+    );
+    assert.equal(approved.soulAction.governanceStatus, 'approved');
+
+    const socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    try {
+      const deferredWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
+        socket,
+        (event) => event.type === 'soul-action-updated' && event.data.id === targetAction.id && event.data.governanceStatus === 'deferred',
+      );
+      const deferred = await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(targetAction.id)}/defer`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'defer for websocket review window' }),
+        },
+      );
+      const deferredWsEvent = await deferredWsEventPromise;
+      assert.equal(deferredWsEvent.data.id, deferred.soulAction.id);
+      assert.equal(deferredWsEvent.data.sourceNoteId, deferred.soulAction.sourceNoteId);
+      assert.equal(deferredWsEvent.data.sourceReintegrationId, deferred.soulAction.sourceReintegrationId);
+      assert.equal(deferredWsEvent.data.governanceStatus, deferred.soulAction.governanceStatus);
+      assert.equal(deferredWsEvent.data.executionStatus, deferred.soulAction.executionStatus);
+      assert.equal(deferredWsEvent.data.deferredAt, deferred.soulAction.deferredAt);
+      assert.equal(deferredWsEvent.data.discardedAt, deferred.soulAction.discardedAt);
+
+      const deferredDetail = await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(targetAction.id)}`,
+      );
+      const deferredList = await api<ListSoulActionsResponse>(
+        baseUrl,
+        `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=deferred`,
+      );
+      assert.equal(deferredDetail.soulAction.governanceStatus, deferred.soulAction.governanceStatus);
+      assert.equal(deferredDetail.soulAction.deferredAt, deferred.soulAction.deferredAt);
+      assert.equal(deferredList.soulActions.length, 1);
+      assert.equal(deferredList.soulActions[0]?.id, deferred.soulAction.id);
+      assert.equal(deferredList.soulActions[0]?.deferredAt, deferred.soulAction.deferredAt);
+      assert.equal(deferredList.soulActions[0]?.discardedAt, deferred.soulAction.discardedAt);
+
+      const discardedWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
+        socket,
+        (event) => event.type === 'soul-action-updated' && event.data.id === targetAction.id && event.data.governanceStatus === 'discarded',
+      );
+      const discarded = await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(targetAction.id)}/discard`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'discard after websocket defer review' }),
+        },
+      );
+      const discardedWsEvent = await discardedWsEventPromise;
+      assert.equal(discardedWsEvent.data.id, discarded.soulAction.id);
+      assert.equal(discardedWsEvent.data.sourceNoteId, discarded.soulAction.sourceNoteId);
+      assert.equal(discardedWsEvent.data.sourceReintegrationId, discarded.soulAction.sourceReintegrationId);
+      assert.equal(discardedWsEvent.data.governanceStatus, discarded.soulAction.governanceStatus);
+      assert.equal(discardedWsEvent.data.executionStatus, discarded.soulAction.executionStatus);
+      assert.equal(discardedWsEvent.data.deferredAt, discarded.soulAction.deferredAt);
+      assert.equal(discardedWsEvent.data.discardedAt, discarded.soulAction.discardedAt);
+
+      const discardedDetail = await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(targetAction.id)}`,
+      );
+      const discardedList = await api<ListSoulActionsResponse>(
+        baseUrl,
+        `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=discarded`,
+      );
+      assert.equal(discardedDetail.soulAction.governanceStatus, discarded.soulAction.governanceStatus);
+      assert.equal(discardedDetail.soulAction.discardedAt, discarded.soulAction.discardedAt);
+      assert.equal(discardedList.soulActions.length, 1);
+      assert.equal(discardedList.soulActions[0]?.id, discarded.soulAction.id);
+      assert.equal(discardedList.soulActions[0]?.deferredAt, discarded.soulAction.deferredAt);
+      assert.equal(discardedList.soulActions[0]?.discardedAt, discarded.soulAction.discardedAt);
+    } finally {
+      socket.close();
+    }
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action list API supports sourceReintegrationId filtering independently from sourceNoteId', async () => {
   const env = await createTestEnv('lifeos-soul-action-source-reintegration-filter-');
   const configFile = CONFIG_FILE;
@@ -3394,7 +3537,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === firstAction.id,
     );
-    await api<SoulActionResponse>(
+    const firstApprove = await api<SoulActionResponse>(
       baseUrl,
       `/api/soul-actions/${encodeURIComponent(firstAction.id)}/approve`,
       {
@@ -3403,7 +3546,12 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
       },
     );
     const firstWsEvent = await firstWsEventPromise;
+    assert.equal(firstWsEvent.data.id, firstApprove.soulAction.id);
+    assert.equal(firstWsEvent.data.sourceNoteId, firstApprove.soulAction.sourceNoteId);
+    assert.equal(firstWsEvent.data.sourceReintegrationId, firstApprove.soulAction.sourceReintegrationId);
+    assert.equal(firstWsEvent.data.governanceStatus, firstApprove.soulAction.governanceStatus);
     assert.equal(firstWsEvent.data.governanceStatus, 'approved');
+    assert.equal(firstWsEvent.data.executionStatus, firstApprove.soulAction.executionStatus);
     assert.equal(firstWsEvent.data.executionStatus, 'not_dispatched');
 
     const pendingAfterFirstApprove = await api<ListSoulActionsResponse>(
@@ -3415,16 +3563,26 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
       `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
 
+    assert.equal(pendingAfterFirstApprove.filters.sourceReintegrationId, record!.id);
+    assert.equal(pendingAfterFirstApprove.filters.governanceStatus, 'pending_review');
+    assert.equal(pendingAfterFirstApprove.filters.executionStatus, 'not_dispatched');
+    assert.equal(approvedAfterFirstApprove.filters.sourceReintegrationId, record!.id);
+    assert.equal(approvedAfterFirstApprove.filters.governanceStatus, 'approved');
+    assert.equal(approvedAfterFirstApprove.filters.executionStatus, 'not_dispatched');
     assert.equal(pendingAfterFirstApprove.soulActions.length, 1);
     assert.equal(pendingAfterFirstApprove.soulActions[0]?.id, secondAction.id);
     assert.equal(approvedAfterFirstApprove.soulActions.length, 1);
     assert.equal(approvedAfterFirstApprove.soulActions[0]?.id, firstAction.id);
+    assert.equal(approvedAfterFirstApprove.soulActions[0]?.sourceNoteId, firstApprove.soulAction.sourceNoteId);
+    assert.equal(approvedAfterFirstApprove.soulActions[0]?.sourceReintegrationId, firstApprove.soulAction.sourceReintegrationId);
+    assert.equal(approvedAfterFirstApprove.soulActions[0]?.governanceStatus, firstApprove.soulAction.governanceStatus);
+    assert.equal(approvedAfterFirstApprove.soulActions[0]?.executionStatus, firstApprove.soulAction.executionStatus);
 
     const secondWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceReintegrationId === record!.id && event.data.id === secondAction.id,
     );
-    await api<SoulActionResponse>(
+    const secondApprove = await api<SoulActionResponse>(
       baseUrl,
       `/api/soul-actions/${encodeURIComponent(secondAction.id)}/approve`,
       {
@@ -3433,7 +3591,12 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
       },
     );
     const secondWsEvent = await secondWsEventPromise;
+    assert.equal(secondWsEvent.data.id, secondApprove.soulAction.id);
+    assert.equal(secondWsEvent.data.sourceNoteId, secondApprove.soulAction.sourceNoteId);
+    assert.equal(secondWsEvent.data.sourceReintegrationId, secondApprove.soulAction.sourceReintegrationId);
+    assert.equal(secondWsEvent.data.governanceStatus, secondApprove.soulAction.governanceStatus);
     assert.equal(secondWsEvent.data.governanceStatus, 'approved');
+    assert.equal(secondWsEvent.data.executionStatus, secondApprove.soulAction.executionStatus);
     assert.equal(secondWsEvent.data.executionStatus, 'not_dispatched');
 
     const fullAfterSecondApprove = await api<ListSoulActionsResponse>(
@@ -3449,12 +3612,25 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
       `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
     );
 
+    assert.equal(pendingAfterSecondApprove.filters.sourceReintegrationId, record!.id);
+    assert.equal(pendingAfterSecondApprove.filters.governanceStatus, 'pending_review');
+    assert.equal(pendingAfterSecondApprove.filters.executionStatus, 'not_dispatched');
+    assert.equal(approvedAfterSecondApprove.filters.sourceReintegrationId, record!.id);
+    assert.equal(approvedAfterSecondApprove.filters.governanceStatus, 'approved');
+    assert.equal(approvedAfterSecondApprove.filters.executionStatus, 'not_dispatched');
     assert.equal(pendingAfterSecondApprove.soulActions.length, 0);
     assert.equal(approvedAfterSecondApprove.soulActions.length, 2);
     assert.deepEqual(
       approvedAfterSecondApprove.soulActions.map((action) => action.id).sort(),
       [firstWsEvent.data.id, secondWsEvent.data.id].sort(),
     );
+    for (const action of approvedAfterSecondApprove.soulActions) {
+      const matchingResponse = action.id === firstApprove.soulAction.id ? firstApprove.soulAction : secondApprove.soulAction;
+      assert.equal(action.sourceNoteId, matchingResponse.sourceNoteId);
+      assert.equal(action.sourceReintegrationId, matchingResponse.sourceReintegrationId);
+      assert.equal(action.governanceStatus, matchingResponse.governanceStatus);
+      assert.equal(action.executionStatus, matchingResponse.executionStatus);
+    }
     assert.deepEqual(
       approvedAfterSecondApprove.soulActions.map((action) => action.id).sort(),
       fullAfterSecondApprove.soulActions.map((action) => action.id).sort(),

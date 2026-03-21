@@ -462,14 +462,15 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
   - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
-- 当前未完成项再补充：
-  - 批量 dispatch 路径当前仍只按 group 迭代派发，不需要额外 reason；若继续沿同一条 source 语义主线推进，可转回 server/shared contract 层继续排查新的 `sourceReintegrationId` / `sourceNoteId` 混用缺口。
-  - 本轮 web 变更待提交 git commit。
-- 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 将单条 / 批量 approve 提交给 API 的治理 reason 再收紧一层：当 action 同时具备 `sourceReintegrationId` 与真实 `sourceNoteId` 时，reason 现在显式写成 `Reintegration {id} (source note {noteId})`，避免用户可见治理记录继续丢失“来自哪条 reintegration、对应哪条原始 note”这两层事实源。
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步补 1 条 fallback 断言并更新 3 处既有断言，分别锁定带 reintegration 来源时会同时写出 reintegration + source note，且无 reintegration 来源时仍回退为 `source note {sourceNoteId}`，把这条 source 语义投射收成可回归保护。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 defer / discard 的 websocket contract test，锁定 soul action 在 `deferred` / `discarded` 两条治理分支上也会广播 `soul-action-updated`，且事件中的 `sourceNoteId`、`sourceReintegrationId`、`governanceStatus`、`executionStatus`、`deferredAt`、`discardedAt` 与 detail/list 读回结果保持一致。
+  - 这次补的是新的 server-side contract gap：此前 approve / dispatch / accept 已有 websocket 回归保护，但 defer / discard 仍缺少“事件源与 follow-up 查询同源收敛”的可回归锚点，web 侧若后续消费这两个治理状态，会对实时刷新语义形成隐性假设；本轮先在 server contract 层把这条事实源一致性补齐。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 111 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action defer and discard websocket events stay aligned with detail and list views" test/reintegrationApi.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过。
+- 当前未完成项再补充：
+  - defer / discard 虽已有 server + shared contract，但 settings 侧还未真实消费这两个治理动作；如果后续要开放 UI，需要优先做最小 contract-to-UI 投射，而不是再堆同类 grouped 收敛测试。
+  - 本轮 server 测试变更待提交 git commit。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 1 条 explicit-source contract test，直接锁定当 promotion action 的 `sourceNoteId` 已经回到真实 note id 时，只要显式提供 `sourceReintegrationId`，`executePromotionSoulAction()` 仍会按 reintegration record 成功派发，不会错误回退到 `sourceNoteId.startsWith('reint:')` 的兼容路径。
   - 该测试同时断言生成的 `event_node` 保留 `sourceReintegrationId = reint:task-pr6-explicit-source`，并把真实原始 note id 投到 `sourceNoteId = note-original-source`，把“promotion 来源”和“原始 source note”两层事实源明确分开。
