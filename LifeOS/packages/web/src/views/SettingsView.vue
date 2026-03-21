@@ -766,7 +766,7 @@ import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.v
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
-import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
+import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
 import { buildSoulActionGroups, getSoulActionGroupCount, getSoulActionGroupQuickFilterLabel, getSoulActionGroupQuickFilterStats, type SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
@@ -1643,14 +1643,14 @@ async function handleCreateWorkerTask() {
   workerSubmitting.value = true;
   workerMessage.value = '';
   try {
-    await createWorkerTask({
+    const task = await createWorkerTask({
       taskType: 'openclaw_task',
       input: {
         instruction: workerInstruction.value.trim(),
         outputDimension: workerDimension.value,
       },
     });
-    workerMessage.value = '任务已创建，正在后台执行';
+    workerMessage.value = workerTaskActionMessage('created', task);
     workerMessageType.value = 'success';
     await loadWorkerTasks();
   } catch (e: any) {
@@ -1665,8 +1665,8 @@ async function handleRetryWorkerTask(taskId: string) {
   workerActionTaskId.value = taskId;
   workerMessage.value = '';
   try {
-    await retryWorkerTask(taskId);
-    workerMessage.value = '任务已重新加入执行队列';
+    const task = await retryWorkerTask(taskId);
+    workerMessage.value = workerTaskActionMessage('retried', task);
     workerMessageType.value = 'success';
     await loadWorkerTasks();
   } catch (e: any) {
@@ -1681,8 +1681,8 @@ async function handleCancelWorkerTask(taskId: string) {
   workerActionTaskId.value = taskId;
   workerMessage.value = '';
   try {
-    await cancelWorkerTask(taskId);
-    workerMessage.value = '任务已取消';
+    const task = await cancelWorkerTask(taskId);
+    workerMessage.value = workerTaskActionMessage('cancelled', task);
     workerMessageType.value = 'success';
     await loadWorkerTasks();
   } catch (e: any) {

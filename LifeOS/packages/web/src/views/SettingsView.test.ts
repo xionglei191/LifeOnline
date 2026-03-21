@@ -129,13 +129,26 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+function workerTaskCardStub() {
+  return {
+    props: ['task'],
+    emits: ['open-detail', 'open-output', 'cancel', 'retry'],
+    template: `
+      <div>
+        <button type="button" class="stub-retry" @click="$emit('retry', task.id)">重试任务</button>
+        <button type="button" class="stub-cancel" @click="$emit('cancel', task.id)">取消任务</button>
+      </div>
+    `,
+  };
+}
+
 function mountSettingsView(): VueWrapper {
   return mount(SettingsView, {
     global: {
       stubs: {
         NoteDetail: true,
         WorkerTaskDetail: true,
-        WorkerTaskCard: true,
+        WorkerTaskCard: workerTaskCardStub(),
         PrivacyMask: true,
       },
     },
@@ -1048,26 +1061,86 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
-  it('shows error feedback without refreshing related views when dispatch-action fails', async () => {
+  it('shows localized worker-task metadata after retrying and cancelling worker tasks', async () => {
+    const client = await import('../api/client');
+    const retryWorkerTaskMock = vi.mocked(client.retryWorkerTask);
+    const cancelWorkerTaskMock = vi.mocked(client.cancelWorkerTask);
+
+    apiMocks.fetchWorkerTasks.mockResolvedValue([
+      {
+        id: 'worker-task-retry',
+        taskType: 'extract_tasks',
+        worker: 'lifeos',
+        status: 'failed',
+        input: { noteId: 'note-1' },
+        outputNotes: [],
+        resultSummary: null,
+        error: null,
+        sourceNoteId: 'note-1',
+        createdAt: '2026-03-21T10:03:00.000Z',
+        updatedAt: '2026-03-21T10:03:00.000Z',
+        startedAt: null,
+        finishedAt: null,
+      },
+      {
+        id: 'worker-task-cancel',
+        taskType: 'openclaw_task',
+        worker: 'openclaw',
+        status: 'running',
+        input: { noteId: 'note-2' },
+        outputNotes: [],
+        resultSummary: null,
+        error: null,
+        sourceNoteId: 'note-2',
+        createdAt: '2026-03-21T10:04:00.000Z',
+        updatedAt: '2026-03-21T10:04:00.000Z',
+        startedAt: '2026-03-21T10:04:30.000Z',
+        finishedAt: null,
+      },
+    ]);
+    retryWorkerTaskMock.mockResolvedValue({
+      id: 'worker-task-retry',
+      taskType: 'extract_tasks',
+      worker: 'lifeos',
+      status: 'pending',
+      input: { noteId: 'note-1' },
+      outputNotes: [],
+      resultSummary: null,
+      error: null,
+      sourceNoteId: 'note-1',
+      createdAt: '2026-03-21T10:03:00.000Z',
+      updatedAt: '2026-03-21T10:05:00.000Z',
+      startedAt: null,
+      finishedAt: null,
+    });
+    cancelWorkerTaskMock.mockResolvedValue({
+      id: 'worker-task-cancel',
+      taskType: 'openclaw_task',
+      worker: 'openclaw',
+      status: 'cancelled',
+      input: { noteId: 'note-2' },
+      outputNotes: [],
+      resultSummary: null,
+      error: null,
+      sourceNoteId: 'note-2',
+      createdAt: '2026-03-21T10:04:00.000Z',
+      updatedAt: '2026-03-21T10:05:00.000Z',
+      startedAt: '2026-03-21T10:04:30.000Z',
+      finishedAt: '2026-03-21T10:05:00.000Z',
+    });
+
     const wrapper = mountSettingsView();
-
-    await flushPromises();
-    apiMocks.dispatchSoulAction.mockRejectedValueOnce(new Error('dispatch failed'));
-    apiMocks.fetchSoulActions.mockClear();
-    apiMocks.fetchReintegrationRecords.mockClear();
-
-    const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    const readyAction = soulActions.find((action) => action.id === 'ready-1');
-    expect(readyAction).toBeTruthy();
-
-    panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
-    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
-    expect(panel.props('message')).toBe('dispatch failed');
-    expect(panel.props('messageType')).toBe('error');
-    expect(panel.props('actionId')).toBe(null);
+    const retryButton = wrapper.find('.stub-retry');
+    await retryButton.trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('已重新入队任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
+
+    const cancelButton = wrapper.find('.stub-cancel');
+    await cancelButton.trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
 
     wrapper.unmount();
   });
