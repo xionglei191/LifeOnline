@@ -97,6 +97,9 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 staggered approve/dispatch 收敛测试，锁定同一 `sourceNoteId` 分组里“一条已 dispatch、另一条刚 approved 仍待 dispatch”的混合状态也能被后续 list 稳定读出。
   - 该测试直接覆盖 grouped settings 在真实操作顺序下最容易隐含出错的场景：先 approve 第一条、再 approve 第二条、随后只 dispatch 第一条时，分组列表仍必须同时保留 1 条 dispatched action 和 1 条 dispatch-ready action，而不是被瞬时刷新顺序冲掉。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 sequential dispatch-ready 收敛测试，锁定同组两条 action 在“先 dispatch 一条、刷新、再 dispatch 第二条”的两次 list 之间，`dispatchReadyCount` 语义能从 1 稳定收敛到 0。
+  - 该测试补上 grouped settings 真实使用里很关键的一段刷新链：第一次刷新必须还能看见剩余 1 条 dispatch-ready action，第二次刷新则必须看到整组 ready 清零，避免 UI 对 sequential dispatch 顺序产生隐性假设。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。

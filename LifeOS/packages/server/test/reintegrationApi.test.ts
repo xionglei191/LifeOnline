@@ -994,6 +994,119 @@ test('grouped settings list stays coherent across staggered approve and dispatch
   }
 });
 
+test('grouped settings list drops dispatch-ready count from one to zero across sequential dispatches', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-sequential-dispatch-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-sequential-dispatch-refresh',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api sequential dispatch summary',
+      evidence: { source: 'api-sequential-dispatch-test' },
+      now: '2026-03-21T19:30:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-sequential-dispatch-refresh');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for sequential dispatch refresh test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    for (const action of accepted.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve for sequential dispatch refresh test' }),
+        },
+      );
+    }
+
+    const firstAction = accepted.soulActions[0]!;
+    const secondAction = accepted.soulActions[1]!;
+
+    const firstDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.ok(firstDispatch.soulAction);
+
+    const listedAfterFirstDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const firstReady = listedAfterFirstDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
+    const firstDispatched = listedAfterFirstDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
+    assert.equal(firstReady.length, 1);
+    assert.equal(firstReady[0]?.id, secondAction.id);
+    assert.equal(firstDispatched.length, 1);
+    assert.equal(firstDispatched[0]?.id, firstAction.id);
+
+    const secondDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.ok(secondDispatch.soulAction);
+
+    const listedAfterSecondDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const secondReady = listedAfterSecondDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
+    const secondDispatched = listedAfterSecondDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
+    assert.equal(secondReady.length, 0);
+    assert.equal(secondDispatched.length, accepted.soulActions.length);
+
+    const finalById = new Map(listedAfterSecondDispatch.soulActions.map((action) => [action.id, action]));
+    assert.equal(finalById.get(firstAction.id)?.executionStatus, firstDispatch.soulAction!.executionStatus);
+    assert.equal(finalById.get(secondAction.id)?.executionStatus, secondDispatch.soulAction!.executionStatus);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
