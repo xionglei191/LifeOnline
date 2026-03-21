@@ -105,7 +105,7 @@
   - 该测试直接保护 settings grouped governance 的另一条真实依赖：即使用户切到仅看 dispatch-ready 或某类已 dispatch action 的筛选视图，过滤结果也必须和总表刷新后的组内状态保持一致，不能出现“总表对了、过滤视图漂移”的分叉。
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 websocket + follow-up list 联动收敛测试，锁定同组两条 action 在 accept 后生成、随后只 approve/dispatch 第一条时，websocket 推送与后续 list 读到的 grouped 状态保持一致。
-  - 该测试直接覆盖 settings grouped governance 对事件顺序最敏感的一段链路：accept 先广播两条 `pending_review`，随后 approve/dispatch 第一条，最终 follow-up list 必须稳定收敛为“1 条 approved+dispatched、1 条 pending_review”，而不是被瞬时 websocket 顺序带偏。
+  - 该测试直接覆盖 settings grouped governance 对事件顺序最敏感的一段链路：accept 先广播两条 `pending_review`，随后 approve 第一条、approve 第二条、再 dispatch 第一条，最终 filtered ready list 与 follow-up 总表都必须收敛为“1 条 approved+dispatched、1 条 approved+not_dispatched”，而不是被瞬时 websocket 顺序带偏。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。

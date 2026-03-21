@@ -1496,7 +1496,7 @@ test('websocket updates and follow-up list stay aligned for grouped refresh afte
     const firstAction = accepted.soulActions[0]!;
     const secondAction = accepted.soulActions[1]!;
 
-    const approveEvent = waitForWebSocketEvent<WsEvent>(
+    const firstApproveEvent = waitForWebSocketEvent<WsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id && event.data.governanceStatus === 'approved',
     );
@@ -1508,10 +1508,27 @@ test('websocket updates and follow-up list stay aligned for grouped refresh afte
         body: JSON.stringify({ reason: 'approve first action for websocket list alignment test' }),
       },
     );
-    const approvedEvent = await approveEvent;
-    assert.equal(approvedEvent.data.id, firstAction.id);
-    assert.equal(approvedEvent.data.governanceStatus, 'approved');
-    assert.equal(approvedEvent.data.executionStatus, 'not_dispatched');
+    const approvedFirstEvent = await firstApproveEvent;
+    assert.equal(approvedFirstEvent.data.id, firstAction.id);
+    assert.equal(approvedFirstEvent.data.governanceStatus, 'approved');
+    assert.equal(approvedFirstEvent.data.executionStatus, 'not_dispatched');
+
+    const secondApproveEvent = waitForWebSocketEvent<WsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === secondAction.id && event.data.governanceStatus === 'approved' && event.data.executionStatus === 'not_dispatched',
+    );
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve second action for mixed websocket list test' }),
+      },
+    );
+    const approvedSecondEvent = await secondApproveEvent;
+    assert.equal(approvedSecondEvent.data.id, secondAction.id);
+    assert.equal(approvedSecondEvent.data.governanceStatus, 'approved');
+    assert.equal(approvedSecondEvent.data.executionStatus, 'not_dispatched');
 
     const dispatchEvent = waitForWebSocketEvent<WsEvent>(
       socket,
@@ -1531,6 +1548,13 @@ test('websocket updates and follow-up list stay aligned for grouped refresh afte
     assert.equal(dispatchedEvent.data.id, firstAction.id);
     assert.equal(dispatchedEvent.data.executionStatus, dispatched.soulAction!.executionStatus);
 
+    const filteredReadyList = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+    assert.equal(filteredReadyList.soulActions.length, 1);
+    assert.equal(filteredReadyList.soulActions[0]?.id, secondAction.id);
+
     const followUpList = await api<ListSoulActionsResponse>(
       baseUrl,
       `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
@@ -1540,15 +1564,15 @@ test('websocket updates and follow-up list stay aligned for grouped refresh afte
     const followUpById = new Map(followUpList.soulActions.map((action) => [action.id, action]));
     assert.equal(followUpById.get(firstAction.id)?.governanceStatus, 'approved');
     assert.equal(followUpById.get(firstAction.id)?.executionStatus, dispatched.soulAction!.executionStatus);
-    assert.equal(followUpById.get(secondAction.id)?.governanceStatus, 'pending_review');
+    assert.equal(followUpById.get(secondAction.id)?.governanceStatus, 'approved');
     assert.equal(followUpById.get(secondAction.id)?.executionStatus, 'not_dispatched');
 
     const pendingReview = followUpList.soulActions.filter((action) => action.governanceStatus === 'pending_review');
     const dispatchReady = followUpList.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
     const dispatchedActions = followUpList.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
-    assert.equal(pendingReview.length, 1);
-    assert.equal(pendingReview[0]?.id, secondAction.id);
-    assert.equal(dispatchReady.length, 0);
+    assert.equal(pendingReview.length, 0);
+    assert.equal(dispatchReady.length, 1);
+    assert.equal(dispatchReady[0]?.id, secondAction.id);
     assert.equal(dispatchedActions.length, 1);
     assert.equal(dispatchedActions[0]?.id, firstAction.id);
   } finally {
