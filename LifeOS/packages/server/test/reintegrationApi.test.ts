@@ -1411,7 +1411,7 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
   }
 });
 
-test('websocket updates and follow-up list stay aligned for grouped refresh after mixed approve and dispatch operations', async () => {
+test('websocket updates, ready filters, and dispatched filters converge after mixed-order grouped refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-list-group-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
   const originalConfig = await fs.readFile(configFile, 'utf-8');
@@ -1554,6 +1554,13 @@ test('websocket updates and follow-up list stay aligned for grouped refresh afte
     );
     assert.equal(filteredReadyList.soulActions.length, 1);
     assert.equal(filteredReadyList.soulActions[0]?.id, secondAction.id);
+
+    const filteredDispatchedList = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
+    );
+    assert.ok(filteredDispatchedList.soulActions.some((action) => action.id === firstAction.id));
+    assert.ok(filteredDispatchedList.soulActions.every((action) => action.executionStatus === dispatched.soulAction!.executionStatus));
 
     const followUpList = await api<ListSoulActionsResponse>(
       baseUrl,
