@@ -860,7 +860,7 @@ export async function createNote(req: Request<Record<string, never>, CreateNoteR
       priority: priority || 'medium',
       privacy: 'private',
       date,
-      source: 'desktop',
+      source: 'web',
       created: now,
       updated: now,
     };

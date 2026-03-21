@@ -1,3 +1,39 @@
+# note create source 事实源修正
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只沿新的高价值缺口推进。
+- [x] 复核 `createNote` 主路径是否存在真实事实源漂移，而不只是 contract 命名问题。
+- [x] 修正 web 控制台创建笔记时落盘 frontmatter 的 `source` 语义。
+- [x] 补 server 回归，锁定 create-note 落盘的 frontmatter source 与入口事实一致。
+- [x] 跑定向 server 验证并更新本文件。
+
+## 当前执行
+- 已确认当前工作树仍只有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts` 中 `createNote()` 写入 frontmatter 时，`source` 从错误的 `'desktop'` 修正为 `'web'`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `notes create API records web source in created note frontmatter`，通过真实 POST `/api/notes` 创建笔记后直接读取落盘文件，断言 frontmatter 中包含 `source: web`。
+- 这次不是继续做 contract 形式对齐，而是修复真实事实源一致性问题：web 控制台创建的笔记此前会被错误记成 desktop 来源。
+
+## 本轮选择依据
+- 用户要求在 contract gap 之后优先处理新的事实源一致性问题。
+- 上一轮已经把 note create/update 的 request/response contract 收齐；继续看主路径时，`createNote` 的 `source` 固定写 `'desktop'` 是一个直接的运行时语义错误，而 web 入口实际来自控制台。
+- 这属于用户可见数据来源事实错误，优先级高于继续补 grouped governance 的对称测试。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/configLifecycle.test.ts` 通过，16/16。
+- 测试尾部仍有 teardown 后 index queue 访问临时 vault 的既有 `Index file error` 日志，但断言全部通过，未影响本轮结果。
+- 新增测试还顺带暴露当前 `buildNoteFilePath()` 的既有事实：长标题会被截断命名；这不是本轮修复目标，但已得到现实锚点。
+
+## 当前未完成项
+- 本轮事实源修正改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- 下一个潜在高价值点是：`CreateNoteRequest` 目前没有显式来源字段，若未来出现非-web 调用方，server 默认来源策略仍可能再次漂移。
+
+## 下一步建议
+- 若继续沿主路径推进，下一步优先评估是否需要把 create-note 来源策略显式化（例如 shared request 可选 source 或 server 按入口固定语义集中处理），避免后续再出现来源漂移。
+- 若暂不扩来源字段，也可以先检查 `buildNoteFilePath()` 的标题截断/命名语义是否需要补成 shared-visible contract 锚点。
+
+
 # server note handler contract 对齐
 
 ## 计划

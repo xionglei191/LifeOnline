@@ -745,6 +745,53 @@ test('notes create API responds with shared success contract', async () => {
   }
 });
 
+test('notes create API records web source in created note frontmatter', async () => {
+  const env = await createTestEnv('lifeos-notes-create-source-web-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const createResponse = await api<import('@lifeos/shared').CreateNoteResponse>(
+      baseUrl,
+      '/api/notes',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Server Contract Web Source Note',
+          dimension: 'learning',
+          type: 'note',
+          content: 'source semantics body',
+          priority: 'medium',
+          tags: ['source-semantics'],
+        } satisfies import('@lifeos/shared').CreateNoteRequest),
+      },
+    );
+
+    assert.equal(createResponse.success, true);
+
+    const createdFile = await fs.readFile(createResponse.filePath, 'utf-8');
+    assert.match(createdFile, /source:\s*web/);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];
