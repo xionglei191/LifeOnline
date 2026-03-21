@@ -369,6 +369,14 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 继续把单条 dispatch 成功提示向 shared/server worker task contract 收敛：在已展示 `workerTaskId` 与 `taskType` 的基础上，再直接消费 `DispatchSoulActionResponse.task.status`，把 worker task 当前状态一起拼进用户可见反馈。
+  - 同一条成功提示继续补上 `DispatchSoulActionResponse.task.worker` 的本地化标签，让 settings 里的 dispatch feedback 不再只显示 task id，而是把 task 类型、状态、执行端一起投射给用户。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/SoulActionGovernancePanel.test.ts` 通过；Vitest 合计 9 files / 110 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿这条 contract-to-UI 主线推进，可优先检查其他 soul-action / worker-task 成功提示是否也还遗漏 shared/server 已有字段的用户可见投射。
   - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `workerTaskStatusLabel()`，把 `pending/running/succeeded/failed/cancelled` 统一映射为中文状态文案，避免 success message 直接暴露底层枚举值。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步收紧单条 dispatch 成功提示与两条 websocket retention 断言，锁定 `等待执行` 状态会在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下保持可见。
 - 本轮验证再补充：

@@ -568,6 +568,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('Continuity Records');
     expect(wrapper.text()).toContain('Ready event node');
     expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).toContain('Reintegration record-ready');
     expect(wrapper.text()).toContain('Promotion: ready-1');
     expect(wrapper.text()).toContain('Promotion: ready-2');
     expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
@@ -2642,67 +2643,57 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
-  it('keeps worker-task create feedback visible across websocket refreshes', async () => {
-    const client = await import('../api/client');
-    const createWorkerTaskMock = vi.mocked(client.createWorkerTask);
+  it('shows typed classify-inbox create feedback and keeps it visible across websocket refreshes', async () => {
+    const classifyInboxMock = vi.mocked(client.classifyInbox);
 
     apiMocks.fetchWorkerTasks
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
         {
-          id: 'worker-task-create',
-          taskType: 'openclaw_task',
-          worker: 'openclaw',
+          id: 'worker-task-classify',
+          taskType: 'classify_inbox',
+          worker: 'lifeos',
           status: 'pending',
-          input: {
-            instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
-            outputDimension: 'career',
-          },
+          input: {},
           outputNotes: [],
           resultSummary: null,
           error: null,
           sourceNoteId: null,
-          createdAt: '2026-03-21T10:06:00.000Z',
-          updatedAt: '2026-03-21T10:06:00.000Z',
+          createdAt: '2026-03-21T10:08:00.000Z',
+          updatedAt: '2026-03-21T10:08:00.000Z',
           startedAt: null,
           finishedAt: null,
         },
       ])
       .mockResolvedValueOnce([
         {
-          id: 'worker-task-create',
-          taskType: 'openclaw_task',
-          worker: 'openclaw',
+          id: 'worker-task-classify',
+          taskType: 'classify_inbox',
+          worker: 'lifeos',
           status: 'pending',
-          input: {
-            instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
-            outputDimension: 'career',
-          },
+          input: {},
           outputNotes: [],
           resultSummary: null,
           error: null,
           sourceNoteId: null,
-          createdAt: '2026-03-21T10:06:00.000Z',
-          updatedAt: '2026-03-21T10:06:30.000Z',
+          createdAt: '2026-03-21T10:08:00.000Z',
+          updatedAt: '2026-03-21T10:08:30.000Z',
           startedAt: null,
           finishedAt: null,
         },
       ]);
-    createWorkerTaskMock.mockResolvedValue({
-      id: 'worker-task-create',
-      taskType: 'openclaw_task',
-      worker: 'openclaw',
+    classifyInboxMock.mockResolvedValue({
+      id: 'worker-task-classify',
+      taskType: 'classify_inbox',
+      worker: 'lifeos',
       status: 'pending',
-      input: {
-        instruction: '搜索最近一周 AI Agent 领域的重要进展并整理',
-        outputDimension: 'career',
-      },
+      input: {},
       outputNotes: [],
       resultSummary: null,
       error: null,
       sourceNoteId: null,
-      createdAt: '2026-03-21T10:06:00.000Z',
-      updatedAt: '2026-03-21T10:06:00.000Z',
+      createdAt: '2026-03-21T10:08:00.000Z',
+      updatedAt: '2026-03-21T10:08:00.000Z',
       startedAt: null,
       finishedAt: null,
     });
@@ -2710,14 +2701,12 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    await wrapper.find('.worker-form textarea').setValue('搜索最近一周 AI Agent 领域的重要进展并整理');
-    await wrapper.find('.worker-form select').setValue('career');
-    const createButton = wrapper.findAll('button').find((button) => button.text() === '执行任务');
-    expect(createButton).toBeTruthy();
-    await createButton!.trigger('click');
+    const classifyButton = wrapper.findAll('button').find((button) => button.text() === '整理 Inbox');
+    expect(classifyButton).toBeTruthy();
+    await classifyButton!.trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('已创建任务 worker-task-create · OpenClaw 任务 · 等待执行 · OpenClaw');
+    expect(wrapper.text()).toContain('已创建任务 worker-task-classify · Inbox 整理 · 等待执行 · LifeOS');
     apiMocks.fetchWorkerTasks.mockClear();
 
     document.dispatchEvent(new CustomEvent('ws-update', {
@@ -2726,7 +2715,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已创建任务 worker-task-create · OpenClaw 任务 · 等待执行 · OpenClaw');
+    expect(wrapper.text()).toContain('已创建任务 worker-task-classify · Inbox 整理 · 等待执行 · LifeOS');
 
     wrapper.unmount();
   });

@@ -1685,8 +1685,8 @@ async function handleClassifyInbox() {
   classifying.value = true;
   aiMessage.value = '';
   try {
-    await classifyInbox();
-    aiMessage.value = 'Inbox 整理任务已创建，可在上方最近任务中查看状态与输出';
+    const task = await classifyInbox();
+    aiMessage.value = workerTaskActionMessage('created', task);
     aiMessageType.value = 'success';
     await loadWorkerTasks();
   } catch (e: any) {
