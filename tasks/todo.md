@@ -440,13 +440,14 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh collapsedGroupIds retention 回归补强。
   - 若还要继续补一轮，应回到新的 server/web/shared contract 缺口，而不是继续在当前折叠态链路上做低边际对称补强。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts:285` 将 `index-queue-complete` 的 view 级 coverage 从“只保折叠态”扩到“collapsedGroupIds + quickFilter + governanceStatus + executionStatus 整体父层上下文都不漂移”，并继续锁定这条 websocket 分支只会触发 `loadStatus()`，不会误刷新 worker/reintegration/soul-action loaders。
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts:327` 同时把 grouped summary websocket 断言收紧到当前真实 contract：`groupCount` 仍表示总分组数、命中分组由 `groups.length` 与 `quickFilterStats` 表达，`summary` 仍是全量 soul actions 汇总；这样测试保护的是实际运行语义，而不是错误的对称假设。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
+  - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
+  - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 50 tests。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 当前未完成项再补充：
-  - 本轮 web 变更待提交 git commit。
+  - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh state retention + grouped summary contract 对齐补强。
-  - 若还要继续补一轮，应转去新的 server/web/shared contract 缺口，而不是继续在同一 `SettingsView` 状态保持链上做低边际补丁。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 dispatch response.task contract + websocket type narrowing 补强。
+  - 若还要继续补一轮，可检查 web/client 是否还缺直接消费 `DispatchSoulActionResponse.task` 的 typed contract 覆盖，而不是继续在同一 server 测试文件里做低边际对称扩张。

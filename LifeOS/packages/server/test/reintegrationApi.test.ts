@@ -10,6 +10,7 @@ import {
   type ListSoulActionsResponse,
   type PlanReintegrationPromotionsResponse,
   type SoulActionResponse,
+  type WorkerTask,
   type WsEvent,
 } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
@@ -73,6 +74,9 @@ async function openWebSocket(url: string, timeoutMs = 10000): Promise<WebSocket>
     socket.once('error', onError);
   });
 }
+
+type SoulActionWsEvent = Extract<WsEvent, { type: 'soul-action-updated' }>;
+type WorkerTaskWsEvent = Extract<WsEvent, { type: 'worker-task-updated' }>;
 
 async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -632,7 +636,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
 
     const seenActionIds = new Set<string>();
     const wsEventsPromise = Promise.all([
-      waitForWebSocketEvent<WsEvent>(
+      waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
           if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
@@ -642,7 +646,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
           return seenActionIds.size >= 1;
         },
       ),
-      waitForWebSocketEvent<WsEvent>(
+      waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
           if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
@@ -747,7 +751,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
 
     const seenActionIds = new Set<string>();
     const wsEventsPromise = Promise.all([
-      waitForWebSocketEvent<WsEvent>(
+      waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
           if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
@@ -757,7 +761,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
           return seenActionIds.size >= 1;
         },
       ),
-      waitForWebSocketEvent<WsEvent>(
+      waitForWebSocketEvent<SoulActionWsEvent>(
         socket,
         (event) => {
           if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
@@ -832,7 +836,7 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
       governanceReason: 'approved for dispatch task websocket follow-up test',
     });
 
-    const taskEventPromise = waitForWebSocketEvent<WsEvent>(
+    const taskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
       socket,
       (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === action.sourceNoteId,
     );
@@ -849,6 +853,11 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(dispatched.soulAction?.id, action.id);
     assert.equal(dispatched.soulAction?.sourceNoteId, action.sourceNoteId);
     assert.ok(dispatched.result.workerTaskId);
+    assert.ok(dispatched.task);
+    assert.equal(dispatched.task?.id, dispatched.result.workerTaskId);
+    assert.equal(dispatched.task?.sourceNoteId, action.sourceNoteId);
+    assert.equal(dispatched.task?.taskType, 'update_persona_snapshot');
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(dispatched.task!.status));
 
     const taskEvent = await taskEventPromise;
     assert.equal(taskEvent.type, 'worker-task-updated');
@@ -857,7 +866,7 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(taskEvent.data.taskType, 'update_persona_snapshot');
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(taskEvent.data.status));
 
-    const workerTasksAfterDispatch = await api<{ tasks: Array<WsEvent['data']>; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+    const workerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
       `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}`,
     );
@@ -1715,7 +1724,7 @@ test('approve websocket updates stay aligned with follow-up filtered lists for g
 
     const firstAction = accepted.soulActions[0]!;
     const secondAction = accepted.soulActions[1]!;
-    const wsEventPromise = waitForWebSocketEvent<WsEvent>(
+    const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
     );
@@ -1829,7 +1838,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
     const firstAction = accepted.soulActions[0]!;
     const secondAction = accepted.soulActions[1]!;
 
-    const firstWsEventPromise = waitForWebSocketEvent<WsEvent>(
+    const firstWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
     );
@@ -1859,7 +1868,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
     assert.equal(approvedAfterFirstApprove.soulActions.length, 1);
     assert.equal(approvedAfterFirstApprove.soulActions[0]?.id, firstAction.id);
 
-    const secondWsEventPromise = waitForWebSocketEvent<WsEvent>(
+    const secondWsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === secondAction.id,
     );
@@ -1973,7 +1982,7 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
 
     const firstAction = accepted.soulActions[0]!;
     const secondAction = accepted.soulActions[1]!;
-    const wsEventPromise = waitForWebSocketEvent<WsEvent>(
+    const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id,
     );
@@ -2094,7 +2103,7 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
       },
     );
 
-    const wsEventPromise = waitForWebSocketEvent<WsEvent>(
+    const wsEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
       socket,
       (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === action!.id,
     );
