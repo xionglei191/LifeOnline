@@ -1,11 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-export interface Config {
-  vaultPath: string;
-  port: number;
-}
+import type { Config } from '@lifeos/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

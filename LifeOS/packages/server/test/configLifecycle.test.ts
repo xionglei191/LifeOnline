@@ -154,6 +154,30 @@ test('config API responds with shared config contracts', async () => {
   }
 });
 
+test('configManager reuses shared Config contract internally', async () => {
+  const env = await createTestEnv('lifeos-config-manager-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+
+    const storedConfig = await loadStoredConfig();
+    const runtimeConfig = await loadConfig();
+
+    const storedConfigContract = storedConfig satisfies import('../../shared/src/types.js').Config;
+    const runtimeConfigContract = runtimeConfig satisfies import('../../shared/src/types.js').Config;
+
+    assert.equal(storedConfigContract.vaultPath, env.vaultPath);
+    assert.equal(storedConfigContract.port, env.port);
+    assert.equal(runtimeConfigContract.vaultPath, env.vaultPath);
+    assert.equal(runtimeConfigContract.port, env.port);
+  } finally {
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('loadStoredConfig keeps persisted values separate from env overrides', async () => {
   const env = await createTestEnv('lifeos-config-persist-');
   const configFile = CONFIG_FILE;

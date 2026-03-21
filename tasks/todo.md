@@ -1,3 +1,33 @@
+# configManager shared contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 收掉上一轮留下的 config contract 最后一段：`configManager.ts` 本地 `Config` interface。
+- [x] 让 server 内部 `loadStoredConfig()` / `loadConfig()` / `saveConfig()` 直接复用 shared `Config`。
+- [x] 补最小 server 回归，锁定 configManager 内部也已经复用 shared `Config` contract。
+- [ ] 跑定向 server 验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/config/configManager.ts` 删除本地 `Config` interface，改为直接 `import type { Config } from '@lifeos/shared'`。
+  - `LifeOS/packages/server/src/index.ts` 不再从 `configManager.ts` 重导本地 `Config`，而是直接从 shared 导入。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `configManager reuses shared Config contract internally`，通过 `satisfies import('../../shared/src/types.js').Config` 锁定 `loadStoredConfig()` 与 `loadConfig()` 的返回值都已符合 shared contract。
+- 这次不是重复整理命名，而是把上一轮 config/index contract 收口剩余的 server-internal 最后一段闭环补完，减少 config contract 在内部模块再次漂移的风险。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- 上一轮已经把 config/index 主路径的 API handler 与 web client 收回 shared，但 `configManager.ts` 仍保留本地 `Config` 类型，是这条主路径里最后一个明确的 contract duplication 点。
+- 先收掉这个重复源，比继续做 SettingsView 对称测试更符合当前优先级。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "configManager reuses shared Config contract internally|config API responds with shared config contracts" test/configLifecycle.test.ts` 通过，2/2。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- config 主路径收口后，可继续检查 `schedule health` / `stats` 这类 Settings 直接消费接口是否仍有 web-local shape。
+
+
 # config/index shared contract 收口
 
 ## 计划
