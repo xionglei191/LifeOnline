@@ -225,6 +225,12 @@ export interface CreateNoteResponse {
   filePath: string;
 }
 
+export interface SearchResult {
+  notes: Note[];
+  total: number;
+  query: string;
+}
+
 export interface DashboardData {
   todayTodos: Note[];
   weeklyHighlights: Note[];

@@ -28,7 +28,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { searchNotes, type SearchResult } from '../api/client';
+import type { SearchResult } from '@lifeos/shared';
+import { searchNotes } from '../api/client';
 import NoteList from '../components/NoteList.vue';
 import NoteDetail from '../components/NoteDetail.vue';
 import StateDisplay from '../components/StateDisplay.vue';

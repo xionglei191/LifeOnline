@@ -1,3 +1,73 @@
+# server search handler contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 server/web/shared contract gap 主线推进。
+- [x] 复核 `/api/search` 是否仍停留在 server 侧未显式复用 shared `SearchResult` 的状态。
+- [x] 让 server `searchNotes()` handler 的 request/response typing 直接接回 shared `SearchResult`。
+- [x] 复用现有 search 主路径回归，确认这次改动是 contract 闭环而不是重复语义补强。
+- [ ] 跑定向 server 验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树的并行改动仍包括：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`，以及上一轮已完成但未提交的 search shared contract 相关文件。本轮未覆盖 grouped governance / SettingsView 这条链。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts` 引入 shared `SearchResult`。
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 `searchNotes()` 改为显式声明：
+    - `Request<Record<string, never>, SearchResult, Record<string, never>, { q?: string }>`
+    - `Response<SearchResult>`
+  - `searchNotes()` 现在先构造 `const result: SearchResult = { notes, total: notes.length, query: q }`，再统一 `res.json(result)`，把上一轮刚提升到 shared 的 search response contract 真正闭环到 server handler。
+- 这次没有再补 search 语义，也没有再加 SettingsView 同类测试；修的是剩余的 server/web/shared contract 缺口。
+
+## 本轮选择依据
+- 用户要求下一轮优先处理新的 `server/web/shared contract gap`，避免回到 grouped governance / SettingsView 的对称补强。
+- 上一轮已经把 search response shape 从 web-local type 收回 shared；如果 server handler 仍然只返回未显式类型化的对象字面量，那么这条主路径的 contract 还没有真正三端闭环。
+- 这一步能减少未来 search 返回 shape 再次漂移的风险，价值高于继续做同类稳定性扩展。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "search API matches" test/configLifecycle.test.ts` 通过，2/2。
+
+## 当前未完成项
+- 本轮以及上一轮 search contract 相关改动尚未提交 git commit。
+- 下一步在 search 主路径收口后，可继续检查还有哪些主路径 API 仍停留在 server-local 或 web-local request/response shape。
+
+
+# search response shared contract 收口
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只处理新的高价值 contract gap。
+- [x] 复核 `/api/search` 的 response shape 是否仍停留在 web 本地类型，而未进入 shared contract。
+- [x] 把 `SearchResult` 提升到 `packages/shared`，并让 web client / SearchView 直接复用。
+- [x] 补最小 web client 回归，锁定 `searchNotes()` 使用 shared response shape。
+- [x] 跑定向 web 验证并更新本文件。
+
+## 当前执行
+- 已确认当前工作树仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增 shared `SearchResult` contract，正式把 `/api/search` 返回 shape 收回单一事实源。
+  - `LifeOS/packages/web/src/api/client.ts` 删除本地 `SearchResult` 类型，改为直接从 `@lifeos/shared` 导入。
+  - `LifeOS/packages/web/src/views/SearchView.vue` 不再从 client 本地导入 `SearchResult`，而是直接消费 shared contract。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 `sends typed search requests and returns the shared response shape`，锁定 `searchNotes()` 的请求路径与 shared 响应 shape。
+- 这次不是继续做 search 语义补强，而是把上一轮刚修好的 search 主路径进一步完成三端 contract 对齐，消除 search result 仍停留在 web-local type 的漂移。
+
+## 本轮选择依据
+- 用户已经明确要求下一轮优先继续找新的 `server/web/shared contract gap`，避免再回到 grouped governance / SettingsView 的同类补强。
+- 上一轮已经修复 `/api/search` 与 SearchView 文案的语义断裂；紧接着最自然的高价值收口点，就是把 search 返回值从 web 本地类型提升为 shared contract。
+- 这属于真实主路径 contract 漂移，优先级高于继续做同类稳定性扩展。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过。
+- 受 vitest 当前配置影响，命令同时跑过现有 web 测试集；结果为 9 files / 120 tests 全通过，其中 `src/api/client.test.ts` 7 tests 全通过。
+- 当前环境仍有 Node engine warning（包声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证结果。
+
+## 当前未完成项
+- 本轮 search contract 收口改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- server 侧虽然在测试里已经按 shared `SearchResult` 使用，但 `/api/search` handler 还没有显式把 response typing 接到 shared contract 上。
+
+## 下一步建议
+- 若继续沿 contract 主线推进，下一步优先把 server `/api/search` handler 的 response type 也显式接回 shared `SearchResult`，完成 server/web/shared 三端闭环。
+- 做完这一步后，再继续检查还有哪些主路径 API 仍然停留在 web-local request/response shape。
+
+
 # search 语义与 UI 承诺对齐
 
 ## 计划

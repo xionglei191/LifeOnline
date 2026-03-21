@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -113,6 +113,21 @@ describe('api client promotion projections', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
+  });
+
+  it('sends typed search requests and returns the shared response shape', async () => {
+    const response: SearchResult = {
+      notes: [],
+      total: 0,
+      query: 'growth',
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => response,
+    }));
+
+    await expect(searchNotes('growth')).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledWith('/api/search?q=growth');
   });
 
   it('surfaces API errors for promotion projection fetches', async () => {
