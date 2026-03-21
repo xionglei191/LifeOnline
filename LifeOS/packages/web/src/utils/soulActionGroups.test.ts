@@ -10,25 +10,23 @@ import {
 function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id' | 'sourceNoteId' | 'createdAt'>): SoulAction {
   return {
     id: overrides.id,
-    kind: overrides.kind ?? 'promote_event_node',
-    title: overrides.title ?? overrides.id,
-    summary: overrides.summary ?? null,
-    detail: overrides.detail ?? null,
-    payload: overrides.payload ?? {},
+    actionKind: overrides.actionKind ?? 'promote_event_node',
+    sourceNoteId: overrides.sourceNoteId,
+    sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
-    sourceNoteId: overrides.sourceNoteId,
+    status: overrides.status ?? overrides.executionStatus ?? 'not_dispatched',
     workerTaskId: overrides.workerTaskId ?? null,
-    resultNoteId: overrides.resultNoteId ?? null,
     governanceReason: overrides.governanceReason ?? null,
-    reviewComment: overrides.reviewComment ?? null,
+    resultSummary: overrides.resultSummary ?? null,
+    error: overrides.error ?? null,
     createdAt: overrides.createdAt,
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     approvedAt: overrides.approvedAt ?? null,
-    approvedBy: overrides.approvedBy ?? null,
-    dispatchedAt: overrides.dispatchedAt ?? null,
-    completedAt: overrides.completedAt ?? null,
-    errorMessage: overrides.errorMessage ?? null,
+    deferredAt: overrides.deferredAt ?? null,
+    discardedAt: overrides.discardedAt ?? null,
+    startedAt: overrides.startedAt ?? null,
+    finishedAt: overrides.finishedAt ?? null,
   };
 }
 
@@ -61,42 +59,48 @@ describe('soulActionGroups', () => {
   const soulActions: SoulAction[] = [
     createSoulAction({
       id: 'ready-1',
-      sourceNoteId: 'record-ready',
+      sourceNoteId: 'note-ready-1',
+      sourceReintegrationId: 'record-ready',
       createdAt: '2026-03-21T10:01:00.000Z',
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
     }),
     createSoulAction({
       id: 'ready-2',
-      sourceNoteId: 'record-ready',
+      sourceNoteId: 'note-ready-2',
+      sourceReintegrationId: 'record-ready',
       createdAt: '2026-03-21T10:02:00.000Z',
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
     }),
     createSoulAction({
       id: 'mixed-pending',
-      sourceNoteId: 'record-mixed',
+      sourceNoteId: 'note-mixed-1',
+      sourceReintegrationId: 'record-mixed',
       createdAt: '2026-03-20T10:01:00.000Z',
       governanceStatus: 'pending_review',
       executionStatus: 'not_dispatched',
     }),
     createSoulAction({
       id: 'mixed-approved',
-      sourceNoteId: 'record-mixed',
+      sourceNoteId: 'note-mixed-2',
+      sourceReintegrationId: 'record-mixed',
       createdAt: '2026-03-20T10:02:00.000Z',
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
     }),
     createSoulAction({
       id: 'done-1',
-      sourceNoteId: 'record-dispatched',
+      sourceNoteId: 'note-done-1',
+      sourceReintegrationId: 'record-dispatched',
       createdAt: '2026-03-19T10:01:00.000Z',
       governanceStatus: 'approved',
       executionStatus: 'succeeded',
     }),
     createSoulAction({
       id: 'done-2',
-      sourceNoteId: 'record-dispatched',
+      sourceNoteId: 'note-done-2',
+      sourceReintegrationId: 'record-dispatched',
       createdAt: '2026-03-19T10:02:00.000Z',
       governanceStatus: 'approved',
       executionStatus: 'succeeded',
@@ -133,6 +137,31 @@ describe('soulActionGroups', () => {
       'record-mixed',
       'record-dispatched',
     ]);
+  });
+
+  it('falls back to sourceNoteId grouping for non-promotion soul actions', () => {
+    const nonPromotionActions: SoulAction[] = [
+      createSoulAction({
+        id: 'worker-1',
+        actionKind: 'extract_tasks',
+        sourceNoteId: 'note-1',
+        sourceReintegrationId: null,
+        createdAt: '2026-03-18T10:01:00.000Z',
+      }),
+      createSoulAction({
+        id: 'worker-2',
+        actionKind: 'update_persona_snapshot',
+        sourceNoteId: 'note-1',
+        sourceReintegrationId: null,
+        createdAt: '2026-03-18T10:02:00.000Z',
+      }),
+    ];
+
+    expect(getSoulActionGroupCount(nonPromotionActions)).toBe(1);
+    const groups = buildSoulActionGroups(nonPromotionActions, reintegrationRecords, 'all');
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.sourceNoteId).toBe('note-1');
+    expect(groups[0]?.reintegrationRecord).toBeNull();
   });
 
   it('reports the current filter label and stats consistently', () => {

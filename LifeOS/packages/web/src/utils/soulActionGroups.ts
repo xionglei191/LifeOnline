@@ -10,6 +10,10 @@ export interface SoulActionGroup {
   dispatchReadyCount: number;
 }
 
+function getSoulActionGroupKey(action: SoulAction): string {
+  return action.sourceReintegrationId || action.sourceNoteId;
+}
+
 export function getSoulActionGroupQuickFilterLabel(filter: SoulActionGroupQuickFilter): string {
   switch (filter) {
     case 'pending_only':
@@ -22,7 +26,7 @@ export function getSoulActionGroupQuickFilterLabel(filter: SoulActionGroupQuickF
 }
 
 export function getSoulActionGroupCount(soulActions: SoulAction[]): number {
-  return new Set(soulActions.map((action) => action.sourceNoteId)).size;
+  return new Set(soulActions.map((action) => getSoulActionGroupKey(action))).size;
 }
 
 export function buildSoulActionGroups(
@@ -33,7 +37,7 @@ export function buildSoulActionGroups(
   const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
 
   for (const action of soulActions) {
-    const key = action.sourceNoteId;
+    const key = getSoulActionGroupKey(action);
     const existing = grouped.get(key);
     if (existing) {
       existing.actions.push(action);
