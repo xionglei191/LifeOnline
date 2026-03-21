@@ -3550,8 +3550,12 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     assert.ok(firstDispatch.soulAction);
 
     const wsEvent = await wsEventPromise;
+    assert.equal(wsEvent.data.id, firstDispatch.soulAction!.id);
     assert.equal(wsEvent.data.sourceNoteId, 'note-api-pr6-ws-filter-followup');
+    assert.equal(wsEvent.data.sourceNoteId, firstDispatch.soulAction!.sourceNoteId);
     assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
+    assert.equal(wsEvent.data.sourceReintegrationId, firstDispatch.soulAction!.sourceReintegrationId);
+    assert.equal(wsEvent.data.governanceStatus, firstDispatch.soulAction!.governanceStatus);
 
     const fullAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
@@ -3567,10 +3571,20 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
     );
 
     assert.equal(fullAfterDispatch.soulActions.length, 2);
+    assert.equal(readyAfterDispatch.filters.sourceReintegrationId, record!.id);
+    assert.equal(readyAfterDispatch.filters.governanceStatus, 'approved');
+    assert.equal(readyAfterDispatch.filters.executionStatus, 'not_dispatched');
+    assert.equal(dispatchedAfterDispatch.filters.sourceReintegrationId, record!.id);
+    assert.equal(dispatchedAfterDispatch.filters.governanceStatus, 'approved');
+    assert.equal(dispatchedAfterDispatch.filters.executionStatus, firstDispatch.soulAction!.executionStatus);
     assert.equal(readyAfterDispatch.soulActions.length, 1);
     assert.equal(readyAfterDispatch.soulActions[0]?.id, secondAction.id);
     assert.equal(dispatchedAfterDispatch.soulActions.length, 1);
     assert.equal(dispatchedAfterDispatch.soulActions[0]?.id, firstAction.id);
+    assert.equal(dispatchedAfterDispatch.soulActions[0]?.sourceNoteId, firstDispatch.soulAction!.sourceNoteId);
+    assert.equal(dispatchedAfterDispatch.soulActions[0]?.sourceReintegrationId, firstDispatch.soulAction!.sourceReintegrationId);
+    assert.equal(dispatchedAfterDispatch.soulActions[0]?.governanceStatus, firstDispatch.soulAction!.governanceStatus);
+    assert.equal(dispatchedAfterDispatch.soulActions[0]?.executionStatus, firstDispatch.soulAction!.executionStatus);
     assert.equal(dispatchedAfterDispatch.soulActions[0]?.executionStatus, wsEvent.data.executionStatus);
 
     const filteredIds = [

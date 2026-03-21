@@ -351,16 +351,16 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，优先检查这条三方对齐测试是否还需要再补 mixed status / repeated websocket 顺序边界；若没有新的真实 contract gap，就直接提交当前 server 增量。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续收紧 `event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record` 与 `continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record`。这两条对象 follow-up 用例现在不再只校验“对象已写出且 promotionSoulActionId 指回 action”，而是先按 `sourceReintegrationId + governanceStatus + executionStatus` 拉取 filtered `/api/soul-actions` 子集，再把该子集与 `DispatchSoulActionResponse.soulAction` 对齐后，继续要求 `eventNodes` / `continuityRecords` 的 `promotionSoulActionId` 指向同一个 filtered action。
-  - 这次补的是 promotion object projection 与 soul-action filtered facts 之间仍未锁住的 server contract gap，直接降低 event-node / continuity 对象层和 dispatch follow-up 列表发生漂移的风险。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续收紧 `dispatch websocket updates stay aligned with follow-up filtered lists for grouped settings refresh`，把 grouped dispatch websocket 场景从“websocket 只校验 source 字段，filtered list 只校验 id / executionStatus”提升到三方 payload 对齐：`DispatchSoulActionResponse.soulAction`、`soul-action-updated` 事件、以及按 `sourceReintegrationId + governanceStatus + executionStatus` 过滤后的 `/api/soul-actions` 子集，现在共同锁住 `id / sourceNoteId / sourceReintegrationId / governanceStatus / executionStatus`，并补上 filtered response 自身的 filter 字段断言。
+  - 这次补的是新的 grouped dispatch websocket contract gap，直接保护 dispatch websocket 事件与 grouped follow-up API 事实源不会在 source / status 字段上漂移；不是继续做低边际 UI 对称补强。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record|continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record" test/reintegrationApi.test.ts` 通过，2/2。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，36/36。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "dispatch websocket updates stay aligned with follow-up filtered lists for grouped settings refresh" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，37/37。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建完成）。
 - 当前未完成项再补充：
-  - 本轮 promotion object projection contract 增量尚未提交 git commit。
+  - 本轮 grouped dispatch websocket payload 对齐增量尚未提交 git commit。
 - 下一步建议再补充：
-  - 若验证通过，可继续检查 promotion 相关 websocket / object projection 用例是否还有“对象与 filtered soul-action 子集未同场锁定”的残余空档；若没有新增真实缺口，就直接提交当前 server 增量。
+  - 若验证通过，可继续检查 sequential approve / sequential dispatch websocket 用例里是否还有同类“事件和 filtered follow-up 没有 payload 级同场锁定”的空档；若没有新增真实缺口，就直接提交当前 server 增量。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更仍未提交 git commit。
