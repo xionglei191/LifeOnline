@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import type { AISuggestion } from '@lifeos/shared';
 import { fetchAISuggestions } from '../api/client';
 
@@ -65,11 +65,16 @@ async function handleRefresh() {
     suggestions.value = await fetchAISuggestions();
     fetched.value = true;
   } catch (e: any) {
+    fetched.value = true;
     error.value = e.message || 'AI 建议获取失败';
   } finally {
     loading.value = false;
   }
 }
+
+onMounted(() => {
+  void handleRefresh();
+});
 </script>
 
 <style scoped>

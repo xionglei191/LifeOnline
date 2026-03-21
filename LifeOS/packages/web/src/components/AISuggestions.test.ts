@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { AISuggestion } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -26,12 +27,27 @@ function createSuggestion(overrides: Partial<AISuggestion> = {}): AISuggestion {
 describe('AISuggestions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiMocks.fetchAISuggestions.mockResolvedValue([]);
   });
 
-  it('renders the idle state before the first refresh', () => {
-    const wrapper = mount(AISuggestions);
+  it('auto-loads suggestions on mount so the dashboard shows insights immediately', async () => {
+    apiMocks.fetchAISuggestions.mockResolvedValue([
+      createSuggestion({ id: 'suggestion-auto', type: 'goal', title: '开场即有洞察' }),
+    ]);
 
-    expect(wrapper.text()).toContain('点击“刷新洞察”让 AI 重新分析最近的数据变化。');
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    expect(apiMocks.fetchAISuggestions).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain('开场即有洞察');
+    expect(wrapper.findAll('.insight-card')).toHaveLength(1);
+  });
+
+  it('renders the empty state after auto-loading finds no suggestions', async () => {
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('本轮没有识别到明显异常，系统处于平稳区间。');
     expect(wrapper.findAll('.insight-card')).toHaveLength(0);
   });
 
@@ -48,11 +64,12 @@ describe('AISuggestions', () => {
     ]);
 
     const wrapper = mount(AISuggestions);
+    await flushPromises();
     await wrapper.find('.refresh-btn').trigger('click');
     await flushPromises();
 
     const text = wrapper.text();
-    expect(apiMocks.fetchAISuggestions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchAISuggestions).toHaveBeenCalledTimes(2);
     expect(wrapper.findAll('.insight-card')).toHaveLength(2);
     expect(text).toContain('负载告警');
     expect(text).toContain('目标推进');
@@ -66,6 +83,7 @@ describe('AISuggestions', () => {
     apiMocks.fetchAISuggestions.mockResolvedValue([]);
 
     const wrapper = mount(AISuggestions);
+    await flushPromises();
     await wrapper.find('.refresh-btn').trigger('click');
     await flushPromises();
 
@@ -77,6 +95,7 @@ describe('AISuggestions', () => {
     apiMocks.fetchAISuggestions.mockRejectedValue(new Error('AI 建议获取失败'));
 
     const wrapper = mount(AISuggestions);
+    await flushPromises();
     await wrapper.find('.refresh-btn').trigger('click');
     await flushPromises();
 
@@ -84,7 +103,7 @@ describe('AISuggestions', () => {
     expect(wrapper.find('.error-state').exists()).toBe(true);
   });
 
-  it('shows the loading state while waiting for the API response', async () => {
+  it('shows the loading state while waiting for the auto-load API response', async () => {
     let resolveFetch: ((value: AISuggestion[]) => void) | undefined;
     apiMocks.fetchAISuggestions.mockImplementation(() => new Promise((resolve) => {
       resolveFetch = resolve;
@@ -92,7 +111,7 @@ describe('AISuggestions', () => {
 
     const wrapper = mount(AISuggestions);
     const refreshButton = wrapper.find('.refresh-btn');
-    await refreshButton.trigger('click');
+    await nextTick();
 
     expect(wrapper.text()).toContain('AI 正在扫描你的生命节律与任务负载。');
     expect((refreshButton.element as HTMLButtonElement).disabled).toBe(true);

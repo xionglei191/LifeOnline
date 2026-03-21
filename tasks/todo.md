@@ -556,6 +556,12 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 `NoteDetail.vue` 中 retry/cancel 成功反馈是否也应补齐本地化 `WorkerTask` 元信息，而不是停留在固定文案。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/AISuggestions.vue` 改为组件挂载后自动触发首轮 `handleRefresh()`，让 dashboard 首次进入就直接消费已经落地的 `/api/ai/suggestions` 主路径，而不是默认停在“点击刷新”空态。
+  - 同时在请求失败时也把 `fetched` 标记为真，保证首轮自动加载失败后面板进入明确 error/empty 分支，不会因为只剩 `fetched=false` 而回退成误导性的 idle 提示。
+  - `LifeOS/packages/web/src/components/AISuggestions.test.ts` 同步改成主路径语义：新增自动加载成功、自动加载空结果两条断言，并把原有 success/error/loading 用例收口到“挂载即请求、手动刷新可再次请求”的真实行为。
+- 本轮验证待执行再补充：
+  - 运行 AI suggestions 组件测试与 web build，确认 dashboard 首屏洞察流现在默认自动拉取且回归通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 related worker task 的 `handleRetryRelatedTask()` / `handleCancelRelatedTask()` 也直接消费 `retryWorkerTask()` / `cancelWorkerTask()` 返回的 `WorkerTask`，成功反馈与创建路径统一为本地化的 `任务 ID · 任务类型 · 状态 · worker` 文案，避免同一组件内 create 与 retry/cancel 两套展示口径分叉。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 新增 retry 与 cancel 两条回归，锁定关联任务操作后会展示 `提取行动项 · 等待执行 · LifeOS` 与 `OpenClaw 任务 · 已取消 · OpenClaw`，并继续防止 raw enum 回流到 UI。
 - 本轮验证再补充：
