@@ -702,6 +702,16 @@
 - 当前未完成项再补充：
   - 本轮 server 变更待提交 git commit。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增一条 `mixed worker-host dispatch response tasks stay aligned with follow-up worker-task filters` contract test，专门覆盖真正走 worker host 的 mixed-order 场景：同一 `sourceNoteId` 下先 dispatch `extract_tasks`、保留 `update_persona_snapshot` 待发，随后再 dispatch 第二条，并分别校验两次 `DispatchSoulActionResponse.task` 与对应的 `/api/worker-tasks?sourceNoteId=...&taskType=...&worker=lifeos&status=...` follow-up 子表保持一致。
+  - 这次刻意不再把 promotion 类 dispatch 硬套成 worker-task contract，而是把三方对齐断言放到真正会返回 `task` 的 worker-host 动作上，避免把“某类 action 本来就不产出 worker task”误判成 contract 缺陷。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "mixed worker-host dispatch response tasks stay aligned with follow-up worker-task filters" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 server contract 主线推进，下一步可检查同类 `DispatchSoulActionResponse.task` 三方对齐是否还缺 websocket 事件参与的 mixed-order worker-host 覆盖；若不继续扩，则可直接提交当前 mixed worker-host follow-up contract 增量。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/shared/src/types.ts` 新增 `reintegration-record-updated` websocket 事件类型；`LifeOS/packages/server/src/api/handlers.ts` 在 accept / reject reintegration review 后同步广播更新后的 record，补上 review 主线缺失的事件事实源，而不再只依赖 `worker-task-updated` / `soul-action-updated` 间接触发刷新。
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 reject websocket contract，锁定 reject 后会收到 `reintegration-record-updated`，且事件中的 `reviewStatus/reviewReason/reviewedAt` 会与 reject response 和 follow-up rejected/pending 列表保持一致。
   - `LifeOS/packages/web/src/views/SettingsView.vue` 为 reintegration refresh 新增 `preserveMessage` 语义，并让 `reintegration-record-updated` 走与现有 review 刷新一致的 `loadReintegrationRecords + loadSoulActions` 链；`LifeOS/packages/web/src/views/SettingsView.test.ts` 同步新增 view 级回归，锁定 reject 成功提示经过该新 websocket 刷新后仍保持可见。

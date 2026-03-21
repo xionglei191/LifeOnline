@@ -1502,6 +1502,119 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
   }
 });
 
+test('mixed worker-host dispatch response tasks stay aligned with follow-up worker-task filters', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-mixed-dispatch-task-followup-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    const sourceNoteId = '2025-02-02.md';
+    const firstAction = createOrReuseSoulAction({
+      sourceNoteId,
+      actionKind: 'extract_tasks',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      now: '2026-03-22T03:00:00.000Z',
+      governanceReason: 'approved for mixed dispatch task follow-up test',
+    });
+    const secondAction = createOrReuseSoulAction({
+      sourceNoteId,
+      actionKind: 'update_persona_snapshot',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      now: '2026-03-22T03:01:00.000Z',
+      governanceReason: 'approved for mixed dispatch task follow-up test',
+    });
+
+    const firstDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    const mixedSoulActions = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(sourceNoteId)}`,
+    );
+    const mixedById = new Map(mixedSoulActions.soulActions.map((action) => [action.id, action]));
+    const workerTasksAfterFirstDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=extract_tasks&worker=lifeos&status=${encodeURIComponent(firstDispatch.task!.status)}`,
+    );
+    const firstTask = workerTasksAfterFirstDispatch.tasks.find((task) => task.id === firstDispatch.task!.id);
+
+    assert.ok(firstDispatch.task);
+    assert.ok(firstDispatch.result.workerTaskId);
+    assert.equal(firstDispatch.task.id, firstDispatch.result.workerTaskId);
+    assert.equal(firstDispatch.task.sourceNoteId, sourceNoteId);
+    assert.equal(firstDispatch.task.taskType, 'extract_tasks');
+    assert.equal(firstDispatch.task.worker, 'lifeos');
+    assert.ok(firstTask);
+    assert.equal(firstTask?.id, firstDispatch.task.id);
+    assert.equal(firstTask?.sourceNoteId, firstDispatch.task.sourceNoteId);
+    assert.equal(firstTask?.taskType, firstDispatch.task.taskType);
+    assert.equal(firstTask?.worker, firstDispatch.task.worker);
+    assert.equal(workerTasksAfterFirstDispatch.filters.sourceNoteId, sourceNoteId);
+    assert.equal(workerTasksAfterFirstDispatch.filters.taskType, 'extract_tasks');
+    assert.equal(workerTasksAfterFirstDispatch.filters.worker, 'lifeos');
+    assert.equal(workerTasksAfterFirstDispatch.filters.status, firstDispatch.task.status);
+    assert.equal(mixedById.get(firstAction.id)?.executionStatus, firstDispatch.soulAction!.executionStatus);
+    assert.equal(mixedById.get(secondAction.id)?.executionStatus, 'not_dispatched');
+
+    const secondDispatch = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    const workerTasksAfterSecondDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(sourceNoteId)}&taskType=update_persona_snapshot&worker=lifeos&status=${encodeURIComponent(secondDispatch.task!.status)}`,
+    );
+    const secondTask = workerTasksAfterSecondDispatch.tasks.find((task) => task.id === secondDispatch.task!.id);
+
+    assert.ok(secondDispatch.task);
+    assert.ok(secondDispatch.result.workerTaskId);
+    assert.equal(secondDispatch.task.id, secondDispatch.result.workerTaskId);
+    assert.equal(secondDispatch.task.sourceNoteId, sourceNoteId);
+    assert.equal(secondDispatch.task.taskType, 'update_persona_snapshot');
+    assert.equal(secondDispatch.task.worker, 'lifeos');
+    assert.ok(secondTask);
+    assert.equal(secondTask?.id, secondDispatch.task.id);
+    assert.equal(secondTask?.sourceNoteId, secondDispatch.task.sourceNoteId);
+    assert.equal(secondTask?.taskType, secondDispatch.task.taskType);
+    assert.equal(secondTask?.worker, secondDispatch.task.worker);
+    assert.equal(workerTasksAfterSecondDispatch.filters.sourceNoteId, sourceNoteId);
+    assert.equal(workerTasksAfterSecondDispatch.filters.taskType, 'update_persona_snapshot');
+    assert.equal(workerTasksAfterSecondDispatch.filters.worker, 'lifeos');
+    assert.equal(workerTasksAfterSecondDispatch.filters.status, secondDispatch.task.status);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dispatch API response and follow-up list stay aligned for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-dispatch-list-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
@@ -2137,6 +2250,11 @@ test('soul-action filters converge when governance and execution subsets are que
       baseUrl,
       `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
     );
+    const workerTasksAfterFirstDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const dispatchedWorkerTask = workerTasksAfterFirstDispatch.tasks.find((task) => task.id === firstDispatch.task!.id);
     const approvedList = await api<ListSoulActionsResponse>(
       baseUrl,
       `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
