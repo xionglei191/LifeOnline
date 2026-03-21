@@ -493,6 +493,12 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh collapsedGroupIds retention 回归补强。
   - 若还要继续补一轮，应回到新的 server/web/shared contract 缺口，而不是继续在当前折叠态链路上做低边际对称补强。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 dispatch worker-task feedback 连续 retention 断言，锁定单条 dispatch 成功提示在先收到 `worker-task-updated`、再收到 `soul-action-updated` 两次连续 websocket 刷新后仍保持可见。
+  - 这次补的是 dispatch worker-task feedback 的连续事件链保护：此前分别验证了两条 websocket 路径各自不会清空提示，但还没有直接锁住“连续经过两次不同刷新后仍不丢消息”的真实使用序列。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 76 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 `handleCreateSummarizeTask()`、`handleCreateOpenClawTask()`、`handleExtractTasks()` 直接消费 `createWorkerTask()` / `extractTasks()` 返回的 `WorkerTask`，成功反馈统一收敛为 `任务 ID · 任务类型 · 状态 · worker` 的本地化文案，不再停留在固定提示语。
   - 新增 `LifeOS/packages/web/src/components/NoteDetail.test.ts`，覆盖摘要任务、OpenClaw 任务、行动项提取三条创建路径，并锁定成功反馈展示 `笔记摘要 / OpenClaw 任务 / 提取行动项`、`等待执行 / 执行中 / 已完成`、`LifeOS / OpenClaw`，避免 raw enum 回流到 UI。
 - 本轮验证再补充：

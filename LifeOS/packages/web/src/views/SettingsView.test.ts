@@ -1061,6 +1061,54 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps dispatch worker task feedback visible across consecutive worker-task and soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const readyAction = soulActions.find((action) => action.id === 'ready-1');
+    expect(readyAction).toBeTruthy();
+
+    panel.vm.$emit('dispatch-action', readyAction);
+    await flushPromises();
+
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+
+    wrapper.unmount();
+  });
+
   it('shows localized worker-task metadata after retrying and cancelling worker tasks', async () => {
     const client = await import('../api/client');
     const retryWorkerTaskMock = vi.mocked(client.retryWorkerTask);
