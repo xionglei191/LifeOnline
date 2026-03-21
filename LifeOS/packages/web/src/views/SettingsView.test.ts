@@ -294,4 +294,126 @@ describe('SettingsView soul action governance wiring', () => {
 
     wrapper.unmount();
   });
+
+  it('refreshes worker tasks alongside grouped governance data on worker-task websocket updates', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchIndexStatus.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+    apiMocks.fetchTaskSchedules.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchTaskSchedules).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('shows success feedback and refreshes soul actions after approve-action emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('approve-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
+      reason: 'Approved from settings reintegration governance panel for record-mixed',
+    });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
+    expect(panel.props('message')).toBe('Soul action 已批准');
+    expect(panel.props('messageType')).toBe('success');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing soul actions when approve-action fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockRejectedValueOnce(new Error('approve failed'));
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('approve-action', pendingAction);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(panel.props('message')).toBe('approve failed');
+    expect(panel.props('messageType')).toBe('error');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows dispatch result feedback and refreshes related views after dispatch-action emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const readyAction = soulActions.find((action) => action.id === 'ready-1');
+    expect(readyAction).toBeTruthy();
+
+    panel.vm.$emit('dispatch-action', readyAction);
+    await flushPromises();
+
+    expect(apiMocks.dispatchSoulAction).toHaveBeenCalledWith('ready-1');
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+    expect(panel.props('message')).toBe('dispatched');
+    expect(panel.props('messageType')).toBe('success');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing related views when dispatch-action fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockRejectedValueOnce(new Error('dispatch failed'));
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const readyAction = soulActions.find((action) => action.id === 'ready-1');
+    expect(readyAction).toBeTruthy();
+
+    panel.vm.$emit('dispatch-action', readyAction);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
+    expect(panel.props('message')).toBe('dispatch failed');
+    expect(panel.props('messageType')).toBe('error');
+    expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
 });

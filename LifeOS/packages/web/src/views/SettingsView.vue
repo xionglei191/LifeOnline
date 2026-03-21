@@ -1034,9 +1034,11 @@ async function loadReintegrationRecords() {
   }
 }
 
-async function loadSoulActions() {
+async function loadSoulActions(options?: { preserveMessage?: boolean }) {
   soulActionLoading.value = true;
-  soulActionMessage.value = '';
+  if (!options?.preserveMessage) {
+    soulActionMessage.value = '';
+  }
   try {
     soulActions.value = await fetchSoulActions({
       governanceStatus: soulActionFilterStatus.value || undefined,
@@ -1230,7 +1232,7 @@ async function handleApproveSoulAction(action: SoulAction) {
     });
     soulActionMessage.value = 'Soul action 已批准';
     soulActionMessageType.value = 'success';
-    await loadSoulActions();
+    await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
     soulActionMessage.value = e.message || '批准 soul action 失败';
     soulActionMessageType.value = 'error';
@@ -1259,7 +1261,7 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
     const totalCount = group.actions.length;
     soulActionMessage.value = `已批量批准 ${approvedCount}/${totalCount} 条 soul actions`;
     soulActionMessageType.value = 'success';
-    await loadSoulActions();
+    await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
     soulActionMessage.value = e.message || '批量批准 soul actions 失败';
     soulActionMessageType.value = 'error';
@@ -1291,7 +1293,7 @@ async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; acti
     const totalCount = group.actions.length;
     soulActionMessage.value = `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions`;
     soulActionMessageType.value = 'success';
-    await loadSoulActions();
+    await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
   } catch (e: any) {
     soulActionMessage.value = e.message || '批量派发 soul actions 失败';
@@ -1308,7 +1310,7 @@ async function handleDispatchSoulAction(action: SoulAction) {
     const result = await dispatchSoulAction(action.id);
     soulActionMessage.value = result.result.reason;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
-    await loadSoulActions();
+    await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
   } catch (e: any) {
     soulActionMessage.value = e.message || '派发 soul action 失败';

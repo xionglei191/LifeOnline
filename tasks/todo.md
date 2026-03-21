@@ -196,3 +196,26 @@
 - 下一步建议最后补充：
   - 若继续沿这条主线推进，优先补 `worker-task-updated` websocket 分支测试，锁定 `SettingsView.vue:1584` 与 `SettingsView.vue:1590` 的联合刷新语义。
   - 然后补单条 action handler 的成功/失败 view 级断言，进一步锁住 message 与 refresh 行为。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 `worker-task-updated` websocket 分支测试，直接派发 `ws-update` 事件，锁定 `SettingsView.vue` 会同时刷新 `workerTasks`、`reintegrationRecords` 与 `soulActions`，且不会误触发 schedule 刷新。
+  - 这次继续只补最窄的 view 级回归面，直接对齐当前 grouped governance 主线的剩余真实缺口，不扩展到新的 UI 功能或更重的端到端 harness。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 26 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 还没有覆盖单条 `approve-action` / `dispatch-action` 在父层成功/失败提示上的 view 级断言。
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，优先补单条 action handler 的成功/失败提示与 refresh 行为，进一步锁住 `SettingsView` 父层治理接线。
+  - 若本轮就收口，也可以直接提交当前 web 测试增量，保持 grouped governance 主线连续提交。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 4 条单条 `approve-action` / `dispatch-action` 父层断言，分别覆盖成功提示、失败提示、成功后 refresh 行为，以及失败时不应误刷新相关列表。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 将 `loadSoulActions()` 收紧为可选 `preserveMessage` 模式，避免 approve / dispatch 成功提示在成功后立即 refresh 时被清空；这次是直接修正新测试揭示的真实父层反馈缺口，而不是纯测试适配。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 30 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前 grouped governance / SettingsView 回归补强；这一段父层接线与反馈语义已经形成更完整的最小保护。
+  - 若还要继续补一轮，再评估是否值得补单条 action loading/disabled 态在父层往返中的 view 级断言。
