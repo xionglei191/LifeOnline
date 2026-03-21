@@ -393,17 +393,15 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 继续把单条 dispatch 成功提示向 shared/server worker task contract 收敛：在已展示 `workerTaskId`、`taskType`、`status` 的基础上，再直接消费 `DispatchSoulActionResponse.task.worker`，把实际执行宿主一起拼进用户可见反馈。
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `workerTaskWorkerLabel()`，把 `lifeos/openclaw` 统一映射为 `LifeOS/OpenClaw`，避免 success message 直接暴露底层 worker 枚举值。
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步收紧单条 dispatch 成功提示与两条 websocket retention 断言，锁定 `LifeOS` worker 标签会在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下保持可见。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在现有 dispatch response worker-task convergence contract 上继续补了 `worker` 过滤收敛：新增 `/api/worker-tasks?sourceNoteId=...&worker=...` follow-up 列表断言，锁定 dispatch 返回的 `task.worker` 会与 `worker-task-updated` websocket 事件以及 worker filtered list 中的同一 task 保持一致。
+  - 这次继续停留在 server contract 事实源，不扩 UI、不改 runtime 行为，直接补上 grouped governance 在 dispatch 后 worker 视图刷新链里最后一个已存在但此前未显式回归保护的过滤维度。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
-  - 本轮 web 变更待提交 git commit。
+  - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一主线推进，可直接提交这条 dispatch worker-host feedback 收敛增量；若还要继续补一轮，再找下一处 server/shared 已锁住但 web/client 尚未直接消费的 worker task contract 细节。
-  - 若还要继续补一轮，可检查其余 panel emit 名称在父层监听与测试中是否还有类似 camel/kebab 不一致的隐性契约缺口。
+  - 若继续沿 grouped governance 主线推进，可直接提交这条 worker filter convergence contract 增量；若还要继续补一轮，可评估 worker-task websocket 刷新后的 `worker` 过滤子集是否还值得再补一条更直接的 follow-up convergence 覆盖。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
   - 这次补的是同一条真实事件契约链上的剩余缺口：`SettingsView.test.ts:218` 与 `:222` 本就通过组件真实 camelCase emits 驱动父层，因此运行时代码也应与测试和组件声明保持一致，避免未来出现“测试通过但真实监听名漂移”的风险。
