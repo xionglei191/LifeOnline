@@ -1,3 +1,43 @@
+# schedule health shared contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 Settings 主路径里剩余的本地 shape，优先检查 `schedule health` 是否仍停留在 web-local / server-local contract。
+- [x] 把 `ScheduleHealth` 提升到 `packages/shared`，并让 web client、server handler、scheduler 内部直接复用。
+- [x] 补最小 web + server 回归，锁定 `/api/schedules/health` 已切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增：
+    - `FailingScheduleHealthItem`
+    - `ScheduleHealth`
+  - `LifeOS/packages/server/src/workers/taskScheduler.ts` 删除本地 `ScheduleHealthData`，`getScheduleHealth()` 直接返回 shared `ScheduleHealth`。
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 `scheduleHealthHandler()` 显式接回 shared `ScheduleHealth`。
+  - `LifeOS/packages/web/src/api/client.ts` 删除本地 `ScheduleHealth`，改为直接从 shared 导入。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 `fetches typed schedule health from the shared response shape`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `schedule health API responds with shared schedule health contract`。
+- 这次修的不是对称测试平移，而是 Settings 主路径里又一个真实的 contract duplication：web client 定义一份、scheduler 内部再定义一份、server handler 不显式类型化。
+
+## 本轮选择依据
+- 用户要求继续优先找新的高价值 `server/web/shared contract gap`。
+- config 主路径闭环后，下一条仍直接服务 Settings 的明显漂移点就是 `schedule health`：
+  - web `client.ts` 自带本地 `ScheduleHealth`
+  - server `taskScheduler.ts` 自带本地 `ScheduleHealthData`
+  - handler 层未显式接回 shared
+- 这条线能继续减少 Settings 主路径的重复源和后续漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 121 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "schedule health API responds with shared schedule health contract|configManager reuses shared Config contract internally" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 下一步可继续检查 stats API 是否仍停留在 web-local response shape。
+
+
 # configManager shared contract 闭环
 
 ## 计划

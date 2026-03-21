@@ -251,6 +251,20 @@ export interface IndexStatus {
   processingFile: string | null;
 }
 
+export interface FailingScheduleHealthItem {
+  id: string;
+  label: string;
+  consecutiveFailures: number;
+  lastError: string | null;
+}
+
+export interface ScheduleHealth {
+  total: number;
+  active: number;
+  failing: number;
+  failingSchedules: FailingScheduleHealthItem[];
+}
+
 export interface DashboardData {
   todayTodos: Note[];
   weeklyHighlights: Note[];

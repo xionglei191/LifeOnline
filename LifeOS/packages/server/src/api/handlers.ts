@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -1066,9 +1066,10 @@ export async function runScheduleNowHandler(req: Request, res: Response): Promis
 }
 
 // GET /api/schedules/health
-export async function scheduleHealthHandler(_req: Request, res: Response): Promise<void> {
+export async function scheduleHealthHandler(_req: Request<Record<string, never>, ScheduleHealth>, res: Response<ScheduleHealth>): Promise<void> {
   try {
-    res.json(getScheduleHealth());
+    const health = getScheduleHealth();
+    res.json(health);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }

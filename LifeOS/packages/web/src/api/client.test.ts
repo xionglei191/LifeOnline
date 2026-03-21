@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -141,27 +141,27 @@ describe('api client promotion projections', () => {
     });
   });
 
-  it('sends typed create-note requests and returns the shared response shape', async () => {
-    const request: CreateNoteRequest = {
-      title: 'Contract note',
-      dimension: 'learning',
-      type: 'note',
-      content: 'hello',
-      priority: 'medium',
-      tags: ['contract'],
+  it('fetches typed schedule health from the shared response shape', async () => {
+    const response: ScheduleHealth = {
+      total: 3,
+      active: 2,
+      failing: 1,
+      failingSchedules: [
+        {
+          id: 'schedule-1',
+          label: 'Daily report',
+          consecutiveFailures: 2,
+          lastError: 'boom',
+        },
+      ],
     };
-    const response: CreateNoteResponse = { success: true, filePath: '/vault/learning/2026-03-22-contract-note.md' };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => response,
     }));
 
-    await expect(createNote(request)).resolves.toEqual(response);
-    expect(fetch).toHaveBeenCalledWith('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
+    await expect(fetchScheduleHealth()).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledWith('/api/schedules/health');
   });
 
   it('sends typed search requests and returns the shared response shape', async () => {

@@ -110,6 +110,37 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('schedule health API responds with shared schedule health contract', async () => {
+  const env = await createTestEnv('lifeos-schedule-health-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const health = await api<import('../../shared/src/types.js').ScheduleHealth>(baseUrl, '/api/schedules/health');
+    assert.equal(typeof health.total, 'number');
+    assert.equal(typeof health.active, 'number');
+    assert.equal(typeof health.failing, 'number');
+    assert.ok(Array.isArray(health.failingSchedules));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('config API responds with shared config contracts', async () => {
   const env = await createTestEnv('lifeos-config-contract-');
   const configFile = CONFIG_FILE;

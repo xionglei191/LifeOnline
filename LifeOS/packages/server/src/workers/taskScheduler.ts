@@ -5,6 +5,7 @@ import type {
   CreateTaskScheduleRequest,
   UpdateTaskScheduleRequest,
   WorkerTaskType,
+  ScheduleHealth,
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import { createWorkerTask, startWorkerTaskExecution, normalizeTaskInput } from './workerTasks.js';
@@ -234,14 +235,7 @@ export function initScheduler(): void {
   console.log(`TaskScheduler: loaded ${schedules.length} active schedule(s)`);
 }
 
-export interface ScheduleHealthData {
-  total: number;
-  active: number;
-  failing: number;
-  failingSchedules: Array<{ id: string; label: string; consecutiveFailures: number; lastError: string | null }>;
-}
-
-export function getScheduleHealth(): ScheduleHealthData {
+export function getScheduleHealth(): ScheduleHealth {
   const db = getDb();
   const rows = db.prepare('SELECT * FROM task_schedules').all() as ScheduleRow[];
   const total = rows.length;
