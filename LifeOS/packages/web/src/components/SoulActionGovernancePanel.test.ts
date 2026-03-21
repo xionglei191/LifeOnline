@@ -125,13 +125,32 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.text()).toContain('派发本组已批准项 (2)');
   });
 
-  it('emits quick-filter updates when the quick filter changes', async () => {
+  it('emits filter-status and execution-filter updates when those filters change', async () => {
     const wrapper = mountPanel('all');
 
     const selects = wrapper.findAll('select');
-    await selects[2]!.setValue('dispatch_ready_only');
+    await selects[0]!.setValue('approved');
+    await selects[1]!.setValue('succeeded');
 
-    expect(wrapper.emitted('update:quickFilter')).toEqual([['dispatch_ready_only']]);
+    expect(wrapper.emitted('update:filterStatus')).toEqual([['approved']]);
+    expect(wrapper.emitted('update:executionFilter')).toEqual([['succeeded']]);
+  });
+
+  it('emits refresh when the refresh button is clicked', async () => {
+    const wrapper = mountPanel('all');
+
+    await wrapper.find('.soul-action-filters .btn-link').trigger('click');
+
+    expect(wrapper.emitted('refresh')).toEqual([[]]);
+  });
+
+  it('emits toggle-collapsed with the selected group id', async () => {
+    const wrapper = mountPanel('dispatch_ready_only');
+
+    const toggleButton = wrapper.findAll('.soul-action-group-toolbar .btn-link')[0]!;
+    await toggleButton.trigger('click');
+
+    expect(wrapper.emitted('toggle-collapsed')).toEqual([['record-ready']]);
   });
 
   it('disables group dispatch unless the whole group is dispatch-ready', () => {
