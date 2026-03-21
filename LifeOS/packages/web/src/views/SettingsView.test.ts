@@ -951,7 +951,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledTimes(1);
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed',
+      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
 
@@ -1125,7 +1125,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed',
+      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
@@ -2202,7 +2202,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Approved from settings reintegration governance panel for Reintegration record-mixed',
+      reason: 'Approved from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
@@ -2231,6 +2231,30 @@ describe('SettingsView soul action governance wiring', () => {
     expect(panel.props('message')).toBe('approve failed');
     expect(panel.props('messageType')).toBe('error');
     expect(panel.props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('falls back to source note wording when approving a soul action without reintegration source', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const standaloneAction = createSoulAction({
+      id: 'standalone-note-action',
+      sourceNoteId: 'note-standalone',
+      sourceReintegrationId: null,
+      createdAt: '2026-03-21T11:00:00.000Z',
+    });
+
+    panel.vm.$emit('approve-action', standaloneAction);
+    await flushPromises();
+
+    expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('standalone-note-action', {
+      reason: 'Approved from settings reintegration governance panel for source note note-standalone',
+    });
 
     wrapper.unmount();
   });

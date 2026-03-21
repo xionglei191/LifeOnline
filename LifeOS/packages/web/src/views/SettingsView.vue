@@ -1280,9 +1280,13 @@ function toggleSoulActionGroupCollapsed(id: string) {
 }
 
 function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' | 'sourceReintegrationId'>): string {
-  return action.sourceReintegrationId
-    ? `Reintegration ${action.sourceReintegrationId}`
-    : `source note ${action.sourceNoteId}`;
+  if (action.sourceReintegrationId && action.sourceNoteId) {
+    return `Reintegration ${action.sourceReintegrationId} (source note ${action.sourceNoteId})`;
+  }
+  if (action.sourceReintegrationId) {
+    return `Reintegration ${action.sourceReintegrationId}`;
+  }
+  return `source note ${action.sourceNoteId}`;
 }
 
 async function handleApproveSoulAction(action: SoulAction) {
