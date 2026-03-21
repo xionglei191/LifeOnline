@@ -176,6 +176,21 @@ describe('SettingsView soul action governance wiring', () => {
       result: {
         dispatched: true,
         reason: 'dispatched',
+        workerTaskId: 'worker-task-ready-1',
+      },
+      task: {
+        id: 'worker-task-ready-1',
+        taskType: 'update_persona_snapshot',
+        worker: 'lifeos',
+        status: 'pending',
+        input: { noteId: 'record-ready' },
+        result: null,
+        error: null,
+        sourceNoteId: 'record-ready',
+        createdAt: '2026-03-21T10:03:00.000Z',
+        updatedAt: '2026-03-21T10:03:00.000Z',
+        startedAt: null,
+        finishedAt: null,
       },
     });
   });
@@ -901,7 +916,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.dispatchSoulAction).toHaveBeenCalledWith('ready-1');
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('dispatched');
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1）');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 

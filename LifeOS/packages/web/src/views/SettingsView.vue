@@ -1308,7 +1308,8 @@ async function handleDispatchSoulAction(action: SoulAction) {
   soulActionMessage.value = '';
   try {
     const result = await dispatchSoulAction(action.id);
-    soulActionMessage.value = result.result.reason;
+    const workerTaskSuffix = result.result.workerTaskId ? `（Worker Task: ${result.result.workerTaskId}）` : '';
+    soulActionMessage.value = `${result.result.reason}${workerTaskSuffix}`;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
     await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
