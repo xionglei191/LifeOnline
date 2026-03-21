@@ -281,6 +281,16 @@
   - 若继续沿同一主线推进，可直接提交当前 group quick action 反馈回归补强。
   - 若还要继续补一轮，可评估 grouped governance filter / quick filter 组合切换在 `SettingsView` 父层是否还值得补一条 round-trip 断言。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/PromotionProjectionPanel.vue` 将 projection 列表里原本裸显示的 `sourceReintegrationId` 收紧为显式 `Reintegration {{ ... }}` 标签，让 PR6 promotion projection 的来源语义与前面 governance panel 保持一致，不再把内部 source id 直接裸投到用户可见层。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步补一条 view 级断言，锁定 promotion projections 初始渲染时会展示 `Reintegration record-ready`；同时顺手把已迁移的 classify-inbox 按钮文案断言对齐到当前真实入口 `手动整理 Inbox（创建任务）`，消除一条已有测试漂移。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
+- 当前未完成项再补充：
+  - `SettingsView.vue` 里 soul-action approve / batch-approve reason 文案仍直接拼接 `sourceNoteId`，若继续沿同一条 contract-to-UI 主线推进，可再评估是否要把这些内部 source key 收紧为显式 reintegration source 标签。
+  - 本轮 web 变更仍未提交 git commit。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 quick-filter round-trip 断言，覆盖 `update:quick-filter` 后 `quickFilter` / `quickFilterLabel` / `quickFilterStats` / `groups` 的联动收敛，以及 quick filter 与 governance / execution filter 组合切换后 refresh 仍保持同一父层状态。
   - 这次继续只补最窄的父层状态回归面，不新增功能、不改 contract；目标是把 grouped governance 面板中最后一段仍未在 view 级锁住的筛选组合语义补成可回归保护。
 - 本轮验证再补充：
