@@ -1279,12 +1279,18 @@ function toggleSoulActionGroupCollapsed(id: string) {
   soulActionCollapsedGroupIds.value = [...soulActionCollapsedGroupIds.value, id];
 }
 
+function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' | 'sourceReintegrationId'>): string {
+  return action.sourceReintegrationId
+    ? `Reintegration ${action.sourceReintegrationId}`
+    : `source note ${action.sourceNoteId}`;
+}
+
 async function handleApproveSoulAction(action: SoulAction) {
   soulActionActionId.value = action.id;
   soulActionMessage.value = '';
   try {
     await approveSoulAction(action.id, {
-      reason: `Approved from settings reintegration governance panel for ${action.sourceNoteId}`,
+      reason: `Approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
     soulActionMessage.value = 'Soul action 已批准';
     soulActionMessageType.value = 'success';
@@ -1310,7 +1316,7 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
   try {
     for (const action of pendingActions) {
       await approveSoulAction(action.id, {
-        reason: `Batch approved from settings reintegration governance panel for ${group.sourceNoteId}`,
+        reason: `Batch approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
       });
     }
     const approvedCount = pendingActions.length;

@@ -82,6 +82,7 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
     sourceNoteId: overrides.sourceNoteId,
+    sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     workerTaskId: overrides.workerTaskId ?? null,
     governanceReason: overrides.governanceReason ?? null,
     resultSummary: overrides.resultSummary ?? null,
@@ -119,9 +120,9 @@ const reintegrationRecords: ReintegrationRecord[] = [
 ];
 
 const soulActions: SoulAction[] = [
-  createSoulAction({ id: 'ready-1', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
-  createSoulAction({ id: 'ready-2', sourceNoteId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
-  createSoulAction({ id: 'mixed-1', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+  createSoulAction({ id: 'ready-1', sourceNoteId: 'note-ready-1', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+  createSoulAction({ id: 'ready-2', sourceNoteId: 'note-ready-2', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
+  createSoulAction({ id: 'mixed-1', sourceNoteId: 'note-mixed-1', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
 ];
 
 const eventNodes: EventNode[] = [
@@ -950,7 +951,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledTimes(1);
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Batch approved from settings reintegration governance panel for record-mixed',
+      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
 
@@ -1124,7 +1125,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Batch approved from settings reintegration governance panel for record-mixed',
+      reason: 'Batch approved from settings reintegration governance panel for Reintegration record-mixed',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
@@ -2201,7 +2202,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
-      reason: 'Approved from settings reintegration governance panel for record-mixed',
+      reason: 'Approved from settings reintegration governance panel for Reintegration record-mixed',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();

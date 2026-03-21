@@ -376,11 +376,18 @@
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:1821` 新增 sequential approve websocket + grouped follow-up filter convergence contract test，锁定同组两条 action 依次 approve 时，每次 `soul-action-updated` 事件都会与后续 `pending_review + not_dispatched`、`approved + not_dispatched` 过滤列表以及 full list 成员变化保持一致；首条批准后是 1 pending + 1 approved，第二条批准后收敛为 0 pending + 2 approved。
   - 这次仍然只补 server contract 事实源，不扩 UI、不改 runtime 行为，进一步把 approve 阶段从“单条事件正确”补强到“组内顺序推进时的刷新收敛也正确”。
-- 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，18/18。
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 server 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `soulActionApprovalReasonLabel()`，把单条 approve 与批量 approve 提交给 API 的治理 reason 从直接拼接内部 `sourceNoteId` 收紧为优先使用显式 `Reintegration {sourceReintegrationId}`，仅在非 promotion action 时才回退到 `source note {sourceNoteId}`。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步把 fixture 切到“不同 `sourceNoteId`、相同 `sourceReintegrationId`”的 promotion action 形态，并更新 3 处断言，锁定 settings 父层 approve reason 现在真正消费 shared/server 已暴露的 `sourceReintegrationId` 语义，而不是继续把 reintegration group key 误写成 note id。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
+- 当前未完成项再补充：
+  - 批量 dispatch 路径当前仍只按 group 迭代派发，不需要额外 reason；若继续沿同一条 source 语义主线推进，可转回 server/shared contract 层继续排查新的 `sourceReintegrationId` / `sourceNoteId` 混用缺口。
+  - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
 - 本轮继续完成的真实实现再补充：
