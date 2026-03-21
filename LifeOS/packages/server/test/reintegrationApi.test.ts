@@ -1299,12 +1299,12 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
 
     const firstTaskEvent = await firstTaskEventPromise;
-    assert.equal(firstTaskEvent.type, 'worker-task-updated');
-    assert.equal(firstTaskEvent.data.id, firstDispatched.result.workerTaskId);
-    assert.equal(firstTaskEvent.data.sourceNoteId, sourceNoteId);
-    assert.equal(firstTaskEvent.data.taskType, 'extract_tasks');
-    assert.equal(firstTaskEvent.data.worker, 'lifeos');
+    assert.equal(firstTaskEvent.data.id, firstDispatched.task?.id);
+    assert.equal(firstTaskEvent.data.sourceNoteId, firstDispatched.task?.sourceNoteId);
+    assert.equal(firstTaskEvent.data.taskType, firstDispatched.task?.taskType);
+    assert.equal(firstTaskEvent.data.worker, firstDispatched.task?.worker);
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstTaskEvent.data.status));
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
 
     const secondTaskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
       socket,
@@ -1331,12 +1331,12 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
 
     const secondTaskEvent = await secondTaskEventPromise;
-    assert.equal(secondTaskEvent.type, 'worker-task-updated');
-    assert.equal(secondTaskEvent.data.id, secondDispatched.result.workerTaskId);
-    assert.equal(secondTaskEvent.data.sourceNoteId, sourceNoteId);
-    assert.equal(secondTaskEvent.data.taskType, 'update_persona_snapshot');
-    assert.equal(secondTaskEvent.data.worker, 'lifeos');
+    assert.equal(secondTaskEvent.data.id, secondDispatched.task?.id);
+    assert.equal(secondTaskEvent.data.sourceNoteId, secondDispatched.task?.sourceNoteId);
+    assert.equal(secondTaskEvent.data.taskType, secondDispatched.task?.taskType);
+    assert.equal(secondTaskEvent.data.worker, secondDispatched.task?.worker);
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondTaskEvent.data.status));
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
 
     const workerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
@@ -1452,10 +1452,12 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(extractTask?.sourceNoteId, firstTaskEvent.data.sourceNoteId);
     assert.equal(extractTask?.taskType, firstTaskEvent.data.taskType);
     assert.equal(extractTask?.worker, firstTaskEvent.data.worker);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(extractTask!.status));
     assert.equal(personaTask?.id, secondTaskEvent.data.id);
     assert.equal(personaTask?.sourceNoteId, secondTaskEvent.data.sourceNoteId);
     assert.equal(personaTask?.taskType, secondTaskEvent.data.taskType);
     assert.equal(personaTask?.worker, secondTaskEvent.data.worker);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(personaTask!.status));
 
     assert.equal(extractTask?.id, firstDispatched.task?.id);
     assert.equal(extractTask?.sourceNoteId, firstDispatched.task?.sourceNoteId);

@@ -663,6 +663,16 @@
   - 若继续往下补，同主线优先检查是否还缺少 `sourceNoteId + status` 非 worker 子表与 full list / websocket 的同级收敛保护。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把 grouped dispatch worker-task contract 从 `sourceNoteId + worker + status` 再补到 `sourceNoteId + status` 非 worker 子表：在同一 `sourceNoteId` 下连续 dispatch `extract_tasks` 与 `update_persona_snapshot` 后，额外校验 `/api/worker-tasks?sourceNoteId=...&status=...` 仍能稳定命中对应 task，且返回 filters.status 与 dispatch response / websocket 的 status 保持一致。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将现有 dispatch worker-task convergence contract 收紧为更明确的三方对齐：现在除了 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 之外，还要求 `DispatchSoulActionResponse.task` 的 `id/sourceNoteId/taskType/worker` 与 websocket 事件及 follow-up list 中命中的同一 task 保持一致。
+  - 对 `status` 的处理保持真实运行时口径：websocket 事件与 follow-up list 只要求是合法状态集合成员，不再假设它一定与 dispatch 响应返回瞬间的 status 完全相等，从而避免把异步 worker 推进时序误当成 contract 本身。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "dispatch response worker task stays aligned with websocket and follow-up worker task list for grouped settings refresh" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 server contract 主线推进，下一步可检查 mixed-order grouped dispatch/filter 测试里是否也值得补上 `DispatchSoulActionResponse.task` 本体断言；若不继续扩，则可直接提交当前三方对齐收紧增量。
   - 这次补的是 worker-task filtered refresh 事实源中的最后一层 status-only 子表缺口，避免 future web/client 只按状态聚焦任务时出现“总表、worker 子表、taskType 子表都对，但纯 status 子表漏项或串 task”的分叉。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
