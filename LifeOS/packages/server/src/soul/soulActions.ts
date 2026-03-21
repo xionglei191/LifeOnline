@@ -35,9 +35,16 @@ interface ListSoulActionsFilters {
 }
 
 function rowToSoulAction(row: SoulActionRow): SoulAction {
+  const sourceReintegrationId = row.action_kind === 'create_event_node'
+    || row.action_kind === 'promote_event_node'
+    || row.action_kind === 'promote_continuity_record'
+    ? row.source_note_id
+    : null;
+
   return {
     id: row.id,
     sourceNoteId: row.source_note_id,
+    sourceReintegrationId,
     actionKind: row.action_kind,
     governanceStatus: row.governance_status,
     executionStatus: row.execution_status,
@@ -125,6 +132,7 @@ export function getSoulActionByWorkerTaskId(workerTaskId: string): SoulAction | 
 
 export function createOrReuseSoulAction(input: {
   sourceNoteId: string;
+  sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
   now?: string;
   governanceStatus?: SoulActionGovernanceStatus;
@@ -142,6 +150,7 @@ export function createOrReuseSoulAction(input: {
   const action: SoulAction = {
     id: buildSoulActionId(input.sourceNoteId, input.actionKind),
     sourceNoteId: input.sourceNoteId,
+    sourceReintegrationId: input.sourceReintegrationId ?? null,
     actionKind: input.actionKind,
     governanceStatus,
     executionStatus,

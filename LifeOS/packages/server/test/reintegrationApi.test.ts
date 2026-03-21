@@ -310,6 +310,7 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       ['promote_continuity_record', 'promote_event_node'],
     );
     assert.ok(accepted.soulActions.every((action) => action.sourceNoteId === record!.id));
+    assert.ok(accepted.soulActions.every((action) => action.sourceReintegrationId === record!.id));
 
     const acceptedRecords = await api<ListReintegrationRecordsResponse>(
       baseUrl,
@@ -2136,6 +2137,7 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
     assert.ok(dispatched.soulAction);
     assert.ok(['pending', 'running', 'succeeded'].includes(dispatched.soulAction.executionStatus));
     assert.equal(dispatched.soulAction.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction.sourceReintegrationId, record!.id);
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
@@ -2144,6 +2146,7 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
     assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, dispatched.soulAction.executionStatus);
   } finally {
@@ -2226,6 +2229,7 @@ test('promotion dispatch response stays aligned with local-only execution result
     assert.equal(dispatched.result.dispatched, true);
     assert.equal(dispatched.soulAction?.id, action!.id);
     assert.equal(dispatched.soulAction?.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction?.sourceReintegrationId, record!.id);
     assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
     assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
     assert.equal(dispatched.result.workerTaskId, null);
@@ -2239,6 +2243,7 @@ test('promotion dispatch response stays aligned with local-only execution result
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
     assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, 'succeeded');
     assert.equal(refreshed?.workerTaskId, null);
@@ -2323,6 +2328,7 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     assert.equal(dispatched.result.dispatched, true);
     assert.equal(dispatched.soulAction?.id, action!.id);
     assert.equal(dispatched.soulAction?.sourceNoteId, record!.id);
+    assert.equal(dispatched.soulAction?.sourceReintegrationId, record!.id);
     assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
     assert.equal(dispatched.soulAction?.executionStatus, 'succeeded');
     assert.equal(dispatched.result.workerTaskId, null);
@@ -2336,6 +2342,7 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
     assert.ok(refreshed);
     assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.sourceReintegrationId, record!.id);
     assert.equal(refreshed?.governanceStatus, 'approved');
     assert.equal(refreshed?.executionStatus, 'succeeded');
     assert.equal(refreshed?.workerTaskId, null);

@@ -340,6 +340,7 @@ export interface WorkerTask<T extends WorkerTaskType = WorkerTaskType> {
 export interface SoulAction {
   id: string;
   sourceNoteId: string;
+  sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
   governanceStatus: SoulActionGovernanceStatus;
   executionStatus: SoulActionExecutionStatus;

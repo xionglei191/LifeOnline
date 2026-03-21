@@ -9,7 +9,8 @@ export interface PromotionExecutionResult {
 }
 
 export function executePromotionSoulAction(action: SoulAction): PromotionExecutionResult {
-  const sourceReintegrationId = action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null;
+  const sourceReintegrationId = action.sourceReintegrationId
+    ?? (action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null);
   if (!sourceReintegrationId) {
     throw new Error('PR6 promotion soul action requires reintegration-record sourceNoteId');
   }

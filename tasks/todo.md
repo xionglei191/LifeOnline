@@ -215,18 +215,19 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 30 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
-  - 本轮 server 变更仍未提交 git commit。
+  - 本轮 server/shared 变更仍未提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿同一条高价值主线推进，优先检查 PR6 promotion action 的 `sourceNoteId` / reintegration id 过载是否要收口成更明确的 shared/server contract，而不是回到 grouped governance 的低边际补强。
-  - 若本轮就收口，也可以直接提交当前 event-node 标题语义收紧与 contract test 增量，继续提升 projection 从 server 到 UI 的可读性。
+  - 若继续沿同一条高价值主线推进，优先评估是否把 promotion soul action 在 web grouped display / filters 上也逐步切到显式 `sourceReintegrationId`，减少后续继续把 reintegration id 误当作 note id 的扩散面。
+  - 若本轮就收口，也可以直接提交当前 shared/server contract 收口增量，先把 PR6 promotion action 的事实源语义从 API 层明确出来。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/src/soul/pr6PromotionRules.ts` 新增 `getEventTitleForReintegrationSignal()`，把 PR6 signalKind 到 event-node 展示标题的映射收口到统一规则源，避免标题语义继续散落在 executor 或 UI。
-  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` 不再生成 `${eventKind}:${record.id}` 这种机器式标题，而是为 persona / daily / weekly 三条真实 promotion 路径分别落地可读标题：`人格切换事件`、`里程碑事件`、`周回顾事件`。
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 event-node follow-up projection contract 断言继续收紧到 `eventKind + title + summary` 三元组，直接锁住 server 对 web projection panel 暴露的人类可读展示数据，而不只是 id 与 summary。
+  - `LifeOS/packages/shared/src/types.ts` 与 `LifeOS/packages/server/src/soul/types.ts` 为 `SoulAction` 新增显式 `sourceReintegrationId?: string | null`，在 shared/server contract 层正式表达 PR6 promotion action 的真实来源，而不再只靠 `sourceNoteId` 的隐式过载语义。
+  - `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts` 在规划 PR6 promotion actions 时显式写入 `sourceReintegrationId`；`LifeOS/packages/server/src/soul/soulActions.ts` 在 row 映射与新建 action 时同步暴露该字段；`LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` 优先消费显式 `sourceReintegrationId`，仅保留对旧 `sourceNoteId=reint:*` 数据的兼容回退。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 accept、grouped dispatch、promotion continuity dispatch、promotion event-node dispatch 相关 contract 断言继续收紧到 `sourceNoteId + sourceReintegrationId` 双字段，直接锁住 planner / dispatch / follow-up list 三处对同一 promotion 来源语义的对齐。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，30/30。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "reintegration accept API returns reviewed record and planned soul actions|promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|dispatch API response and follow-up list stay aligned for grouped settings refresh" test/reintegrationApi.test.ts` 通过，4/4。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
-  - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮测试与构建结果均通过。
+  - 全量 `reintegrationApi.test.ts` 当前仍有历史 websocket/worker-task 等待超时波动；本轮改动直接相关的 targeted contract 覆盖已通过。
+  - 仍有 Node engine warning：包声明要求 `>=20 <21`，当前环境是 `v25.8.1`，但本轮 targeted tests 与构建均通过。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 将单条 dispatch 成功提示继续收紧为直接消费 `DispatchSoulActionResponse.task.taskType`，在已有 workerTaskId 基础上补充本地化 task label，避免 web 侧只展示 ID 而没有落地 shared/server 已锁住的 task contract。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步把单条 dispatch 成功提示与两条 websocket retention 断言更新为包含 `人格快照更新` label，直接锁住 success message 在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下都持续消费该 contract。

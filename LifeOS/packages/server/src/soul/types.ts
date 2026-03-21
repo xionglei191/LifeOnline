@@ -19,6 +19,7 @@ export type ContinuityRecordKind = 'persona_direction' | 'daily_rhythm' | 'weekl
 export interface SoulAction {
   id: string;
   sourceNoteId: string;
+  sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
   governanceStatus: SoulActionGovernanceStatus;
   executionStatus: SoulActionExecutionStatus;
