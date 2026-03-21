@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,89 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('fetches typed reintegration contracts from shared response shapes', async () => {
+    const reintegrationRecord: ReintegrationRecord = {
+      id: 'reint:worker-task-1',
+      workerTaskId: 'worker-task-1',
+      sourceNoteId: 'note-1',
+      soulActionId: 'soul-action-1',
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'Daily report reintegration summary',
+      evidence: { source: 'client-test' },
+      reviewReason: null,
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      reviewedAt: null,
+    };
+    const plannedSoulAction: SoulAction = {
+      id: 'soul:promote_event_node:reint:worker-task-1',
+      sourceNoteId: 'note-1',
+      sourceReintegrationId: reintegrationRecord.id,
+      actionKind: 'promote_event_node',
+      governanceStatus: 'pending_review',
+      executionStatus: 'not_dispatched',
+      governanceReason: 'promotion planned',
+      workerTaskId: null,
+      payload: { source: 'client-test' },
+      createdAt: '2026-03-22T10:05:00.000Z',
+      updatedAt: '2026-03-22T10:05:00.000Z',
+      approvedAt: null,
+      startedAt: null,
+      finishedAt: null,
+      error: null,
+      resultSummary: null,
+    };
+    const accepted: AcceptReintegrationRecordResponse = {
+      reintegrationRecord: { ...reintegrationRecord, reviewStatus: 'accepted', reviewReason: 'looks good', reviewedAt: '2026-03-22T10:06:00.000Z' },
+      soulActions: [plannedSoulAction],
+    };
+    const rejected: RejectReintegrationRecordResponse = {
+      reintegrationRecord: { ...reintegrationRecord, reviewStatus: 'rejected', reviewReason: 'not useful', reviewedAt: '2026-03-22T10:07:00.000Z' },
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ reintegrationRecords: [reintegrationRecord] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => accepted })
+      .mockResolvedValueOnce({ ok: true, json: async () => rejected })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulActions: [plannedSoulAction] }) }));
+
+    await expect(fetchReintegrationRecords('pending_review')).resolves.toEqual([reintegrationRecord]);
+    await expect(acceptReintegrationRecord('reint:worker-task-1', { reason: 'looks good' })).resolves.toEqual(accepted);
+    await expect(rejectReintegrationRecord('reint:worker-task-1', { reason: 'not useful' })).resolves.toEqual(rejected);
+    await expect(planReintegrationPromotions('reint:worker-task-1')).resolves.toEqual([plannedSoulAction]);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/reintegration-records?reviewStatus=pending_review');
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/reintegration-records/reint%3Aworker-task-1/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'looks good' }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/reintegration-records/reint%3Aworker-task-1/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'not useful' }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(4, '/api/reintegration-records/reint%3Aworker-task-1/plan-promotions', {
+      method: 'POST',
+    });
+  });
+
+  it('surfaces API errors for reintegration contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'reintegration list failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'reintegration accept failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'reintegration reject failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'reintegration plan failed' }) }));
+
+    await expect(fetchReintegrationRecords()).rejects.toThrow('reintegration list failed');
+    await expect(acceptReintegrationRecord('reint:worker-task-1')).rejects.toThrow('reintegration accept failed');
+    await expect(rejectReintegrationRecord('reint:worker-task-1')).rejects.toThrow('reintegration reject failed');
+    await expect(planReintegrationPromotions('reint:worker-task-1')).rejects.toThrow('reintegration plan failed');
   });
 
   it('fetches typed AI provider contracts from shared response shapes', async () => {

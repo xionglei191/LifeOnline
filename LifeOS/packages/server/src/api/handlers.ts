@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -618,17 +618,26 @@ export async function dispatchSoulActionHandler(req: Request, res: Response): Pr
   }
 }
 
-export async function listReintegrationRecordsHandler(req: Request, res: Response): Promise<void> {
+export async function listReintegrationRecordsHandler(
+  req: Request<Record<string, never>, ListReintegrationRecordsResponse, Record<string, never>, { reviewStatus?: 'pending_review' | 'accepted' | 'rejected' }>,
+  res: Response<ListReintegrationRecordsResponse>,
+): Promise<void> {
   try {
     const reviewStatus = typeof req.query.reviewStatus === 'string' ? req.query.reviewStatus.trim() as 'pending_review' | 'accepted' | 'rejected' : undefined;
-    res.json({ reintegrationRecords: listReintegrationRecords({ reviewStatus }) });
+    const response: ListReintegrationRecordsResponse = {
+      reintegrationRecords: listReintegrationRecords({ reviewStatus }),
+    };
+    res.json(response);
   } catch (error) {
     console.error('List reintegration records error:', error);
     res.status(500).json({ error: String(error) });
   }
 }
 
-export async function acceptReintegrationRecordHandler(req: Request, res: Response): Promise<void> {
+export async function acceptReintegrationRecordHandler(
+  req: Request<{ id: string }, AcceptReintegrationRecordResponse, ReintegrationReviewRequest>,
+  res: Response<AcceptReintegrationRecordResponse>,
+): Promise<void> {
   try {
     const result = acceptReintegrationRecordAndPlanPromotions(req.params.id, getGovernanceReason(req.body));
     if (!result) {
@@ -637,13 +646,17 @@ export async function acceptReintegrationRecordHandler(req: Request, res: Respon
     }
     broadcastReintegrationRecordUpdate(result.reintegrationRecord);
     result.soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
-    res.json(result);
+    const response: AcceptReintegrationRecordResponse = result;
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }
 }
 
-export async function rejectReintegrationRecordHandler(req: Request, res: Response): Promise<void> {
+export async function rejectReintegrationRecordHandler(
+  req: Request<{ id: string }, RejectReintegrationRecordResponse, ReintegrationReviewRequest>,
+  res: Response<RejectReintegrationRecordResponse>,
+): Promise<void> {
   try {
     const record = rejectReintegrationRecord(req.params.id, getGovernanceReason(req.body));
     if (!record) {
@@ -651,13 +664,17 @@ export async function rejectReintegrationRecordHandler(req: Request, res: Respon
       return;
     }
     broadcastReintegrationRecordUpdate(record);
-    res.json({ reintegrationRecord: record });
+    const response: RejectReintegrationRecordResponse = { reintegrationRecord: record };
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }
 }
 
-export async function planPromotionsHandler(req: Request, res: Response): Promise<void> {
+export async function planPromotionsHandler(
+  req: Request<{ id: string }, PlanReintegrationPromotionsResponse>,
+  res: Response<PlanReintegrationPromotionsResponse>,
+): Promise<void> {
   try {
     const record = getReintegrationRecord(req.params.id);
     if (!record) {
@@ -667,7 +684,8 @@ export async function planPromotionsHandler(req: Request, res: Response): Promis
     const soulActions = planPromotionSoulActions(record);
     broadcastReintegrationRecordUpdate(record);
     soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
-    res.json({ soulActions });
+    const response: PlanReintegrationPromotionsResponse = { soulActions };
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }

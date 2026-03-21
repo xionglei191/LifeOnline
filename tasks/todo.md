@@ -1,3 +1,38 @@
+# reintegration shared contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 reintegration 主路径，确认 list/accept/reject/plan-promotions 是否已稳定依赖 shared response contract，但仍缺少显式回归锁定。
+- [x] 让 server handlers 显式接回 shared reintegration contracts，并补最小 web + server 回归覆盖返回 shape。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `listReintegrationRecordsHandler()` 显式接回 shared `ListReintegrationRecordsResponse`。
+    - `acceptReintegrationRecordHandler()` 显式接回 shared `AcceptReintegrationRecordResponse`。
+    - `rejectReintegrationRecordHandler()` 显式接回 shared `RejectReintegrationRecordResponse`。
+    - `planPromotionsHandler()` 显式接回 shared `PlanReintegrationPromotionsResponse`。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 reintegration shared contract 回归。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `reintegration APIs respond with shared reintegration contracts`。
+- 这次修的不是回到 SettingsView 做对称补强，而是 reintegration 主路径虽然 shared 已有稳定 response contracts，但缺少 API 层显式接回与回归保护，后续最容易再次发生 server/web 漂移。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- AI provider 收口后，reintegration 是下一条真实主路径：shared 已存在 `ListReintegrationRecordsResponse` / `AcceptReintegrationRecordResponse` / `RejectReintegrationRecordResponse` / `PlanReintegrationPromotionsResponse`，且 Settings 中正在直接消费这些行为。
+- 这条线可以继续减少 reintegration 审核与 promotion planning 主路径的 contract 漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 132 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "reintegration APIs respond with shared reintegration contracts|soul-actions API approve then dispatch runs governance happy path" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- reintegration 主路径收口后，下一步可继续检查 soul action detail/list 或其它 shared 已存在但 handler/client 未显式 typed 的残留点。
+
+
 # AI provider shared contract 闭环
 
 ## 计划

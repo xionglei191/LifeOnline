@@ -9,6 +9,7 @@ import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 import { createWorkerTask as seedWorkerTask, cancelWorkerTask as seedCancelWorkerTask } from '../src/workers/workerTasks.js';
+import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
 const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -733,6 +734,87 @@ test('updating config restores original watcher state when restart fails', async
     });
   } finally {
     configUpdateDeps.restartWatcher = originalRestartWatcher;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('reintegration APIs respond with shared reintegration contracts', async () => {
+  const env = await createTestEnv('lifeos-reintegration-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const reintegrationRecord = upsertReintegrationRecord({
+      workerTaskId: 'worker-task-reintegration-contract',
+      sourceNoteId: 'note-reintegration-contract',
+      soulActionId: 'soul-action-reintegration-contract',
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'daily report reintegration summary',
+      evidence: { source: 'configLifecycle.test.ts' },
+    });
+
+    const listed = await api<import('../../shared/src/types.js').ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=pending_review',
+    );
+    assert.ok(listed.reintegrationRecords.some((record) => record.id === reintegrationRecord.id));
+
+    const accepted = await api<import('../../shared/src/types.js').AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${reintegrationRecord.id}/accept`,
+      { method: 'POST', body: JSON.stringify({ reason: 'accepted in api test' } satisfies import('../../shared/src/types.js').ReintegrationReviewRequest) },
+    );
+    assert.equal(accepted.reintegrationRecord.id, reintegrationRecord.id);
+    assert.equal(accepted.reintegrationRecord.reviewStatus, 'accepted');
+    assert.ok(Array.isArray(accepted.soulActions));
+
+    const planned = await api<import('../../shared/src/types.js').PlanReintegrationPromotionsResponse>(
+      baseUrl,
+      `/api/reintegration-records/${reintegrationRecord.id}/plan-promotions`,
+      { method: 'POST' },
+    );
+    assert.ok(Array.isArray(planned.soulActions));
+
+    const rejectedSeed = upsertReintegrationRecord({
+      workerTaskId: 'worker-task-reintegration-reject-contract',
+      sourceNoteId: 'note-reintegration-reject-contract',
+      soulActionId: 'soul-action-reintegration-reject-contract',
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'weekly report reintegration summary',
+      evidence: { source: 'configLifecycle.test.ts' },
+    });
+
+    const rejected = await api<import('../../shared/src/types.js').RejectReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${rejectedSeed.id}/reject`,
+      { method: 'POST', body: JSON.stringify({ reason: 'rejected in api test' } satisfies import('../../shared/src/types.js').ReintegrationReviewRequest) },
+    );
+    assert.equal(rejected.reintegrationRecord.id, rejectedSeed.id);
+    assert.equal(rejected.reintegrationRecord.reviewStatus, 'rejected');
+  } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
