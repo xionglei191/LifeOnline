@@ -141,14 +141,14 @@
   - `LifeOS/packages/web/src/views/SettingsView.vue` 改为复用这组纯函数，保持现有 UI 行为不变，但不再把 grouped governance 规则内联死在单个大视图里。
   - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 新增 5 条最小前端语义测试，覆盖分组计数、`pending_only` 过滤、`dispatch_ready_only` 过滤、按 reintegration 时间排序，以及 filter label/stats 文案一致性。
 - 本轮验证补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 11 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 14 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现补充：
-  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 3 条交互/状态测试，直接锁定 quick filter 变更事件、组级 dispatch 按钮在 mixed group 下的禁用条件，以及 group dispatch 处理中时的禁用态与按钮文案。
-  - 这次不新增接口、不改治理规则，只把上一轮刚抽出的 panel 组件继续补到“可见性 + 交互门槛”两个最容易回归的真实前端语义层。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 3 条 payload 级交互测试，分别锁定 `approve-group`、`dispatch-group`、`approve-action` / `dispatch-action` 触发时携带的 group/action 身份。
+  - 同时把 group payload 测试收紧到符合真实治理门槛的场景：只有 pending group 会触发 `approve-group`，只有 fully-ready group 会触发 `dispatch-group`，避免测试本身引入与 UI 规则相矛盾的假设。
 - 当前未完成项：
-  - 当前组件测试仍未覆盖 approve-group / dispatch-group / approve-action / dispatch-action 具体 emitted payload 的完整行为矩阵。
+  - 当前组件测试仍未覆盖 `refresh`、`toggle-collapsed`、`update:filterStatus`、`update:executionFilter` 的 emitted payload。
   - 本轮 web 变更尚未提交 git commit。
 - 下一步建议：
-  - 若继续沿同一主线推进，优先补 emitted payload 级测试，锁定单条/组级 approve 与 dispatch 事件携带的 action/group 身份，进一步减少 Settings 治理 UI 的行为漂移。
-  - 若本轮先提交也合适；因为 quick filter 事件和 dispatch 门槛这两个最直接的 UI 约束现在已经被组件测试实际覆盖。
+  - 若继续沿同一主线推进，优先补 panel 其余 emitted 事件的 payload 测试，把当前组件对父层的关键通信面一次性锁稳。
+  - 若本轮先提交也合适；因为 approve / dispatch 相关的组级与单条事件身份现在已经有直接组件测试保护。

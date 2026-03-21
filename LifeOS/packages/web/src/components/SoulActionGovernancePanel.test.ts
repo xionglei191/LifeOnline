@@ -57,6 +57,9 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'done-1', sourceNoteId: 'record-done', createdAt: '2026-03-19T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'succeeded' }),
 ];
 
+const readyGroup = buildSoulActionGroups(soulActions, reintegrationRecords, 'dispatch_ready_only')[0]!;
+const mixedGroup = buildSoulActionGroups(soulActions, reintegrationRecords, 'pending_only')[0]!;
+
 function mountPanel(quickFilter: SoulActionGroupQuickFilter, overrides?: Partial<InstanceType<typeof SoulActionGovernancePanel>['$props']>): VueWrapper {
   return mount(SoulActionGovernancePanel, {
     props: {
@@ -139,6 +142,35 @@ describe('SoulActionGovernancePanel', () => {
     const readyWrapper = mountPanel('dispatch_ready_only');
     const readyButton = readyWrapper.find('.soul-action-group-toolbar .btn-cancel');
     expect(readyButton.attributes('disabled')).toBeUndefined();
+  });
+
+  it('emits the selected group payload for approve-group actions', async () => {
+    const wrapper = mountPanel('pending_only');
+
+    const approveButton = wrapper.find('.soul-action-group-toolbar .btn-worker');
+    await approveButton.trigger('click');
+
+    expect(wrapper.emitted('approve-group')).toEqual([[mixedGroup]]);
+  });
+
+  it('emits the selected group payload for dispatch-group actions', async () => {
+    const wrapper = mountPanel('dispatch_ready_only');
+
+    const dispatchButton = wrapper.find('.soul-action-group-toolbar .btn-cancel');
+    await dispatchButton.trigger('click');
+
+    expect(wrapper.emitted('dispatch-group')).toEqual([[readyGroup]]);
+  });
+
+  it('emits the selected action payload for approve-action and dispatch-action controls', async () => {
+    const wrapper = mountPanel('pending_only');
+
+    const actionRows = wrapper.findAll('.soul-action-item');
+    await actionRows[0]!.find('.btn-worker').trigger('click');
+    await actionRows[1]!.find('.btn-cancel').trigger('click');
+
+    expect(wrapper.emitted('approve-action')).toEqual([[mixedGroup.actions[0]]]);
+    expect(wrapper.emitted('dispatch-action')).toEqual([[mixedGroup.actions[1]]]);
   });
 
   it('disables group dispatch while the matching group is processing', () => {
