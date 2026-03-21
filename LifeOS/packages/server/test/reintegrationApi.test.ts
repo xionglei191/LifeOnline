@@ -148,7 +148,7 @@ test('soul-action defer and discard APIs keep governance detail and list views a
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-soul-action-defer-discard',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-soul-action-defer-discard',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -210,10 +210,13 @@ test('soul-action defer and discard APIs keep governance detail and list views a
 
     const deferredList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=deferred`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=deferred`,
     );
+    assert.equal(deferredList.filters.sourceReintegrationId, record!.id);
     assert.equal(deferredList.soulActions.length, 1);
     assert.equal(deferredList.soulActions[0]?.id, targetAction.id);
+    assert.equal(deferredList.soulActions[0]?.sourceNoteId, 'note-api-soul-action-defer-discard');
+    assert.equal(deferredList.soulActions[0]?.sourceReintegrationId, record!.id);
     assert.equal(deferredList.soulActions[0]?.governanceStatus, 'deferred');
 
     const discarded = await api<SoulActionResponse>(
@@ -241,10 +244,13 @@ test('soul-action defer and discard APIs keep governance detail and list views a
 
     const discardedList = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=discarded`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=discarded`,
     );
+    assert.equal(discardedList.filters.sourceReintegrationId, record!.id);
     assert.equal(discardedList.soulActions.length, 1);
     assert.equal(discardedList.soulActions[0]?.id, targetAction.id);
+    assert.equal(discardedList.soulActions[0]?.sourceNoteId, 'note-api-soul-action-defer-discard');
+    assert.equal(discardedList.soulActions[0]?.sourceReintegrationId, record!.id);
     assert.equal(discardedList.soulActions[0]?.governanceStatus, 'discarded');
   } finally {
     await stopServer();

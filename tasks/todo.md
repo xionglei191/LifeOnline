@@ -737,6 +737,18 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list" test/reintegrationApi.test.ts` 通过，2/2。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 defer/discard API contract 从旧兼容语义继续收口到双事实源：fixture 改为显式真实 `sourceNoteId = note-api-soul-action-defer-discard`，而 follow-up list 改为按 `sourceReintegrationId = record.id` 查询，不再把 reintegration record id 继续当作 note-level filter key。
+  - 同一条用例新增断言锁定 defer/discard follow-up list 返回的 `filters.sourceReintegrationId`、`action.sourceNoteId`、`action.sourceReintegrationId` 三者同时正确，避免这条非-dispatch 治理路径继续停留在旧 promotion 兼容语义上。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action defer and discard APIs keep governance detail and list views aligned" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - `reintegrationApi.test.ts` 与 `feedbackReintegration.test.ts` 中仍有不少 `sourceNoteId: null` fixture；其中一部分是合法 fallback 覆盖，但后续仍要继续筛掉那些与“真实 note source + 显式 reintegration source”主语义冲突的残留点。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 优先继续排查 `reintegrationApi.test.ts` / `feedbackReintegration.test.ts` 中仍把 promotion follow-up list 或治理断言锚在旧兼容语义上的用例，尤其是 defer/discard 之外的非-dispatch 路径。
+  - 若本轮先收口，也可以直接提交当前这条非-dispatch governance contract 修正，避免这条边路继续把旧 source 语义保留在回归面里。
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 related worker task 的 `handleRetryRelatedTask()` / `handleCancelRelatedTask()` 也直接消费 `retryWorkerTask()` / `cancelWorkerTask()` 返回的 `WorkerTask`，成功反馈与创建路径统一为本地化的 `任务 ID · 任务类型 · 状态 · worker` 文案，避免同一组件内 create 与 retry/cancel 两套展示口径分叉。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 新增 retry 与 cancel 两条回归，锁定关联任务操作后会展示 `提取行动项 · 等待执行 · LifeOS` 与 `OpenClaw 任务 · 已取消 · OpenClaw`，并继续防止 raw enum 回流到 UI。
 - 本轮验证再补充：
