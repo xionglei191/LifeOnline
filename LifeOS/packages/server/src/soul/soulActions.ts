@@ -59,8 +59,27 @@ function rowToSoulAction(row: SoulActionRow): SoulAction {
   };
 }
 
-function buildSoulActionId(sourceNoteId: string, actionKind: SoulActionKind): string {
-  return `soul:${actionKind}:${sourceNoteId}`;
+function isPromotionSoulActionKind(actionKind: SoulActionKind): boolean {
+  return actionKind === 'promote_event_node' || actionKind === 'promote_continuity_record';
+}
+
+function getSoulActionIdentityKey(input: {
+  sourceNoteId: string;
+  sourceReintegrationId?: string | null;
+  actionKind: SoulActionKind;
+}): string {
+  if (isPromotionSoulActionKind(input.actionKind) && input.sourceReintegrationId) {
+    return input.sourceReintegrationId;
+  }
+  return input.sourceNoteId;
+}
+
+function buildSoulActionId(input: {
+  sourceNoteId: string;
+  sourceReintegrationId?: string | null;
+  actionKind: SoulActionKind;
+}): string {
+  return `soul:${input.actionKind}:${getSoulActionIdentityKey(input)}`;
 }
 
 function mapWorkerTaskStatusToExecutionStatus(status: WorkerTask['status']): SoulActionExecutionStatus {
@@ -121,6 +140,24 @@ export function getSoulActionBySourceNoteIdAndKind(sourceNoteId: string, actionK
   return row ? rowToSoulAction(row) : null;
 }
 
+export function getSoulActionBySourceReintegrationIdAndKind(sourceReintegrationId: string, actionKind: SoulActionKind): SoulAction | null {
+  const row = getDb()
+    .prepare('SELECT * FROM soul_actions WHERE source_reintegration_id = ? AND action_kind = ?')
+    .get(sourceReintegrationId, actionKind) as SoulActionRow | undefined;
+  return row ? rowToSoulAction(row) : null;
+}
+
+export function getSoulActionByIdentityAndKind(input: {
+  sourceNoteId: string;
+  sourceReintegrationId?: string | null;
+  actionKind: SoulActionKind;
+}): SoulAction | null {
+  if (isPromotionSoulActionKind(input.actionKind) && input.sourceReintegrationId) {
+    return getSoulActionBySourceReintegrationIdAndKind(input.sourceReintegrationId, input.actionKind);
+  }
+  return getSoulActionBySourceNoteIdAndKind(input.sourceNoteId, input.actionKind);
+}
+
 export function getSoulActionByWorkerTaskId(workerTaskId: string): SoulAction | null {
   const row = getDb().prepare('SELECT * FROM soul_actions WHERE worker_task_id = ?').get(workerTaskId) as SoulActionRow | undefined;
   return row ? rowToSoulAction(row) : null;
@@ -135,7 +172,7 @@ export function createOrReuseSoulAction(input: {
   executionStatus?: SoulActionExecutionStatus;
   governanceReason?: string | null;
 }): SoulAction {
-  const existing = getSoulActionBySourceNoteIdAndKind(input.sourceNoteId, input.actionKind);
+  const existing = getSoulActionByIdentityAndKind(input);
   if (existing) {
     return existing;
   }
@@ -144,7 +181,7 @@ export function createOrReuseSoulAction(input: {
   const governanceStatus = input.governanceStatus ?? 'pending_review';
   const executionStatus = input.executionStatus ?? 'not_dispatched';
   const action: SoulAction = {
-    id: buildSoulActionId(input.sourceNoteId, input.actionKind),
+    id: buildSoulActionId(input),
     sourceNoteId: input.sourceNoteId,
     sourceReintegrationId: input.sourceReintegrationId ?? null,
     actionKind: input.actionKind,

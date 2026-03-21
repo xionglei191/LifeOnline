@@ -5,7 +5,7 @@ import { assertAcceptedPromotionReintegration, getPromotionActionKindsForReinteg
 export function planPromotionSoulActions(record: ReintegrationRecord) {
   assertAcceptedPromotionReintegration(record);
 
-  const sourceNoteId = record.id;
+  const sourceNoteId = record.sourceNoteId ?? record.id;
   const sourceReintegrationId = record.id;
   const planned = [] as ReturnType<typeof createOrReuseSoulAction>[];
 

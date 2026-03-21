@@ -6,7 +6,7 @@ import type { WorkerTask } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb, closeDb } from '../src/db/client.js';
 import { createWorkerTask, executeWorkerTask, cancelWorkerTask } from '../src/workers/workerTasks.js';
-import { approveSoulAction, createOrReuseSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
+import { approveSoulAction, createOrReuseSoulAction, getSoulActionByIdentityAndKind, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
@@ -69,8 +69,13 @@ test('createOrReuseSoulAction persists explicit sourceReintegrationId independen
     governanceReason: 'persist explicit source reintegration id',
   });
 
-  const reloaded = getSoulActionBySourceNoteIdAndKind('note-separated-source', 'promote_event_node');
+  const reloaded = getSoulActionByIdentityAndKind({
+    sourceNoteId: 'note-separated-source',
+    sourceReintegrationId: 'reint:separated-source',
+    actionKind: 'promote_event_node',
+  });
   assert.ok(reloaded);
+  assert.equal(action.id, 'soul:promote_event_node:reint:separated-source');
   assert.equal(action.sourceNoteId, 'note-separated-source');
   assert.equal(action.sourceReintegrationId, 'reint:separated-source');
   assert.equal(reloaded?.sourceNoteId, 'note-separated-source');
@@ -2092,7 +2097,7 @@ test('acceptReintegrationRecordAndPlanPromotions auto-plans PR6 actions on accep
   initDatabase();
   upsertReintegrationRecord({
     workerTaskId: 'manual-task-pr6-accept-plan',
-    sourceNoteId: null,
+    sourceNoteId: 'note-pr6-accept-plan',
     soulActionId: null,
     taskType: 'weekly_report',
     terminalStatus: 'succeeded',
@@ -2117,9 +2122,19 @@ test('acceptReintegrationRecordAndPlanPromotions auto-plans PR6 actions on accep
     acceptedResult?.soulActions.map((action) => action.actionKind).sort(),
     ['promote_continuity_record', 'promote_event_node'],
   );
+  assert.ok(acceptedResult?.soulActions.every((action) => action.sourceNoteId === 'note-pr6-accept-plan'));
+  assert.ok(acceptedResult?.soulActions.every((action) => action.sourceReintegrationId === reintegrationRecord!.id));
 
-  const persistedEventAction = getSoulActionBySourceNoteIdAndKind(`reint:${reintegrationRecord!.workerTaskId}`, 'promote_event_node');
-  const persistedContinuityAction = getSoulActionBySourceNoteIdAndKind(`reint:${reintegrationRecord!.workerTaskId}`, 'promote_continuity_record');
+  const persistedEventAction = getSoulActionByIdentityAndKind({
+    sourceNoteId: 'note-pr6-accept-plan',
+    sourceReintegrationId: reintegrationRecord!.id,
+    actionKind: 'promote_event_node',
+  });
+  const persistedContinuityAction = getSoulActionByIdentityAndKind({
+    sourceNoteId: 'note-pr6-accept-plan',
+    sourceReintegrationId: reintegrationRecord!.id,
+    actionKind: 'promote_continuity_record',
+  });
   assert.ok(persistedEventAction);
   assert.ok(persistedContinuityAction);
 });
@@ -2153,6 +2168,8 @@ test('acceptReintegrationRecordAndPlanPromotions reuses existing PR6 promotion a
   const firstAcceptance = acceptReintegrationRecordAndPlanPromotions(record!.id, 'first accept');
   assert.ok(firstAcceptance);
   assert.equal(firstAcceptance?.soulActions.length, 2);
+  assert.ok(firstAcceptance?.soulActions.every((action) => action.sourceNoteId === 'note-pr6-auto-plan'));
+  assert.ok(firstAcceptance?.soulActions.every((action) => action.sourceReintegrationId === record!.id));
 
   const secondPlanned = planPromotionSoulActions(firstAcceptance!.reintegrationRecord);
   assert.equal(secondPlanned.length, 2);
@@ -2162,9 +2179,9 @@ test('acceptReintegrationRecordAndPlanPromotions reuses existing PR6 promotion a
   const promotionActions = getDb().prepare(`
     SELECT COUNT(*) as total
     FROM soul_actions
-    WHERE source_note_id = ?
+    WHERE source_reintegration_id = ?
       AND action_kind IN ('promote_event_node', 'promote_continuity_record')
-  `).get(`reint:${record!.workerTaskId}`) as { total: number };
+  `).get(record!.id) as { total: number };
   assert.equal(promotionActions.total, 2);
 });
 

@@ -338,7 +338,7 @@ test('reintegration accept API returns reviewed record and planned soul actions'
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-accept',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -372,7 +372,7 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       accepted.soulActions.map((action) => action.actionKind).sort(),
       ['promote_continuity_record', 'promote_event_node'],
     );
-    assert.ok(accepted.soulActions.every((action) => action.sourceNoteId === record!.id));
+    assert.ok(accepted.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6'));
     assert.ok(accepted.soulActions.every((action) => action.sourceReintegrationId === record!.id));
 
     const listedByReintegration = await api<ListSoulActionsResponse>(
