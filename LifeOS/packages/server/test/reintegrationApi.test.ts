@@ -4,8 +4,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import {
   type AcceptReintegrationRecordResponse,
+  type DispatchSoulActionResponse,
   type ListReintegrationRecordsResponse,
+  type ListSoulActionsResponse,
   type PlanReintegrationPromotionsResponse,
+  type SoulActionResponse,
 } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer } from '../src/index.js';
@@ -106,6 +109,114 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       planned.soulActions.map((action) => action.id).sort(),
       accepted.soulActions.map((action) => action.id).sort(),
     );
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('soul-action approve and dispatch APIs cover the settings governance path', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-governance-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-governance',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api governance summary',
+      evidence: { source: 'api-governance-test' },
+      now: '2026-03-21T11:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-governance');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for governance api test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    const listedSoulActions = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    assert.equal(listedSoulActions.soulActions.length, 2);
+    assert.equal(listedSoulActions.filters.sourceNoteId, record!.id);
+    assert.equal(listedSoulActions.filters.governanceStatus, 'pending_review');
+    assert.equal(listedSoulActions.filters.executionStatus, 'not_dispatched');
+
+    const action = listedSoulActions.soulActions[0]!;
+    const approved = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approved from reintegration settings api test' }),
+      },
+    );
+    assert.equal(approved.soulAction.id, action.id);
+    assert.equal(approved.soulAction.governanceStatus, 'approved');
+    assert.equal(approved.soulAction.executionStatus, 'not_dispatched');
+    assert.equal(approved.soulAction.governanceReason, 'approved from reintegration settings api test');
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.equal(dispatched.result.dispatched, true);
+    assert.equal(dispatched.result.soulActionId, action.id);
+    assert.ok(dispatched.result.reason.length > 0);
+    assert.equal(dispatched.soulAction?.id, action.id);
+    assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
+    assert.ok(dispatched.soulAction?.executionStatus === 'pending' || dispatched.soulAction?.executionStatus === 'running' || dispatched.soulAction?.executionStatus === 'succeeded');
+    if (dispatched.result.workerTaskId) {
+      assert.ok(dispatched.task);
+      assert.equal(dispatched.task?.id, dispatched.result.workerTaskId);
+    } else {
+      assert.equal(dispatched.task, null);
+    }
+
+    const detail = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}`,
+    );
+    assert.equal(detail.soulAction.id, action.id);
+    assert.equal(detail.soulAction.governanceStatus, 'approved');
+    assert.equal(detail.soulAction.sourceNoteId, record!.id);
+    assert.ok(detail.soulAction.executionStatus === 'pending' || detail.soulAction.executionStatus === 'running' || detail.soulAction.executionStatus === 'succeeded');
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
