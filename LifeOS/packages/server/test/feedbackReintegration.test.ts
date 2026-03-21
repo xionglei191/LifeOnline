@@ -260,6 +260,61 @@ test('executePromotionSoulAction prefers explicit sourceReintegrationId over a n
   assert.equal(eventNode?.title, '周回顾事件');
 });
 
+test('executePromotionSoulAction still supports legacy reintegration ids stored in sourceNoteId for event-node promotions', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-legacy-source-note-event-fallback-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  upsertReintegrationRecord({
+    workerTaskId: 'task-pr6-legacy-event-source',
+    sourceNoteId: 'note-legacy-event-original-source',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'weekly legacy reviewed summary',
+    evidence: { source: 'feedback-test-event' },
+    reviewStatus: 'accepted',
+    reviewReason: 'legacy event fallback still supported',
+  });
+
+  const result = executePromotionSoulAction({
+    id: 'soul:promote-event-legacy-source',
+    sourceNoteId: 'reint:task-pr6-legacy-event-source',
+    sourceReintegrationId: null,
+    actionKind: 'promote_event_node',
+    governanceStatus: 'approved',
+    executionStatus: 'not_dispatched',
+    status: 'not_dispatched',
+    workerTaskId: null,
+    governanceReason: null,
+    resultSummary: null,
+    error: null,
+    createdAt: '2026-03-22T10:08:00.000Z',
+    updatedAt: '2026-03-22T10:08:00.000Z',
+    approvedAt: '2026-03-22T10:08:00.000Z',
+    deferredAt: null,
+    discardedAt: null,
+    startedAt: null,
+    finishedAt: null,
+  });
+
+  assert.match(result.summary, /已创建 event node:/);
+
+  const eventNode = listEventNodes().find((item) => item.sourceReintegrationId === 'reint:task-pr6-legacy-event-source');
+  assert.ok(eventNode);
+  assert.equal(eventNode?.sourceReintegrationId, 'reint:task-pr6-legacy-event-source');
+  assert.equal(eventNode?.sourceNoteId, 'note-legacy-event-original-source');
+  assert.equal(eventNode?.eventKind, 'weekly_reflection');
+  assert.equal(eventNode?.title, '周回顾事件');
+});
+
 test('executePromotionSoulAction still supports legacy reintegration ids stored in sourceNoteId', async (t) => {
   const env = await createTestEnv('lifeos-pr6-legacy-source-note-fallback-');
 
