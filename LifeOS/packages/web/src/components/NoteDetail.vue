@@ -577,9 +577,9 @@ async function handleRetryRelatedTask(taskId: string) {
   workerActionTaskId.value = taskId;
   workerMessage.value = '';
   try {
-    await retryWorkerTask(taskId);
+    const task = await retryWorkerTask(taskId);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = '任务已重新加入执行队列';
+    workerMessage.value = workerTaskCreatedMessage(task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '任务重试失败';
@@ -594,9 +594,9 @@ async function handleCancelRelatedTask(taskId: string) {
   workerActionTaskId.value = taskId;
   workerMessage.value = '';
   try {
-    await cancelWorkerTask(taskId);
+    const task = await cancelWorkerTask(taskId);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = '任务已取消';
+    workerMessage.value = workerTaskCreatedMessage(task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '任务取消失败';

@@ -80,11 +80,26 @@ function clickButtonByText(text: string) {
   (button as HTMLButtonElement).click();
 }
 
+function workerTaskCardStub() {
+  return {
+    props: ['task'],
+    emits: ['open-detail', 'open-output', 'cancel', 'retry'],
+    template: `
+      <div>
+        <button type="button" class="stub-retry" @click="$emit('retry', task.id)">重试任务</button>
+        <button type="button" class="stub-cancel" @click="$emit('cancel', task.id)">取消任务</button>
+      </div>
+    `,
+  };
+}
+
 describe('NoteDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiMocks.fetchNoteById.mockResolvedValue(createNote());
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
+    apiMocks.retryWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'pending' }));
+    apiMocks.cancelWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'cancelled' }));
   });
 
   afterEach(() => {
@@ -101,7 +116,7 @@ describe('NoteDetail', () => {
           Teleport: false,
           PrivacyMask: { template: '<div><slot /></div>' },
           WorkerTaskDetail: true,
-          WorkerTaskCard: true,
+          WorkerTaskCard: workerTaskCardStub(),
         },
       },
       attachTo: document.body,
@@ -131,7 +146,7 @@ describe('NoteDetail', () => {
           Teleport: false,
           PrivacyMask: { template: '<div><slot /></div>' },
           WorkerTaskDetail: true,
-          WorkerTaskCard: true,
+          WorkerTaskCard: workerTaskCardStub(),
         },
       },
       attachTo: document.body,
@@ -163,7 +178,7 @@ describe('NoteDetail', () => {
           Teleport: false,
           PrivacyMask: { template: '<div><slot /></div>' },
           WorkerTaskDetail: true,
-          WorkerTaskCard: true,
+          WorkerTaskCard: workerTaskCardStub(),
         },
       },
       attachTo: document.body,
@@ -176,6 +191,59 @@ describe('NoteDetail', () => {
     expect(apiMocks.extractTasks).toHaveBeenCalledWith('note-1.md');
     expect(document.body.textContent).toContain('已创建任务 worker-task-1 · 提取行动项 · 已完成 · LifeOS');
     expect(document.body.textContent).not.toContain('extract_tasks');
+
+    wrapper.unmount();
+  });
+
+  it('renders localized worker-task metadata after retrying a related task', async () => {
+    apiMocks.fetchWorkerTasks.mockResolvedValue([createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'failed' })]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    clickButtonByText('重试任务');
+    await flushPromises();
+
+    expect(apiMocks.retryWorkerTask).toHaveBeenCalledWith('worker-task-retry');
+    expect(document.body.textContent).toContain('已创建任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
+
+    wrapper.unmount();
+  });
+
+  it('renders localized worker-task metadata after cancelling a related task', async () => {
+    apiMocks.fetchWorkerTasks.mockResolvedValue([createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'running' })]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    clickButtonByText('取消任务');
+    await flushPromises();
+
+    expect(apiMocks.cancelWorkerTask).toHaveBeenCalledWith('worker-task-cancel');
+    expect(document.body.textContent).toContain('已创建任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
+    expect(document.body.textContent).not.toContain('openclaw_task');
 
     wrapper.unmount();
   });
