@@ -57,12 +57,17 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 为 grouped soul-action governance 增加第二个保守 quick filter：`dispatch_ready_only`，只显示“整组全部已 approved 且都 still not_dispatched”的分组。
   - 这次不新增后端接口、不改 shared contract，只在现有 grouped computed 上复用 `dispatchReadyCount` 与 `group.actions.length` 做前端过滤，继续保持 approve / dispatch 分离与 review-backed 治理边界。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 为 grouped soul-action governance 补了更直接的筛选可见性：在 summary strip 中增加 `当前分组` 计数，显示“当前命中的分组数 / 全部分组数”。
+  - 同一处为空态补了保守提示文案，引导在 `dispatch_ready_only` / `pending_only` 过滤下快速回到 `全部分组` 或继续检查是否还有已批准未派发分组，减少 settings 里“看起来像没数据”的误判。
+  - 这次仍只复用现有 `soulActions` / grouped computed 数据，不新增 API、不改 shared contract，也不改变 approve / dispatch 规则。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action 行为的测试。
+  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action、空态提示与命中计数的前端交互测试。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定 grouped filters 与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
-  - 若继续做 UI，优先补“当前筛选命中数/空态提示”等低风险可见性增强，而不是继续扩更多治理按钮。
+  - 若继续补验证，下一步优先锁定 grouped filters、命中计数、空态提示与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
+  - 若继续做 UI，优先补每个 quick filter 的细化命中标签或分组 badge，而不是继续扩更多治理动作。
+- 本轮选择依据：当前 PR6 settings 治理链路已经具备按分组查看、approve、dispatch 与 quick filter；下一步最小高价值补强不是再扩动作，而是让“当前筛选到底命中了什么”更可见，降低误读成本。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。

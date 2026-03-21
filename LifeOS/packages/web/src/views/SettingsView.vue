@@ -484,6 +484,10 @@
           <span>已执行</span>
           <strong>{{ soulActionSummary.dispatched }}</strong>
         </div>
+        <div class="reintegration-summary-item">
+          <span>当前分组</span>
+          <strong>{{ soulActionGroups.length }} / {{ soulActionGroupCount }}</strong>
+        </div>
       </div>
 
       <div v-if="soulActionMessage" :class="['message', soulActionMessageType]">{{ soulActionMessage }}</div>
@@ -578,6 +582,7 @@
       </div>
       <div v-else class="worker-empty-state">
         当前筛选下没有 soul actions
+        <span class="worker-empty-hint">可尝试切换为“全部分组”或检查是否还有已批准但未派发的分组。</span>
       </div>
     </div>
 
@@ -1093,6 +1098,10 @@ const soulActionSummary = computed(() => {
   });
 });
 const soulActionGroupQuickFilter = ref<'all' | 'pending_only' | 'dispatch_ready_only'>('all');
+const soulActionGroupCount = computed(() => {
+  const groupIds = new Set(soulActions.value.map((action) => action.sourceNoteId));
+  return groupIds.size;
+});
 const soulActionGroups = computed(() => {
   const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
   for (const action of soulActions.value) {
@@ -2676,6 +2685,13 @@ async function handleReindex() {
   color: var(--text-muted);
   font-size: 13px;
   text-align: center;
+}
+
+.worker-empty-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .worker-meta-pills {
