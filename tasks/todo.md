@@ -67,13 +67,16 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 为 grouped soul-action governance 补了当前 quick filter 模式回显：在筛选区下方直接显示 `当前分组视图：全部分组 / 仅待治理分组 / 仅可派发分组`，避免用户切换后只看结果却忘记当前模式。
   - 这次只基于已有 `soulActionGroupQuickFilter` 增加一个本地 computed label 和轻量提示样式，不新增接口、不改 contract，也不扩治理动作。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 把 reintegration / soul-action summary strip 的栅格从固定 `repeat(3, ...)` 调整为 `repeat(auto-fit, minmax(160px, 1fr))`，让已经扩到 4 个 summary item 的 grouped governance 卡片在当前实现下不再依赖挤压或换行碰运气。
+  - 这次没有新增任何新功能，只是把前几轮已经加进去的 `当前分组` 指标纳入稳定布局约束，属于修正同一主线 UI 的真实显示问题，而不是纯形式整理。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action、空态提示、命中计数、ready pill 与 filter label 回显的前端交互测试。
+  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action、空态提示、命中计数、ready pill、filter label 与 summary strip 布局的前端交互测试。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定 grouped filters、filter label、命中计数、ready pill、空态提示与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
-  - 若继续做 UI，优先把当前模式回显再与 summary strip 或分组标题更紧密对齐，而不是继续扩更多治理动作。
-- 本轮选择依据：上一轮已经把 readiness/pending/counts 暴露到了分组扫描层；继续补一个明确的“当前处于哪种筛选视图”回显，能进一步降低误读成本，而且改动更小、风险更低，也比继续加按钮更符合当前保守边界。
+  - 若继续补验证，下一步优先锁定 grouped filters、filter label、命中计数、ready pill、空态提示、summary strip 布局与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
+  - 若继续做 UI，优先补真实测试或最小可视回归保护，而不是继续叠加更多显示元素。
+- 本轮选择依据：前几轮连续往 grouped governance 顶部补了新的 summary/filter 信息，但原样式仍固定三列；这已经开始影响当前真实界面的稳定性，因此先补布局约束比继续加新显示更有价值，也更符合“小而真”的保守推进口径。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
