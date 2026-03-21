@@ -253,4 +253,53 @@ describe('WorkerTaskDetail', () => {
 
     wrapper.unmount();
   });
+
+  it('emits close when clicking the close button', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask());
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    const closeButton = document.body.querySelector('.close-btn');
+    expect(closeButton).toBeTruthy();
+    (closeButton as HTMLButtonElement).click();
+
+    expect(wrapper.emitted('close')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it('emits close when clicking the overlay itself', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask());
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    const overlay = document.body.querySelector('.worker-task-overlay');
+    expect(overlay).toBeTruthy();
+    overlay!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    expect(wrapper.emitted('close')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
 });
