@@ -773,6 +773,108 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
   }
 });
 
+test('grouped settings list converges after full accept-approve-dispatch chain', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-group-convergence-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-group-convergence',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api grouped convergence summary',
+      evidence: { source: 'api-group-convergence-test' },
+      now: '2026-03-21T18:30:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-convergence');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for grouped convergence api test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    for (const action of accepted.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve full grouped convergence chain' }),
+        },
+      );
+    }
+
+    const dispatchResults: DispatchSoulActionResponse[] = [];
+    for (const action of accepted.soulActions) {
+      dispatchResults.push(
+        await api<DispatchSoulActionResponse>(
+          baseUrl,
+          `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      );
+    }
+
+    const listedAfterDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    assert.equal(listedAfterDispatch.soulActions.length, accepted.soulActions.length);
+
+    const refreshedById = new Map(listedAfterDispatch.soulActions.map((action) => [action.id, action]));
+    for (const dispatched of dispatchResults) {
+      assert.ok(dispatched.soulAction);
+      const refreshed = refreshedById.get(dispatched.soulAction!.id);
+      assert.ok(refreshed);
+      assert.equal(refreshed?.sourceNoteId, record!.id);
+      assert.equal(refreshed?.governanceStatus, 'approved');
+      assert.equal(refreshed?.executionStatus, dispatched.soulAction!.executionStatus);
+      assert.ok(['pending', 'running', 'succeeded'].includes(refreshed!.executionStatus));
+    }
+
+    const pendingReview = listedAfterDispatch.soulActions.filter((action) => action.governanceStatus === 'pending_review');
+    const dispatchReady = listedAfterDispatch.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
+    assert.equal(pendingReview.length, 0);
+    assert.equal(dispatchReady.length, 0);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');

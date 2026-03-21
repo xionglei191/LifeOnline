@@ -91,6 +91,9 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 dispatch 后 follow-up list 收敛测试，锁定 `dispatch` API 返回的 soul action 状态与后续 `GET /api/soul-actions?sourceNoteId=...` 读到的组内状态保持一致。
   - 该测试直接覆盖 grouped governance 的一个关键前提：settings 在 dispatch 后重新拉取列表时，看到的分组内 action 必须与 dispatch 响应中的 execution status 对齐，而不是只依赖 websocket 瞬时事件。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 accept -> approve -> dispatch 全链路组状态收敛测试，锁定 daily-report 分组在完整治理链路走完后，再次 list 时整组 action 都保持 `approved` 且不再落回 `pending_review` / `not_dispatched`。
+  - 该测试与上一条单 action dispatch/list 对齐测试互补：前者锁定单条响应和 follow-up list 一致，新增这条则锁定整组双 action 在完整主链结束后的最终 grouped settings 视图收敛。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。
