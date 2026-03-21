@@ -567,6 +567,11 @@
 - 本轮验证待执行补充：
   - 运行 `SettingsView` 定向测试与 web build，确认 `suggest` prompt 已被 settings prompt center 稳定消费。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再补 1 条 `save -> loadPrompts -> selectedPrompt` 主链断言，锁定 `suggest` prompt 保存 override 后，settings 会重新拉取 prompt 列表、保持当前仍选中 `suggest`、状态 pill 收敛到 `已覆盖`，并把编辑器内容同步为新的 override 文本。
+  - 这次保护的是 prompt center 最关键的真实编辑回路，而不是继续补“能看见 suggest”这一类静态展示断言；它直接防止保存后跳回默认 prompt、状态不刷新、或 textarea 仍残留旧值等用户可见主路径断裂。
+- 本轮验证待执行再补充：
+  - 重新运行 `SettingsView` 定向测试与 web build，确认 suggest prompt 的保存回路与前一轮显示/校验回归一起稳定通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 related worker task 的 `handleRetryRelatedTask()` / `handleCancelRelatedTask()` 也直接消费 `retryWorkerTask()` / `cancelWorkerTask()` 返回的 `WorkerTask`，成功反馈与创建路径统一为本地化的 `任务 ID · 任务类型 · 状态 · worker` 文案，避免同一组件内 create 与 retry/cancel 两套展示口径分叉。
   - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 新增 retry 与 cancel 两条回归，锁定关联任务操作后会展示 `提取行动项 · 等待执行 · LifeOS` 与 `OpenClaw 任务 · 已取消 · OpenClaw`，并继续防止 raw enum 回流到 UI。
 - 本轮验证再补充：

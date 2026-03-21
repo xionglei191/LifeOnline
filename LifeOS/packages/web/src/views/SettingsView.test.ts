@@ -324,6 +324,56 @@ describe('SettingsView soul action governance wiring', () => {
     expect((saveDisabledButton!.element as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('keeps the suggest prompt selected and refreshes status after saving an override', async () => {
+    const wrapper = mountSettingsView();
+    const clientMocks = vi.mocked(client);
+    const updatedPromptRecords: PromptRecord[] = [
+      promptRecords[0]!,
+      createPromptRecord({
+        key: 'suggest',
+        label: '洞察建议',
+        description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+        requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+        defaultContent: 'suggest default {dashboardData} {recentNotes}',
+        overrideContent: 'suggest override {dashboardData} {recentNotes}',
+        effectiveContent: 'suggest override {dashboardData} {recentNotes}',
+        enabled: true,
+        isOverridden: true,
+        updatedAt: '2026-03-21T10:20:00.000Z',
+        notes: 'saved from settings test',
+      }),
+    ];
+
+    clientMocks.updateAiPrompt.mockResolvedValue(updatedPromptRecords[1]!);
+    apiMocks.fetchAiPrompts
+      .mockResolvedValueOnce(promptRecords)
+      .mockResolvedValueOnce(updatedPromptRecords);
+
+    await flushPromises();
+    const promptButtons = wrapper.findAll('.prompt-list-item');
+    await promptButtons[1]!.trigger('click');
+    await flushPromises();
+
+    const textarea = wrapper.find('.prompt-editor .prompt-textarea');
+    await textarea.setValue('suggest override {dashboardData} {recentNotes}');
+    await flushPromises();
+
+    const saveButton = wrapper.findAll('.prompt-actions button').find((button) => button.text().includes('保存 override'));
+    expect(saveButton).toBeTruthy();
+    await saveButton!.trigger('click');
+    await flushPromises();
+
+    expect(clientMocks.updateAiPrompt).toHaveBeenCalledWith('suggest', {
+      content: 'suggest override {dashboardData} {recentNotes}',
+      enabled: true,
+    });
+    expect(apiMocks.fetchAiPrompts).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('.prompt-list-item.active .prompt-key').text()).toBe('suggest');
+    expect(wrapper.text()).toContain('Prompt override 已保存并启用');
+    expect(wrapper.find('.prompt-list-item.active .prompt-status').text()).toBe('已覆盖');
+    expect((wrapper.find('.prompt-editor .prompt-textarea').element as HTMLTextAreaElement).value).toBe('suggest override {dashboardData} {recentNotes}');
+  });
+
   it('keeps the suggest prompt selected after prompt records load', async () => {
     const wrapper = mountSettingsView();
 
