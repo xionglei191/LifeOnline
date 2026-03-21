@@ -6,7 +6,7 @@ import type { WorkerTask } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb, closeDb } from '../src/db/client.js';
 import { createWorkerTask, executeWorkerTask, cancelWorkerTask } from '../src/workers/workerTasks.js';
-import { approveSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
+import { approveSoulAction, createOrReuseSoulAction, getSoulActionBySourceNoteIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
@@ -52,6 +52,31 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('createOrReuseSoulAction persists explicit sourceReintegrationId independently from sourceNoteId', async (t) => {
+  const env = await createTestEnv('lifeos-soul-action-source-reintegration-column-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  const action = createOrReuseSoulAction({
+    sourceNoteId: 'note-separated-source',
+    sourceReintegrationId: 'reint:separated-source',
+    actionKind: 'promote_event_node',
+    governanceReason: 'persist explicit source reintegration id',
+  });
+
+  const reloaded = getSoulActionBySourceNoteIdAndKind('note-separated-source', 'promote_event_node');
+  assert.ok(reloaded);
+  assert.equal(action.sourceNoteId, 'note-separated-source');
+  assert.equal(action.sourceReintegrationId, 'reint:separated-source');
+  assert.equal(reloaded?.sourceNoteId, 'note-separated-source');
+  assert.equal(reloaded?.sourceReintegrationId, 'reint:separated-source');
+  assert.equal(reloaded?.id, action.id);
+});
 
 test('createReintegrationRecordInput centralizes record assembly for terminal tasks', () => {
   const task = buildTerminalTask('update_persona_snapshot', {
@@ -2021,11 +2046,12 @@ test('approved create_event_node action reuses PR6 event promotion executor', as
   if (!soulAction) {
     getDb().prepare(`
       INSERT INTO soul_actions (
-        id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+        id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
         created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       'soul:create_event_node:reint:create-event-node',
+      'reint:create-event-node',
       'reint:create-event-node',
       'create_event_node',
       'approved',
@@ -2242,7 +2268,14 @@ test('accepted daily report reintegration plans PR6 event and continuity promoti
   assert.ok(planned.some((action) => action.actionKind === 'promote_continuity_record'));
 });
 
-test('unaccepted reintegration cannot plan PR6 promotions', async () => {
+test('unaccepted reintegration cannot plan PR6 promotions', async (t) => {
+  closeDb();
+  const env = await createTestEnv('lifeos-pr6-unaccepted-plan-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
   initDatabase();
   upsertReintegrationRecord({
     workerTaskId: 'manual-task-pr6',
@@ -2290,11 +2323,12 @@ test('dispatch blocks PR6 promotion when reintegration review is still pending',
 
   getDb().prepare(`
     INSERT INTO soul_actions (
-      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
       created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     'soul:promote_event_node:reint:manual-task-pr6-pending-dispatch',
+    'reint:manual-task-pr6-pending-dispatch',
     'reint:manual-task-pr6-pending-dispatch',
     'promote_event_node',
     'approved',
@@ -2346,11 +2380,12 @@ test('accepted daily report continuity promotion dispatch creates daily_rhythm c
 
   getDb().prepare(`
     INSERT INTO soul_actions (
-      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
       created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     'soul:promote_continuity_record:reint:manual-task-pr6-daily-continuity-dispatch',
+    'reint:manual-task-pr6-daily-continuity-dispatch',
     'reint:manual-task-pr6-daily-continuity-dispatch',
     'promote_continuity_record',
     'approved',
@@ -2406,11 +2441,12 @@ test('dispatch blocks daily-report PR6 continuity promotion when reintegration r
 
   getDb().prepare(`
     INSERT INTO soul_actions (
-      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
       created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     'soul:promote_continuity_record:reint:manual-task-pr6-daily-rejected-dispatch',
+    'reint:manual-task-pr6-daily-rejected-dispatch',
     'reint:manual-task-pr6-daily-rejected-dispatch',
     'promote_continuity_record',
     'approved',

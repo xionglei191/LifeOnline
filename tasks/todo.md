@@ -412,6 +412,19 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 server 变更仍未提交 git commit。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/db/schema.ts` 为 `soul_actions` 增加独立 `source_reintegration_id` 列；`LifeOS/packages/server/src/db/client.ts` 同步补上缺列重建迁移，并在旧 promotion 数据上把历史 `source_note_id` 回填到新列，避免既有库升级后丢失显式 reintegration 来源。
+  - `LifeOS/packages/server/src/soul/soulActions.ts` 改为直接读写持久化的 `source_reintegration_id`，不再从 `source_note_id` 反推；`LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 round-trip 断言，并把几处手工插入的 promotion soul_action fixture 同步到新列，修正存储层 contract 变更后的测试夹具漂移。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，50/50。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮定向测试与构建均通过。
+- 当前未完成项再补充：
+  - `reintegrationPromotionPlanner.ts` / accept 返回链里仍把 `sourceNoteId = record.id` 当作主承载语义，`sourceReintegrationId` 虽然已独立持久化，但 planner/API 主路径还没完全切回“真实 source note + 显式 reintegration source”双字段分离。
+  - 本轮 server 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 优先继续检查 promotion planner、accept API payload 与 related soul-action list 是否还能去掉 `sourceNoteId = record.id` 这一兼容主承载，直接把本轮刚补好的持久化双事实源真正推到 planner/API 主链。
+  - 若没有更高价值的新缺口，也可以先提交当前这轮 server 根因修复，避免 `sourceReintegrationId` 存储层与运行时 contract 长时间继续分叉。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 accept websocket follow-up filter convergence contract 补强。
   - 若还要继续补一轮，可评估 approve 阶段 websocket 广播后 follow-up filtered list 是否也值得补成同类 contract。

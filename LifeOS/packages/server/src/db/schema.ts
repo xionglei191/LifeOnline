@@ -40,6 +40,7 @@ export const TASK_SCHEDULE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_task_sc
 
 export const SOUL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   source_note_id TEXT NOT NULL,
+  source_reintegration_id TEXT,
   action_kind TEXT NOT NULL,
   governance_status TEXT NOT NULL CHECK(governance_status IN ('pending_review', 'approved', 'deferred', 'discarded')),
   execution_status TEXT NOT NULL CHECK(execution_status IN ('not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled')),

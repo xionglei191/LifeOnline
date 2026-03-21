@@ -11,6 +11,7 @@ import {
 interface SoulActionRow {
   id: string;
   source_note_id: string;
+  source_reintegration_id: string | null;
   action_kind: SoulActionKind;
   governance_status: SoulActionGovernanceStatus;
   execution_status: SoulActionExecutionStatus;
@@ -35,16 +36,10 @@ interface ListSoulActionsFilters {
 }
 
 function rowToSoulAction(row: SoulActionRow): SoulAction {
-  const sourceReintegrationId = row.action_kind === 'create_event_node'
-    || row.action_kind === 'promote_event_node'
-    || row.action_kind === 'promote_continuity_record'
-    ? row.source_note_id
-    : null;
-
   return {
     id: row.id,
     sourceNoteId: row.source_note_id,
-    sourceReintegrationId,
+    sourceReintegrationId: row.source_reintegration_id,
     actionKind: row.action_kind,
     governanceStatus: row.governance_status,
     executionStatus: row.execution_status,
@@ -170,12 +165,13 @@ export function createOrReuseSoulAction(input: {
 
   getDb().prepare(`
     INSERT INTO soul_actions (
-      id, source_note_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason, worker_task_id,
       created_at, updated_at, approved_at, deferred_at, discarded_at, started_at, finished_at, error, result_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     action.id,
     action.sourceNoteId,
+    action.sourceReintegrationId,
     action.actionKind,
     action.governanceStatus,
     action.executionStatus,

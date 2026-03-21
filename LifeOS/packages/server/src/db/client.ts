@@ -97,6 +97,7 @@ function ensureSoulActionsTable(database: Database.Database): void {
   const requiredColumns = [
     'id',
     'source_note_id',
+    'source_reintegration_id',
     'action_kind',
     'governance_status',
     'execution_status',
@@ -128,13 +129,17 @@ function ensureSoulActionsTable(database: Database.Database): void {
 ${SOUL_ACTION_TABLE_COLUMNS_SQL}
     );
     INSERT INTO soul_actions_new (
-      id, source_note_id, action_kind, governance_status, execution_status, governance_reason,
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason,
       worker_task_id, created_at, updated_at, approved_at, deferred_at, discarded_at,
       started_at, finished_at, error, result_summary
     )
     SELECT
       id,
       source_note_id,
+      CASE
+        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN source_note_id
+        ELSE NULL
+      END,
       action_kind,
       'approved',
       CASE
