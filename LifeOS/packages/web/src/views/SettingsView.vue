@@ -1565,7 +1565,7 @@ function handleWsUpdate(event: Event) {
   if (wsEvent.type === 'schedule-updated') {
     loadSchedules();
   }
-  if (wsEvent.type === 'worker-task-updated') {
+  if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated') {
     loadReintegrationRecords();
     loadSoulActions();
   }

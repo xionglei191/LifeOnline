@@ -471,6 +471,11 @@ function getGovernanceReason(body: any): string | null {
   return typeof body?.reason === 'string' && body.reason.trim() ? body.reason.trim() : null;
 }
 
+function broadcastSoulActionUpdate(soulAction: ReturnType<typeof getSoulAction> | null | undefined): void {
+  if (!soulAction) return;
+  broadcastUpdate({ type: 'soul-action-updated', data: soulAction });
+}
+
 export async function approveSoulActionHandler(req: Request, res: Response): Promise<void> {
   try {
     const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
@@ -478,6 +483,7 @@ export async function approveSoulActionHandler(req: Request, res: Response): Pro
       res.status(404).json({ error: 'Soul action not found' });
       return;
     }
+    broadcastSoulActionUpdate(soulAction);
     res.json({ soulAction });
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -524,6 +530,7 @@ export async function dispatchSoulActionHandler(req: Request, res: Response): Pr
 
     const soulAction = getSoulAction(result.soulActionId);
     const task = result.workerTaskId ? getWorkerTask(result.workerTaskId) : null;
+    broadcastSoulActionUpdate(soulAction);
     res.status(202).json({ result, soulAction, task });
   } catch (error) {
     console.error('Dispatch soul action error:', error);
@@ -548,6 +555,7 @@ export async function acceptReintegrationRecordHandler(req: Request, res: Respon
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
+    result.soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
     res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });

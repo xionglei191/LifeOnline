@@ -364,6 +364,7 @@ export type WsEvent =
   | { type: 'index-queue-complete' }
   | { type: 'index-error'; data: IndexErrorEventData }
   | { type: 'worker-task-updated'; data: WorkerTask }
+  | { type: 'soul-action-updated'; data: SoulAction }
   | { type: 'schedule-updated' };
 
 export type WsEventType = WsEvent['type'];
