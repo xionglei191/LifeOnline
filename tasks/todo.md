@@ -458,8 +458,13 @@
   - 这次不再改运行时，而是把上一轮已经修好的 `preserveMessage` 根因保护扩到另一条同级 websocket 分支，避免回归只在 `worker-task-updated` 路径成立、换到 `soul-action-updated` 就再次退化。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 52 tests。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:381` 新增 `worker-task-updated` 分支下的 grouped summary / filtered groups 收敛回归，锁定当 quick filter 处于 `dispatch_ready_only` 时，websocket 刷新后 `workerTasks` / `reintegrationRecords` / `soulActions` 会一起刷新，同时 `quickFilterStats`、`groupCount`、`groups.length` 与 `summary` 仍保持同一事实源语义。
+  - 这次补的是 `SettingsView` 三路刷新中的一条组合 contract：此前只在 `soul-action-updated` 下锁过 grouped 聚合/过滤收敛，还没有覆盖 `worker-task-updated` 这条更宽的联动刷新分支。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 53 tests。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action websocket feedback retention 回归补强。
-  - 若还要继续补一轮，应转去新的 server/web/shared contract 缺口，而不是继续在同一 dispatch feedback retention 链上做低边际对称补丁。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task websocket grouped summary convergence 回归补强。
+  - 若还要继续补一轮，可检查 `index-queue-complete` 这类非治理刷新事件下，grouped summary / filtered groups 是否也值得补同级“不会误漂移”的保护；若价值不足，再回到新的 server/web/shared contract 缺口。

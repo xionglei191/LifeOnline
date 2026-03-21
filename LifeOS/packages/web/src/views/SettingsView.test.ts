@@ -378,6 +378,47 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps grouped governance summary and filtered groups coherent across worker-task websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
+
+    wrapper.unmount();
+  });
+
   it('wires panel refresh and filter updates back to parent loaders', async () => {
     const wrapper = mountSettingsView();
 
