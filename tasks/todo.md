@@ -49,15 +49,14 @@
   - reintegration accept / 手动补规划、以及 websocket 的 `worker-task-updated` 现在都会联动刷新 soul actions，让 accept -> planned -> approve / dispatch 在同一 settings 入口形成连续链路。
   - soul-action 区块保留保守边界：只消费已有 approve / dispatch API，不新增 defer/discard 等更大治理面。
 - 本轮继续完成的真实实现：
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 将 soul-action governance 面板从平铺列表改为按 `sourceNoteId` / reintegration record 分组展示，让同一条 review-backed promotion 链路在 settings 中更可读。
-  - 分组头直接显示对应 reintegration 的 task type / summary / signal / review 状态，保留组内 approve / dispatch 操作，不引入新的路由或更大治理面。
-  - 这次收口只复用现有 `soulActions` 与 `reintegrationRecords` 数据，不新增 API，不扩 contract，保持 PR6 保守边界。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 在按 reintegration 分组后的 soul-action governance 面板上继续补组级 pending count 与“仅待治理分组”快速过滤，进一步降低当前 settings 视图的扫描成本。
+  - 这次只复用已加载的 `soulActions` / `reintegrationRecords` 做本地 computed 过滤，不新增 API、不改 contract，也不扩大 PR6 治理边界。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - 组内还没有 collapse / expand 或只看 pending actions 的更细交互。
+  - 组内还没有 collapse / expand，也没有组级 approve/dispatch 批量操作。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定 settings 分组展示所依赖的 sourceNoteId 关联语义，避免后续 UI 调整时打散同一条 review 链路。
-  - 若继续做 UI，优先补组级 pending count / quick actions，而不是继续增加新的治理状态按钮。
+  - 若继续做 UI，优先补组级 collapse / expand，让 settings 在分组数继续上升时仍保持可扫描。
+  - 若继续补验证，下一步优先锁定分组与 pending-only 快速过滤的显示语义，避免后续样式或 computed 调整带来行为回退。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。

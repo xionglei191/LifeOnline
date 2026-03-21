@@ -462,6 +462,10 @@
             <option value="failed">执行失败</option>
             <option value="cancelled">已取消</option>
           </select>
+          <select v-model="soulActionGroupQuickFilter" class="worker-filter">
+            <option value="all">全部分组</option>
+            <option value="pending_only">仅待治理分组</option>
+          </select>
           <button class="btn-link" @click="loadSoulActions">刷新</button>
         </div>
       </div>
@@ -490,6 +494,7 @@
             <div class="reintegration-item-title-row">
               <strong>{{ group.reintegrationRecord ? taskTypeLabel(group.reintegrationRecord.taskType) : 'Promotion actions' }}</strong>
               <span class="worker-pill">{{ group.actions.length }} actions</span>
+              <span class="worker-pill">pending {{ group.pendingCount }}</span>
               <span class="worker-pill">{{ group.sourceNoteId }}</span>
             </div>
           </div>
@@ -1064,6 +1069,7 @@ const soulActionSummary = computed(() => {
     dispatched: 0,
   });
 });
+const soulActionGroupQuickFilter = ref<'all' | 'pending_only'>('all');
 const soulActionGroups = computed(() => {
   const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
   for (const action of soulActions.value) {
@@ -1080,7 +1086,16 @@ const soulActionGroups = computed(() => {
     });
   }
 
-  return Array.from(grouped.values()).sort((left, right) => {
+  const groups = Array.from(grouped.values()).map((group) => ({
+    ...group,
+    pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
+  }));
+
+  const filteredGroups = soulActionGroupQuickFilter.value === 'pending_only'
+    ? groups.filter((group) => group.pendingCount > 0)
+    : groups;
+
+  return filteredGroups.sort((left, right) => {
     const leftTime = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
     const rightTime = right.reintegrationRecord?.createdAt || right.actions[0]?.createdAt || '';
     return rightTime.localeCompare(leftTime);
