@@ -208,6 +208,24 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.text()).toContain('收起分组');
   });
 
+  it('renders a loading state before groups are shown', () => {
+    const wrapper = mountPanel('all', {
+      loading: true,
+    });
+
+    expect(wrapper.text()).toContain('加载中...');
+    expect(wrapper.findAll('.soul-action-group')).toHaveLength(0);
+  });
+
+  it('renders the empty state hint when no groups match the current view', () => {
+    const wrapper = mountPanel('all', {
+      groups: [],
+    });
+
+    expect(wrapper.text()).toContain('当前筛选下没有 soul actions');
+    expect(wrapper.text()).toContain('可尝试切换为“全部分组”或检查是否还有已批准但未派发的分组。');
+  });
+
   it('disables group dispatch while the matching group is processing', () => {
     const wrapper = mountPanel('dispatch_ready_only', {
       groupDispatchId: 'record-ready',

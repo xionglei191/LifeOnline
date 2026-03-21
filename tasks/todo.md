@@ -141,15 +141,15 @@
   - `LifeOS/packages/web/src/views/SettingsView.vue` 改为复用这组纯函数，保持现有 UI 行为不变，但不再把 grouped governance 规则内联死在单个大视图里。
   - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 新增 5 条最小前端语义测试，覆盖分组计数、`pending_only` 过滤、`dispatch_ready_only` 过滤、按 reintegration 时间排序，以及 filter label/stats 文案一致性。
 - 本轮验证补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 18 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 20 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现补充：
-  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 2 条 collapsed-state DOM 断言，直接验证父层传入 `collapsedGroupIds` 后 action 列表会被收起，未传入时则保持展开。
-  - 这样当前 panel 的折叠能力不再只停留在 emitted 事件层，也有了实际 DOM 可见性回归保护。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 2 条空态 / loading 态 DOM 断言，分别锁定加载中提示与空列表提示文案。
+  - 这样 grouped governance panel 在“正常列表 / 收起 / 无数据 / 加载中”几种核心显示模式上都已有直接测试保护。
 - 当前未完成项：
-  - 还没有覆盖空态下除 `refresh` 外的交互表现。
+  - 还没有覆盖空态下除 `refresh` 外的更多交互表现。
   - 还没有覆盖 `SettingsView` 父层接住这些事件后的联动刷新链路。
   - 本轮 web 变更尚未提交 git commit。
 - 下一步建议：
-  - 若继续沿同一主线推进，优先补空态与 loading 态的 DOM 断言，把 panel 在“无数据 / 收起 / 正常列表”三种显示模式都锁住。
-  - 若本轮先提交也合适；因为 grouped governance panel 的主要事件面和 collapsed DOM 表现现在都已有直接测试保护。
+  - 若继续沿同一主线推进，优先评估是否值得补一条 `SettingsView` 级最小联动测试，验证父层把状态与 handler 正确接到 `SoulActionGovernancePanel`。
+  - 若保持当前低成本策略，也可以继续只在 panel 组件层补少量高价值显示/交互断言。
