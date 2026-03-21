@@ -377,6 +377,17 @@
   - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
   - 这次补的是同一条真实事件契约链上的剩余缺口：`SettingsView.test.ts:218` 与 `:222` 本就通过组件真实 camelCase emits 驱动父层，因此运行时代码也应与测试和组件声明保持一致，避免未来出现“测试通过但真实监听名漂移”的风险。
 - 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 45 tests，且不再出现 grouped governance filter emits warning。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 grouped governance emit contract 对齐修复。
+  - 若还要继续补一轮，可检查 `index-queue-complete` 这类非治理数据刷新 websocket 路径下，panel 当前上下文是否仍缺最小 view 级保护。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:285` 将 index refresh websocket coverage 从“只保 collapsed state”收紧为“collapsed state + quickFilter + governanceStatus + executionStatus 整体父层上下文都不漂移”，并继续锁定 `index-queue-complete` 只刷新 `loadStatus()`、不会误触发 worker/reintegration/soul-action loaders。
+  - 这次补的是 grouped governance 在非 soul-action websocket 分支下的真实边界保护：既不把 index refresh 误判成治理数据刷新，也不让当前面板筛选上下文因全局状态更新而悄悄掉回默认值。
+- 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 45 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
@@ -384,3 +395,58 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 filter event contract 对齐修复。
   - 若还要继续补一轮，可检查 `toggle-collapsed` 等其余 emits 在模板监听、单测触发、组件声明之间是否还存在类似的命名漂移。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:210` 新增 collapsed group ids 父层状态断言，锁定 grouped governance 面板触发 `toggle-collapsed` 时，`SettingsView` 会正确维护 `collapsedGroupIds`：首次折叠加入 id，继续折叠第二组追加，重复触发同组则正确移除。
+  - 这次补的是一个此前确实存在但未被 view 级回归覆盖的父层状态面：`collapsedGroupIds` 已作为真实运行时状态传给 panel，却没有测试防止后续 wiring 退化。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 46 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 collapsed-group state 回归补强。
+  - 若还要继续补一轮，可检查 websocket refresh 之后 collapsedGroupIds 是否应保持不变；若这是预期语义，则值得再补一条 retention 断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:233` 新增 collapsedGroupIds websocket retention 断言，锁定 grouped governance 面板在折叠某个 group 后，即使收到 `worker-task-updated` 触发的父层 refresh，`collapsedGroupIds` 仍保持不变。
+  - 这次补的是同一状态面的后半段真实风险：不仅要能切换折叠态，还要避免 websocket 刷新把用户刚折叠的分组重新展开。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 47 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 collapsedGroupIds websocket retention 回归补强。
+  - 若还要继续补一轮，可评估 soul-action websocket 路径下 collapsedGroupIds 是否也该保持；若是，则可补同级 retention 断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:259` 新增 soul-action websocket 下的 collapsedGroupIds retention 断言，锁定 grouped governance 面板在折叠某个 group 后，即使收到 `soul-action-updated` 触发的父层 refresh，`collapsedGroupIds` 仍保持不变，且不会误刷新 worker task 列表。
+  - 这次补齐的是同一 retention 链的另一条关键 websocket 路径，保证用户在治理面板里的折叠状态不会因 soul-action 事件刷新而丢失。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 48 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action collapsedGroupIds retention 回归补强。
+  - 若还要继续补一轮，可检查 index refresh 相关事件是否也会影响 grouped governance 折叠态；若会，则可补最后一条同级 retention 断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:285` 新增 index refresh 事件下的 collapsedGroupIds retention 断言，锁定 grouped governance 面板在折叠某个 group 后，即使收到 `index-queue-complete` 触发的父层 worker task refresh，`collapsedGroupIds` 仍保持不变；同时确认这条路径不会误刷新 reintegration records 或 soul actions。
+  - 这次补上的是 grouped governance 折叠态 retention 链上的最后一条相关 websocket/event 路径，确保非治理事件驱动的刷新也不会打断用户当前面板展开状态。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 49 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh collapsedGroupIds retention 回归补强。
+  - 若还要继续补一轮，应回到新的 server/web/shared contract 缺口，而不是继续在当前折叠态链路上做低边际对称补强。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:285` 将 `index-queue-complete` 的 view 级 coverage 从“只保折叠态”扩到“collapsedGroupIds + quickFilter + governanceStatus + executionStatus 整体父层上下文都不漂移”，并继续锁定这条 websocket 分支只会触发 `loadStatus()`，不会误刷新 worker/reintegration/soul-action loaders。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:327` 同时把 grouped summary websocket 断言收紧到当前真实 contract：`groupCount` 仍表示总分组数、命中分组由 `groups.length` 与 `quickFilterStats` 表达，`summary` 仍是全量 soul actions 汇总；这样测试保护的是实际运行语义，而不是错误的对称假设。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 50 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh state retention + grouped summary contract 对齐补强。
+  - 若还要继续补一轮，应转去新的 server/web/shared contract 缺口，而不是继续在同一 `SettingsView` 状态保持链上做低边际补丁。

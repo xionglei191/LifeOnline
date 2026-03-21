@@ -207,6 +207,162 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps collapsed group ids in sync when the panel toggles grouped governance sections', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    expect(panel.props('collapsedGroupIds')).toEqual([]);
+
+    panel.vm.$emit('toggle-collapsed', 'record-ready');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+
+    panel.vm.$emit('toggle-collapsed', 'record-mixed');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready', 'record-mixed']);
+
+    panel.vm.$emit('toggle-collapsed', 'record-ready');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-mixed']);
+
+    wrapper.unmount();
+  });
+
+  it('keeps collapsed group ids stable across worker-task websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('toggle-collapsed', 'record-ready');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+
+    wrapper.unmount();
+  });
+
+  it('keeps collapsed group ids stable across soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('toggle-collapsed', 'record-ready');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+
+    wrapper.unmount();
+  });
+
+  it('keeps grouped governance state stable across index refresh websocket events', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchIndexStatus.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('toggle-collapsed', 'record-ready');
+    await flushPromises();
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
+    await flushPromises();
+    panel.vm.$emit('update:filterStatus', 'approved');
+    await flushPromises();
+    panel.vm.$emit('update:executionFilter', 'not_dispatched');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'index-queue-complete' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('collapsedGroupIds')).toEqual(['record-ready']);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it('keeps grouped governance summary and filtered groups coherent across soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupCount')).toBe(2);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('summary')).toEqual({
+      pendingReview: 1,
+      approved: 2,
+      dispatched: 0,
+    });
+
+    wrapper.unmount();
+  });
+
   it('wires panel refresh and filter updates back to parent loaders', async () => {
     const wrapper = mountSettingsView();
 
@@ -369,7 +525,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
-    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenLastCalledWith({
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
@@ -408,7 +564,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
-    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenLastCalledWith({
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
