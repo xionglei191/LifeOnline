@@ -235,6 +235,65 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps quick filter props and grouped stats in sync when the panel updates quick-filter', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+
+    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterLabel')).toBe('仅可派发分组');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    panel.vm.$emit('update:quick-filter', 'pending_only');
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('pending_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterLabel')).toBe('仅待治理分组');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it('keeps quick filter and governance filters aligned after round-trip updates and refresh', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+
+    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    await flushPromises();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    panel.vm.$emit('update:filterStatus', 'approved');
+    await flushPromises();
+    panel.vm.$emit('update:executionFilter', 'not_dispatched');
+    await flushPromises();
+    panel.vm.$emit('refresh');
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchSoulActions).toHaveBeenLastCalledWith({
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+    });
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterLabel')).toBe('仅可派发分组');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
   it('routes approve-group emits through the parent batch approve handler', async () => {
     const wrapper = mountSettingsView();
 
