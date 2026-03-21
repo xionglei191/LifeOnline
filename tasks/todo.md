@@ -79,13 +79,16 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增一条 grouped settings 语义测试，锁定 `sourceNoteId` 分组下的 `pendingCount` / `dispatchReadyCount` 组合在“整组全 approved 可派发”和“部分 approved、仍混合 pending”两种场景下都能稳定从 API 读出。
   - 这次没有新增后端接口，也没有继续做纯 UI 微调，而是直接在现有 HTTP contract 覆盖里把 grouped governance 依赖的核心语义补成可回归的测试锚点。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续扩 grouped settings 语义测试，新增“整组已 approve 且已全部 dispatch 后，dispatchReadyCount 必须回落为 0”这一条 contract 断言。
+  - 这样一来，当前测试同时锁住了三种关键分组状态：整组全 approved 可派发、部分 approved 混合 pending、以及整组已 dispatch 后的 ready 清零，直接覆盖 settings grouped governance 里最核心的分组统计语义。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。
 - 下一步建议：
-  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 grouped governance 相关 contract coverage，例如批量 approve 后 pending 清零、批量 dispatch 后 dispatch-ready 归零。
-  - 若继续做实现，优先考虑引入最小前端测试设施或继续补 server-side contract 测试，而不是再做低边际的 UI 文案微调。
-- 本轮选择依据：前几轮 grouped governance 的 UI 语义已经补得比较细，但缺的仍是可回归验证；在尚未引入 web 测试设施前，先把 settings 真正依赖的分组统计语义锁进现有 `reintegrationApi.test.ts`，比继续堆前端显示更有价值。
+  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 grouped governance 相关 contract coverage，例如批量 approve 后成功提示对应的数量上下文，或 websocket 更新后列表刷新所依赖的状态变化。
+  - 若继续做实现，优先考虑引入最小前端测试设施，而不是回到低边际的 UI 微调。
+- 本轮选择依据：上一轮已经锁住了 pending / dispatch-ready 的基础组合，但 grouped dispatch 按钮是否应当在“已全部 dispatch”后自然失效，仍缺直接回归保护；先补这条 contract，更贴近当前 settings 真正依赖的行为边界。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。

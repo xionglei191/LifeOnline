@@ -464,12 +464,28 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
       evidence: { source: 'api-group-semantics-b' },
       now: '2026-03-21T15:05:00.000Z',
     });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-group-semantics-c',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api group semantics summary c',
+      evidence: { source: 'api-group-semantics-c' },
+      now: '2026-03-21T15:10:00.000Z',
+    });
 
     const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
     const recordA = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-semantics-a');
     const recordB = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-semantics-b');
+    const recordC = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-group-semantics-c');
     assert.ok(recordA);
     assert.ok(recordB);
+    assert.ok(recordC);
 
     const acceptedA = await api<AcceptReintegrationRecordResponse>(
       baseUrl,
@@ -485,6 +501,14 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
       {
         method: 'POST',
         body: JSON.stringify({ reason: 'accept group semantics record b' }),
+      },
+    );
+    const acceptedC = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordC!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept group semantics record c' }),
       },
     );
 
@@ -508,9 +532,28 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
       },
     );
 
+    for (const action of acceptedC.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve and dispatch group c' }),
+        },
+      );
+      await api<DispatchSoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+      );
+    }
+
     const allSoulActions = await api<ListSoulActionsResponse>(baseUrl, '/api/soul-actions');
     const groups = new Map<string, { totalCount: number; pendingCount: number; dispatchReadyCount: number }>();
-    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id)) {
+    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id || item.sourceNoteId === recordC!.id)) {
       const current = groups.get(action.sourceNoteId) ?? { totalCount: 0, pendingCount: 0, dispatchReadyCount: 0 };
       current.totalCount += 1;
       if (action.governanceStatus === 'pending_review') {
@@ -531,6 +574,11 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
       totalCount: acceptedB.soulActions.length,
       pendingCount: acceptedB.soulActions.length - 1,
       dispatchReadyCount: 1,
+    });
+    assert.deepEqual(groups.get(recordC!.id), {
+      totalCount: acceptedC.soulActions.length,
+      pendingCount: 0,
+      dispatchReadyCount: 0,
     });
   } finally {
     await stopServer();
