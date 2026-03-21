@@ -595,6 +595,13 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 将组级 dispatch 成功提示从纯计数文案收紧为复用单条 dispatch 已消费的 worker-task contract：批量派发后现在会附带最后一个 dispatch 返回的 `Worker Task: {id} · {taskType} · {status} · {worker}` 元信息。
+  - 这次补的是新的 contract-to-UI 投射缺口：server 的 `DispatchSoulActionResponse.task` 在单条 dispatch 路径已展示，但 group dispatch 仍丢失这条事实源，导致同一页两个派发入口对同一 contract 的用户反馈不一致。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步把组级 dispatch 成功提示与 websocket refresh 后的保留断言更新为包含 worker task label，锁住这条主路径反馈不再退化回纯计数。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 115 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/api/client.ts` 补齐 soul-action detail / defer / discard 三个 typed client 入口：新增 `fetchSoulAction()`、`deferSoulAction()`、`discardSoulAction()`，把 server 侧已存在的治理接口正式收进 web/shared contract 消费面，避免后续继续靠散落的裸 fetch 或遗漏客户端封装。
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 defer/discard contract test，锁定同一 soul action 在 `approve -> defer -> discard` 之后，detail 接口与按 `sourceNoteId + governanceStatus` 过滤的 list 结果保持一致，且 `governanceReason`、`deferredAt`、`discardedAt` 等关键字段不漂移。
