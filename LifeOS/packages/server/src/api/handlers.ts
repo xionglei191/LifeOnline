@@ -476,6 +476,11 @@ function broadcastSoulActionUpdate(soulAction: ReturnType<typeof getSoulAction> 
   broadcastUpdate({ type: 'soul-action-updated', data: soulAction });
 }
 
+function broadcastReintegrationRecordUpdate(record: ReturnType<typeof getReintegrationRecord> | null | undefined): void {
+  if (!record) return;
+  broadcastUpdate({ type: 'reintegration-record-updated', data: record });
+}
+
 export async function approveSoulActionHandler(req: Request, res: Response): Promise<void> {
   try {
     const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
@@ -555,6 +560,7 @@ export async function acceptReintegrationRecordHandler(req: Request, res: Respon
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
+    broadcastReintegrationRecordUpdate(result.reintegrationRecord);
     result.soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
     res.json(result);
   } catch (error: any) {
@@ -569,6 +575,7 @@ export async function rejectReintegrationRecordHandler(req: Request, res: Respon
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
+    broadcastReintegrationRecordUpdate(record);
     res.json({ reintegrationRecord: record });
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });

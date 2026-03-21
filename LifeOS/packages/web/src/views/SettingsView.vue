@@ -1023,8 +1023,11 @@ async function loadSchedules() {
   } catch (_) { /* ignore */ }
 }
 
-async function loadReintegrationRecords() {
+async function loadReintegrationRecords(options?: { preserveMessage?: boolean }) {
   reintegrationLoading.value = true;
+  if (!options?.preserveMessage) {
+    reintegrationMessage.value = '';
+  }
   try {
     reintegrationRecords.value = await fetchReintegrationRecords(reintegrationFilterStatus.value || undefined);
   } catch (e: any) {
@@ -1346,7 +1349,7 @@ async function handleAcceptReintegration(record: ReintegrationRecord) {
       ? `已接受并自动规划 ${result.soulActions.length} 条 promotion actions`
       : '已接受，但当前没有可规划的 promotion actions';
     reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords();
+    await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
   } catch (e: any) {
     reintegrationMessage.value = e.message || '接受 reintegration record 失败';
@@ -1365,7 +1368,7 @@ async function handleRejectReintegration(record: ReintegrationRecord) {
     });
     reintegrationMessage.value = '已拒绝该 reintegration record';
     reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords();
+    await loadReintegrationRecords({ preserveMessage: true });
   } catch (e: any) {
     reintegrationMessage.value = e.message || '拒绝 reintegration record 失败';
     reintegrationMessageType.value = 'error';
@@ -1390,7 +1393,7 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
       ? `已规划 ${soulActions.length} 条 promotion actions`
       : '当前没有可规划的 promotion actions';
     reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords();
+    await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
   } catch (e: any) {
     reintegrationMessage.value = e.message || '手动规划 promotion actions 失败';
@@ -1591,6 +1594,7 @@ onUnmounted(() => {
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
   const preserveSoulActionMessage = soulActionMessageType.value === 'success' && Boolean(soulActionMessage.value);
+  const preserveReintegrationMessage = reintegrationMessageType.value === 'success' && Boolean(reintegrationMessage.value);
   loadStatus();
   if (wsEvent.type === 'worker-task-updated' || isIndexRefreshEvent(wsEvent)) {
     loadWorkerTasks();
@@ -1598,8 +1602,8 @@ function handleWsUpdate(event: Event) {
   if (wsEvent.type === 'schedule-updated') {
     loadSchedules();
   }
-  if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated') {
-    loadReintegrationRecords();
+  if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated' || wsEvent.type === 'reintegration-record-updated') {
+    loadReintegrationRecords({ preserveMessage: preserveReintegrationMessage });
     loadSoulActions({ preserveMessage: preserveSoulActionMessage });
   }
 }

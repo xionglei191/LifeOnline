@@ -652,6 +652,17 @@
 - 当前未完成项再补充：
   - 本轮 server 变更待提交 git commit。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/shared/src/types.ts` 新增 `reintegration-record-updated` websocket 事件类型；`LifeOS/packages/server/src/api/handlers.ts` 在 accept / reject reintegration review 后同步广播更新后的 record，补上 review 主线缺失的事件事实源，而不再只依赖 `worker-task-updated` / `soul-action-updated` 间接触发刷新。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 reject websocket contract，锁定 reject 后会收到 `reintegration-record-updated`，且事件中的 `reviewStatus/reviewReason/reviewedAt` 会与 reject response 和 follow-up rejected/pending 列表保持一致。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 为 reintegration refresh 新增 `preserveMessage` 语义，并让 `reintegration-record-updated` 走与现有 review 刷新一致的 `loadReintegrationRecords + loadSoulActions` 链；`LifeOS/packages/web/src/views/SettingsView.test.ts` 同步新增 view 级回归，锁定 reject 成功提示经过该新 websocket 刷新后仍保持可见。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，21/21。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 82 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server/web/shared 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:1583` 将 soul-action websocket 刷新改成在当前 `soulActionMessageType === 'success'` 且已有消息时沿用 `preserveMessage`，避免刚显示出的 dispatch 成功反馈被随后的 `worker-task-updated` / `soul-action-updated` 自动刷新立即清空。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:926` 新增 view 级回归，锁定单条 dispatch 成功后即使立刻收到 `worker-task-updated`，`workerTasks` / `reintegration` / `soulActions` 会正常刷新，但 `Worker Task` 成功反馈仍保持可见。
   - 这次补的是上一轮新引入 feedback contract 的真实后半段：如果 websocket 自动刷新会把成功消息立刻抹掉，那前一轮把 `workerTaskId` 暴露到 UI 的价值就会被抵消；因此这里修的是消息保留的根因，而不是再加一层表面文案。

@@ -77,6 +77,7 @@ async function openWebSocket(url: string, timeoutMs = 10000): Promise<WebSocket>
 }
 
 type SoulActionWsEvent = Extract<WsEvent, { type: 'soul-action-updated' }>;
+type ReintegrationRecordWsEvent = Extract<WsEvent, { type: 'reintegration-record-updated' }>;
 type WorkerTaskWsEvent = Extract<WsEvent, { type: 'worker-task-updated' }>;
 
 async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {
@@ -286,6 +287,99 @@ test('reintegration reject API returns reviewed record and filtered follow-up li
     assert.equal(rejectedFollowUp?.reviewedAt, rejected.reintegrationRecord.reviewedAt);
     assert.equal(pendingFollowUp, undefined);
   } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('reintegration reject emits reintegration-record-updated websocket event aligned with follow-up lists', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-reject-ws-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-reject-ws-refresh',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'failed',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api reject websocket summary',
+      evidence: { source: 'api-reject-ws-test' },
+      now: '2026-03-22T01:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-reject-ws-refresh');
+    assert.ok(record);
+
+    const wsEventPromise = waitForWebSocketEvent<ReintegrationRecordWsEvent>(
+      socket,
+      (event) => event.type === 'reintegration-record-updated' && event.data.id === record!.id,
+    );
+
+    const rejected = await api<RejectReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'reject for websocket refresh test' }),
+      },
+    );
+
+    const wsEvent = await wsEventPromise;
+    assert.equal(wsEvent.data.id, rejected.reintegrationRecord.id);
+    assert.equal(wsEvent.data.reviewStatus, 'rejected');
+    assert.equal(wsEvent.data.reviewReason, rejected.reintegrationRecord.reviewReason);
+    assert.equal(wsEvent.data.reviewedAt, rejected.reintegrationRecord.reviewedAt);
+
+    const rejectedRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=rejected',
+    );
+    const pendingRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=pending_review',
+    );
+
+    assert.equal(
+      rejectedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.id,
+      rejected.reintegrationRecord.id,
+    );
+    assert.equal(
+      rejectedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.reviewedAt,
+      wsEvent.data.reviewedAt,
+    );
+    assert.equal(
+      pendingRecords.reintegrationRecords.find((item) => item.id === record!.id),
+      undefined,
+    );
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
