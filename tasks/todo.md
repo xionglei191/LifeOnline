@@ -907,6 +907,19 @@
 - 下一步建议再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言要求 `DispatchSoulActionResponse.task` 本身也必须与各个 follow-up worker-task filter 结果一一对齐。
+  - 这次补的不是同类 filter 平移，而是把之前尚未被锁住的一块真实 contract 面补齐：dispatch 响应自带的 `task` 对象必须和 websocket 事件、以及按 `sourceNoteId / taskType / worker / status` 组合过滤后的 worker-task 列表保持同一事实源，而不是只校验 `workerTaskId` 能串起来。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "dispatch response worker task stays aligned with websocket and follow-up worker task list for grouped settings refresh" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - server 侧 promotion/source 主语义残留已明显减少，但 `reintegrationApi.test.ts` 中仍可继续排查是否还有零散 follow-up 断言只校验 id 串联、未同时锁住 payload 全字段对齐。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿当前高价值主线推进，优先检查其余 dispatch / worker-task follow-up contract 是否还存在“只锁 id、不锁 payload 对齐”的空档。
+  - 若本轮先收口，也可以直接提交当前三方对齐 contract 修正，避免 `DispatchSoulActionResponse.task` 再次脱离 websocket / list 事实源。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 为 reintegration accept 与 reject 各新增 1 条 `reintegration-record-updated -> soul-action-updated` 双事件链 retention 回归，锁定 success feedback 在连续两次非 worker websocket 刷新后仍保持可见。
   - 这两条新用例继续要求刷新只联动 `fetchReintegrationRecords()` / `fetchSoulActions()`，不会误触发 `fetchWorkerTasks()`，把 accept / reject / manual planning 三条 reintegration success path 的 websocket 语义进一步收口一致。
 - 本轮验证再补充：
