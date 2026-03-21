@@ -468,8 +468,14 @@
   - 这次补的是 grouped governance 的非治理刷新边界：即使全局 index 队列事件到来，面板当前聚合统计也不应被悄悄改写或重算成不同语义。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 53 tests。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:869` 将 dispatch worker-task convergence contract 再收紧一层：除现有 `response.task -> worker-task-updated -> /api/worker-tasks?sourceNoteId=...` 三方对齐外，新增 `taskType` 过滤后的 follow-up worker task 列表也必须包含同一 task，并回传正确的 `filters.taskType`。
+  - 这次补的是 shared/server 事实源里还没锁住的查询过滤 contract，直接保护 web/client 未来如果按 taskType 聚焦 worker task 时，不会出现“总表对了、过滤表漂移”的分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 当前未完成项再补充：
-  - 本轮 web 变更待提交 git commit。
+  - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh grouped summary stability 回归补强。
-  - 若还要继续补一轮，应切回新的 server/web/shared contract 缺口，而不是继续在同一 grouped summary stability 链上做低边际对称扩张。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task taskType filter convergence contract 补强。
+  - 若还要继续补一轮，可检查 worker task `status` 过滤后的 follow-up list 是否也值得补同级收敛保护；如果那条边际价值不高，就切回新的 web/shared contract 缺口。
