@@ -791,6 +791,19 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task feedback 主线推进，可检查 `NoteDetail.vue` 在 worker task 失败/加载刷新链路中是否还存在固定提示语与真实任务状态脱节的缺口，优先补会影响用户判断当前任务状态的文案。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 grouped-semantics contract 从旧的 `sourceNoteId = record.id` 聚合锚点切回显式 `sourceReintegrationId`：三条 fixture 现在都携带真实 `sourceNoteId`（`note-api-pr6-group-semantics-a/b/c`），整组 pending/dispatch-ready 统计改为按 reintegration group id 聚合。
+  - 同一条用例新增断言锁定 `acceptedA/B/C` 返回的 actions 同时满足“真实 `sourceNoteId` + 对应 `sourceReintegrationId`”，避免分组统计虽然过了，但底层 action source 语义仍悄悄回退到旧兼容路径。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action API preserves group-level pending and dispatch-ready semantics for settings view" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - `reintegrationApi.test.ts` 中仍有少量 grouped-semantics / mixed-progress 场景可能残留 `sourceNoteId = record.id` 过滤锚点，需要继续逐条清理。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 继续优先扫 `reintegrationApi.test.ts` 中 grouped-semantics / mixed-progress 相关用例，找出还在按 `record.id` 过滤 soul actions 的残留点。
+  - 若本轮先收口，也可以直接提交当前 grouped-semantics contract 修正，避免分组统计再次漂回旧兼容语义。
+- 本轮继续完成的真实实现再补充：
   - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.ts`，集中维护 worker task 的 `taskType / status / worker` 本地化映射与 action-aware 成功反馈文案，避免 `NoteDetail.vue`、`WorkerTaskCard.vue`、`WorkerTaskDetail.vue`、`SettingsView.vue` 四处各自维护同一份 shared contract 解释而再次漂移。
   - `LifeOS/packages/web/src/components/WorkerTaskCard.vue`、`LifeOS/packages/web/src/components/WorkerTaskDetail.vue`、`LifeOS/packages/web/src/components/NoteDetail.vue`、`LifeOS/packages/web/src/views/SettingsView.vue` 全部改为复用该 helper；其中 `WorkerTaskDetail.vue` 的 retry/cancel 成功反馈也同步收敛为与 `NoteDetail` 一致的 action-aware 本地化文案。
   - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.test.ts`，把共享 helper 本身作为事实源锁住，直接覆盖 `人格快照更新 / 等待执行 / LifeOS` 等映射以及 create/retry/cancel 三条消息前缀。

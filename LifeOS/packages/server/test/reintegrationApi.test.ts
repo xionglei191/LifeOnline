@@ -851,7 +851,7 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-group-semantics-a',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-group-semantics-a',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -865,7 +865,7 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
     });
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-group-semantics-b',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-group-semantics-b',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -879,7 +879,7 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
     });
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-group-semantics-c',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-group-semantics-c',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -966,8 +966,9 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
 
     const allSoulActions = await api<ListSoulActionsResponse>(baseUrl, '/api/soul-actions');
     const groups = new Map<string, { totalCount: number; pendingCount: number; dispatchReadyCount: number }>();
-    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id || item.sourceNoteId === recordC!.id)) {
-      const current = groups.get(action.sourceNoteId) ?? { totalCount: 0, pendingCount: 0, dispatchReadyCount: 0 };
+    for (const action of allSoulActions.soulActions.filter((item) => item.sourceReintegrationId === recordA!.id || item.sourceReintegrationId === recordB!.id || item.sourceReintegrationId === recordC!.id)) {
+      const groupKey = action.sourceReintegrationId!;
+      const current = groups.get(groupKey) ?? { totalCount: 0, pendingCount: 0, dispatchReadyCount: 0 };
       current.totalCount += 1;
       if (action.governanceStatus === 'pending_review') {
         current.pendingCount += 1;
@@ -975,8 +976,15 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
       if (action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched') {
         current.dispatchReadyCount += 1;
       }
-      groups.set(action.sourceNoteId, current);
+      groups.set(groupKey, current);
     }
+
+    assert.ok(acceptedA.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-group-semantics-a'));
+    assert.ok(acceptedA.soulActions.every((action) => action.sourceReintegrationId === recordA!.id));
+    assert.ok(acceptedB.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-group-semantics-b'));
+    assert.ok(acceptedB.soulActions.every((action) => action.sourceReintegrationId === recordB!.id));
+    assert.ok(acceptedC.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-group-semantics-c'));
+    assert.ok(acceptedC.soulActions.every((action) => action.sourceReintegrationId === recordC!.id));
 
     assert.deepEqual(groups.get(recordA!.id), {
       totalCount: acceptedA.soulActions.length,
