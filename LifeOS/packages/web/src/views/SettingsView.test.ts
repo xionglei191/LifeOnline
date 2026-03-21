@@ -242,7 +242,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
 
-    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
     await flushPromises();
 
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
@@ -250,7 +250,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilterStats')).toBe('1 / 2 分组命中');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
 
-    panel.vm.$emit('update:quick-filter', 'pending_only');
+    panel.vm.$emit('update:quickFilter', 'pending_only');
     await flushPromises();
 
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('pending_only');
@@ -269,7 +269,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
 
-    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
     await flushPromises();
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
 
@@ -352,7 +352,7 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchWorkerTasks.mockClear();
 
     const panel = wrapper.findComponent(SoulActionGovernancePanel);
-    panel.vm.$emit('update:quick-filter', 'dispatch_ready_only');
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
     await flushPromises();
     panel.vm.$emit('update:filterStatus', 'approved');
     await flushPromises();
@@ -374,6 +374,46 @@ describe('SettingsView soul action governance wiring', () => {
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
     });
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groups')).toHaveLength(1);
+
+    wrapper.unmount();
+  });
+
+  it('keeps grouped governance filters stable across soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.fetchIndexStatus.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    panel.vm.$emit('update:quickFilter', 'dispatch_ready_only');
+    await flushPromises();
+    panel.vm.$emit('update:filterStatus', 'approved');
+    await flushPromises();
+    panel.vm.$emit('update:executionFilter', 'not_dispatched');
+    await flushPromises();
+
+    apiMocks.fetchSoulActions.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchIndexStatus).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchSoulActions).toHaveBeenLastCalledWith({
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+    });
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('quickFilter')).toBe('dispatch_ready_only');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('filterStatus')).toBe('approved');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('executionFilter')).toBe('not_dispatched');

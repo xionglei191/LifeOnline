@@ -463,7 +463,7 @@
       :format-time="formatTime"
       @update:filter-status="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
       @update:execution-filter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
-      @update:quick-filter="soulActionGroupQuickFilter = $event"
+      @update:quickFilter="soulActionGroupQuickFilter = $event"
       @refresh="loadSoulActions"
       @approve-group="handleApproveSoulActionGroup"
       @dispatch-group="handleDispatchSoulActionGroup"

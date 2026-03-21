@@ -351,3 +351,25 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task websocket filter retention 回归补强。
   - 若还要继续补一轮，可检查 `soul-action-updated` 刷新路径是否也缺同级“保留当前 filter 上下文”的断言，若缺则可用同样方式补齐。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:385` 新增 soul-action websocket refresh filter retention 断言，锁定在 grouped governance 面板已选中 `quickFilter=dispatch_ready_only`、`governanceStatus=approved`、`executionStatus=not_dispatched` 的情况下，收到 `soul-action-updated` 后父层刷新仍会按当前筛选条件重新请求 `fetchSoulActions`，且 panel 上下文不会丢失。
+  - 这次补齐的是另一条同级 websocket 监听链，保证 grouped governance 不会因为 soul-action 事件刷新而掉回默认筛选态。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 45 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action websocket filter retention 回归补强。
+  - 若还要继续补一轮，可检查 index refresh 相关 websocket 路径是否也存在类似的“保留当前筛选上下文”缺口，但优先级低于治理主线本身。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue:466` 与 `LifeOS/packages/web/src/views/SettingsView.test.ts:245` 把 grouped governance quick-filter 事件统一收敛为组件真实声明的 `update:quickFilter` 契约，消除了此前测试运行中持续出现的 Vue emits warning。
+  - 这次不是表面对称整理，而是补齐父子组件之间的真实事件命名契约，避免测试只靠错误事件名碰巧驱动、同时让回归验证输出恢复干净可信。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 45 tests，且不再出现 quick-filter emits warning。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
+  - 若还要继续补一轮，可检查其余 panel emit 名称在父层监听与测试中是否还有类似 camel/kebab 不一致的隐性契约缺口。
