@@ -617,6 +617,15 @@
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 为 reintegration accept 与 reject 各新增 1 条 `reintegration-record-updated -> soul-action-updated` 双事件链 retention 回归，锁定 success feedback 在连续两次非 worker websocket 刷新后仍保持可见。
+  - 这两条新用例继续要求刷新只联动 `fetchReintegrationRecords()` / `fetchSoulActions()`，不会误触发 `fetchWorkerTasks()`，把 accept / reject / manual planning 三条 reintegration success path 的 websocket 语义进一步收口一致。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 89 tests。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 reintegration websocket 主线推进，下一步可回到 server contract，补 `DispatchSoulActionResponse.task` 与 `worker-task-updated` / follow-up worker-task list 的三方对齐断言；若保持 web 主线，则可直接提交当前 accept/reject 双事件链回归补强。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 reintegration feedback 连续 retention 回归，分别锁定 `接受并自动规划` 与 `手动补规划` 成功提示在先收到 `worker-task-updated`、再收到 `soul-action-updated` 两次连续 websocket 刷新后仍保持可见。
