@@ -51,12 +51,15 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 增加组级 quick action：只对当前分组中仍为 `pending_review` 的 soul actions 执行批量 approve，继续保持 approve / dispatch 分离，不扩大治理边界。
   - 这次完全复用现有单条 `approveSoulAction()` API 和本地分组数据，不新增 API、不改 contract，也不引入批量 dispatch 这类更高风险动作。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 继续补上保守的组级 dispatch quick action，但只在当前分组所有 soul actions 都已 `approved` 且仍为 `not_dispatched` 时才开放，避免把部分完成/混合状态组错误地一键派发。
+  - 组级 dispatch 仍完全复用现有单条 `dispatchSoulAction()` API，不新增批量接口；执行后继续刷新 reintegration records 与 soul actions，保持 settings 视图即时反映执行结果。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - 还没有覆盖分组折叠、pending-only 过滤、组级 quick action 行为的测试。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定组级 quick action 与 pending-only 快速过滤的显示/状态语义，避免后续 UI/computed 调整带来行为回退。
-  - 若继续做 UI，优先补组级 dispatch quick action，但仅限所有 action 已 approved 且仍 `not_dispatched` 的简单安全场景。
+  - 若继续补验证，下一步优先锁定组级 approve / dispatch quick action 与 pending-only 快速过滤的显示/状态语义，避免后续 UI/computed 调整带来行为回退。
+  - 若继续做 UI，优先补组级 quick actions 的前端交互测试，而不是继续扩更多治理按钮。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。

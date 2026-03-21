@@ -505,6 +505,13 @@
               >
                 {{ soulActionGroupActionId === group.sourceNoteId ? '处理中...' : `批准本组待治理项 (${group.pendingCount})` }}
               </button>
+              <button
+                class="btn-cancel"
+                :disabled="soulActionGroupDispatchId === group.sourceNoteId || group.dispatchReadyCount !== group.actions.length || group.dispatchReadyCount === 0"
+                @click="handleDispatchSoulActionGroup(group)"
+              >
+                {{ soulActionGroupDispatchId === group.sourceNoteId ? '处理中...' : `派发本组已批准项 (${group.dispatchReadyCount})` }}
+              </button>
               <button class="btn-link" @click="toggleSoulActionGroupCollapsed(group.sourceNoteId)">
                 {{ soulActionCollapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
               </button>
@@ -990,6 +997,7 @@ const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending
 const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
 const soulActionActionId = ref<string | null>(null);
 const soulActionGroupActionId = ref<string | null>(null);
+const soulActionGroupDispatchId = ref<string | null>(null);
 const soulActionCollapsedGroupIds = ref<string[]>([]);
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
@@ -1103,6 +1111,7 @@ const soulActionGroups = computed(() => {
   const groups = Array.from(grouped.values()).map((group) => ({
     ...group,
     pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
+    dispatchReadyCount: group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched').length,
   }));
 
   const filteredGroups = soulActionGroupQuickFilter.value === 'pending_only'
@@ -1379,6 +1388,37 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
     soulActionMessageType.value = 'error';
   } finally {
     soulActionGroupActionId.value = null;
+  }
+}
+
+async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; actions: SoulAction[]; dispatchReadyCount: number }) {
+  const dispatchableActions = group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
+  if (!dispatchableActions.length) {
+    soulActionMessage.value = '当前分组没有可派发的 soul actions';
+    soulActionMessageType.value = 'error';
+    return;
+  }
+  if (dispatchableActions.length !== group.actions.length) {
+    soulActionMessage.value = '仅当本组 actions 全部已批准且未派发时才支持组级派发';
+    soulActionMessageType.value = 'error';
+    return;
+  }
+
+  soulActionGroupDispatchId.value = group.sourceNoteId;
+  soulActionMessage.value = '';
+  try {
+    for (const action of dispatchableActions) {
+      await dispatchSoulAction(action.id);
+    }
+    soulActionMessage.value = `已批量派发 ${dispatchableActions.length} 条 soul actions`;
+    soulActionMessageType.value = 'success';
+    await loadSoulActions();
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '批量派发 soul actions 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionGroupDispatchId.value = null;
   }
 }
 
