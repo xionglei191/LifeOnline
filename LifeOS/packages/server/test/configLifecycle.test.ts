@@ -609,6 +609,56 @@ test('AI suggestions API responds with shared list contract', async () => {
   }
 });
 
+test('notes API returns shared note title field when indexer extracts one', async () => {
+  const env = await createTestEnv('lifeos-notes-title-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const titledNotePath = path.join(env.vaultPath, '成长', '2026-03-22-title-contract.md');
+
+  try {
+    await fs.writeFile(
+      titledNotePath,
+      `---
+type: note
+dimension: growth
+status: pending
+privacy: private
+date: 2026-03-22
+source: web
+created: 2026-03-22T10:00:00
+---
+
+## Shared contract title
+
+Body for title contract coverage.
+`,
+    );
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const notes = await api<Array<import('@lifeos/shared').Note>>(baseUrl, '/api/notes');
+    const createdNote = notes.find((note) => note.file_path === titledNotePath);
+
+    assert.ok(createdNote);
+    assert.equal(createdNote?.title, 'Shared contract title');
+    assert.equal(createdNote?.file_name, '2026-03-22-title-contract.md');
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];

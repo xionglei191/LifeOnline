@@ -168,6 +168,8 @@ export interface WorkerTaskListFilters {
   worker?: WorkerName;
 }
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Frontmatter {
   type: NoteType;
   dimension: Dimension;
@@ -180,12 +182,19 @@ export interface Frontmatter {
   source: Source;
   created: string;
   updated?: string;
+  approval_status?: ApprovalStatus | null;
+  approval_operation?: string | null;
+  approval_action?: string | null;
+  approval_risk?: string | null;
+  approval_scope?: string | null;
 }
 
 export interface Note extends Frontmatter {
   id: string;
   file_path: string;
   file_name: string;
+  title?: string | null;
+  encrypted?: boolean;
   content: string;
   indexed_at: string;
   file_modified_at: string;

@@ -1,3 +1,91 @@
+# shared Note metadata contract 收口
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / 上一轮 SettingsView 改动，只沿新的高价值 contract 主线推进。
+- [x] 复核 `NoteDetail` 当前消费的 note metadata，确认哪些字段 server 已返回但 shared `Note` 尚未声明。
+- [x] 补齐最小 shared contract：把 `encrypted` 与现有 approval metadata 纳入 `packages/shared`，不扩 API 语义。
+- [x] 去掉 web 侧 `NoteDetail` 的本地临时扩展类型，直接复用共享 `Note` contract。
+- [x] 补 `NoteDetail` 组件级回归，锁定 approval metadata 与 encrypted placeholder 的真实消费。
+- [x] 跑定向 web 验证并更新本文件。
+
+## 当前执行
+- 已确认当前仓库仍有与本轮无关或未准备提交的并行改动：根目录 `CLAUDE.md`、根目录 `lifeonline-claude-worker-v2.sh`、以及上一轮尚未提交的 `LifeOS/packages/web/src/views/SettingsView.vue` / `SettingsView.test.ts`。本轮未覆盖这些改动。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 新增 `ApprovalStatus = 'pending' | 'approved' | 'rejected'`，并把 `approval_status`、`approval_operation`、`approval_action`、`approval_risk`、`approval_scope` 纳入 `Frontmatter`；同时把 `encrypted?: boolean` 纳入共享 `Note` contract。
+  - `LifeOS/packages/web/src/components/NoteDetail.vue` 删除本地 `Note & {...}` 临时扩展，改为直接使用共享 `Note` 类型，避免 web 再自行维护一份与 server 实际响应并行的影子 contract。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 的测试数据工厂改为符合当前共享 `Note` 真实字段名（`id` / `file_path` / `created` / `updated` / `indexed_at` / `file_modified_at` 等），不再依赖旧的本地伪字段。
+  - 同一测试文件新增两条回归：
+    - `renders approval metadata from the shared Note contract`
+    - `renders encrypted placeholder from the shared Note contract flag`
+    直接锁定 `NoteDetail` 对 approval / encrypted 两类共享字段的真实消费。
+- 这次没有新增后端接口，也没有继续深挖 grouped governance；重点是把另一个已经运行中的 note 详情 contract 缺口补齐。
+
+## 本轮选择依据
+- 用户已要求后续优先找新的 `server/web/shared contract gap`，避免继续在 grouped governance / SettingsView 同类收敛链上做低边际平移。
+- 代码现实显示：
+  - server 在 `LifeOS/packages/server/src/db/schema.ts` / `src/indexer/indexer.ts` 已持久化 approval metadata；
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 `parseNote()` 也会在返回 note 时附带 `encrypted`；
+  - `LifeOS/packages/web/src/components/NoteDetail.vue` 已在真实 UI 中消费这些字段；
+  - 但 `LifeOS/packages/shared/src/types.ts` 之前仍未声明这些 note metadata，导致 web 用本地扩展影子补洞。
+- 这属于真实 shared contract 漂移，而不是形式重构。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts` 通过；vitest 同时跑过当前 web 测试集，9 files / 117 tests。
+- 当前环境仍有 Node engine warning（包声明 `>=20 <21`，实际 `v25.8.1`），但本轮定向验证通过。
+
+## 当前未完成项
+- 本轮 shared/web contract 收口改动尚未提交 git commit。
+- 仓库仍有与本轮无关或并行中的未提交改动：`CLAUDE.md`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`，以及上一轮尚未提交的 `LifeOS/packages/server/test/configLifecycle.test.ts` / `LifeOS/packages/shared/src/types.ts` 一并仍在工作区。
+- `web/src/api/client.ts` 的 `updateNote()` 仍在使用内联 `{ approval_status?: string }`，还没有复用刚补齐的共享 approval status 类型。
+
+## 下一步建议
+- 若继续沿同一 contract 主线推进，优先收口 `updateNote()` / 相关调用点的 approval status 类型，让 note 写回入口也回到 shared contract，而不是继续保留字符串漂移口。
+- 若准备提交，建议把本轮与上一轮的 shared contract 收口改动拆成只包含相关文件的干净 commit，继续避开无关 dirty 文件。
+
+
+# shared Note.title contract 收口
+
+## 计划
+- [x] 复核当前仓库未提交状态，继续避开并行中的 `CLAUDE.md` / worker 草稿与上一轮尚未提交的 `SettingsView` 文案改动。
+- [x] 沿用户要求转向新的高价值缺口，优先排查 server/web/shared contract gap，而不是继续深挖 grouped governance 同类补强。
+- [x] 锁定并修复新的真实 contract gap：`packages/shared` 的 `Note` 缺少 `title`，但 server 实际返回、web 已在消费。
+- [x] 补最小 server contract 回归，锁定 `/api/notes` 在 indexer 提取标题时会返回 `title`。
+- [x] 跑定向 server / web 验证并记录结果。
+- [x] 更新本文件，记录本轮选择依据、验证结果与下一步建议。
+
+## 当前执行
+- 已确认当前仓库仍有与本轮无关的未提交改动：根目录 `CLAUDE.md`、根目录 `lifeonline-claude-worker-v2.sh`，以及上一轮尚未提交的 `LifeOS/packages/web/src/views/SettingsView.vue` / `SettingsView.test.ts`。本轮未覆盖这些改动，也未把它们混入实现。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts` 为共享 `Note` contract 增加 `title?: string | null`，使 shared 类型与 server 实际返回、web 现有消费对齐。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `notes API returns shared note title field when indexer extracts one`，在测试 vault 中写入带 `##` 标题的笔记，启动 server 后通过 `/api/notes` 断言返回的 note 带有 `title: 'Shared contract title'`。
+  - 这条回归同时确认现有 `file_name` contract 仍保持带 `.md` 的真实返回，没有误把新的 title coverage 写成 filename 语义改动。
+- 本轮过程中发现并处理了一个测试副作用：`configLifecycle.test.ts` 跑完后把 `LifeOS/packages/server/config.json` 清空。已立即恢复为原内容，避免把无关配置漂移带入后续工作区。
+- 这次没有新增接口、没有改 settings grouped governance 行为，也没有继续围绕同一链路做对称补强；重点是把一个已存在于主数据模型中的共享 contract 缺口补齐。
+
+## 本轮选择依据
+- 用户已明确要求下一轮优先寻找新的 `server/web/shared contract gap` 或新的事实源一致性问题，而不要再默认深挖 grouped governance / SettingsView 的 websocket/filter/retention 同类补强。
+- 代码现实显示：
+  - server 在 `LifeOS/packages/server/src/indexer/indexer.ts` 中会提取 markdown 标题并写入 `notes.title`；
+  - `LifeOS/packages/server/src/api/handlers.ts` 的 `parseNote()` 直接把这部分数据返回给 API；
+  - web 多处组件已使用 `note.title || note.file_name...`；
+  - 但 `LifeOS/packages/shared/src/types.ts` 的 `Note` 却没有 `title` 字段。
+- 这属于真实 shared contract 漂移：不是未来设计，而是当前运行中的 server/web 已经依赖、shared 仍未声明。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/configLifecycle.test.ts` 通过，13/13。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过；vitest 同时跑过当前 web 测试集，9 files / 116 tests。
+- 当前环境仍有 Node engine warning（包声明 `>=20 <21`，实际 `v25.8.1`），但本轮定向验证全部通过。
+
+## 当前未完成项
+- 本轮 shared/server contract 收口改动尚未提交 git commit。
+- 仓库仍有与本轮无关或并行中的未提交改动：`CLAUDE.md`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`。
+- 仍有下一个潜在高价值 contract gap 可继续排查：note detail 流中的 `encrypted` / approval metadata 仍未进入 shared `Note` contract，而 web 已在本地扩展类型消费。
+
+## 下一步建议
+- 继续沿新的 contract 主线前进，优先排查并收口 `NoteDetail` 相关的共享 note metadata 缺口（如 `encrypted`、approval 字段），而不是回到 grouped governance 的文案/筛选微调。
+- 若要提交本轮改动，建议只包含 `LifeOS/packages/shared/src/types.ts` 与 `LifeOS/packages/server/test/configLifecycle.test.ts`，继续避开无关 dirty 文件。
+
+
 # PR6 grouped governance 命名语义收口
 
 ## 计划

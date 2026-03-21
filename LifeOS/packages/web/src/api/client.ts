@@ -469,7 +469,7 @@ export async function fetchContinuityRecords(): Promise<ContinuityRecord[]> {
 }
 
 // Note write-back API
-export async function updateNote(id: string, updates: { status?: string; priority?: string; tags?: string[]; approval_status?: string }): Promise<void> {
+export async function updateNote(id: string, updates: { status?: string; priority?: string; tags?: string[]; approval_status?: import('@lifeos/shared').ApprovalStatus }): Promise<void> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

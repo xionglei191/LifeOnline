@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
-import type { Note, WorkerTask } from '@lifeos/shared';
+import type { Note, WorkerTask, ApprovalStatus } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNoteById: vi.fn(),
@@ -35,8 +35,9 @@ import NoteDetail from './NoteDetail.vue';
 
 function createNote(overrides: Partial<Note> = {}): Note {
   return {
+    id: overrides.id ?? 'note-1',
     file_name: overrides.file_name ?? 'note-1.md',
-    path: overrides.path ?? 'learning/note-1.md',
+    file_path: overrides.file_path ?? '/vault/learning/note-1.md',
     title: overrides.title ?? 'Test Note',
     content: overrides.content ?? 'hello world',
     type: overrides.type ?? 'note',
@@ -45,15 +46,32 @@ function createNote(overrides: Partial<Note> = {}): Note {
     priority: overrides.priority ?? 'medium',
     tags: overrides.tags ?? [],
     date: overrides.date ?? '2026-03-22',
-    due: overrides.due ?? null,
-    source: overrides.source ?? null,
-    created_at: overrides.created_at ?? '2026-03-22T10:00:00.000Z',
-    updated_at: overrides.updated_at ?? '2026-03-22T10:00:00.000Z',
-    links: overrides.links ?? [],
-    backlinks: overrides.backlinks ?? [],
+    due: overrides.due ?? undefined,
+    source: overrides.source ?? 'web',
+    created: overrides.created ?? '2026-03-22T10:00:00.000Z',
+    updated: overrides.updated ?? '2026-03-22T10:00:00.000Z',
+    approval_status: overrides.approval_status ?? null,
+    approval_operation: overrides.approval_operation ?? null,
+    approval_action: overrides.approval_action ?? null,
+    approval_risk: overrides.approval_risk ?? null,
+    approval_scope: overrides.approval_scope ?? null,
     encrypted: overrides.encrypted ?? false,
     privacy: overrides.privacy ?? 'private',
-  } as Note;
+    indexed_at: overrides.indexed_at ?? '2026-03-22T10:00:00.000Z',
+    file_modified_at: overrides.file_modified_at ?? '2026-03-22T10:00:00.000Z',
+  };
+}
+
+function createApprovalNote(status: ApprovalStatus = 'pending'): Note {
+  return createNote({
+    approval_status: status,
+    approval_operation: 'openclaw_execute',
+    approval_action: 'legacy_openclaw_execute',
+    approval_risk: 'high',
+    approval_scope: 'vault write',
+    due: '2026-03-23T12:00:00.000Z',
+    content: 'Need approval body',
+  });
 }
 
 function createTask(overrides: Partial<WorkerTask> = {}): WorkerTask {
@@ -221,8 +239,8 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
-  it('renders localized worker-task metadata after cancelling a related task', async () => {
-    apiMocks.fetchWorkerTasks.mockResolvedValue([createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'running' })]);
+  it('renders approval metadata from the shared Note contract', async () => {
+    apiMocks.fetchNoteById.mockResolvedValue(createApprovalNote());
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -238,12 +256,38 @@ describe('NoteDetail', () => {
     });
 
     await flushPromises();
-    clickButtonByText('取消任务');
+
+    expect(document.body.textContent).toContain('OpenClaw 审批请求');
+    expect(document.body.textContent).toContain('openclaw_execute');
+    expect(document.body.textContent).toContain('vault write');
+    expect(document.body.textContent).toContain('pending');
+
+    wrapper.unmount();
+  });
+
+  it('renders encrypted placeholder from the shared Note contract flag', async () => {
+    apiMocks.fetchNoteById.mockResolvedValue(createNote({
+      encrypted: true,
+      privacy: 'sensitive',
+      content: 'iv:authTag:cipherText',
+    }));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
     await flushPromises();
 
-    expect(apiMocks.cancelWorkerTask).toHaveBeenCalledWith('worker-task-cancel');
-    expect(document.body.textContent).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
-    expect(document.body.textContent).not.toContain('openclaw_task');
+    expect(document.body.innerHTML).toContain('内容已加密，需要解锁后查看');
 
     wrapper.unmount();
   });

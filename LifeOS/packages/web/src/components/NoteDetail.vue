@@ -272,7 +272,7 @@ const props = defineProps<{ noteId: string | null }>();
 const emit = defineEmits<{ close: []; deleted: [] }>();
 
 const currentNoteId = ref<string | null>(null);
-const note = ref<(Note & { encrypted?: boolean; approval_status?: string; approval_operation?: string; approval_risk?: string; approval_scope?: string }) | null>(null);
+const note = ref<Note | null>(null);
 const loading = ref(false);
 const error = ref<Error | null>(null);
 const extracting = ref(false);
