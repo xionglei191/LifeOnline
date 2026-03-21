@@ -1026,6 +1026,77 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps manual reintegration planning feedback visible across consecutive reintegration-record and soul-action websocket refreshes', async () => {
+    apiMocks.fetchReintegrationRecords
+      .mockResolvedValueOnce(reintegrationRecords)
+      .mockResolvedValueOnce([
+        createReintegrationRecord({
+          id: 'record-ready',
+          createdAt: '2026-03-21T10:00:00.000Z',
+          summary: 'ready group',
+          reviewStatus: 'accepted',
+          reviewedAt: '2026-03-21T10:05:00.000Z',
+        }),
+        createReintegrationRecord({ id: 'record-mixed', createdAt: '2026-03-20T10:00:00.000Z', summary: 'mixed group' }),
+      ]);
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    const clientMocks = vi.mocked(client);
+    clientMocks.planReintegrationPromotions.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const planButton = wrapper.findAll('button').find((button) => button.text() === '手动补规划');
+    expect(planButton).toBeTruthy();
+
+    await planButton!.trigger('click');
+    await flushPromises();
+
+    expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
+    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'reintegration-record-updated',
+        data: createReintegrationRecord({
+          id: 'record-ready',
+          createdAt: '2026-03-21T10:00:00.000Z',
+          summary: 'ready group',
+          reviewStatus: 'accepted',
+          reviewedAt: '2026-03-21T10:05:00.000Z',
+        }),
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('已规划 1 条 promotion actions');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条 promotion actions');
+
+    wrapper.unmount();
+  });
+
   it('keeps reintegration reject feedback visible across consecutive worker-task, reintegration-record, and soul-action websocket refreshes', async () => {
     const wrapper = mountSettingsView();
 

@@ -599,6 +599,15 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract 主线推进，可检查 `WorkerTaskDetail.vue` 的 source note / output note 打开链路是否也需要补一条最小回归，确保 detail overlay 不只展示 contract，还能稳定消费这些已存在的导航动作。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 manual planning 的双事件链 retention 回归，锁定在 `planReintegrationPromotions()` 成功后，连续收到 `reintegration-record-updated -> soul-action-updated` 两次 websocket 刷新时，`已规划 1 条 promotion actions` 仍保持可见。
+  - 同一用例继续要求这两次刷新都只联动 `fetchReintegrationRecords()` / `fetchSoulActions()`，不会误触发 `fetchWorkerTasks()`，把上一轮 server 新补的手动 planning websocket 广播链直接落到 view-level 连续行为保护上。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 85 tests。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 reintegration websocket 主线推进，下一步可检查 accept / reject 的 success feedback 是否也缺同级“先 record、再 soul-action”双事件链 retention 断言；若不缺，则可直接提交当前手动 planning 连续刷新回归增量。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 新增 source note pill 与 output note 列表两条导航回归，直接锁定 detail overlay 点击后会把对应 note id 传给 `NoteDetail`，避免后续重构时把这两条已存在动作链路悄悄断开。
   - 这次补的是上一轮 detail overlay 行为验证的剩余空白面：当前 UI 不只是展示 worker task contract，还承担从 source/output 跳回 note 详情的联动职责，因此需要一条真正覆盖导航消费面的测试，而不是只测静态渲染。
 - 本轮验证再补充：
