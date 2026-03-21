@@ -465,6 +465,7 @@
           <select v-model="soulActionGroupQuickFilter" class="worker-filter">
             <option value="all">全部分组</option>
             <option value="pending_only">仅待治理分组</option>
+            <option value="dispatch_ready_only">仅可派发分组</option>
           </select>
           <button class="btn-link" @click="loadSoulActions">刷新</button>
         </div>
@@ -1091,7 +1092,7 @@ const soulActionSummary = computed(() => {
     dispatched: 0,
   });
 });
-const soulActionGroupQuickFilter = ref<'all' | 'pending_only'>('all');
+const soulActionGroupQuickFilter = ref<'all' | 'pending_only' | 'dispatch_ready_only'>('all');
 const soulActionGroups = computed(() => {
   const grouped = new Map<string, { sourceNoteId: string; actions: SoulAction[]; reintegrationRecord: ReintegrationRecord | null }>();
   for (const action of soulActions.value) {
@@ -1116,7 +1117,9 @@ const soulActionGroups = computed(() => {
 
   const filteredGroups = soulActionGroupQuickFilter.value === 'pending_only'
     ? groups.filter((group) => group.pendingCount > 0)
-    : groups;
+    : soulActionGroupQuickFilter.value === 'dispatch_ready_only'
+      ? groups.filter((group) => group.dispatchReadyCount === group.actions.length && group.dispatchReadyCount > 0)
+      : groups;
 
   return filteredGroups.sort((left, right) => {
     const leftTime = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
