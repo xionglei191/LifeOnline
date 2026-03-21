@@ -34,6 +34,13 @@ function createTask(overrides: Partial<WorkerTask> = {}): WorkerTask {
   };
 }
 
+function noteDetailStub() {
+  return {
+    props: ['noteId'],
+    template: '<div class="note-detail-stub" :data-note-id="noteId"></div>',
+  };
+}
+
 describe('WorkerTaskDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -188,6 +195,61 @@ describe('WorkerTaskDetail', () => {
 
     expect(apiMocks.fetchWorkerTask).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
+
+    wrapper.unmount();
+  });
+
+  it('opens source note from the source pill', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask({ sourceNoteId: 'source-note.md' }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: noteDetailStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    const sourceButton = Array.from(document.body.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'source source…e.md');
+    expect(sourceButton).toBeTruthy();
+    (sourceButton as HTMLButtonElement).click();
+    await flushPromises();
+
+    const noteDetail = document.body.querySelector('.note-detail-stub');
+    expect(noteDetail?.getAttribute('data-note-id')).toBe('source-note.md');
+
+    wrapper.unmount();
+  });
+
+  it('opens output note from the output list', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask({
+      outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md' }],
+    }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: noteDetailStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    const outputButton = document.body.querySelector('.output-item');
+    expect(outputButton).toBeTruthy();
+    (outputButton as HTMLButtonElement).click();
+    await flushPromises();
+
+    const noteDetail = document.body.querySelector('.note-detail-stub');
+    expect(noteDetail?.getAttribute('data-note-id')).toBe('output-note-1');
+    expect(document.body.textContent).toContain('Output Note');
 
     wrapper.unmount();
   });

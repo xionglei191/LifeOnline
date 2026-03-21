@@ -530,6 +530,14 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract 主线推进，可检查 `WorkerTaskDetail.vue` 的 source note / output note 打开链路是否也需要补一条最小回归，确保 detail overlay 不只展示 contract，还能稳定消费这些已存在的导航动作。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 新增 source note pill 与 output note 列表两条导航回归，直接锁定 detail overlay 点击后会把对应 note id 传给 `NoteDetail`，避免后续重构时把这两条已存在动作链路悄悄断开。
+  - 这次补的是上一轮 detail overlay 行为验证的剩余空白面：当前 UI 不只是展示 worker task contract，还承担从 source/output 跳回 note 详情的联动职责，因此需要一条真正覆盖导航消费面的测试，而不是只测静态渲染。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskDetail.test.ts` 通过，7 files / 70 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
