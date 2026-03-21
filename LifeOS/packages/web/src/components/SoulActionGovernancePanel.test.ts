@@ -192,6 +192,22 @@ describe('SoulActionGovernancePanel', () => {
     expect(wrapper.emitted('dispatch-action')).toEqual([[mixedGroup.actions[1]]]);
   });
 
+  it('hides action rows when the group is passed as collapsed', () => {
+    const wrapper = mountPanel('dispatch_ready_only', {
+      collapsedGroupIds: ['record-ready'],
+    });
+
+    expect(wrapper.findAll('.soul-action-item')).toHaveLength(0);
+    expect(wrapper.text()).toContain('展开分组');
+  });
+
+  it('keeps action rows visible when the group is not collapsed', () => {
+    const wrapper = mountPanel('dispatch_ready_only');
+
+    expect(wrapper.findAll('.soul-action-item')).toHaveLength(2);
+    expect(wrapper.text()).toContain('收起分组');
+  });
+
   it('disables group dispatch while the matching group is processing', () => {
     const wrapper = mountPanel('dispatch_ready_only', {
       groupDispatchId: 'record-ready',

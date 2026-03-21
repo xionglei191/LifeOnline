@@ -141,14 +141,15 @@
   - `LifeOS/packages/web/src/views/SettingsView.vue` 改为复用这组纯函数，保持现有 UI 行为不变，但不再把 grouped governance 规则内联死在单个大视图里。
   - `LifeOS/packages/web/src/utils/soulActionGroups.test.ts` 新增 5 条最小前端语义测试，覆盖分组计数、`pending_only` 过滤、`dispatch_ready_only` 过滤、按 reintegration 时间排序，以及 filter label/stats 文案一致性。
 - 本轮验证补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 16 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test` 通过，2 files / 18 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现补充：
-  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 3 条 panel 通信面测试，锁定 `update:filterStatus`、`update:executionFilter`、`refresh` 与 `toggle-collapsed` 的 emitted 事件。
-  - 这样一来，当前 panel 对父层暴露的主要事件面——filter 更新、refresh、折叠切换、组级 approve/dispatch、单条 approve/dispatch——都已有直接组件测试保护。
+  - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 再补 2 条 collapsed-state DOM 断言，直接验证父层传入 `collapsedGroupIds` 后 action 列表会被收起，未传入时则保持展开。
+  - 这样当前 panel 的折叠能力不再只停留在 emitted 事件层，也有了实际 DOM 可见性回归保护。
 - 当前未完成项：
-  - 还没有覆盖空态下 `refresh` 以外的交互表现，也还没有验证 `collapsedGroupIds` 输入变化后的 DOM 收起/展开结果。
+  - 还没有覆盖空态下除 `refresh` 外的交互表现。
+  - 还没有覆盖 `SettingsView` 父层接住这些事件后的联动刷新链路。
   - 本轮 web 变更尚未提交 git commit。
 - 下一步建议：
-  - 若继续沿同一主线推进，优先补 collapsed state 的 DOM 断言，锁定父层传入 `collapsedGroupIds` 后 action 列表确实收起，不只验证事件发出。
-  - 若本轮先提交也合适；因为当前 panel 与父层之间的关键通信面已经基本补齐。
+  - 若继续沿同一主线推进，优先补空态与 loading 态的 DOM 断言，把 panel 在“无数据 / 收起 / 正常列表”三种显示模式都锁住。
+  - 若本轮先提交也合适；因为 grouped governance panel 的主要事件面和 collapsed DOM 表现现在都已有直接测试保护。
