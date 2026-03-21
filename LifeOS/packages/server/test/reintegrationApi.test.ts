@@ -897,6 +897,129 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
   }
 });
 
+test('reintegration accept emits reintegration-record-updated websocket event aligned with follow-up lists', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-accept-record-ws-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-accept-record-ws-refresh',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api accept reintegration-record websocket summary',
+      evidence: { source: 'api-accept-record-ws-test' },
+      now: '2026-03-22T01:30:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-accept-record-ws-refresh');
+    assert.ok(record);
+
+    const recordEventPromise = waitForWebSocketEvent<ReintegrationRecordWsEvent>(
+      socket,
+      (event) => event.type === 'reintegration-record-updated' && event.data.id === record!.id,
+    );
+    const seenActionIds = new Set<string>();
+    const actionEventsPromise = Promise.all([
+      waitForWebSocketEvent<SoulActionWsEvent>(
+        socket,
+        (event) => {
+          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+            return false;
+          }
+          seenActionIds.add(event.data.id);
+          return seenActionIds.size >= 1;
+        },
+      ),
+      waitForWebSocketEvent<SoulActionWsEvent>(
+        socket,
+        (event) => {
+          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
+            return false;
+          }
+          seenActionIds.add(event.data.id);
+          return seenActionIds.size >= 2;
+        },
+      ),
+    ]);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for reintegration-record websocket test' }),
+      },
+    );
+
+    const recordEvent = await recordEventPromise;
+    const actionEvents = await actionEventsPromise;
+    assert.equal(recordEvent.data.id, accepted.reintegrationRecord.id);
+    assert.equal(recordEvent.data.reviewStatus, accepted.reintegrationRecord.reviewStatus);
+    assert.equal(recordEvent.data.reviewReason, accepted.reintegrationRecord.reviewReason);
+    assert.equal(recordEvent.data.reviewedAt, accepted.reintegrationRecord.reviewedAt);
+    assert.equal(accepted.soulActions.length, 2);
+    assert.deepEqual(
+      [...seenActionIds].sort(),
+      accepted.soulActions.map((action) => action.id).sort(),
+    );
+    assert.ok(actionEvents.every((event) => event.data.sourceNoteId === record!.id));
+
+    const acceptedRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=accepted',
+    );
+    const pendingRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=pending_review',
+    );
+
+    assert.equal(
+      acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.id,
+      accepted.reintegrationRecord.id,
+    );
+    assert.equal(
+      acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.reviewedAt,
+      recordEvent.data.reviewedAt,
+    );
+    assert.equal(
+      pendingRecords.reintegrationRecords.find((item) => item.id === record!.id),
+      undefined,
+    );
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('reintegration accept emits soul-action-updated websocket events for planned settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
