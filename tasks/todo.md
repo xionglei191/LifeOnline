@@ -218,6 +218,15 @@
   - 本轮 web 变更仍未提交 git commit。
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 grouped governance / SettingsView 回归补强；这一段父层接线与反馈语义已经形成更完整的最小保护。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 将单条 dispatch 成功提示继续收紧为直接消费 `DispatchSoulActionResponse.task.taskType`，在已有 workerTaskId 基础上补充本地化 task label，避免 web 侧只展示 ID 而没有落地 shared/server 已锁住的 task contract。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步把单条 dispatch 成功提示与两条 websocket retention 断言更新为包含 `人格快照更新` label，直接锁住 success message 在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下都持续消费该 contract。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交这条 web/shared contract 收敛增量；若还想再扩验证，再补一轮 `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build`。
   - 若还要继续补一轮，再评估是否值得补单条 action loading/disabled 态在父层往返中的 view 级断言。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。

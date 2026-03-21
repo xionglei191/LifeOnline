@@ -1308,7 +1308,10 @@ async function handleDispatchSoulAction(action: SoulAction) {
   soulActionMessage.value = '';
   try {
     const result = await dispatchSoulAction(action.id);
-    const workerTaskSuffix = result.result.workerTaskId ? `（Worker Task: ${result.result.workerTaskId}）` : '';
+    const workerTaskLabel = result.task ? taskTypeLabel(result.task.taskType) : null;
+    const workerTaskSuffix = result.result.workerTaskId
+      ? `（Worker Task: ${result.result.workerTaskId}${workerTaskLabel ? ` · ${workerTaskLabel}` : ''}）`
+      : '';
     soulActionMessage.value = `${result.result.reason}${workerTaskSuffix}`;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
     await loadSoulActions({ preserveMessage: true });
@@ -1718,6 +1721,7 @@ function taskTypeLabel(taskType: string): string {
     summarize_note: '笔记摘要',
     classify_inbox: 'Inbox 整理',
     extract_tasks: '提取行动项',
+    update_persona_snapshot: '人格快照更新',
     daily_report: '每日回顾',
     weekly_report: '每周回顾',
   };
