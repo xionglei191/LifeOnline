@@ -453,8 +453,13 @@
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 51 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts:955` 新增 `soul-action-updated` 分支下的 dispatch feedback retention 回归，锁定单条 dispatch 成功后即使马上收到 `soul-action-updated`，`reintegrationRecords` / `soulActions` 仍会刷新，但带 `Worker Task` 的成功提示不会被清空。
+  - 这次不再改运行时，而是把上一轮已经修好的 `preserveMessage` 根因保护扩到另一条同级 websocket 分支，避免回归只在 `worker-task-updated` 路径成立、换到 `soul-action-updated` 就再次退化。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 52 tests。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 websocket-driven dispatch feedback retention 修复。
-  - 若还要继续补一轮，应转去新的 server/web/shared contract 缺口，而不是继续在同一 success-message 链上做低边际对称补丁。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action websocket feedback retention 回归补强。
+  - 若还要继续补一轮，应转去新的 server/web/shared contract 缺口，而不是继续在同一 dispatch feedback retention 链上做低边际对称补丁。
