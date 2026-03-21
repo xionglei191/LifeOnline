@@ -718,10 +718,11 @@
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
 - 本轮继续完成的真实实现：
-  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 将 `approved create_event_node action reuses PR6 event promotion executor` 用例从旧的 `getSoulActionBySourceNoteIdAndKind('reint:...')` 误用，收回到显式 `getSoulActionBySourceReintegrationIdAndKind('reint:...')`。这让 `create_event_node` 的测试主语义与 promotion helper / identity lookup 现在一致，不再继续把 legacy `sourceNoteId = reint:...` 兼容路径当成主查询键。
-  - 这次补的是新的事实源一致性问题：runtime 已按 promotion action 的 `sourceReintegrationId` 优先查 identity，但这条 `create_event_node` 回归仍在测试层鼓励旧兼容路径，未来容易把新 contract 再拉回旧语义。
+  - `LifeOS/packages/server/src/soul/soulActions.ts` 将 promotion action 的 identity/create-or-reuse 路径也切到统一的 `resolveSoulActionSourceReintegrationId()`：当旧数据仍以 `sourceNoteId = reint:...` 进入且 `sourceReintegrationId` 为空时，现在会先归一化出 `sourceReintegrationId` 再查重/建 id/落库，不再出现 executor 认得 legacy source、但 createOrReuse 仍按 note 维度插入导致主键冲突的分叉。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 legacy identity reuse 回归，并继续保留 explicit source 与 create_event_node 主路径断言，锁住三条 source 语义：explicit source、legacy fallback、create_event_node dispatch 主路径。
+  - 这次补的是新的主路径断裂：上轮刚把 source resolution helper 收束到 executor，但 create/reuse 仍没跟上；只有实际补到 `soulActions.ts` 才真正消掉 runtime 分叉。
 - 本轮验证再补充：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "approved create_event_node action reuses PR6 event promotion executor" test/feedbackReintegration.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "legacy reintegration source encoded in sourceNoteId|create_event_node action reuses PR6 event promotion executor|persists explicit sourceReintegrationId independently from sourceNoteId" test/feedbackReintegration.test.ts` 通过，3/3。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 soul-action collapsedGroupIds retention 回归补强。

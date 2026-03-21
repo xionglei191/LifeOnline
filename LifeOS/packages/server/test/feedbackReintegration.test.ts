@@ -84,6 +84,41 @@ test('createOrReuseSoulAction persists explicit sourceReintegrationId independen
   assert.equal(reloaded?.id, action.id);
 });
 
+test('createOrReuseSoulAction reuses promotion actions by legacy reintegration source encoded in sourceNoteId', async (t) => {
+  const env = await createTestEnv('lifeos-soul-action-legacy-source-identity-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  const first = createOrReuseSoulAction({
+    sourceNoteId: 'reint:legacy-identity-source',
+    sourceReintegrationId: null,
+    actionKind: 'promote_event_node',
+    governanceReason: 'legacy identity seed',
+  });
+
+  const reused = createOrReuseSoulAction({
+    sourceNoteId: 'reint:legacy-identity-source',
+    sourceReintegrationId: null,
+    actionKind: 'promote_event_node',
+    governanceReason: 'legacy identity second pass',
+  });
+
+  const reloaded = getSoulActionByIdentityAndKind({
+    sourceNoteId: 'reint:legacy-identity-source',
+    sourceReintegrationId: null,
+    actionKind: 'promote_event_node',
+  });
+
+  assert.equal(reused.id, first.id);
+  assert.equal(reloaded?.id, first.id);
+  assert.equal(reloaded?.sourceReintegrationId, 'reint:legacy-identity-source');
+  assert.equal(reloaded?.sourceNoteId, 'reint:legacy-identity-source');
+});
+
 test('createReintegrationRecordInput centralizes record assembly for terminal tasks', () => {
   const task = buildTerminalTask('update_persona_snapshot', {
     id: 'task-record-input',

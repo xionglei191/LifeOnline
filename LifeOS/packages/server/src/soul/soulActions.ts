@@ -2,6 +2,7 @@ import type { WorkerTask } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import {
   SUPPORTED_SOUL_ACTION_KINDS,
+  resolveSoulActionSourceReintegrationId,
   type SoulAction,
   type SoulActionExecutionStatus,
   type SoulActionGovernanceStatus,
@@ -68,8 +69,8 @@ function getSoulActionIdentityKey(input: {
   sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
 }): string {
-  if (isPromotionSoulActionKind(input.actionKind) && input.sourceReintegrationId) {
-    return input.sourceReintegrationId;
+  if (isPromotionSoulActionKind(input.actionKind)) {
+    return resolveSoulActionSourceReintegrationId(input) ?? input.sourceNoteId;
   }
   return input.sourceNoteId;
 }
@@ -152,8 +153,11 @@ export function getSoulActionByIdentityAndKind(input: {
   sourceReintegrationId?: string | null;
   actionKind: SoulActionKind;
 }): SoulAction | null {
-  if (isPromotionSoulActionKind(input.actionKind) && input.sourceReintegrationId) {
-    return getSoulActionBySourceReintegrationIdAndKind(input.sourceReintegrationId, input.actionKind);
+  if (isPromotionSoulActionKind(input.actionKind)) {
+    const sourceReintegrationId = resolveSoulActionSourceReintegrationId(input);
+    if (sourceReintegrationId) {
+      return getSoulActionBySourceReintegrationIdAndKind(sourceReintegrationId, input.actionKind);
+    }
   }
   return getSoulActionBySourceNoteIdAndKind(input.sourceNoteId, input.actionKind);
 }
@@ -172,7 +176,14 @@ export function createOrReuseSoulAction(input: {
   executionStatus?: SoulActionExecutionStatus;
   governanceReason?: string | null;
 }): SoulAction {
-  const existing = getSoulActionByIdentityAndKind(input);
+  const normalizedSourceReintegrationId = isPromotionSoulActionKind(input.actionKind)
+    ? resolveSoulActionSourceReintegrationId(input)
+    : input.sourceReintegrationId ?? null;
+  const normalizedInput = {
+    ...input,
+    sourceReintegrationId: normalizedSourceReintegrationId,
+  };
+  const existing = getSoulActionByIdentityAndKind(normalizedInput);
   if (existing) {
     return existing;
   }
@@ -181,9 +192,9 @@ export function createOrReuseSoulAction(input: {
   const governanceStatus = input.governanceStatus ?? 'pending_review';
   const executionStatus = input.executionStatus ?? 'not_dispatched';
   const action: SoulAction = {
-    id: buildSoulActionId(input),
+    id: buildSoulActionId(normalizedInput),
     sourceNoteId: input.sourceNoteId,
-    sourceReintegrationId: input.sourceReintegrationId ?? null,
+    sourceReintegrationId: normalizedSourceReintegrationId,
     actionKind: input.actionKind,
     governanceStatus,
     executionStatus,
