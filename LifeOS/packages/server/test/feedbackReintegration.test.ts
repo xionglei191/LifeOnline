@@ -230,6 +230,60 @@ test('executePromotionSoulAction prefers explicit sourceReintegrationId over a n
   assert.equal(eventNode?.title, '周回顾事件');
 });
 
+test('executePromotionSoulAction still supports legacy reintegration ids stored in sourceNoteId', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-legacy-source-note-fallback-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+
+  upsertReintegrationRecord({
+    workerTaskId: 'task-pr6-legacy-source',
+    sourceNoteId: 'note-legacy-original-source',
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'daily reviewed summary',
+    evidence: { source: 'feedback-test' },
+    reviewStatus: 'accepted',
+    reviewReason: 'legacy still supported',
+  });
+
+  const result = executePromotionSoulAction({
+    id: 'soul:promote-continuity-legacy-source',
+    sourceNoteId: 'reint:task-pr6-legacy-source',
+    sourceReintegrationId: null,
+    actionKind: 'promote_continuity_record',
+    governanceStatus: 'approved',
+    executionStatus: 'not_dispatched',
+    status: 'not_dispatched',
+    workerTaskId: null,
+    governanceReason: null,
+    resultSummary: null,
+    error: null,
+    createdAt: '2026-03-22T10:10:00.000Z',
+    updatedAt: '2026-03-22T10:10:00.000Z',
+    approvedAt: '2026-03-22T10:10:00.000Z',
+    deferredAt: null,
+    discardedAt: null,
+    startedAt: null,
+    finishedAt: null,
+  });
+
+  assert.match(result.summary, /已创建 continuity record:/);
+
+  const continuity = listContinuityRecords().find((item) => item.sourceReintegrationId === 'reint:task-pr6-legacy-source');
+  assert.ok(continuity);
+  assert.equal(continuity?.sourceReintegrationId, 'reint:task-pr6-legacy-source');
+  assert.equal(continuity?.sourceNoteId, 'note-legacy-original-source');
+  assert.equal(continuity?.continuityKind, 'daily_rhythm');
+});
+
 test('update_persona_snapshot with sourceNoteId creates and reuses a SoulAction record', async (t) => {
   const env = await createTestEnv('lifeos-persona-soul-action-create-');
 

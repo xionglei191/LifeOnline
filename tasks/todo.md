@@ -454,6 +454,16 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 sequential approve websocket filter convergence contract 补强。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 1 条 legacy-source fallback contract test，直接锁定当旧 promotion action 仍把 reintegration id 塞在 `sourceNoteId`、且 `sourceReintegrationId` 为空时，`executePromotionSoulAction()` 仍能继续走兼容路径成功派发，不会因后续收口显式字段而把旧数据主路径打断。
+  - 该测试同时断言生成的 `continuity_record` 继续保留 `sourceReintegrationId = reint:task-pr6-legacy-source`，并把真实原始 note id 维持在 `sourceNoteId = note-legacy-original-source`，证明兼容旧 action 输入时仍能把两层事实源正确分开投射到 projection 对象。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，49/49。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
+- 当前未完成项再补充：
+  - promotion dispatch 现在同时有 explicit-source precedence 与 legacy fallback 两条直接测试保护，但 planner / API 返回链路里是否还存在继续把 `sourceNoteId = record.id` 当主语义的现实路径，仍值得下一轮继续排查。
+  - 本轮 server 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 worker-task create websocket retention 回归，锁定手动创建 OpenClaw worker task 后的成功提示在 `worker-task-updated` 刷新后仍保持可见，补齐 SettingsView 中 create / retry / cancel 三条 action feedback 的同级保护面。
   - 这次继续只补最窄的 view-level 可回归断言，不改运行时代码；目标是避免 create 路径在跨刷新保留语义上再次落后于已补齐的 retry / cancel。
 - 本轮验证再补充：
