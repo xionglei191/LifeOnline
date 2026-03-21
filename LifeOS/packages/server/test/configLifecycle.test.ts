@@ -111,6 +111,52 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('AI provider APIs respond with shared provider contracts', async () => {
+  const env = await createTestEnv('lifeos-ai-provider-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const fetched = await api<import('../../shared/src/types.js').AiProviderSettings>(baseUrl, '/api/ai/provider');
+    assert.equal(typeof fetched.baseUrl, 'string');
+    assert.equal(typeof fetched.model, 'string');
+    assert.equal(typeof fetched.enabled, 'boolean');
+    assert.equal(typeof fetched.hasApiKey, 'boolean');
+
+    const updated = await api<import('../../shared/src/types.js').AiProviderSettings>(baseUrl, '/api/ai/provider', {
+      method: 'PATCH',
+      body: JSON.stringify({ model: fetched.model } satisfies import('../../shared/src/types.js').UpdateAiProviderSettingsRequest),
+    });
+    assert.equal(updated.model, fetched.model);
+
+    const tested = await api<import('../../shared/src/types.js').TestAiProviderConnectionResponse>(baseUrl, '/api/ai/provider/test', {
+      method: 'POST',
+      body: JSON.stringify({ model: fetched.model } satisfies import('../../shared/src/types.js').TestAiProviderConnectionRequest),
+    });
+    assert.equal(typeof tested.success, 'boolean');
+    assert.equal(typeof tested.message, 'string');
+    assert.equal(typeof tested.resolvedBaseUrl, 'string');
+    assert.equal(typeof tested.resolvedModel, 'string');
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('AI prompt APIs respond with shared prompt contracts', async () => {
   const env = await createTestEnv('lifeos-ai-prompt-contract-');
   const configFile = CONFIG_FILE;

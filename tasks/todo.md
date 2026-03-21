@@ -1,3 +1,43 @@
+# AI provider shared contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 AI provider 主路径是否仍停留在 server handler 未显式复用 shared `AiProviderSettings` / `TestAiProviderConnectionResponse`、以及 web client 使用无类型 fallback 的状态。
+- [x] 让 AI provider 的 web client / server handlers 显式接回 shared provider contracts。
+- [x] 补最小 web + server 回归，锁定 AI provider 主路径已经切到 shared contract。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/api/client.ts`
+    - `fetchAiProviderSettings()` 改为按 shared `AiProviderSettings` 解析返回。
+    - `updateAiProviderSettings()` 改为按 shared `AiProviderSettings` 解析返回。
+    - `testAiProviderConnection()` 改为按 shared `TestAiProviderConnectionResponse` 解析返回。
+    - 三者均去掉无类型 `{}` fallback。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `getAiProviderHandler()` 显式接回 shared `AiProviderSettings`。
+    - `updateAiProviderHandler()` 显式接回 shared `AiProviderSettings` request/response typing。
+    - `testAiProviderHandler()` 显式接回 shared `TestAiProviderConnectionResponse` request/response typing。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 AI provider shared contract 回归。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `AI provider APIs respond with shared provider contracts`。
+- 这次修的不是对称 UI 补强，而是 AI provider 主路径已有 shared 本体 contract，但 server/web 仍未显式 typed 接回，导致 handler 与 client 容易在错误分支或返回解析上再次漂移。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- AI prompt 收口后，AI provider 是同一主路径上的下一条真实 contract gap：shared 已定义 provider contracts，但 server handler 仍未显式复用，web client 仍使用无类型 fallback。
+- 这条线能继续减少 provider 设置与连接测试主路径在 server/web 两端的 contract 漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 130 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "AI provider APIs respond with shared provider contracts|AI prompt APIs respond with shared prompt contracts" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- AI provider 主路径收口后，下一步可继续检查 reintegration / soul action 相关 response wrapper 是否仍有 shared 外稳定 shape。
+
+
 # AI prompt shared response contract 收口
 
 ## 计划

@@ -142,11 +142,11 @@ export async function resetAiPrompt(key: PromptKey): Promise<void> {
 
 export async function fetchAiProviderSettings(): Promise<AiProviderSettings> {
   const res = await fetch(`${API_BASE}/ai/provider`);
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch AI provider settings');
   }
-  return data;
+  return data as AiProviderSettings;
 }
 
 export async function updateAiProviderSettings(payload: UpdateAiProviderSettingsRequest): Promise<AiProviderSettings> {
@@ -155,11 +155,11 @@ export async function updateAiProviderSettings(payload: UpdateAiProviderSettings
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to update AI provider settings');
   }
-  return data;
+  return data as AiProviderSettings;
 }
 
 export async function testAiProviderConnection(payload: TestAiProviderConnectionRequest): Promise<TestAiProviderConnectionResponse> {
@@ -168,11 +168,11 @@ export async function testAiProviderConnection(payload: TestAiProviderConnection
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({} as Partial<TestAiProviderConnectionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to test AI provider connection');
   }
-  return data;
+  return data as TestAiProviderConnectionResponse;
 }
 
 export async function createWorkerTask(request: CreateWorkerTaskRequest): Promise<WorkerTask> {

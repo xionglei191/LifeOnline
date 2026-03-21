@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,55 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('fetches typed AI provider contracts from shared response shapes', async () => {
+    const settings: AiProviderSettings = {
+      baseUrl: 'https://api.example.test/v1/messages',
+      model: 'claude-sonnet-4-6',
+      enabled: true,
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      hasApiKey: true,
+      apiKeyMasked: 'sk-***abcd',
+      apiKeySource: 'database',
+    };
+    const connection: TestAiProviderConnectionResponse = {
+      success: true,
+      message: 'ok',
+      resolvedBaseUrl: settings.baseUrl,
+      resolvedModel: settings.model,
+      latencyMs: 123,
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => settings })
+      .mockResolvedValueOnce({ ok: true, json: async () => settings })
+      .mockResolvedValueOnce({ ok: true, json: async () => connection }));
+
+    await expect(fetchAiProviderSettings()).resolves.toEqual(settings);
+    await expect(updateAiProviderSettings({ model: 'claude-sonnet-4-6' })).resolves.toEqual(settings);
+    await expect(testAiProviderConnection({ model: 'claude-sonnet-4-6' })).resolves.toEqual(connection);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/ai/provider');
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/ai/provider', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6' }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/ai/provider/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6' }),
+    });
+  });
+
+  it('surfaces API errors for AI provider contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'provider fetch failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'provider update failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'provider test failed' }) }));
+
+    await expect(fetchAiProviderSettings()).rejects.toThrow('provider fetch failed');
+    await expect(updateAiProviderSettings({ model: 'claude-sonnet-4-6' })).rejects.toThrow('provider update failed');
+    await expect(testAiProviderConnection({ model: 'claude-sonnet-4-6' })).rejects.toThrow('provider test failed');
   });
 
   it('fetches typed AI prompt contracts from shared response shapes', async () => {

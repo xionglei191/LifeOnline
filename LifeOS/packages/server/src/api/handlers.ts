@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -418,20 +418,28 @@ export async function resetAiPrompt(
   }
 }
 
-export async function getAiProviderHandler(_req: Request, res: Response): Promise<void> {
+export async function getAiProviderHandler(
+  _req: Request<Record<string, never>, AiProviderSettings>,
+  res: Response<AiProviderSettings>,
+): Promise<void> {
   try {
-    res.json(getAiProviderSettings());
+    const response: AiProviderSettings = getAiProviderSettings();
+    res.json(response);
   } catch (error) {
     console.error('Get AI provider settings error:', error);
     res.status(500).json({ error: 'Failed to fetch AI provider settings' });
   }
 }
 
-export async function updateAiProviderHandler(req: Request, res: Response): Promise<void> {
+export async function updateAiProviderHandler(
+  req: Request<Record<string, never>, AiProviderSettings, UpdateAiProviderSettingsRequest>,
+  res: Response<AiProviderSettings>,
+): Promise<void> {
   try {
-    const body = req.body as UpdateAiProviderSettingsRequest;
+    const body = req.body;
     validateAiProviderSettings(body || {});
-    res.json(upsertAiProviderSettings(body || {}));
+    const response: AiProviderSettings = upsertAiProviderSettings(body || {});
+    res.json(response);
   } catch (error: any) {
     const message = error?.message || 'Failed to update AI provider settings';
     if (message.includes('baseUrl') || message.includes('model') || message.includes('enabled') || message.includes('apiKey') || message.includes('clearApiKey')) {
@@ -443,11 +451,15 @@ export async function updateAiProviderHandler(req: Request, res: Response): Prom
   }
 }
 
-export async function testAiProviderHandler(req: Request, res: Response): Promise<void> {
+export async function testAiProviderHandler(
+  req: Request<Record<string, never>, TestAiProviderConnectionResponse, TestAiProviderConnectionRequest>,
+  res: Response<TestAiProviderConnectionResponse>,
+): Promise<void> {
   try {
-    const body = (req.body || {}) as TestAiProviderConnectionRequest;
+    const body = req.body || {};
     validateAiProviderSettings(body);
-    res.json(await testAiProviderConnection(body));
+    const response: TestAiProviderConnectionResponse = await testAiProviderConnection(body);
+    res.json(response);
   } catch (error: any) {
     const message = error?.message || 'Failed to test AI provider connection';
     if (message.includes('baseUrl') || message.includes('model') || message.includes('enabled') || message.includes('apiKey') || message.includes('clearApiKey')) {
