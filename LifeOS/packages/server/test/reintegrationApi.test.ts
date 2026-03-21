@@ -1939,7 +1939,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
     assert.equal(firstDispatch.task.sourceNoteId, firstTaskEvent.data.sourceNoteId);
     assert.equal(firstDispatch.task.taskType, firstTaskEvent.data.taskType);
     assert.equal(firstDispatch.task.worker, firstTaskEvent.data.worker);
-    assert.equal(firstDispatch.task.status, firstFilteredTask?.status);
+    assert.equal(firstDispatch.task.id, firstFilteredTask?.id);
+    assert.equal(firstDispatch.task.sourceNoteId, firstFilteredTask?.sourceNoteId);
+    assert.equal(firstDispatch.task.taskType, firstFilteredTask?.taskType);
+    assert.equal(firstDispatch.task.worker, firstFilteredTask?.worker);
     assert.equal(firstFilteredTask?.id, firstTaskEvent.data.id);
     assert.equal(firstFilteredTask?.sourceNoteId, firstTaskEvent.data.sourceNoteId);
     assert.equal(firstFilteredTask?.taskType, firstTaskEvent.data.taskType);
@@ -1985,7 +1988,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
     assert.equal(secondDispatch.task.sourceNoteId, secondTaskEvent.data.sourceNoteId);
     assert.equal(secondDispatch.task.taskType, secondTaskEvent.data.taskType);
     assert.equal(secondDispatch.task.worker, secondTaskEvent.data.worker);
-    assert.equal(secondDispatch.task.status, secondFilteredTask?.status);
+    assert.equal(secondDispatch.task.id, secondFilteredTask?.id);
+    assert.equal(secondDispatch.task.sourceNoteId, secondFilteredTask?.sourceNoteId);
+    assert.equal(secondDispatch.task.taskType, secondFilteredTask?.taskType);
+    assert.equal(secondDispatch.task.worker, secondFilteredTask?.worker);
     assert.equal(secondFilteredTask?.id, secondTaskEvent.data.id);
     assert.equal(secondFilteredTask?.sourceNoteId, secondTaskEvent.data.sourceNoteId);
     assert.equal(secondFilteredTask?.taskType, secondTaskEvent.data.taskType);
@@ -3628,10 +3634,29 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
     );
 
     const wsEvent = await wsEventPromise;
+    const filteredAfterDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatchResponse.soulAction!.executionStatus)}`,
+    );
+    const filteredAction = filteredAfterDispatch.soulActions.find((item) => item.id === action!.id);
+
+    assert.ok(dispatchResponse.soulAction);
     assert.equal(wsEvent.type, 'soul-action-updated');
     assert.equal(wsEvent.data.id, action!.id);
+    assert.equal(wsEvent.data.id, dispatchResponse.soulAction.id);
     assert.equal(wsEvent.data.sourceNoteId, 'note-api-pr6-ws-refresh');
+    assert.equal(wsEvent.data.sourceNoteId, dispatchResponse.soulAction.sourceNoteId);
     assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
+    assert.equal(wsEvent.data.sourceReintegrationId, dispatchResponse.soulAction.sourceReintegrationId);
+    assert.equal(wsEvent.data.governanceStatus, dispatchResponse.soulAction.governanceStatus);
+    assert.equal(filteredAfterDispatch.filters.sourceReintegrationId, record!.id);
+    assert.equal(filteredAfterDispatch.filters.governanceStatus, 'approved');
+    assert.equal(filteredAfterDispatch.filters.executionStatus, dispatchResponse.soulAction.executionStatus);
+    assert.equal(filteredAction?.id, dispatchResponse.soulAction.id);
+    assert.equal(filteredAction?.sourceNoteId, dispatchResponse.soulAction.sourceNoteId);
+    assert.equal(filteredAction?.sourceReintegrationId, dispatchResponse.soulAction.sourceReintegrationId);
+    assert.equal(filteredAction?.governanceStatus, dispatchResponse.soulAction.governanceStatus);
+    assert.equal(filteredAction?.executionStatus, dispatchResponse.soulAction.executionStatus);
     assert.ok(['pending', 'running', 'succeeded'].includes(wsEvent.data.executionStatus));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {

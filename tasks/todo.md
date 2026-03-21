@@ -350,6 +350,17 @@
   - 本轮 server 测试增量尚未提交 git commit。
 - 下一步建议再补充：
   - 若继续沿同一主线推进，优先检查这条三方对齐测试是否还需要再补 mixed status / repeated websocket 顺序边界；若没有新的真实 contract gap，就直接提交当前 server 增量。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续收紧 `soul-action dispatch emits soul-action-updated websocket event for settings refresh`，把单条 promotion dispatch 的 websocket 场景从“只看有事件发出”提升到 response / websocket / follow-up filtered list 三方对齐：`DispatchSoulActionResponse.soulAction`、`soul-action-updated` 事件、以及按 `sourceReintegrationId + governanceStatus + executionStatus` 过滤后的 `/api/soul-actions` 子集，现在会共同锁住 `id / sourceNoteId / sourceReintegrationId / governanceStatus / executionStatus`。
+  - 这次补的是新的单条 dispatch contract gap，不是继续平移 mixed worker-host 那条 worker-task 测试；也没有回到 grouped governance / SettingsView 的对称性微补强。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action dispatch emits soul-action-updated websocket event for settings refresh" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，32/32。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过（当前环境仍提示 Node engine `>=20 <21`，但构建完成）。
+- 当前未完成项再补充：
+  - 本轮单条 promotion dispatch websocket contract 增量尚未提交 git commit。
+- 下一步建议再补充：
+  - 若验证通过，优先继续检查其余单条 dispatch / follow-up 用例是否还停留在“只看事件发出、不锁 follow-up filtered view”的旧粒度；若没有新增真实缺口，就直接提交当前 server 增量。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更仍未提交 git commit。
