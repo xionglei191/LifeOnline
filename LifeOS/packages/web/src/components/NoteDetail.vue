@@ -372,6 +372,36 @@ function dimensionColor(dimension: string) {
   return dimensionColors[dimension] || 'var(--signal)';
 }
 
+function workerTaskTypeLabel(taskType: WorkerTask['taskType']) {
+  if (taskType === 'openclaw_task') return 'OpenClaw 任务';
+  if (taskType === 'summarize_note') return '笔记摘要';
+  if (taskType === 'classify_inbox') return 'Inbox 整理';
+  if (taskType === 'extract_tasks') return '提取行动项';
+  if (taskType === 'update_persona_snapshot') return '人格快照更新';
+  if (taskType === 'daily_report') return '每日回顾';
+  if (taskType === 'weekly_report') return '每周回顾';
+  return taskType;
+}
+
+function workerTaskWorkerLabel(worker: WorkerTask['worker']) {
+  if (worker === 'lifeos') return 'LifeOS';
+  if (worker === 'openclaw') return 'OpenClaw';
+  return worker;
+}
+
+function workerTaskStatusLabel(status: WorkerTask['status']) {
+  if (status === 'pending') return '等待执行';
+  if (status === 'running') return '执行中';
+  if (status === 'succeeded') return '已完成';
+  if (status === 'failed') return '失败';
+  if (status === 'cancelled') return '已取消';
+  return status;
+}
+
+function workerTaskCreatedMessage(task: WorkerTask) {
+  return `已创建任务 ${task.id} · ${workerTaskTypeLabel(task.taskType)} · ${workerTaskStatusLabel(task.status)} · ${workerTaskWorkerLabel(task.worker)}`;
+}
+
 async function loadRelatedWorkerTasks(sourceNoteId: string) {
   try {
     relatedWorkerTasks.value = await fetchWorkerTasks(5, {
@@ -483,9 +513,9 @@ async function handleExtractTasks() {
   extracting.value = true;
   workerMessage.value = '';
   try {
-    await extractTasks(currentNoteId.value);
+    const task = await extractTasks(currentNoteId.value);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = '行动项提取任务已创建，可在下方关联任务中查看结果';
+    workerMessage.value = workerTaskCreatedMessage(task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '行动项提取任务创建失败';
@@ -500,7 +530,7 @@ async function handleCreateOpenClawTask() {
   workerSubmitting.value = true;
   workerMessage.value = '';
   try {
-    await createWorkerTask({
+    const task = await createWorkerTask({
       taskType: 'openclaw_task',
       sourceNoteId: currentNoteId.value,
       input: {
@@ -509,7 +539,7 @@ async function handleCreateOpenClawTask() {
       },
     });
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = '外部任务已创建，可在下方查看最近任务状态';
+    workerMessage.value = workerTaskCreatedMessage(task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '外部任务创建失败';
@@ -524,7 +554,7 @@ async function handleCreateSummarizeTask() {
   workerSubmitting.value = true;
   workerMessage.value = '';
   try {
-    await createWorkerTask({
+    const task = await createWorkerTask({
       taskType: 'summarize_note',
       sourceNoteId: currentNoteId.value,
       input: {
@@ -532,7 +562,7 @@ async function handleCreateSummarizeTask() {
       },
     });
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = '摘要任务已创建，可在下方查看任务状态';
+    workerMessage.value = workerTaskCreatedMessage(task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '摘要任务创建失败';

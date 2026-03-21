@@ -469,6 +469,16 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 index refresh collapsedGroupIds retention 回归补强。
   - 若还要继续补一轮，应回到新的 server/web/shared contract 缺口，而不是继续在当前折叠态链路上做低边际对称补强。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue` 让 `handleCreateSummarizeTask()`、`handleCreateOpenClawTask()`、`handleExtractTasks()` 直接消费 `createWorkerTask()` / `extractTasks()` 返回的 `WorkerTask`，成功反馈统一收敛为 `任务 ID · 任务类型 · 状态 · worker` 的本地化文案，不再停留在固定提示语。
+  - 新增 `LifeOS/packages/web/src/components/NoteDetail.test.ts`，覆盖摘要任务、OpenClaw 任务、行动项提取三条创建路径，并锁定成功反馈展示 `笔记摘要 / OpenClaw 任务 / 提取行动项`、`等待执行 / 执行中 / 已完成`、`LifeOS / OpenClaw`，避免 raw enum 回流到 UI。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts` 通过，6 files / 60 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 `NoteDetail.vue` 中 retry/cancel 成功反馈是否也应补齐本地化 `WorkerTask` 元信息，而不是停留在固定文案。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
@@ -509,8 +519,15 @@
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue` 将笔记详情里的三条 worker task 创建成功反馈统一收敛为直接消费返回 task contract，不再只给模糊提示语；成功后会稳定展示 `task.id + taskType + status + worker` 的本地化组合消息。
+  - 同文件新增 `workerTaskCreatedMessage()` 以及 taskType / worker / status 三组本地化 helper，把 `summarize_note`、`openclaw_task`、`extract_tasks` 等创建反馈口径与现有 worker task 列表/详情保持一致，避免再次泄漏原始枚举值。
+  - 新增 `LifeOS/packages/web/src/components/NoteDetail.test.ts`，覆盖摘要任务、OpenClaw 任务、行动项提取三条创建路径，锁定成功提示直接展示本地化 worker task 元数据，而不是旧的泛化文案。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts` 通过；实际跑到当前 web 测试全集，6 files / 60 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
-  - 本轮 server 变更待提交 git commit。
+  - 本轮 `NoteDetail` web 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task status filter convergence contract 补强。
-  - 若还要继续补一轮，应切回新的 web/shared contract 缺口，而不是继续在同一 worker task filter 链上做低边际对称扩张。
+  - 若继续沿“worker task contract 直接投射到 UI”这条线推进，下一步优先检查 `NoteDetail` 下方关联任务列表/详情以外，是否还有创建入口或 toast 仍在复用泛化提示文案。
+  - 若没有新的真实 contract 缺口，就应结束这一轮，避免再回到 grouped governance / worker-task filter 的低边际对称补强。
