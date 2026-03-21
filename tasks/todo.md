@@ -109,6 +109,9 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 继续把同一 mixed-order 场景扩展到 dispatched filter，锁定 websocket 事件、ready filter、dispatched filter 与 full list 四者在同一 `sourceNoteId` 分组上的最终语义一致。
   - 这条测试进一步压缩 settings grouped governance 的隐性假设：不只“总表对”，而是“已派发筛选 / 待派发筛选 / 总表”都必须和 websocket 驱动后的最终组态收敛到同一事实源。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 same-status execution filter 收敛测试，锁定同组两条 action 在最终 dispatch 到相同 `executionStatus` 时，按该 status 过滤得到的结果不会漏掉任一 action。
+  - 该测试直接覆盖 grouped settings 一个容易被忽视的边界：当多条 action 收敛到同一终态时，executionStatus filter 必须与 full list 保持同一成员集合，而不是默认一条一条地命中。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。

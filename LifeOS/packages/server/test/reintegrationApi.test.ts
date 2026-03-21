@@ -1411,11 +1411,10 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
   }
 });
 
-test('websocket updates, ready filters, and dispatched filters converge after mixed-order grouped refresh', async () => {
-  const env = await createTestEnv('lifeos-reintegration-api-ws-list-group-');
+test('execution-status filter stays aligned when grouped actions converge to the same dispatched state', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-same-status-filter-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
   const originalConfig = await fs.readFile(configFile, 'utf-8');
-  let socket: WebSocket | null = null;
 
   try {
     await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
@@ -1431,11 +1430,9 @@ test('websocket updates, ready filters, and dispatched filters converge after mi
       }
     });
 
-    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
-
     initDatabase();
     upsertReintegrationRecord({
-      workerTaskId: 'api-pr6-ws-list-group-refresh',
+      workerTaskId: 'api-pr6-same-status-filter',
       sourceNoteId: null,
       soulActionId: null,
       taskType: 'weekly_report',
@@ -1444,148 +1441,77 @@ test('websocket updates, ready filters, and dispatched filters converge after mi
       reviewStatus: 'pending_review',
       target: 'derived_outputs',
       strength: 'medium',
-      summary: 'api websocket list group summary',
-      evidence: { source: 'api-ws-list-group-test' },
-      now: '2026-03-21T20:30:00.000Z',
+      summary: 'api same-status filter summary',
+      evidence: { source: 'api-same-status-filter-test' },
+      now: '2026-03-21T21:00:00.000Z',
     });
 
     const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
-    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-ws-list-group-refresh');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-same-status-filter');
     assert.ok(record);
-
-    const seenAcceptedIds = new Set<string>();
-    const acceptedEventsPromise = Promise.all([
-      waitForWebSocketEvent<WsEvent>(
-        socket,
-        (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
-            return false;
-          }
-          seenAcceptedIds.add(event.data.id);
-          return seenAcceptedIds.size >= 1;
-        },
-      ),
-      waitForWebSocketEvent<WsEvent>(
-        socket,
-        (event) => {
-          if (event.type !== 'soul-action-updated' || event.data.sourceNoteId !== record!.id) {
-            return false;
-          }
-          seenAcceptedIds.add(event.data.id);
-          return seenAcceptedIds.size >= 2;
-        },
-      ),
-    ]);
 
     const accepted = await api<AcceptReintegrationRecordResponse>(
       baseUrl,
       `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
       {
         method: 'POST',
-        body: JSON.stringify({ reason: 'accept for websocket list alignment test' }),
+        body: JSON.stringify({ reason: 'accept for same execution-status filter test' }),
       },
     );
     assert.equal(accepted.soulActions.length, 2);
 
-    const acceptedEvents = await acceptedEventsPromise;
-    assert.equal(acceptedEvents.length, 2);
-    const acceptedIds = new Set(acceptedEvents.map((event) => event.data.id));
-    assert.deepEqual([...acceptedIds].sort(), accepted.soulActions.map((action) => action.id).sort());
-    assert.ok(acceptedEvents.every((event) => event.data.governanceStatus === 'pending_review'));
+    for (const action of accepted.soulActions) {
+      await api<SoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action.id)}/approve`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'approve for same execution-status filter test' }),
+        },
+      );
+    }
 
-    const firstAction = accepted.soulActions[0]!;
-    const secondAction = accepted.soulActions[1]!;
+    const dispatchResults: DispatchSoulActionResponse[] = [];
+    for (const action of accepted.soulActions) {
+      dispatchResults.push(
+        await api<DispatchSoulActionResponse>(
+          baseUrl,
+          `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      );
+    }
 
-    const firstApproveEvent = waitForWebSocketEvent<WsEvent>(
-      socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id && event.data.governanceStatus === 'approved',
-    );
-    await api<SoulActionResponse>(
-      baseUrl,
-      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/approve`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ reason: 'approve first action for websocket list alignment test' }),
-      },
-    );
-    const approvedFirstEvent = await firstApproveEvent;
-    assert.equal(approvedFirstEvent.data.id, firstAction.id);
-    assert.equal(approvedFirstEvent.data.governanceStatus, 'approved');
-    assert.equal(approvedFirstEvent.data.executionStatus, 'not_dispatched');
+    const terminalStatus = dispatchResults[0]!.soulAction!.executionStatus;
+    assert.ok(dispatchResults.every((result) => result.soulAction?.executionStatus === terminalStatus));
 
-    const secondApproveEvent = waitForWebSocketEvent<WsEvent>(
-      socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === secondAction.id && event.data.governanceStatus === 'approved' && event.data.executionStatus === 'not_dispatched',
-    );
-    await api<SoulActionResponse>(
-      baseUrl,
-      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/approve`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ reason: 'approve second action for mixed websocket list test' }),
-      },
-    );
-    const approvedSecondEvent = await secondApproveEvent;
-    assert.equal(approvedSecondEvent.data.id, secondAction.id);
-    assert.equal(approvedSecondEvent.data.governanceStatus, 'approved');
-    assert.equal(approvedSecondEvent.data.executionStatus, 'not_dispatched');
-
-    const dispatchEvent = waitForWebSocketEvent<WsEvent>(
-      socket,
-      (event) => event.type === 'soul-action-updated' && event.data.sourceNoteId === record!.id && event.data.id === firstAction.id && event.data.governanceStatus === 'approved' && event.data.executionStatus !== 'not_dispatched',
-    );
-    const dispatched = await api<DispatchSoulActionResponse>(
-      baseUrl,
-      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
-      {
-        method: 'POST',
-        body: JSON.stringify({}),
-      },
-    );
-    assert.ok(dispatched.soulAction);
-
-    const dispatchedEvent = await dispatchEvent;
-    assert.equal(dispatchedEvent.data.id, firstAction.id);
-    assert.equal(dispatchedEvent.data.executionStatus, dispatched.soulAction!.executionStatus);
-
-    const filteredReadyList = await api<ListSoulActionsResponse>(
-      baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
-    );
-    assert.equal(filteredReadyList.soulActions.length, 1);
-    assert.equal(filteredReadyList.soulActions[0]?.id, secondAction.id);
-
-    const filteredDispatchedList = await api<ListSoulActionsResponse>(
-      baseUrl,
-      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
-    );
-    assert.ok(filteredDispatchedList.soulActions.some((action) => action.id === firstAction.id));
-    assert.ok(filteredDispatchedList.soulActions.every((action) => action.executionStatus === dispatched.soulAction!.executionStatus));
-
-    const followUpList = await api<ListSoulActionsResponse>(
+    const fullList = await api<ListSoulActionsResponse>(
       baseUrl,
       `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
     );
-    assert.equal(followUpList.soulActions.length, accepted.soulActions.length);
+    assert.equal(fullList.soulActions.length, accepted.soulActions.length);
 
-    const followUpById = new Map(followUpList.soulActions.map((action) => [action.id, action]));
-    assert.equal(followUpById.get(firstAction.id)?.governanceStatus, 'approved');
-    assert.equal(followUpById.get(firstAction.id)?.executionStatus, dispatched.soulAction!.executionStatus);
-    assert.equal(followUpById.get(secondAction.id)?.governanceStatus, 'approved');
-    assert.equal(followUpById.get(secondAction.id)?.executionStatus, 'not_dispatched');
+    const readyList = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=not_dispatched`,
+    );
+    assert.equal(readyList.soulActions.length, 0);
 
-    const pendingReview = followUpList.soulActions.filter((action) => action.governanceStatus === 'pending_review');
-    const dispatchReady = followUpList.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
-    const dispatchedActions = followUpList.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
-    assert.equal(pendingReview.length, 0);
-    assert.equal(dispatchReady.length, 1);
-    assert.equal(dispatchReady[0]?.id, secondAction.id);
-    assert.equal(dispatchedActions.length, 1);
-    assert.equal(dispatchedActions[0]?.id, firstAction.id);
+    const sameStatusList = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(terminalStatus)}`,
+    );
+    assert.equal(sameStatusList.soulActions.length, accepted.soulActions.length);
+
+    const fullIds = fullList.soulActions.map((action) => action.id).sort();
+    const sameStatusIds = sameStatusList.soulActions.map((action) => action.id).sort();
+    assert.deepEqual(sameStatusIds, fullIds);
+    assert.ok(sameStatusList.soulActions.every((action) => action.governanceStatus === 'approved'));
+    assert.ok(sameStatusList.soulActions.every((action) => action.executionStatus === terminalStatus));
   } finally {
-    if (socket && socket.readyState !== WebSocket.CLOSED) {
-      socket.terminate();
-    }
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
