@@ -230,3 +230,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前按钮状态回归补强。
   - 若还要继续补一轮，可评估 `SettingsView` 父层是否还值得补“操作进行中 actionId 正确透传到 panel” 的 view 级断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 in-flight 断言，分别用 deferred promise 锁定单条 approve / dispatch 进行中时，`SettingsView` 会把当前 `actionId` 透传给 `SoulActionGovernancePanel`，并在异步完成后正确回落为 `null`。
+  - 这次继续只补最窄的父层接线回归面，不新增 UI 功能，也不改治理规则；目标是把前一轮组件层按钮禁用语义，与父层真实 in-flight 状态来源正式接上。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 35 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前 view 级 in-flight 状态回归补强。
+  - 若还要继续补一轮，可评估 groupActionId / groupDispatchId 的父层 in-flight 透传是否还值得锁一条 view 级断言。

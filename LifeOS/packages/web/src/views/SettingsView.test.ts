@@ -119,6 +119,16 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'mixed-1', sourceNoteId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
 ];
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 function mountSettingsView(): VueWrapper {
   return mount(SettingsView, {
     global: {
@@ -315,6 +325,59 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchTaskSchedules).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('passes the active actionId into the panel while approve-action is still in flight', async () => {
+    const deferred = createDeferred<Record<string, never>>();
+    apiMocks.approveSoulAction.mockImplementationOnce(() => deferred.promise);
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const pendingAction = soulActions.find((action) => action.id === 'mixed-1');
+    expect(pendingAction).toBeTruthy();
+
+    panel.vm.$emit('approve-action', pendingAction);
+    await Promise.resolve();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('actionId')).toBe('mixed-1');
+
+    deferred.resolve({});
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('actionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('passes the active actionId into the panel while dispatch-action is still in flight', async () => {
+    const deferred = createDeferred<{ result: { dispatched: boolean; reason: string } }>();
+    apiMocks.dispatchSoulAction.mockImplementationOnce(() => deferred.promise);
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const readyAction = soulActions.find((action) => action.id === 'ready-1');
+    expect(readyAction).toBeTruthy();
+
+    panel.vm.$emit('dispatch-action', readyAction);
+    await Promise.resolve();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('actionId')).toBe('ready-1');
+
+    deferred.resolve({
+      result: {
+        dispatched: true,
+        reason: 'dispatched later',
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('actionId')).toBe(null);
 
     wrapper.unmount();
   });
