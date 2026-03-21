@@ -577,6 +577,28 @@
 - 下一步建议再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 2 条 reintegration feedback 连续 retention 回归，分别锁定 `接受并自动规划` 与 `手动补规划` 成功提示在先收到 `worker-task-updated`、再收到 `soul-action-updated` 两次连续 websocket 刷新后仍保持可见。
+  - 这次继续只补最窄的 view 级保护面，不改运行时代码；目标是把当前 grouped governance / worker-task feedback retention 主线从 soul-action quick actions 延伸到 reintegration review 成功反馈，避免 accept / manual plan 消息在真实刷新链中掉失。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 80 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 reintegration feedback retention 主线推进，可检查 reintegration reject success feedback 是否也缺同级连续 websocket retention 保护。
+  - 若转回 server contract 侧，则优先寻找 reintegration review 刷新链与 worker-task filtered refresh 之间还未被锁住的事实源缺口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再新增 1 条 reintegration reject feedback 连续 retention 回归，锁定 `拒绝` 成功提示在先收到 `worker-task-updated`、再收到 `soul-action-updated` 两次连续 websocket 刷新后仍保持可见。
+  - 这次继续沿同一条 reintegration review feedback 主线把最后一条同级成功动作补齐，避免 accept / manual plan 已有连续刷新保护，但 reject 仍在真实刷新链中掉消息而形成行为分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 81 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若定向测试与 build 通过，可直接提交当前 reintegration review feedback retention 补齐增量。
+  - 若转回下一轮开发，可优先找 reintegration review refresh 链与 worker-task filtered refresh 之间还未被锁住的 server fact-source gap。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
