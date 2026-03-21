@@ -252,3 +252,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 group-level in-flight 状态回归补强。
   - 若还要继续补一轮，可评估 group quick action 的成功/失败提示在 view 级是否还值得补更细的中途态断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再新增 4 条 group quick action 反馈断言，分别覆盖 approve-group / dispatch-group 的成功提示、失败提示，以及成功后刷新 / 失败时不误刷新相关列表。
+  - 这次继续只补最窄的父层反馈回归面，把上一轮 group-level in-flight 状态接线，进一步补到“完成后用户能看到什么、失败时不会误刷什么”的可回归语义。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 41 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前 group quick action 反馈回归补强。
+  - 若还要继续补一轮，可评估 grouped governance filter / quick filter 组合切换在 `SettingsView` 父层是否还值得补一条 round-trip 断言。

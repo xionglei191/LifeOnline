@@ -329,6 +329,108 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('shows batch approve feedback and refreshes soul actions after approve-group emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    expect(pendingGroup).toBeTruthy();
+
+    panel.vm.$emit('approve-group', pendingGroup);
+    await flushPromises();
+
+    expect(apiMocks.approveSoulAction).toHaveBeenCalledWith('mixed-1', {
+      reason: 'Batch approved from settings reintegration governance panel for record-mixed',
+    });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量批准 1/1 条 soul actions');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupActionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing soul actions when approve-group fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockRejectedValueOnce(new Error('batch approve failed'));
+    apiMocks.fetchSoulActions.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    expect(pendingGroup).toBeTruthy();
+
+    panel.vm.$emit('approve-group', pendingGroup);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('batch approve failed');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('error');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupActionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows batch dispatch feedback and refreshes related views after dispatch-group emits', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    expect(readyGroup).toBeTruthy();
+
+    panel.vm.$emit('dispatch-group', readyGroup);
+    await flushPromises();
+
+    expect(apiMocks.dispatchSoulAction.mock.calls.map(([id]) => id)).toEqual(['ready-1', 'ready-2']);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('shows error feedback without refreshing related views when dispatch-group fails', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockRejectedValueOnce(new Error('batch dispatch failed'));
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    expect(readyGroup).toBeTruthy();
+
+    panel.vm.$emit('dispatch-group', readyGroup);
+    await flushPromises();
+
+    expect(apiMocks.fetchSoulActions).not.toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('batch dispatch failed');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('error');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
   it('passes the active groupActionId into the panel while approve-group is still in flight', async () => {
     const deferred = createDeferred<Record<string, never>>();
     apiMocks.approveSoulAction.mockImplementationOnce(() => deferred.promise);
