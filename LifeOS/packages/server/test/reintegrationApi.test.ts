@@ -738,7 +738,7 @@ test('soul-action sourceNoteId stays aligned with reintegration ids for grouped 
     initDatabase();
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-grouping-a',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-grouping-a',
       soulActionId: null,
       taskType: 'weekly_report',
       terminalStatus: 'succeeded',
@@ -752,7 +752,7 @@ test('soul-action sourceNoteId stays aligned with reintegration ids for grouped 
     });
     upsertReintegrationRecord({
       workerTaskId: 'api-pr6-grouping-b',
-      sourceNoteId: null,
+      sourceNoteId: 'note-api-pr6-grouping-b',
       soulActionId: null,
       taskType: 'daily_report',
       terminalStatus: 'succeeded',
@@ -790,16 +790,19 @@ test('soul-action sourceNoteId stays aligned with reintegration ids for grouped 
 
     assert.equal(acceptedA.soulActions.length, 2);
     assert.equal(acceptedB.soulActions.length, 2);
-    assert.ok(acceptedA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
-    assert.ok(acceptedB.soulActions.every((action) => action.sourceNoteId === recordB!.id));
+    assert.ok(acceptedA.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-grouping-a'));
+    assert.ok(acceptedA.soulActions.every((action) => action.sourceReintegrationId === recordA!.id));
+    assert.ok(acceptedB.soulActions.every((action) => action.sourceNoteId === 'note-api-pr6-grouping-b'));
+    assert.ok(acceptedB.soulActions.every((action) => action.sourceReintegrationId === recordB!.id));
 
     const allSoulActions = await api<ListSoulActionsResponse>(baseUrl, '/api/soul-actions');
     const groupedIds = new Map<string, Set<string>>();
-    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id)) {
-      if (!groupedIds.has(action.sourceNoteId)) {
-        groupedIds.set(action.sourceNoteId, new Set());
+    for (const action of allSoulActions.soulActions.filter((item) => item.sourceReintegrationId === recordA!.id || item.sourceReintegrationId === recordB!.id)) {
+      const groupKey = action.sourceReintegrationId!;
+      if (!groupedIds.has(groupKey)) {
+        groupedIds.set(groupKey, new Set());
       }
-      groupedIds.get(action.sourceNoteId)!.add(action.id);
+      groupedIds.get(groupKey)!.add(action.id);
     }
 
     assert.deepEqual(

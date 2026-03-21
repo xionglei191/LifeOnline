@@ -792,7 +792,18 @@
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/utils/workerTaskLabels.ts` 改为用 `Record<WorkerTaskType, string>`、`Record<WorkerTaskStatus, string>`、`Record<WorkerName, string>` 显式声明 web 侧 worker task 本地化事实源，不再靠一串 if/return 维持；这样当 shared 新增 enum 值时，这里会在编译期直接暴露未覆盖项。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 accept API contract 旁新增 reintegration review-status follow-up list 收敛断言，锁定 accept 之后 `/api/reintegration-records?reviewStatus=accepted` 会稳定命中刚 review 完成的 record，而 `/api/reintegration-records?reviewStatus=pending_review` 不再包含同一条 record。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 将 accepted-grouping contract 从旧的 `sourceNoteId = record.id` 锚点切回当前主语义：两条 reintegration fixture 现在各自携带真实 `sourceNoteId`（`note-api-pr6-grouping-a` / `note-api-pr6-grouping-b`），accept 返回断言也同步要求 `sourceNoteId` 等于真实 note source、`sourceReintegrationId` 等于对应 reintegration record id。
+  - 同一条 grouped list 断言改为按 `sourceReintegrationId` 聚合，而不是继续按 `sourceNoteId = record.id` 分组，直接锁住 accept 后 promotion action 的 group identity 已切到显式 reintegration source，而 note-level source 只保留为原始事实源字段。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action API keeps accepted records grouped separately by source note" test/reintegrationApi.test.ts` 通过，1/1。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建通过。
+- 当前未完成项再补充：
+  - `reintegrationApi.test.ts` / `feedbackReintegration.test.ts` 中仍可能有少量 accept / plan / governance follow-up 断言停留在旧兼容语义；需要继续逐条筛掉，而不是泛化清洗所有 `sourceNoteId: null` fixture。
+  - 本轮 server 变更尚未提交 git commit。
+- 下一步建议再补充：
+  - 继续优先扫 `reintegrationApi.test.ts` 与 `feedbackReintegration.test.ts` 中 accept / manual-plan / governance follow-up 相关用例，找出仍把 `record.id` 当 `sourceNoteId` 或分组 key 的残留点。
+  - 若本轮先收口，也可以直接提交当前 accepted-grouping contract 修正，避免这条旧锚点重新漂移回测试面。
   - 该断言继续直接对齐 shared contract 的真实返回形状，只验证 `reintegrationRecords` 成员收敛与 `id/reviewStatus/reviewedAt` 一致性，不再错误假设 list 响应额外暴露 `filters` 字段。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
