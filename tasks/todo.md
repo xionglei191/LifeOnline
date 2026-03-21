@@ -385,6 +385,17 @@
   - 当前产品代码工作树未新增别的主线脏改动；仍只剩与本轮无关的 `CLAUDE.md` 与 `lifeonline-claude-worker-v2.sh`。
 - 下一步建议补充：
   - 下一轮应继续转向新的 server/web/shared contract gap 或新的事实源一致性问题，不再回到 grouped governance 同类文案/retention 补强。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 里 `acceptReintegrationRecord()` 的 mocked response 字段从错误的 `record` 对齐回 shared/server 已正式暴露的 `reintegrationRecord`，补上了一个真实的 web/shared contract gap，而不是继续做同类 UI 微调。
+  - 这次修的是测试夹具对共享 contract 的漂移：运行时代码一直在消费 `result.reintegrationRecord`，而测试 mock 却偷偷返回 `record` 仍能靠局部路径幸存，后续如果继续扩同一 API 的前端逻辑，很容易在测试里掩盖真实 contract 断裂。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 与前一轮文案收口改动一起保留，确认这条 accept/planning 主路径在共享 contract 名称正确后仍然稳定通过。
+- 本轮验证补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts src/api/client.test.ts` 通过；Vitest 合计 9 files / 116 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项补充：
+  - 这轮 contract 对齐与前一轮 SettingsView 文案收口仍未单独提交。
+- 下一步建议补充：
+  - 可将当前 `SettingsView` 文案收口 + reintegration accept response contract 对齐作为同一批 web 主路径修正提交；之后再转向新的 server/web/shared contract gap 或事实源一致性问题。
 单条 action loading/disabled 态在父层往返中的 view 级断言。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/components/SoulActionGovernancePanel.test.ts` 新增 3 条按钮状态断言，覆盖单条 action 处理中时 approve/dispatch 双按钮禁用与 `处理中...` 文案、pending/approved 混合组内 approve/dispatch 各自启停条件，以及已完成 action 不应再次派发。

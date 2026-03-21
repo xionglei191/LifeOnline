@@ -300,7 +300,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     const clientMocks = vi.mocked(client);
     clientMocks.acceptReintegrationRecord.mockResolvedValue({
-      record: createReintegrationRecord({
+      reintegrationRecord: createReintegrationRecord({
         id: 'record-mixed',
         createdAt: '2026-03-20T10:00:00.000Z',
         summary: 'mixed group',
