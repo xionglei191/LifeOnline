@@ -684,6 +684,95 @@ test('reintegration accept emits soul-action-updated websocket events for planne
   }
 });
 
+test('dispatch API response and follow-up list stay aligned for grouped settings refresh', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-dispatch-list-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-dispatch-list-refresh',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api dispatch list summary',
+      evidence: { source: 'api-dispatch-list-test' },
+      now: '2026-03-21T18:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-dispatch-list-refresh');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for dispatch list api test' }),
+      },
+    );
+    const action = accepted.soulActions[0];
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for dispatch list api test' }),
+      },
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.equal(dispatched.soulAction?.id, action!.id);
+    assert.ok(dispatched.soulAction);
+    assert.ok(['pending', 'running', 'succeeded'].includes(dispatched.soulAction.executionStatus));
+    assert.equal(dispatched.soulAction.sourceNoteId, record!.id);
+
+    const listedAfterDispatch = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
+    assert.ok(refreshed);
+    assert.equal(refreshed?.sourceNoteId, record!.id);
+    assert.equal(refreshed?.governanceStatus, 'approved');
+    assert.equal(refreshed?.executionStatus, dispatched.soulAction.executionStatus);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');

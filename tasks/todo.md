@@ -88,13 +88,16 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 accept 阶段的 websocket contract test，锁定 reintegration record 被 accept 后自动规划出的 soul actions 也会立刻通过 `soul-action-updated` 广播出去，供 settings grouped governance 即时刷新。
   - 该测试要求同一 `sourceNoteId` 下收到两条 `pending_review` 的 websocket 事件，并与 accept API 返回的两条 planned actions 一一对齐，直接补上“accept -> planned -> web refresh”这段主链的回归保护。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 dispatch 后 follow-up list 收敛测试，锁定 `dispatch` API 返回的 soul action 状态与后续 `GET /api/soul-actions?sourceNoteId=...` 读到的组内状态保持一致。
+  - 该测试直接覆盖 grouped governance 的一个关键前提：settings 在 dispatch 后重新拉取列表时，看到的分组内 action 必须与 dispatch 响应中的 execution status 对齐，而不是只依赖 websocket 瞬时事件。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。
 - 下一步建议：
-  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 refresh/list 收敛语义，例如 dispatch 后再次 list 的状态变化，或 accept/approve/dispatch 串联后的最终组状态。
+  - 若继续补验证，下一步优先继续在 `reintegrationApi.test.ts` 里补 accept/approve/dispatch 串联后的最终组状态收敛，减少 settings grouped governance 对瞬时事件顺序的隐性假设。
   - 若继续做实现，优先考虑引入最小前端测试设施，而不是回到低边际的 UI 微调。
-- 本轮选择依据：上一轮已经锁住 approve 后的 websocket 刷新，但 grouped governance 的链路起点其实是 accept 后自动规划；补上 accept 阶段的广播 contract，才能把 settings 依赖的整条 refresh 主链基本闭合。
+- 本轮选择依据：前两轮已经锁住了 accept/approve/dispatch 的 websocket 刷新，但 settings 最终展示仍取决于后续 list 结果；因此先补 dispatch 后 list 收敛这条 contract，比继续做事件层微补强更贴近真实界面依赖。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
