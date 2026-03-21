@@ -311,6 +311,111 @@ test('soul-action list API keeps filters stable with multiple promotion actions 
   }
 });
 
+test('soul-action sourceNoteId stays aligned with reintegration ids for grouped settings view', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-grouping-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-grouping-a',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api grouping summary a',
+      evidence: { source: 'api-grouping-a' },
+      now: '2026-03-21T14:00:00.000Z',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-grouping-b',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api grouping summary b',
+      evidence: { source: 'api-grouping-b' },
+      now: '2026-03-21T14:05:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const recordA = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-grouping-a');
+    const recordB = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-grouping-b');
+    assert.ok(recordA);
+    assert.ok(recordB);
+
+    const acceptedA = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordA!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept grouping record a' }),
+      },
+    );
+    const acceptedB = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordB!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept grouping record b' }),
+      },
+    );
+
+    assert.equal(acceptedA.soulActions.length, 2);
+    assert.equal(acceptedB.soulActions.length, 2);
+    assert.ok(acceptedA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
+    assert.ok(acceptedB.soulActions.every((action) => action.sourceNoteId === recordB!.id));
+
+    const allSoulActions = await api<ListSoulActionsResponse>(baseUrl, '/api/soul-actions');
+    const groupedIds = new Map<string, Set<string>>();
+    for (const action of allSoulActions.soulActions.filter((item) => item.sourceNoteId === recordA!.id || item.sourceNoteId === recordB!.id)) {
+      if (!groupedIds.has(action.sourceNoteId)) {
+        groupedIds.set(action.sourceNoteId, new Set());
+      }
+      groupedIds.get(action.sourceNoteId)!.add(action.id);
+    }
+
+    assert.deepEqual(
+      [...groupedIds.keys()].sort(),
+      [recordA!.id, recordB!.id].sort(),
+    );
+    assert.deepEqual(
+      [...(groupedIds.get(recordA!.id) ?? new Set())].sort(),
+      acceptedA.soulActions.map((action) => action.id).sort(),
+    );
+    assert.deepEqual(
+      [...(groupedIds.get(recordB!.id) ?? new Set())].sort(),
+      acceptedB.soulActions.map((action) => action.id).sort(),
+    );
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');

@@ -49,13 +49,13 @@
   - reintegration accept / 手动补规划、以及 websocket 的 `worker-task-updated` 现在都会联动刷新 soul actions，让 accept -> planned -> approve / dispatch 在同一 settings 入口形成连续链路。
   - soul-action 区块保留保守边界：只消费已有 approve / dispatch API，不新增 defer/discard 等更大治理面。
 - 本轮继续完成的真实实现：
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 在 soul-action 分组视图上补了组级 collapse / expand，继续降低 settings 在分组数继续上升时的扫描成本。
-  - 这次只增加本地折叠状态与切换交互，不新增 API、不改 contract，也不扩大 PR6 治理面。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增分组展示所依赖的 contract 覆盖，锁定 PR6 promotion actions 的 `sourceNoteId` 会稳定对齐到对应 reintegration record id，避免 settings 分组视图后续被打散。
+  - 这次只补贴近 UI 分组语义的 server contract 测试，不扩 API、不改对象模型，也不引入新的前端测试基建。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - 还没有组级 approve/dispatch 批量操作，也没有覆盖这次 collapse / expand 行为的测试。
+  - 还没有组级 quick actions，也没有覆盖分组折叠与 pending-only 过滤显示语义的测试。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定分组折叠与 pending-only 过滤的显示语义，避免后续 computed/UI 调整带来行为回退。
+  - 若继续补验证，下一步优先锁定分组折叠与 pending-only 快速过滤的显示语义，避免后续 computed/UI 调整带来行为回退。
   - 若继续做 UI，优先补组级 quick actions，而不是继续增加新的治理状态按钮。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
