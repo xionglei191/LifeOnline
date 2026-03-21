@@ -497,6 +497,9 @@
               <span class="worker-pill">pending {{ group.pendingCount }}</span>
               <span class="worker-pill">{{ group.sourceNoteId }}</span>
             </div>
+            <button class="btn-link" @click="toggleSoulActionGroupCollapsed(group.sourceNoteId)">
+              {{ soulActionCollapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
+            </button>
           </div>
 
           <div class="reintegration-meta-grid soul-action-group-meta">
@@ -505,7 +508,7 @@
             <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
           </div>
 
-          <div class="soul-action-group-actions">
+          <div v-if="!soulActionCollapsedGroupIds.includes(group.sourceNoteId)" class="soul-action-group-actions">
             <article v-for="action in group.actions" :key="action.id" class="reintegration-item soul-action-item">
               <div class="reintegration-item-top">
                 <div class="reintegration-item-title-row">
@@ -977,6 +980,7 @@ const soulActionMessageType = ref<'success' | 'error'>('success');
 const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending_review');
 const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
 const soulActionActionId = ref<string | null>(null);
+const soulActionCollapsedGroupIds = ref<string[]>([]);
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
 const schedulePreset = ref('0 9 * * *');
@@ -1313,6 +1317,14 @@ function toggleReintegrationExpanded(id: string) {
     return;
   }
   reintegrationExpandedIds.value = [...reintegrationExpandedIds.value, id];
+}
+
+function toggleSoulActionGroupCollapsed(id: string) {
+  if (soulActionCollapsedGroupIds.value.includes(id)) {
+    soulActionCollapsedGroupIds.value = soulActionCollapsedGroupIds.value.filter((item) => item !== id);
+    return;
+  }
+  soulActionCollapsedGroupIds.value = [...soulActionCollapsedGroupIds.value, id];
 }
 
 async function handleApproveSoulAction(action: SoulAction) {
