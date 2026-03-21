@@ -644,6 +644,14 @@
   - 若定向测试与 build 通过，可直接提交当前 reintegration review-status follow-up list 收敛补强。
   - 若继续沿同一条 refresh 主线推进，可检查 reject 之后 `reviewStatus=rejected` / `pending_review` follow-up list 是否也缺同级 contract 保护。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 在 accept follow-up list 收敛断言之后，再补 reject API contract：锁定 `/api/reintegration-records?reviewStatus=rejected` 会稳定命中刚 reject 的 record，而 `/api/reintegration-records?reviewStatus=pending_review` 不再包含它。
+  - 新断言继续只对齐 shared contract 的真实返回形状，并额外校验 follow-up record 的 `reviewReason/reviewedAt` 与 reject response 保持一致，把 reintegration review refresh 主线从 accept 扩到 reject。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，20/20。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:1583` 将 soul-action websocket 刷新改成在当前 `soulActionMessageType === 'success'` 且已有消息时沿用 `preserveMessage`，避免刚显示出的 dispatch 成功反馈被随后的 `worker-task-updated` / `soul-action-updated` 自动刷新立即清空。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:926` 新增 view 级回归，锁定单条 dispatch 成功后即使立刻收到 `worker-task-updated`，`workerTasks` / `reintegration` / `soulActions` 会正常刷新，但 `Worker Task` 成功反馈仍保持可见。
   - 这次补的是上一轮新引入 feedback contract 的真实后半段：如果 websocket 自动刷新会把成功消息立刻抹掉，那前一轮把 `workerTaskId` 暴露到 UI 的价值就会被抵消；因此这里修的是消息保留的根因，而不是再加一层表面文案。

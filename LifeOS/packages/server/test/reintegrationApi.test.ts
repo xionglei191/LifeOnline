@@ -7,6 +7,7 @@ import {
   type AcceptReintegrationRecordResponse,
   type DispatchSoulActionResponse,
   type ListReintegrationRecordsResponse,
+  type RejectReintegrationRecordResponse,
   type ListSoulActionsResponse,
   type PlanReintegrationPromotionsResponse,
   type SoulActionResponse,
@@ -206,6 +207,84 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       planned.soulActions.map((action) => action.id).sort(),
       accepted.soulActions.map((action) => action.id).sort(),
     );
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('reintegration reject API returns reviewed record and filtered follow-up lists stay aligned', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-reject-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-reject',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'failed',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api reject summary',
+      evidence: { source: 'api-test-reject' },
+      now: '2026-03-21T11:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-reject');
+    assert.ok(record);
+    assert.equal(record?.reviewStatus, 'pending_review');
+
+    const rejected = await api<RejectReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'reject from api test' }),
+      },
+    );
+
+    assert.equal(rejected.reintegrationRecord.id, record!.id);
+    assert.equal(rejected.reintegrationRecord.reviewStatus, 'rejected');
+    assert.equal(rejected.reintegrationRecord.reviewReason, 'reject from api test');
+    assert.ok(rejected.reintegrationRecord.reviewedAt);
+
+    const rejectedRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=rejected',
+    );
+    const pendingRecords = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=pending_review',
+    );
+    const rejectedFollowUp = rejectedRecords.reintegrationRecords.find((item) => item.id === record!.id);
+    const pendingFollowUp = pendingRecords.reintegrationRecords.find((item) => item.id === record!.id);
+
+    assert.ok(rejectedFollowUp);
+    assert.equal(rejectedFollowUp?.id, rejected.reintegrationRecord.id);
+    assert.equal(rejectedFollowUp?.reviewStatus, rejected.reintegrationRecord.reviewStatus);
+    assert.equal(rejectedFollowUp?.reviewReason, rejected.reintegrationRecord.reviewReason);
+    assert.equal(rejectedFollowUp?.reviewedAt, rejected.reintegrationRecord.reviewedAt);
+    assert.equal(pendingFollowUp, undefined);
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
