@@ -296,3 +296,14 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 websocket follow-up filter convergence contract 补强。
   - 若还要继续补一轮，可评估 accept 阶段 websocket 广播后的 follow-up filtered list 是否也值得补成同类 contract。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 accept websocket + follow-up pending filter convergence contract test，锁定 accept 后广播出来的两条 `pending_review + not_dispatched` soul actions，与随后 `sourceNoteId + governanceStatus=pending_review + executionStatus=not_dispatched` 过滤列表以及 full list 中 pending 子集保持同一成员集合。
+  - 这次继续停留在 server contract 事实源，不扩 UI，不改 runtime 行为，直接补 settings grouped governance 在 accept 即时刷新阶段最关键的过滤收敛保护。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，16/16。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 server 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 accept websocket follow-up filter convergence contract 补强。
+  - 若还要继续补一轮，可评估 approve 阶段 websocket 广播后 follow-up filtered list 是否也值得补成同类 contract。
