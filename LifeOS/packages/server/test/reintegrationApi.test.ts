@@ -2370,14 +2370,18 @@ test('promotion dispatch response stays aligned with local-only execution result
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
     );
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
+    assert.equal(listedAfterDispatch.filters.sourceReintegrationId, record!.id);
+    assert.equal(listedAfterDispatch.filters.governanceStatus, 'approved');
+    assert.equal(listedAfterDispatch.filters.executionStatus, dispatched.soulAction!.executionStatus);
     assert.ok(refreshed);
-    assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-promotion-dispatch-followup');
-    assert.equal(refreshed?.sourceReintegrationId, record!.id);
-    assert.equal(refreshed?.governanceStatus, 'approved');
-    assert.equal(refreshed?.executionStatus, 'succeeded');
+    assert.equal(refreshed?.id, dispatched.soulAction?.id);
+    assert.equal(refreshed?.sourceNoteId, dispatched.soulAction?.sourceNoteId);
+    assert.equal(refreshed?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
+    assert.equal(refreshed?.governanceStatus, dispatched.soulAction?.governanceStatus);
+    assert.equal(refreshed?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.equal(refreshed?.workerTaskId, null);
     assert.equal(refreshed?.resultSummary, dispatched.result.reason);
   } finally {
@@ -2469,14 +2473,18 @@ test('event-node promotion dispatch response stays aligned with local-only execu
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
-      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved&executionStatus=${encodeURIComponent(dispatched.soulAction!.executionStatus)}`,
     );
     const refreshed = listedAfterDispatch.soulActions.find((item) => item.id === action!.id);
+    assert.equal(listedAfterDispatch.filters.sourceReintegrationId, record!.id);
+    assert.equal(listedAfterDispatch.filters.governanceStatus, 'approved');
+    assert.equal(listedAfterDispatch.filters.executionStatus, dispatched.soulAction!.executionStatus);
     assert.ok(refreshed);
-    assert.equal(refreshed?.sourceNoteId, 'note-api-pr6-event-node-dispatch-followup');
-    assert.equal(refreshed?.sourceReintegrationId, record!.id);
-    assert.equal(refreshed?.governanceStatus, 'approved');
-    assert.equal(refreshed?.executionStatus, 'succeeded');
+    assert.equal(refreshed?.id, dispatched.soulAction?.id);
+    assert.equal(refreshed?.sourceNoteId, dispatched.soulAction?.sourceNoteId);
+    assert.equal(refreshed?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
+    assert.equal(refreshed?.governanceStatus, dispatched.soulAction?.governanceStatus);
+    assert.equal(refreshed?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.equal(refreshed?.workerTaskId, null);
     assert.equal(refreshed?.resultSummary, dispatched.result.reason);
   } finally {
