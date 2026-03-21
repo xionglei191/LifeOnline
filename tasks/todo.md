@@ -73,13 +73,16 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/web/src/views/SettingsView.vue` 为 grouped soul-action governance 的 filter mode 回显再补一层命中统计 pill：在 `当前分组视图` 文案旁直接显示 `X / Y 分组命中`，把当前过滤结果和总分组数并排放到同一个提示区。
   - 这次只复用已有 `soulActionGroups.length` 与 `soulActionGroupCount`，新增一个本地 computed 文案与轻量样式，不新增接口、不改 contract，也不扩治理动作。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 将组级 approve / dispatch 成功提示从单纯的数量文案收紧为 `已批量批准 X/Y 条`、`已批量派发 X/Y 条`，把“本次处理了多少”与“当前分组总量”一起返回给 settings 使用者。
+  - 这次不改治理规则、不新增接口，只复用现有 group actions 长度，让 group quick action 的结果反馈更可解释，符合当前 PR6 review-backed 管理面的小步增强方向。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
-  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action、空态提示、命中计数、ready pill、filter label、filter hit stats 与 summary strip 布局的前端交互测试。
+  - 还没有覆盖分组折叠、pending-only / dispatch-ready-only 过滤、组级 quick action、空态提示、命中计数、ready pill、filter label、filter hit stats、批量结果提示与 summary strip 布局的前端交互测试。
 - 下一步建议：
-  - 若继续补验证，下一步优先锁定 grouped filters、filter label、filter hit stats、命中计数、ready pill、空态提示、summary strip 布局与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
-  - 若继续做 UI，优先补最小测试或可视回归保护，而不是继续叠加更多状态展示。
-- 本轮选择依据：上一轮已经把当前 filter mode 回显出来，但命中数仍在 summary strip 的另一块区域；继续把“当前模式 + 当前命中”收拢到同一提示层，能进一步降低解释成本，且改动仍是局部、低风险、可验证的小步增强。
+  - 若继续补验证，下一步优先锁定 grouped filters、filter label、filter hit stats、批量结果提示、命中计数、ready pill、空态提示、summary strip 布局与组级 approve / dispatch quick action 的前端交互语义，避免后续 UI/computed 调整带来行为回退。
+  - 若继续做实现，优先把测试能力补起来，而不是继续追加新的文案/状态展示。
+- 本轮选择依据：当前 grouped governance 已经能批量 approve / dispatch，但成功提示只告诉“处理了几条”，没有说明相对整组的上下文；补齐 `X/Y` 能让治理结果更可解释，且改动很小、无需新接口，比继续叠加更多显示元素更有价值。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 要求第一阶段优先让治理链路可记录、可查看、可解释，而不是继续扩张高风险执行面；因此优先补能直接降低扫描成本的保守筛选，而不是新接口。
 - 当前代码现实：Settings 中 grouped governance 已经有 pending-only quick filter 与组级 approve / dispatch；继续补 dispatch-ready-only filter，能更快聚焦“已经获得执行资格但尚未真正下发”的 PR6 分组，且不改变任何治理判定。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。

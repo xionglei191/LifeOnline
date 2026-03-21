@@ -1409,7 +1409,9 @@ async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actio
         reason: `Batch approved from settings reintegration governance panel for ${group.sourceNoteId}`,
       });
     }
-    soulActionMessage.value = `已批量批准 ${pendingActions.length} 条 soul actions`;
+    const approvedCount = pendingActions.length;
+    const totalCount = group.actions.length;
+    soulActionMessage.value = `已批量批准 ${approvedCount}/${totalCount} 条 soul actions`;
     soulActionMessageType.value = 'success';
     await loadSoulActions();
   } catch (e: any) {
@@ -1439,7 +1441,9 @@ async function handleDispatchSoulActionGroup(group: { sourceNoteId: string; acti
     for (const action of dispatchableActions) {
       await dispatchSoulAction(action.id);
     }
-    soulActionMessage.value = `已批量派发 ${dispatchableActions.length} 条 soul actions`;
+    const dispatchedCount = dispatchableActions.length;
+    const totalCount = group.actions.length;
+    soulActionMessage.value = `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions`;
     soulActionMessageType.value = 'success';
     await loadSoulActions();
     await loadReintegrationRecords();
