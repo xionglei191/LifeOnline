@@ -241,3 +241,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 view 级 in-flight 状态回归补强。
   - 若还要继续补一轮，可评估 groupActionId / groupDispatchId 的父层 in-flight 透传是否还值得锁一条 view 级断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 再新增 2 条 group-level in-flight 断言，分别用 deferred promise 锁定批量 approve / dispatch 进行中时，`SettingsView` 会把 `groupActionId` / `groupDispatchId` 正确透传给 `SoulActionGovernancePanel`，并在异步完成后回落为 `null`。
+  - 这次继续只补最窄的父层状态接线回归面，把前一轮单条 action 的 in-flight 语义补齐到组级 quick action，不新增 UI 功能，也不改变 approve / dispatch 分离边界。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，3 files / 37 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更仍未提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交当前 group-level in-flight 状态回归补强。
+  - 若还要继续补一轮，可评估 group quick action 的成功/失败提示在 view 级是否还值得补更细的中途态断言。

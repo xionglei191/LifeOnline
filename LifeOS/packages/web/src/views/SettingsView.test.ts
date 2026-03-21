@@ -329,6 +329,61 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('passes the active groupActionId into the panel while approve-group is still in flight', async () => {
+    const deferred = createDeferred<Record<string, never>>();
+    apiMocks.approveSoulAction.mockImplementationOnce(() => deferred.promise);
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    expect(pendingGroup).toBeTruthy();
+
+    panel.vm.$emit('approve-group', pendingGroup);
+    await Promise.resolve();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupActionId')).toBe('record-mixed');
+
+    deferred.resolve({});
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupActionId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
+  it('passes the active groupDispatchId into the panel while dispatch-group is still in flight', async () => {
+    const deferred = createDeferred<{ result: { dispatched: boolean; reason: string } }>();
+    apiMocks.dispatchSoulAction.mockImplementationOnce(() => deferred.promise);
+
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const readyGroup = groups.find((group) => group.sourceNoteId === 'record-ready');
+    expect(readyGroup).toBeTruthy();
+
+    panel.vm.$emit('dispatch-group', readyGroup);
+    await Promise.resolve();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe('record-ready');
+
+    deferred.resolve({
+      result: {
+        dispatched: true,
+        reason: 'dispatched later',
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe(null);
+
+    wrapper.unmount();
+  });
+
   it('passes the active actionId into the panel while approve-action is still in flight', async () => {
     const deferred = createDeferred<Record<string, never>>();
     apiMocks.approveSoulAction.mockImplementationOnce(() => deferred.promise);
