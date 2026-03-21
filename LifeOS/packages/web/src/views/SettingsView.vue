@@ -1218,6 +1218,14 @@ function workerTaskStatusLabel(status: string): string {
   return labels[status] || status;
 }
 
+function workerTaskWorkerLabel(worker: string): string {
+  const labels: Record<string, string> = {
+    lifeos: 'LifeOS',
+    openclaw: 'OpenClaw',
+  };
+  return labels[worker] || worker;
+}
+
 function toggleReintegrationExpanded(id: string) {
   if (reintegrationExpandedIds.value.includes(id)) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
@@ -1321,7 +1329,8 @@ async function handleDispatchSoulAction(action: SoulAction) {
     const result = await dispatchSoulAction(action.id);
     const workerTaskLabel = result.task ? taskTypeLabel(result.task.taskType) : null;
     const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
-    const workerTaskMeta = [workerTaskLabel, workerTaskStatus].filter(Boolean).join(' · ');
+    const workerTaskWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
+    const workerTaskMeta = [workerTaskLabel, workerTaskStatus, workerTaskWorker].filter(Boolean).join(' · ');
     const workerTaskSuffix = result.result.workerTaskId
       ? `（Worker Task: ${result.result.workerTaskId}${workerTaskMeta ? ` · ${workerTaskMeta}` : ''}）`
       : '';

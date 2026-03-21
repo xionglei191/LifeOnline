@@ -971,7 +971,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.dispatchSoulAction).toHaveBeenCalledWith('ready-1');
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行）');
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -994,7 +994,7 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行）');
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1007,7 +1007,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();
@@ -1029,7 +1029,7 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行）');
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1042,7 +1042,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();

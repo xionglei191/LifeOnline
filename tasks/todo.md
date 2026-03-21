@@ -392,6 +392,17 @@
   - 本轮 web 变更待提交 git commit。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 quick-filter event contract 对齐修复。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 继续把单条 dispatch 成功提示向 shared/server worker task contract 收敛：在已展示 `workerTaskId`、`taskType`、`status` 的基础上，再直接消费 `DispatchSoulActionResponse.task.worker`，把实际执行宿主一起拼进用户可见反馈。
+  - `LifeOS/packages/web/src/views/SettingsView.vue` 新增 `workerTaskWorkerLabel()`，把 `lifeos/openclaw` 统一映射为 `LifeOS/OpenClaw`，避免 success message 直接暴露底层 worker 枚举值。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步收紧单条 dispatch 成功提示与两条 websocket retention 断言，锁定 `LifeOS` worker 标签会在初次 dispatch、`worker-task-updated` refresh、`soul-action-updated` refresh 三条路径下保持可见。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一主线推进，可直接提交这条 dispatch worker-host feedback 收敛增量；若还要继续补一轮，再找下一处 server/shared 已锁住但 web/client 尚未直接消费的 worker task contract 细节。
   - 若还要继续补一轮，可检查其余 panel emit 名称在父层监听与测试中是否还有类似 camel/kebab 不一致的隐性契约缺口。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.vue:464` 把 grouped governance 的 `filterStatus` / `executionFilter` 父层监听同样统一为组件真实声明的 `@update:filterStatus` 与 `@update:executionFilter`，不再依赖 kebab/camel 混用的隐性兼容。
