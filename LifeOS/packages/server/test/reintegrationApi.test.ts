@@ -874,22 +874,34 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
       baseUrl,
       `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}&taskType=${encodeURIComponent(dispatched.task!.taskType)}`,
     );
+    const statusFilteredWorkerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
+      baseUrl,
+      `/api/worker-tasks?sourceNoteId=${encodeURIComponent(action.sourceNoteId)}&status=${encodeURIComponent(dispatched.task!.status)}`,
+    );
     const refreshedTask = workerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
     const filteredTask = filteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
+    const statusFilteredTask = statusFilteredWorkerTasksAfterDispatch.tasks.find((task) => task.id === dispatched.result.workerTaskId);
 
     assert.ok(refreshedTask);
     assert.ok(filteredTask);
+    assert.ok(statusFilteredTask);
     assert.equal(workerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
     assert.equal(filteredWorkerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
     assert.equal(filteredWorkerTasksAfterDispatch.filters.taskType, dispatched.task!.taskType);
+    assert.equal(statusFilteredWorkerTasksAfterDispatch.filters.sourceNoteId, action.sourceNoteId);
+    assert.equal(statusFilteredWorkerTasksAfterDispatch.filters.status, dispatched.task!.status);
     assert.equal(refreshedTask?.id, taskEvent.data.id);
     assert.equal(refreshedTask?.sourceNoteId, taskEvent.data.sourceNoteId);
     assert.equal(refreshedTask?.taskType, taskEvent.data.taskType);
     assert.equal(filteredTask?.id, dispatched.task?.id);
     assert.equal(filteredTask?.sourceNoteId, dispatched.task?.sourceNoteId);
     assert.equal(filteredTask?.taskType, dispatched.task?.taskType);
+    assert.equal(statusFilteredTask?.id, dispatched.task?.id);
+    assert.equal(statusFilteredTask?.sourceNoteId, dispatched.task?.sourceNoteId);
+    assert.equal(statusFilteredTask?.status, dispatched.task?.status);
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(refreshedTask!.status));
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(filteredTask!.status));
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(statusFilteredTask!.status));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
       socket.terminate();

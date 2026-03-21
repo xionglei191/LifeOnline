@@ -474,8 +474,14 @@
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts:873` 将同一 dispatch worker-task convergence contract 再补一层 `status` 过滤：除了总表与 `taskType` 子表外，按 `dispatched.task.status` 过滤后的 follow-up worker task 列表也必须包含同一 task，并正确回传 `filters.status`。
+  - 这次继续补的是 shared/server 事实源里的查询过滤 contract，避免未来 worker task 面板若切到某个 status 过滤时，出现“dispatch 响应、websocket、总表都对，但 status 子表漏项”的分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，19/19。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
 - 当前未完成项再补充：
   - 本轮 server 变更待提交 git commit。
 - 下一步建议再补充：
-  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task taskType filter convergence contract 补强。
-  - 若还要继续补一轮，可检查 worker task `status` 过滤后的 follow-up list 是否也值得补同级收敛保护；如果那条边际价值不高，就切回新的 web/shared contract 缺口。
+  - 若继续沿 grouped governance 主线推进，可直接提交当前 worker-task status filter convergence contract 补强。
+  - 若还要继续补一轮，应切回新的 web/shared contract 缺口，而不是继续在同一 worker task filter 链上做低边际对称扩张。
