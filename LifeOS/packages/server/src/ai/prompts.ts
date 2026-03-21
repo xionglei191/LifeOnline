@@ -138,6 +138,13 @@ export const PROMPT_REGISTRY: Record<PromptKey, PromptRegistryItem> = {
     requiredPlaceholders: ['{content}', '{today}'],
     defaultContent: EXTRACT_TASKS_PROMPT,
   },
+  suggest: {
+    key: 'suggest',
+    label: '洞察建议',
+    description: '用于基于近期数据生成 2-3 条可执行洞察建议。',
+    requiredPlaceholders: ['{dashboardData}', '{recentNotes}'],
+    defaultContent: SUGGEST_PROMPT,
+  },
   summarize_note: {
     key: 'summarize_note',
     label: '笔记摘要',

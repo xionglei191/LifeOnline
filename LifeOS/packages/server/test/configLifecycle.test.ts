@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import path from 'path';
 import { WebSocket } from 'ws';
+import { fileURLToPath } from 'url';
+import type { AISuggestion, ListAiSuggestionsResponse, PromptRecord } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
+
+const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
 
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
@@ -108,7 +112,7 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
 
 test('loadStoredConfig keeps persisted values separate from env overrides', async () => {
   const env = await createTestEnv('lifeos-config-persist-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const persistedVaultPath = path.join(env.rootDir, 'persisted-vault');
 
@@ -135,7 +139,7 @@ test('loadStoredConfig keeps persisted values separate from env overrides', asyn
 
 test('updating config persists vault path, emits index-complete, and rebinds watcher to the new vault', async () => {
   const env = await createTestEnv('lifeos-config-update-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'replacement-vault');
   const replacementNotePath = path.join(replacementVaultPath, '切换后.md');
@@ -201,7 +205,7 @@ test('updating config persists vault path, emits index-complete, and rebinds wat
 
 test('updating config treats equivalent vault paths as unchanged after normalization', async () => {
   const env = await createTestEnv('lifeos-config-normalize-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const serverRoot = path.dirname(configFile);
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const relativeVaultPath = path.relative(serverRoot, env.vaultPath);
@@ -238,7 +242,7 @@ test('updating config treats equivalent vault paths as unchanged after normaliza
 
 test('updating config rolls back persisted vault path when reindex fails', async () => {
   const env = await createTestEnv('lifeos-config-rollback-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'rollback-vault');
   const originalIndexVault = configUpdateDeps.indexVault;
@@ -284,7 +288,7 @@ test('updating config rolls back persisted vault path when reindex fails', async
 
 test('updating config restores original watcher state when restart fails', async () => {
   const env = await createTestEnv('lifeos-config-restart-rollback-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'restart-rollback-vault');
   const replacementNotePath = path.join(replacementVaultPath, '新库.md');
@@ -346,7 +350,7 @@ test('updating config restores original watcher state when restart fails', async
 
 test('soul-actions API approve then dispatch runs governance happy path', async () => {
   const env = await createTestEnv('lifeos-soul-actions-api-');
-  const configFile = path.resolve('/home/xionglei/Project/LifeOnline/LifeOS/packages/server/config.json');
+  const configFile = CONFIG_FILE;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const growthFilePath = path.join(env.vaultPath, '成长', '2026-03-20-api-review.md');
 
@@ -414,6 +418,190 @@ test('soul-actions API approve then dispatch runs governance happy path', async 
     assert.equal(detail.soulAction.governanceStatus, 'approved');
     assert.equal(detail.soulAction.executionStatus, 'succeeded');
     assert.ok(detail.soulAction.workerTaskId);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('AI suggestions prompt override accepts suggest prompt and reset restores default content', async () => {
+  const env = await createTestEnv('lifeos-ai-suggest-prompt-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const overrideContent = `Analyze the following productivity data and generate actionable suggestions. Return only valid JSON.\n\nDashboard data:\n{dashboardData}\n\nRecent notes summary:\n{recentNotes}\n\nReturn exactly 1 suggestion as JSON only.`;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const listed = await api<{ prompts: PromptRecord[] }>(baseUrl, '/api/ai/prompts');
+    const suggestPrompt = listed.prompts.find((prompt) => prompt.key === 'suggest');
+    assert.ok(suggestPrompt);
+    assert.equal(suggestPrompt?.requiredPlaceholders.includes('{dashboardData}'), true);
+    assert.equal(suggestPrompt?.requiredPlaceholders.includes('{recentNotes}'), true);
+    assert.equal(suggestPrompt?.isOverridden, false);
+
+    const updated = await api<{ prompt: PromptRecord }>(baseUrl, '/api/ai/prompts/suggest', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        content: overrideContent,
+        enabled: true,
+        notes: 'config lifecycle test override',
+      }),
+    });
+
+    assert.equal(updated.prompt.key, 'suggest');
+    assert.equal(updated.prompt.overrideContent, overrideContent);
+    assert.equal(updated.prompt.effectiveContent, overrideContent);
+    assert.equal(updated.prompt.isOverridden, true);
+    assert.equal(updated.prompt.notes, 'config lifecycle test override');
+
+    const relisted = await api<{ prompts: PromptRecord[] }>(baseUrl, '/api/ai/prompts');
+    const overriddenSuggestPrompt = relisted.prompts.find((prompt) => prompt.key === 'suggest');
+    assert.ok(overriddenSuggestPrompt);
+    assert.equal(overriddenSuggestPrompt?.effectiveContent, overrideContent);
+    assert.equal(overriddenSuggestPrompt?.isOverridden, true);
+
+    const reset = await api<{ success: boolean }>(baseUrl, '/api/ai/prompts/suggest', {
+      method: 'DELETE',
+    });
+    assert.equal(reset.success, true);
+
+    const resetListed = await api<{ prompts: PromptRecord[] }>(baseUrl, '/api/ai/prompts');
+    const resetSuggestPrompt = resetListed.prompts.find((prompt) => prompt.key === 'suggest');
+    assert.ok(resetSuggestPrompt);
+    assert.equal(resetSuggestPrompt?.isOverridden, false);
+    assert.equal(resetSuggestPrompt?.overrideContent, null);
+    assert.notEqual(resetSuggestPrompt?.effectiveContent, overrideContent);
+    assert.equal(resetSuggestPrompt?.requiredPlaceholders.includes('{dashboardData}'), true);
+    assert.equal(resetSuggestPrompt?.requiredPlaceholders.includes('{recentNotes}'), true);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('AI suggestions prompt override rejects missing required placeholders', async () => {
+  const env = await createTestEnv('lifeos-ai-suggest-prompt-invalid-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/api/ai/prompts/suggest`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: 'Dashboard data only: {dashboardData}',
+      }),
+    });
+
+    assert.equal(response.status, 400);
+    const payload = await response.json() as { error?: string };
+    assert.match(payload.error || '', /\{recentNotes\}/);
+
+    const listed = await api<{ prompts: PromptRecord[] }>(baseUrl, '/api/ai/prompts');
+    const suggestPrompt = listed.prompts.find((prompt) => prompt.key === 'suggest');
+    assert.ok(suggestPrompt);
+    assert.equal(suggestPrompt?.isOverridden, false);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('AI suggestions API returns fallback suggestions without provider credentials', async () => {
+  const env = await createTestEnv('lifeos-ai-suggestions-api-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    delete process.env.ANTHROPIC_API_KEY;
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const response = await api<ListAiSuggestionsResponse>(baseUrl, '/api/ai/suggestions');
+    const suggestions = response.suggestions;
+
+    assert.ok(suggestions.length > 0);
+    assert.ok(suggestions.length <= 3);
+    for (const suggestion of suggestions as AISuggestion[]) {
+      assert.ok(suggestion.id);
+      assert.match(suggestion.type, /^(balance|overload|goal|reminder)$/);
+      assert.ok(suggestion.title.length > 0);
+      assert.ok(suggestion.content.length > 0);
+      assert.ok(suggestion.createdAt.length > 0);
+      if (suggestion.dimension) {
+        assert.match(suggestion.dimension, /^(health|career|finance|learning|relationship|life|hobby|growth)$/);
+      }
+    }
+    assert.ok(suggestions.some((suggestion) => suggestion.dimension));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('AI suggestions API responds with shared list contract', async () => {
+  const env = await createTestEnv('lifeos-ai-suggestions-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    delete process.env.ANTHROPIC_API_KEY;
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const response = await api<ListAiSuggestionsResponse>(baseUrl, '/api/ai/suggestions');
+    assert.equal(Object.prototype.hasOwnProperty.call(response, 'suggestions'), true);
+    assert.ok(Array.isArray(response.suggestions));
+    assert.ok(response.suggestions.length > 0);
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);

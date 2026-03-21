@@ -32,7 +32,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { fetchAISuggestions, type AISuggestion } from '../api/client';
+import type { AISuggestion } from '@lifeos/shared';
+import { fetchAISuggestions } from '../api/client';
 
 const suggestions = ref<AISuggestion[]>([]);
 const loading = ref(false);

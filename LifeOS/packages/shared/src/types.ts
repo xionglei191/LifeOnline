@@ -22,7 +22,7 @@ export const SUPPORTED_WORKER_TASK_TYPES = [
 ] as const;
 export type WorkerTaskType = typeof SUPPORTED_WORKER_TASK_TYPES[number];
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
-export type PromptKey = 'classify' | 'extract_tasks' | 'summarize_note' | 'daily_report' | 'weekly_report';
+export type PromptKey = 'classify' | 'extract_tasks' | 'summarize_note' | 'daily_report' | 'weekly_report' | 'suggest';
 export const SUPPORTED_SOUL_ACTION_KINDS = [
   'extract_tasks',
   'update_persona_snapshot',
@@ -99,6 +99,19 @@ export interface TestAiProviderConnectionResponse {
   resolvedBaseUrl: string;
   resolvedModel: string;
   latencyMs?: number;
+}
+
+export interface AISuggestion {
+  id: string;
+  type: 'balance' | 'overload' | 'goal' | 'reminder';
+  title: string;
+  content: string;
+  dimension?: Exclude<Dimension, '_inbox'>;
+  createdAt: string;
+}
+
+export interface ListAiSuggestionsResponse {
+  suggestions: AISuggestion[];
 }
 
 export interface WorkerTaskListFilters {

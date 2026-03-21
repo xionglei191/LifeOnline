@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler, listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler, dispatchSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, listReintegrationRecordsHandler, acceptReintegrationRecordHandler, rejectReintegrationRecordHandler, planPromotionsHandler, listEventNodesHandler, listContinuityRecordsHandler } from './handlers.js';
+import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, listAiSuggestionsHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler, listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler, dispatchSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, listReintegrationRecordsHandler, acceptReintegrationRecordHandler, rejectReintegrationRecordHandler, planPromotionsHandler, listEventNodesHandler, listContinuityRecordsHandler } from './handlers.js';
 
 export const router = Router();
 
@@ -20,6 +20,7 @@ router.delete('/ai/prompts/:key', resetAiPrompt);
 router.get('/ai/provider', getAiProviderHandler);
 router.patch('/ai/provider', updateAiProviderHandler);
 router.post('/ai/provider/test', testAiProviderHandler);
+router.get('/ai/suggestions', listAiSuggestionsHandler);
 router.post('/worker-tasks', createWorkerTaskHandler);
 router.delete('/worker-tasks/finished', clearFinishedWorkerTasksHandler);
 router.get('/worker-tasks', listWorkerTasksHandler);

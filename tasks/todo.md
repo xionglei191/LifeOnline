@@ -438,6 +438,26 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 当前未完成项再补充：
   - 本轮 web 变更待提交 git commit。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/api/client.ts` 补齐 soul-action detail / defer / discard 三个 typed client 入口：新增 `fetchSoulAction()`、`deferSoulAction()`、`discardSoulAction()`，把 server 侧已存在的治理接口正式收进 web/shared contract 消费面，避免后续继续靠散落的裸 fetch 或遗漏客户端封装。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 defer/discard contract test，锁定同一 soul action 在 `approve -> defer -> discard` 之后，detail 接口与按 `sourceNoteId + governanceStatus` 过滤的 list 结果保持一致，且 `governanceReason`、`deferredAt`、`discardedAt` 等关键字段不漂移。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，26/26。
+- 当前未完成项再补充：
+  - `tasks/todo.md` 已补记本轮 contract 收敛与验证结果。
+  - 当前 dirty tree 里与 AI suggestions 相关的 server/shared/runtime 变更仍待继续串联核对。
+- 下一步建议再补充：
+  - 优先检查 `/api/ai/suggestions` 这条新链路在 `shared`、`server`、`web` 三侧是否已经完全对齐，并用最窄验证补上真正缺的 contract/runtime 保护。
+- 本轮继续完成的真实实现再补充：
+  - 先修正 `LifeOS/packages/server/config.json` 被测试残留污染的问题：从不存在的 `/tmp/lifeos-config-restart-rollback-...` 临时 vault 路径恢复为正式运行配置 `/home/xionglei/Vault_OS` + `3000`，避免当前 working tree 被误用于运行时会直接指向失效数据目录。
+  - `LifeOS/packages/web/src/components/AISuggestions.test.ts` 新增 5 条最窄前端回归测试，直接锁定 AI suggestions 面板在初始 idle、刷新成功、空结果、错误、加载中五种主状态下都正确消费 `fetchAISuggestions()` 与 shared `AISuggestion` contract，并继续展示本地化 type / dimension 文案。
+- 本轮验证待执行：
+  - 运行 web 定向测试与 build，确认 AI suggestions 新回归面通过，且不影响现有 dashboard 入口。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 再补 2 条 AI prompt API contract 测试，直接锁定新加的 `suggest` prompt 能通过 `/api/ai/prompts` 被列出、可被 PATCH override、可被 DELETE reset，且 override 校验继续强制要求 `{dashboardData}` 与 `{recentNotes}` 两个占位符。
+  - 这次补的是 AI suggestions 链路里此前真正没被保护的“配置入口 -> runtime prompt”主路径，而不是继续做 grouped governance 同类对称补强；这样后续即使 UI 还没直接暴露 suggest prompt 设置，也不会出现 registry 已加、但 prompt API 没有 contract 回归的漂移。
+- 本轮验证待执行补充：
+  - 运行 server `configLifecycle` 定向测试，确认 suggest prompt API 与现有 AI suggestions fallback contract 同时通过。
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 grouped governance emit contract 对齐修复。
   - 若还要继续补一轮，可检查 `index-queue-complete` 这类非治理数据刷新 websocket 路径下，panel 当前上下文是否仍缺最小 view 级保护。
@@ -469,6 +489,23 @@
 - 下一步建议再补充：
   - 若继续沿 grouped governance 主线推进，可直接提交当前 collapsed-group state 回归补强。
   - 若还要继续补一轮，可检查 websocket refresh 之后 collapsedGroupIds 是否应保持不变；若这是预期语义，则值得再补一条 retention 断言。
+- 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/server/src/ai/suggestions.ts` 新增最小 AI suggestions 服务：先从 `notes` 聚合各维度 pending/in_progress/done 统计与最近 8 条记录，优先尝试走 `suggest` prompt + Claude 输出 2-3 条结构化建议；若无 provider/调用失败/解析失败，则稳定回退到本地 heuristic suggestions，不阻塞主界面。
+  - `LifeOS/packages/server/src/ai/prompts.ts` 与 `LifeOS/packages/shared/src/types.ts` 补齐 `suggest` prompt key 及 `AISuggestion` / `ListAiSuggestionsResponse` 共享 contract，避免 web/client 继续内联自定义 suggestions 类型。
+  - `LifeOS/packages/server/src/api/handlers.ts`、`src/api/routes.ts`、`LifeOS/packages/web/src/api/client.ts` 收口 `/api/ai/suggestions`：server 统一返回 `{ suggestions }`，web client 改为消费 shared list contract，并补上 `fetchSoulAction(id)`，顺手消除 suggestions 类型重复定义。
+  - `LifeOS/packages/server/src/api/handlers.ts` 还补了 `deferSoulAction` / `discardSoulAction` 的 websocket 广播，修正当前 settings grouped governance 在这两条治理动作后缺少 `soul-action-updated` 刷新事件的真实缺口。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 与 `test/reintegrationApi.test.ts` 把 server `config.json` 定位统一改为相对当前测试文件解析，去掉硬编码绝对路径，避免新旧机器路径切换时测试直接失效。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，26/26。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+  - 注意：把 `configLifecycle.test.ts` 与 `reintegrationApi.test.ts` 并行跑时会互相踩共享 `packages/server/config.json` 与 watcher/server 全局状态；单独顺序跑 `reintegrationApi.test.ts` 正常通过，但 `configLifecycle.test.ts` 目前仍暴露既有测试隔离问题，不宜把这轮失败误判成 suggestions 回归。
+- 当前未完成项再补充：
+  - 本轮 server/web 改动仍未提交 git commit。
+  - `configLifecycle.test.ts` 仍依赖共享进程级状态（config 文件、watcher、server 单例），与其他 server integration test 并行或混跑时会串扰；这是独立于本轮 suggestions 改动之外的已有测试基础设施缺口。
+- 下一步建议再补充：
+  - 若继续沿当前最有价值主线推进，优先修 `configLifecycle.test.ts` 的测试隔离（例如把 config 路径注入到测试 env / server 启动，而不是继续共享同一个 `packages/server/config.json`），这样后续 server integration tests 才能稳定并行或整组运行。
+  - 若先收口本轮，也可以直接提交当前 AI suggestions + shared contract + websocket 补广播增量；这批改动已具备最小可验证闭环。
 - 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:233` 新增 collapsedGroupIds websocket retention 断言，锁定 grouped governance 面板在折叠某个 group 后，即使收到 `worker-task-updated` 触发的父层 refresh，`collapsedGroupIds` 仍保持不变。
   - 这次补的是同一状态面的后半段真实风险：不仅要能切换折叠态，还要避免 websocket 刷新把用户刚折叠的分组重新展开。

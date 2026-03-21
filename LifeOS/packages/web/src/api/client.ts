@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind } from '@lifeos/shared';
+import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind } from '@lifeos/shared';
 
 export interface SearchResult {
   notes: Note[];
@@ -136,15 +136,6 @@ export interface ExtractTasksResult {
     filePath?: string;
   }>;
   count: number;
-}
-
-export interface AISuggestion {
-  id: string;
-  type: 'balance' | 'overload' | 'goal' | 'reminder';
-  title: string;
-  content: string;
-  dimension?: string;
-  createdAt: string;
 }
 
 export interface WorkerTaskListResponse {
@@ -327,6 +318,15 @@ export async function fetchSoulActions(filters?: {
   return data.soulActions || [];
 }
 
+export async function fetchSoulAction(id: string): Promise<SoulAction> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}`);
+  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch soul action');
+  }
+  return data.soulAction as SoulAction;
+}
+
 export async function approveSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
@@ -349,6 +349,32 @@ export async function dispatchSoulAction(id: string): Promise<DispatchSoulAction
     throw new Error(data.error || 'Failed to dispatch soul action');
   }
   return data as DispatchSoulActionResponse;
+}
+
+export async function deferSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/defer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to defer soul action');
+  }
+  return data.soulAction as SoulAction;
+}
+
+export async function discardSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/discard`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to discard soul action');
+  }
+  return data.soulAction as SoulAction;
 }
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
@@ -410,8 +436,11 @@ export async function extractTasks(noteId: string): Promise<WorkerTask> {
 
 export async function fetchAISuggestions(): Promise<AISuggestion[]> {
   const res = await fetch(`${API_BASE}/ai/suggestions`);
-  if (!res.ok) return [];
-  return res.json();
+  const data = await res.json().catch(() => ({} as Partial<ListAiSuggestionsResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch AI suggestions');
+  }
+  return data.suggestions || [];
 }
 
 // Note write-back API

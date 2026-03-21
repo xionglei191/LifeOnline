@@ -17,7 +17,8 @@ import { listEventNodes } from '../soul/eventNodes.js';
 import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest } from '@lifeos/shared';
+import { listAiSuggestions } from '../ai/suggestions.js';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -431,6 +432,18 @@ export async function testAiProviderHandler(req: Request, res: Response): Promis
   }
 }
 
+export async function listAiSuggestionsHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const response: ListAiSuggestionsResponse = {
+      suggestions: await listAiSuggestions(),
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('List AI suggestions error:', error);
+    res.status(500).json({ error: 'Failed to fetch AI suggestions' });
+  }
+}
+
 // GET /api/soul-actions
 export async function listSoulActionsHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -502,6 +515,7 @@ export async function deferSoulActionHandler(req: Request, res: Response): Promi
       res.status(404).json({ error: 'Soul action not found' });
       return;
     }
+    broadcastSoulActionUpdate(soulAction);
     res.json({ soulAction });
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -515,6 +529,7 @@ export async function discardSoulActionHandler(req: Request, res: Response): Pro
       res.status(404).json({ error: 'Soul action not found' });
       return;
     }
+    broadcastSoulActionUpdate(soulAction);
     res.json({ soulAction });
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
