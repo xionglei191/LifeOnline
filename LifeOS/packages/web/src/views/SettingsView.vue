@@ -497,9 +497,18 @@
               <span class="worker-pill">pending {{ group.pendingCount }}</span>
               <span class="worker-pill">{{ group.sourceNoteId }}</span>
             </div>
-            <button class="btn-link" @click="toggleSoulActionGroupCollapsed(group.sourceNoteId)">
-              {{ soulActionCollapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
-            </button>
+            <div class="reintegration-head-actions soul-action-group-toolbar">
+              <button
+                class="btn-worker"
+                :disabled="soulActionGroupActionId === group.sourceNoteId || group.pendingCount === 0"
+                @click="handleApproveSoulActionGroup(group)"
+              >
+                {{ soulActionGroupActionId === group.sourceNoteId ? '处理中...' : `批准本组待治理项 (${group.pendingCount})` }}
+              </button>
+              <button class="btn-link" @click="toggleSoulActionGroupCollapsed(group.sourceNoteId)">
+                {{ soulActionCollapsedGroupIds.includes(group.sourceNoteId) ? '展开分组' : '收起分组' }}
+              </button>
+            </div>
           </div>
 
           <div class="reintegration-meta-grid soul-action-group-meta">
@@ -980,6 +989,7 @@ const soulActionMessageType = ref<'success' | 'error'>('success');
 const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending_review');
 const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
 const soulActionActionId = ref<string | null>(null);
+const soulActionGroupActionId = ref<string | null>(null);
 const soulActionCollapsedGroupIds = ref<string[]>([]);
 const scheduleLabel = ref('');
 const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
@@ -1342,6 +1352,33 @@ async function handleApproveSoulAction(action: SoulAction) {
     soulActionMessageType.value = 'error';
   } finally {
     soulActionActionId.value = null;
+  }
+}
+
+async function handleApproveSoulActionGroup(group: { sourceNoteId: string; actions: SoulAction[]; pendingCount: number }) {
+  const pendingActions = group.actions.filter((action) => action.governanceStatus === 'pending_review');
+  if (!pendingActions.length) {
+    soulActionMessage.value = '当前分组没有待批准的 soul actions';
+    soulActionMessageType.value = 'error';
+    return;
+  }
+
+  soulActionGroupActionId.value = group.sourceNoteId;
+  soulActionMessage.value = '';
+  try {
+    for (const action of pendingActions) {
+      await approveSoulAction(action.id, {
+        reason: `Batch approved from settings reintegration governance panel for ${group.sourceNoteId}`,
+      });
+    }
+    soulActionMessage.value = `已批量批准 ${pendingActions.length} 条 soul actions`;
+    soulActionMessageType.value = 'success';
+    await loadSoulActions();
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '批量批准 soul actions 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionGroupActionId.value = null;
   }
 }
 
@@ -2186,6 +2223,11 @@ async function handleReindex() {
 
 .soul-action-group-meta {
   margin-top: 0;
+}
+
+.soul-action-group-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .soul-action-group-actions {
