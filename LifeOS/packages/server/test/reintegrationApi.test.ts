@@ -191,6 +191,126 @@ test('reintegration accept API returns reviewed record and planned soul actions'
   }
 });
 
+test('soul-action list API keeps filters stable with multiple promotion actions and mixed governance states', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-filters-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-filter-a',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api filter summary a',
+      evidence: { source: 'api-filter-a' },
+      now: '2026-03-21T13:00:00.000Z',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-filter-b',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api filter summary b',
+      evidence: { source: 'api-filter-b' },
+      now: '2026-03-21T13:05:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const recordA = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-filter-a');
+    const recordB = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-filter-b');
+    assert.ok(recordA);
+    assert.ok(recordB);
+
+    const acceptedA = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordA!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept filter record a' }),
+      },
+    );
+    const acceptedB = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(recordB!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept filter record b' }),
+      },
+    );
+    assert.equal(acceptedA.soulActions.length, 2);
+    assert.equal(acceptedB.soulActions.length, 2);
+
+    const approvedAction = acceptedA.soulActions[0]!;
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(approvedAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve one filter action' }),
+      },
+    );
+
+    const pendingForA = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordA!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    assert.equal(pendingForA.filters.sourceNoteId, recordA!.id);
+    assert.equal(pendingForA.filters.governanceStatus, 'pending_review');
+    assert.equal(pendingForA.filters.executionStatus, 'not_dispatched');
+    assert.equal(pendingForA.soulActions.length, 1);
+    assert.ok(pendingForA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
+    assert.ok(pendingForA.soulActions.every((action) => action.governanceStatus === 'pending_review'));
+    assert.ok(pendingForA.soulActions.every((action) => action.executionStatus === 'not_dispatched'));
+
+    const approvedForA = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordA!.id)}&governanceStatus=approved`,
+    );
+    assert.equal(approvedForA.soulActions.length, 1);
+    assert.equal(approvedForA.soulActions[0]?.id, approvedAction.id);
+    assert.ok(approvedForA.soulActions.every((action) => action.sourceNoteId === recordA!.id));
+    assert.ok(approvedForA.soulActions.every((action) => action.governanceStatus === 'approved'));
+
+    const pendingForB = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(recordB!.id)}&governanceStatus=pending_review&executionStatus=not_dispatched`,
+    );
+    assert.equal(pendingForB.soulActions.length, 2);
+    assert.ok(pendingForB.soulActions.every((action) => action.sourceNoteId === recordB!.id));
+    assert.ok(pendingForB.soulActions.every((action) => action.governanceStatus === 'pending_review'));
+    assert.ok(pendingForB.soulActions.every((action) => action.executionStatus === 'not_dispatched'));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');

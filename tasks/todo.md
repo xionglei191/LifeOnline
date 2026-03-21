@@ -49,16 +49,14 @@
   - reintegration accept / 手动补规划、以及 websocket 的 `worker-task-updated` 现在都会联动刷新 soul actions，让 accept -> planned -> approve / dispatch 在同一 settings 入口形成连续链路。
   - soul-action 区块保留保守边界：只消费已有 approve / dispatch API，不新增 defer/discard 等更大治理面。
 - 本轮继续完成的真实实现：
-  - `LifeOS/packages/shared/src/types.ts` 扩展 websocket contract，新增 `soul-action-updated` 事件，避免 settings 只能被动依赖 `worker-task-updated` 才能刷新治理区块。
-  - `LifeOS/packages/server/src/api/handlers.ts` 在 reintegration accept、soul-action approve、dispatch 后显式广播 `soul-action-updated`，让 review-backed governance 的状态变化有独立事件源。
-  - `LifeOS/packages/web/src/views/SettingsView.vue` 改为同时监听 `worker-task-updated` 与 `soul-action-updated`，让 reintegration / soul-action 面板在同步 dispatch 或纯治理状态变化下也能即时刷新。
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 websocket contract 覆盖，锁定 dispatch 后会广播 `soul-action-updated`，保证 settings 当前依赖的联动刷新语义有后端测试兜底。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增多条 PR6 promotion actions 并列时的过滤 contract 覆盖，锁定 `sourceNoteId + governanceStatus + executionStatus` 在 mixed governance state 下仍返回稳定结果。
+  - 这条测试直接对应 settings 里 soul-action 列表的更真实数据场景，优先防止错筛选、误刷新，而不是继续做低价值结构对称化。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - soul-action 面板目前还是列表级操作台，尚未提供更细的 source-note drilldown 或按 reintegration record 分组视图。
 - 下一步建议：
-  - 若继续补 coverage，下一步优先锁定多条 soul-action 并列时的过滤/渲染语义，避免 settings 面板在更真实数据量下出现错刷或误筛选。
-  - 若要进入更高价值 UI 演进，优先做 source-note / reintegration 关联视图，而不是继续堆新的治理状态按钮。
+  - 若继续补 coverage，下一步优先锁定 source-note / reintegration 关联展示语义，确保同一条 review 链路下的对象关系在 UI 上可解释。
+  - 若进入 UI 演进，优先做按 reintegration record 分组的 soul-action 展示，而不是继续增加新的治理状态按钮。
 - 本轮选择依据：`vision/01-当前进度/LifeOnline 第一阶段项目开发任务书（进度对齐正式版）.md` 明确要求后续在保守边界内继续 review-backed、可解释、可审计的小步推进，而不是夸大成完整产品化系统。
 - 当前代码现实：PR6 中 `accepted review` 判定与 signal 映射此前同时散落在 planner / executor；这轮做的是局部收束，不改变治理边界，不扩新对象面。
 - 延续同一方向，本轮再把 terminal reintegration hook 中的 record 输入组装压回 `feedbackReintegration.ts`，继续减少 `workerTasks.ts` 内联规则拼装。
