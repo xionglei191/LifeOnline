@@ -923,6 +923,41 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps dispatch worker task feedback visible across worker-task websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.dispatchSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const readyAction = soulActions.find((action) => action.id === 'ready-1');
+    expect(readyAction).toBeTruthy();
+
+    panel.vm.$emit('dispatch-action', readyAction);
+    await flushPromises();
+
+    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1）');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+
+    wrapper.unmount();
+  });
+
   it('shows error feedback without refreshing related views when dispatch-action fails', async () => {
     const wrapper = mountSettingsView();
 

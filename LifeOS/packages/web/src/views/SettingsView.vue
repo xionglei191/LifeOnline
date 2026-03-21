@@ -1583,6 +1583,7 @@ onUnmounted(() => {
 
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  const preserveSoulActionMessage = soulActionMessageType.value === 'success' && Boolean(soulActionMessage.value);
   loadStatus();
   if (wsEvent.type === 'worker-task-updated' || isIndexRefreshEvent(wsEvent)) {
     loadWorkerTasks();
@@ -1592,7 +1593,7 @@ function handleWsUpdate(event: Event) {
   }
   if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated') {
     loadReintegrationRecords();
-    loadSoulActions();
+    loadSoulActions({ preserveMessage: preserveSoulActionMessage });
   }
 }
 
