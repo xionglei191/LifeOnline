@@ -216,7 +216,7 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(apiMocks.retryWorkerTask).toHaveBeenCalledWith('worker-task-retry');
-    expect(document.body.textContent).toContain('已创建任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
+    expect(document.body.textContent).toContain('已重新入队任务 worker-task-retry · 提取行动项 · 等待执行 · LifeOS');
 
     wrapper.unmount();
   });
@@ -242,7 +242,7 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(apiMocks.cancelWorkerTask).toHaveBeenCalledWith('worker-task-cancel');
-    expect(document.body.textContent).toContain('已创建任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
+    expect(document.body.textContent).toContain('已取消任务 worker-task-cancel · OpenClaw 任务 · 已取消 · OpenClaw');
     expect(document.body.textContent).not.toContain('openclaw_task');
 
     wrapper.unmount();

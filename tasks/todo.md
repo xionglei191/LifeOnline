@@ -489,6 +489,16 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 `NoteDetail.vue` 是否还存在与 worker task 相关的错误态/刷新态提示未消费统一本地化 helper，优先补真实用户可见缺口而非对称扩张。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue` 将原先只适用于 create 路径的 `workerTaskCreatedMessage()` 收敛为 action-aware 的 `workerTaskActionMessage()`，让 create / retry / cancel 三条路径继续共用同一份本地化 worker-task 元信息拼装逻辑，同时修正 retry/cancel 成功反馈仍显示“已创建任务”的语义错误。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts` 将 retry/cancel 断言同步收紧为 `已重新入队任务` 与 `已取消任务`，避免 UI 在 contract 字段已正确消费后仍误导用户当前动作语义。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts` 通过，6 files / 62 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 worker-task feedback 主线推进，可检查 `NoteDetail.vue` 在 worker task 失败/加载刷新链路中是否还存在固定提示语与真实任务状态脱节的缺口，优先补会影响用户判断当前任务状态的文案。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。

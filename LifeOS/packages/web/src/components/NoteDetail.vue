@@ -398,8 +398,9 @@ function workerTaskStatusLabel(status: WorkerTask['status']) {
   return status;
 }
 
-function workerTaskCreatedMessage(task: WorkerTask) {
-  return `已创建任务 ${task.id} · ${workerTaskTypeLabel(task.taskType)} · ${workerTaskStatusLabel(task.status)} · ${workerTaskWorkerLabel(task.worker)}`;
+function workerTaskActionMessage(action: 'created' | 'retried' | 'cancelled', task: WorkerTask) {
+  const prefix = action === 'created' ? '已创建任务' : action === 'retried' ? '已重新入队任务' : '已取消任务';
+  return `${prefix} ${task.id} · ${workerTaskTypeLabel(task.taskType)} · ${workerTaskStatusLabel(task.status)} · ${workerTaskWorkerLabel(task.worker)}`;
 }
 
 async function loadRelatedWorkerTasks(sourceNoteId: string) {
@@ -515,7 +516,7 @@ async function handleExtractTasks() {
   try {
     const task = await extractTasks(currentNoteId.value);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskCreatedMessage(task);
+    workerMessage.value = workerTaskActionMessage('created', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '行动项提取任务创建失败';
@@ -539,7 +540,7 @@ async function handleCreateOpenClawTask() {
       },
     });
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskCreatedMessage(task);
+    workerMessage.value = workerTaskActionMessage('created', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '外部任务创建失败';
@@ -562,7 +563,7 @@ async function handleCreateSummarizeTask() {
       },
     });
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskCreatedMessage(task);
+    workerMessage.value = workerTaskActionMessage('created', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '摘要任务创建失败';
@@ -579,7 +580,7 @@ async function handleRetryRelatedTask(taskId: string) {
   try {
     const task = await retryWorkerTask(taskId);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskCreatedMessage(task);
+    workerMessage.value = workerTaskActionMessage('retried', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '任务重试失败';
@@ -596,7 +597,7 @@ async function handleCancelRelatedTask(taskId: string) {
   try {
     const task = await cancelWorkerTask(taskId);
     await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskCreatedMessage(task);
+    workerMessage.value = workerTaskActionMessage('cancelled', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '任务取消失败';
