@@ -352,7 +352,15 @@
   - 若继续沿 grouped governance 主线推进，可直接提交当前 websocket follow-up filter convergence contract 补强。
   - 若还要继续补一轮，可评估 accept 阶段 websocket 广播后的 follow-up filtered list 是否也值得补成同类 contract。
 - 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 accept websocket + follow-up pending filter convergence contract test，锁定 accept 后广播出来的两条 `pending_review + not_dispatched` soul actions，与随后 `sourceNoteId + governanceStatus=pending_review + executionStatus=not_dispatched` 过滤列表以及 full list 中 pending 子集保持同一成员集合。
+  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` 将缺失 promotion 来源时的错误信息从过时的 `requires reintegration-record sourceNoteId` 收紧为 `requires sourceReintegrationId or reintegration-record sourceNoteId`，让 runtime 报错与当前 shared/server contract 的显式来源语义保持一致。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 1 条最小单元测试，直接锁定当 promotion action 既没有 `sourceReintegrationId`、其 `sourceNoteId` 也不是兼容的 reintegration id 时，会返回更新后的显式 contract 错误，而不是继续把调用方引向旧的 note-id 语义。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，47/47。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+  - 当前环境仍有 Node engine warning：包声明要求 `>=20 <21`，实际为 `v25.8.1`，但本轮测试与构建均通过。
+- 当前未完成项再补充：
+  - promotion executor 仍保留 `sourceNoteId.startsWith('reint:')` 的兼容 fallback；若继续沿同一条 contract 收口主线推进，可再评估 server 侧哪些真实 dispatch 场景仍依赖这条兼容路径，而不是显式 `sourceReintegrationId`。
+  - 本轮 server 变更待提交 git commit。
   - 这次继续停留在 server contract 事实源，不扩 UI，不改 runtime 行为，直接补 settings grouped governance 在 accept 即时刷新阶段最关键的过滤收敛保护。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts` 通过，16/16。

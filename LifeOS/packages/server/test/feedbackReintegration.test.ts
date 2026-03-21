@@ -25,6 +25,7 @@ import { getPromotionActionKindsForReintegration } from '../src/soul/pr6Promotio
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
+import { executePromotionSoulAction } from '../src/soul/pr6PromotionExecutor.js';
 import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../src/soul/postIndexPersonaTrigger.js';
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
@@ -148,6 +149,32 @@ function buildNoteMarkdown(frontmatter: Record<string, unknown>, content: string
   lines.push('---', '', content);
   return `${lines.join('\n')}\n`;
 }
+
+test('executePromotionSoulAction reports the explicit reintegration source contract when missing promotion source ids', () => {
+  assert.throws(
+    () => executePromotionSoulAction({
+      id: 'soul:promote-event-missing-source',
+      sourceNoteId: 'note-without-reintegration-prefix',
+      sourceReintegrationId: null,
+      actionKind: 'promote_event_node',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      status: 'not_dispatched',
+      workerTaskId: null,
+      governanceReason: null,
+      resultSummary: null,
+      error: null,
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      approvedAt: '2026-03-22T10:00:00.000Z',
+      deferredAt: null,
+      discardedAt: null,
+      startedAt: null,
+      finishedAt: null,
+    }),
+    /requires sourceReintegrationId or reintegration-record sourceNoteId/,
+  );
+});
 
 test('update_persona_snapshot with sourceNoteId creates and reuses a SoulAction record', async (t) => {
   const env = await createTestEnv('lifeos-persona-soul-action-create-');
