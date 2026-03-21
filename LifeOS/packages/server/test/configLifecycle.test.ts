@@ -659,6 +659,92 @@ Body for title contract coverage.
   }
 });
 
+test('notes update API responds with shared success contract', async () => {
+  const env = await createTestEnv('lifeos-notes-update-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const notes = await api<Array<import('@lifeos/shared').Note>>(baseUrl, '/api/notes');
+    const target = notes[0];
+    assert.ok(target);
+
+    const response = await api<import('@lifeos/shared').UpdateNoteResponse>(
+      baseUrl,
+      `/api/notes/${encodeURIComponent(target!.id)}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done', approval_status: 'approved' } satisfies import('@lifeos/shared').UpdateNoteRequest),
+      },
+    );
+
+    assert.deepEqual(response, { success: true });
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('notes create API responds with shared success contract', async () => {
+  const env = await createTestEnv('lifeos-notes-create-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const response = await api<import('@lifeos/shared').CreateNoteResponse>(
+      baseUrl,
+      '/api/notes',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Server Contract Create Note',
+          dimension: 'learning',
+          type: 'note',
+          content: 'server create contract body',
+          priority: 'medium',
+          tags: ['server-contract'],
+        } satisfies import('@lifeos/shared').CreateNoteRequest),
+      },
+    );
+
+    assert.equal(response.success, true);
+    assert.match(response.filePath, /Server Contract Create Note\.md$/);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];

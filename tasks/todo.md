@@ -1,3 +1,44 @@
+# server note handler contract 对齐
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只沿新的 shared contract 主线推进。
+- [x] 复核 server note handlers 是否仍未显式复用上一轮补齐的 shared request/response contract。
+- [x] 让 `createNote` / `updateNote` handler 的 request/response 类型直接接回 shared contract。
+- [x] 补 server contract 回归，锁定 create/update note API 的成功响应 shape。
+- [x] 跑定向 server 验证并更新本文件。
+
+## 当前执行
+- 已确认当前工作树只剩与本轮无关的并行改动：根目录 `CLAUDE.md`、根目录 `lifeonline-claude-worker-v2.sh`、`LifeOS/packages/server/config.json`、以及上一条 grouped governance / SettingsView 工作。本轮未覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`：
+    - `updateNote()` 改为 `Request<{ id: string }, UpdateNoteResponse, UpdateNoteRequest>` + `Response<UpdateNoteResponse>`
+    - `createNote()` 改为 `Request<Record<string, never>, CreateNoteResponse, CreateNoteRequest>` + `Response<CreateNoteResponse>`
+    - 让 server handler 层直接复用 shared contract，而不再只在 web/client 侧单独对齐。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增：
+    - `notes update API responds with shared success contract`
+    - `notes create API responds with shared success contract`
+    分别锁定 PATCH `/api/notes/:id` 与 POST `/api/notes` 的成功响应 shape 与 shared contract 一致。
+- 这次没有新增接口行为，也没有去动 grouped governance；重点是把 note 写回 contract 的最后一段 server handler 也接回 shared 单一事实源。
+
+## 本轮选择依据
+- 用户已要求优先继续处理新的 `server/web/shared contract gap`。
+- 上一轮已把 note 写回 contract 收进 shared，并让 web client 对齐；若 server handler 层仍不显式使用同一份 request/response type，那么三端对齐还差最后一段。
+- 这比继续做 grouped governance 同类稳定性测试更贴近主路径，也更能减少 contract 漂移复发。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/configLifecycle.test.ts` 通过，15/15。
+- 测试末尾仍有两条 teardown 后 index queue 访问临时 vault 的既有 `Index file error` 日志，但断言全部通过，未影响本轮 contract 回归结果。
+
+## 当前未完成项
+- 本轮 server contract 对齐改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- 下一个更像“事实源一致性问题”的缺口是：`createNote` 当前服务端固定把新笔记 `source` 写成 `'desktop'`，而 web 创建入口实际来自 web 控制台，存在来源语义漂移。
+
+## 下一步建议
+- 继续沿主路径查这个新的事实源问题：评估并修正 `createNote` 默认 `source` 的写入语义，让 web 创建的笔记不再落成 `'desktop'`。
+- 若不想改 runtime 语义，也至少先为当前事实补 contract/测试锚点，避免后续入口来源继续漂移。
+
+
 # shared note write-back contract 收口
 
 ## 计划

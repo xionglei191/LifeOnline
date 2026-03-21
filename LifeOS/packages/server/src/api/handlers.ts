@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, WorkerName, WorkerTaskListFilters, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -772,7 +772,7 @@ export async function clearFinishedWorkerTasksHandler(_req: Request, res: Respon
 
 // PATCH /api/notes/:id — update status/priority/tags in frontmatter
 // 规则：应用内主动写 Vault 文件后，必须显式 enqueue 索引；watcher 只负责外部改动捕获与兜底同步。
-export async function updateNote(req: Request, res: Response): Promise<void> {
+export async function updateNote(req: Request<{ id: string }, UpdateNoteResponse, UpdateNoteRequest>, res: Response<UpdateNoteResponse>): Promise<void> {
   try {
     const { id } = req.params;
     const { status, priority, tags, approval_status } = req.body;
@@ -843,7 +843,7 @@ export async function deleteNote(req: Request, res: Response): Promise<void> {
 }
 
 // POST /api/notes — create new note in vault
-export async function createNote(req: Request, res: Response): Promise<void> {
+export async function createNote(req: Request<Record<string, never>, CreateNoteResponse, CreateNoteRequest>, res: Response<CreateNoteResponse>): Promise<void> {
   try {
     const { title, dimension, type, content, priority, tags } = req.body;
     if (!title || !dimension) { res.status(400).json({ error: 'title and dimension are required' }); return; }
