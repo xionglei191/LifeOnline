@@ -500,6 +500,7 @@
               <strong>{{ group.reintegrationRecord ? taskTypeLabel(group.reintegrationRecord.taskType) : 'Promotion actions' }}</strong>
               <span class="worker-pill">{{ group.actions.length }} actions</span>
               <span class="worker-pill">pending {{ group.pendingCount }}</span>
+              <span class="worker-pill">ready {{ group.dispatchReadyCount }}</span>
               <span class="worker-pill">{{ group.sourceNoteId }}</span>
             </div>
             <div class="reintegration-head-actions soul-action-group-toolbar">
