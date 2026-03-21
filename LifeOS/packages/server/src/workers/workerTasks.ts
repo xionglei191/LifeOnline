@@ -22,7 +22,7 @@ import {
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import { loadConfig } from '../config/configManager.js';
-import { createFile } from '../vault/fileManager.js';
+import { createFile, sanitizeNoteFileStem } from '../vault/fileManager.js';
 import { buildWorkerResultFrontmatter, buildClassifiedFrontmatter, buildTaskFrontmatter } from '../vault/frontmatterBuilder.js';
 import { getIndexQueue, broadcastUpdate } from '../index.js';
 import { runOpenClawTask } from '../integrations/openclawClient.js';
@@ -192,7 +192,7 @@ function buildWorkerTaskId(): string {
 }
 
 function sanitizeFileName(title: string): string {
-  return title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, 60);
+  return sanitizeNoteFileStem(title);
 }
 
 function buildOpenClawMarkdown(result: WorkerTaskResultMap['openclaw_task']): string {

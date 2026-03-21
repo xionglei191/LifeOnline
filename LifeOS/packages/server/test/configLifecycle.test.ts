@@ -792,6 +792,52 @@ test('notes create API records web source in created note frontmatter', async ()
   }
 });
 
+test('notes create API keeps longer file names aligned with shared note naming semantics', async () => {
+  const env = await createTestEnv('lifeos-notes-create-long-name-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const longTitle = 'Server Contract Web Source Note With A Much Longer Title For Stable Naming';
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const createResponse = await api<import('@lifeos/shared').CreateNoteResponse>(
+      baseUrl,
+      '/api/notes',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: longTitle,
+          dimension: 'learning',
+          type: 'note',
+          content: 'naming semantics body',
+          priority: 'medium',
+          tags: ['naming-semantics'],
+        } satisfies import('@lifeos/shared').CreateNoteRequest),
+      },
+    );
+
+    assert.equal(createResponse.success, true);
+    assert.match(createResponse.filePath, /Server Contract Web Source Note With A Much Longer Title For\.md$/);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('broadcastUpdate is silent when websocket server is unavailable', async () => {
   const originalConsoleLog = console.log;
   const calls: unknown[][] = [];

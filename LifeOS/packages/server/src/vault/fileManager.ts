@@ -44,9 +44,15 @@ export async function rewriteMarkdownContent(
   await fs.writeFile(filePath, nextRaw, 'utf-8');
 }
 
+export const MAX_NOTE_FILE_STEM_LENGTH = 60;
+
+export function sanitizeNoteFileStem(title: string): string {
+  return title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, MAX_NOTE_FILE_STEM_LENGTH);
+}
+
 export function buildNoteFilePath(vaultPath: string, dimension: string, title: string, date: string): string {
   const dir = getDimensionDirectoryName(dimension) || '成长';
-  const safeName = title.replace(/[\/\\:*?"<>|]/g, '-').slice(0, 30);
+  const safeName = sanitizeNoteFileStem(title);
   return path.join(vaultPath, dir, `${date}-${safeName}.md`);
 }
 

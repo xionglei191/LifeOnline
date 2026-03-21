@@ -1,3 +1,43 @@
+# note 文件命名语义收口
+
+## 计划
+- [x] 继续避开并行中的 `CLAUDE.md` / worker 草稿 / SettingsView 改动，只处理新的高价值主路径缺口。
+- [x] 复核 `createNote` 与 worker 输出的文件命名逻辑，确认是否存在真实的用户可见行为漂移。
+- [x] 把 note 文件名清洗/截断规则收口到单一事实源，避免 create-note 与 worker 结果使用不同长度规则。
+- [x] 补 server 回归，锁定长标题 create-note 的文件路径命名语义。
+- [x] 跑定向 server 验证并更新本文件。
+
+## 当前执行
+- 已确认当前工作树仍只有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/vault/fileManager.ts` 新增：
+    - `MAX_NOTE_FILE_STEM_LENGTH = 60`
+    - `sanitizeNoteFileStem(title)`
+    - `buildNoteFilePath()` 改为复用统一清洗/截断逻辑。
+  - `LifeOS/packages/server/src/workers/workerTasks.ts` 的 `sanitizeFileName()` 改为复用 `sanitizeNoteFileStem()`，不再维护另一套独立的 60 字符规则实现。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `notes create API keeps longer file names aligned with shared note naming semantics`，通过真实 create-note 调用锁定长标题会按统一规则生成稳定文件路径。
+- 这次不是继续补 grouped governance，也不是纯重命名；修的是一个真实的用户可见行为漂移：同一系统里 create-note 与 worker 输出此前使用两套不同文件名长度规则（30 vs 60）。
+
+## 本轮选择依据
+- 用户要求在前面的 contract / 事实源修正之后，继续优先处理新的主路径断裂或用户可见行为缺口。
+- 上一轮测试已经暴露 `buildNoteFilePath()` 与 worker 输出命名规则不一致；这会让用户在 Vault 中看到同类内容因入口不同而得到不同截断行为。
+- 这是一个新的主路径行为漂移，价值高于继续补 grouped governance 同类稳定性测试。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/configLifecycle.test.ts` 通过，17/17。
+- 测试尾部仍有 teardown 后 index queue 访问临时 vault 的既有 `Index file error` 日志，但断言全部通过，未影响本轮结果。
+- 新回归确认：长标题 create-note 现在与 worker 输出共享同一 60 字符文件名裁剪语义。
+
+## 当前未完成项
+- 本轮命名语义收口改动尚未提交 git commit。
+- 工作区仍有与本轮无关的并行改动：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。
+- 仍有下一个潜在高价值点：虽然规则已统一，但文件命名语义仍是 server-local 约定，尚未以 shared-visible contract 或显式 helper 输出到其他层。
+
+## 下一步建议
+- 若继续沿主路径推进，优先看是否需要把 note 命名规则再向更明确的公共 seam 提升，避免 future entrypoints 再各自复制一套逻辑。
+- 另一条可选主线是回到新的 contract gap：检查 note create/update 之外是否还有其他 web client 仍在用本地 response shape 而非 shared contract。
+
+
 # note create source 事实源修正
 
 ## 计划
