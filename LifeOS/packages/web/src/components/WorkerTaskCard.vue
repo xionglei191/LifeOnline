@@ -1,12 +1,12 @@
 <template>
   <div class="wtc-card">
     <div class="wtc-top">
-      <strong>{{ taskLabel(task.taskType) }}</strong>
-      <span class="wtc-status" :class="`status-${task.status}`">{{ taskStatusLabel(task.status) }}</span>
+      <strong>{{ workerTaskTypeLabel(task.taskType) }}</strong>
+      <span class="wtc-status" :class="`status-${task.status}`">{{ workerTaskStatusLabel(task.status) }}</span>
     </div>
     <div class="wtc-pills">
-      <span class="wtc-pill">{{ workerLabel(task.worker) }}</span>
-      <span class="wtc-pill">{{ taskLabel(task.taskType) }}</span>
+      <span class="wtc-pill">{{ workerTaskWorkerLabel(task.worker) }}</span>
+      <span class="wtc-pill">{{ workerTaskTypeLabel(task.taskType) }}</span>
       <span v-if="task.sourceNoteId && showSourceNote" class="wtc-pill">source {{ shortId(task.sourceNoteId) }}</span>
       <span class="wtc-pill">输出 {{ task.outputNotes?.length || 0 }}</span>
     </div>
@@ -57,6 +57,7 @@
 
 <script setup lang="ts">
 import type { WorkerTask } from '@lifeos/shared';
+import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 
 defineProps<{
   task: WorkerTask;
@@ -70,34 +71,6 @@ defineEmits<{
   'cancel': [taskId: string];
   'retry': [taskId: string];
 }>();
-
-function taskLabel(taskType: WorkerTask['taskType']) {
-  if (taskType === 'openclaw_task') return 'OpenClaw 任务';
-  if (taskType === 'summarize_note') return '笔记摘要';
-  if (taskType === 'classify_inbox') return 'Inbox 整理';
-  if (taskType === 'extract_tasks') return '提取行动项';
-  if (taskType === 'update_persona_snapshot') return '人格快照更新';
-  if (taskType === 'daily_report') return '每日回顾';
-  if (taskType === 'weekly_report') return '每周回顾';
-  return taskType;
-}
-
-function taskStatusLabel(status: WorkerTask['status']) {
-  switch (status) {
-    case 'pending': return '等待执行';
-    case 'running': return '执行中';
-    case 'succeeded': return '已完成';
-    case 'failed': return '失败';
-    case 'cancelled': return '已取消';
-    default: return status;
-  }
-}
-
-function workerLabel(worker: WorkerTask['worker']) {
-  if (worker === 'lifeos') return 'LifeOS';
-  if (worker === 'openclaw') return 'OpenClaw';
-  return worker;
-}
 
 function shortId(value: string) {
   return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;

@@ -10,14 +10,14 @@
           <div class="detail-header">
             <div>
               <p class="detail-kicker">Worker Task</p>
-              <h3>{{ taskLabel(task.taskType) }}</h3>
+              <h3>{{ workerTaskTypeLabel(task.taskType) }}</h3>
             </div>
-            <span class="detail-status" :class="`status-${task.status}`">{{ taskStatusLabel(task.status) }}</span>
+            <span class="detail-status" :class="`status-${task.status}`">{{ workerTaskStatusLabel(task.status) }}</span>
           </div>
 
           <div class="detail-pills">
-            <span class="detail-pill">{{ workerLabel(task.worker) }}</span>
-            <span class="detail-pill">{{ taskLabel(task.taskType) }}</span>
+            <span class="detail-pill">{{ workerTaskWorkerLabel(task.worker) }}</span>
+            <span class="detail-pill">{{ workerTaskTypeLabel(task.taskType) }}</span>
             <span class="detail-pill">{{ shortId(task.id) }}</span>
             <button
               v-if="task.sourceNoteId"
@@ -109,6 +109,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import type { WorkerTask } from '@lifeos/shared';
 import { fetchWorkerTask, retryWorkerTask, cancelWorkerTask } from '../api/client';
 import NoteDetail from './NoteDetail.vue';
+import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 
 const props = defineProps<{ taskId: string | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -120,34 +121,6 @@ const message = ref('');
 const messageType = ref<'success' | 'error'>('success');
 const actionTaskId = ref<string | null>(null);
 const selectedNoteId = ref<string | null>(null);
-
-function taskLabel(taskType: WorkerTask['taskType']) {
-  if (taskType === 'openclaw_task') return 'OpenClaw 任务';
-  if (taskType === 'summarize_note') return '笔记摘要';
-  if (taskType === 'classify_inbox') return 'Inbox 整理';
-  if (taskType === 'extract_tasks') return '提取行动项';
-  if (taskType === 'update_persona_snapshot') return '人格快照更新';
-  if (taskType === 'daily_report') return '每日回顾';
-  if (taskType === 'weekly_report') return '每周回顾';
-  return taskType;
-}
-
-function taskStatusLabel(status: WorkerTask['status']) {
-  switch (status) {
-    case 'pending': return '等待执行';
-    case 'running': return '执行中';
-    case 'succeeded': return '已完成';
-    case 'failed': return '失败';
-    case 'cancelled': return '已取消';
-    default: return status;
-  }
-}
-
-function workerLabel(worker: WorkerTask['worker']) {
-  if (worker === 'lifeos') return 'LifeOS';
-  if (worker === 'openclaw') return 'OpenClaw';
-  return worker;
-}
 
 function shortId(value: string) {
   return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
@@ -185,7 +158,7 @@ async function handleRetry() {
   message.value = '';
   try {
     task.value = await retryWorkerTask(task.value.id);
-    message.value = '任务已重新加入执行队列';
+    message.value = workerTaskActionMessage('retried', task.value);
     messageType.value = 'success';
   } catch (e: any) {
     message.value = e.message || '任务重试失败';
@@ -201,7 +174,7 @@ async function handleCancel() {
   message.value = '';
   try {
     task.value = await cancelWorkerTask(task.value.id);
-    message.value = '任务已取消';
+    message.value = workerTaskActionMessage('cancelled', task.value);
     messageType.value = 'success';
   } catch (e: any) {
     message.value = e.message || '任务取消失败';

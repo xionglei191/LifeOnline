@@ -499,6 +499,17 @@
 - 下一步建议再补充：
   - 若继续沿同一条 worker-task feedback 主线推进，可检查 `NoteDetail.vue` 在 worker task 失败/加载刷新链路中是否还存在固定提示语与真实任务状态脱节的缺口，优先补会影响用户判断当前任务状态的文案。
 - 本轮继续完成的真实实现再补充：
+  - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.ts`，集中维护 worker task 的 `taskType / status / worker` 本地化映射与 action-aware 成功反馈文案，避免 `NoteDetail.vue`、`WorkerTaskCard.vue`、`WorkerTaskDetail.vue`、`SettingsView.vue` 四处各自维护同一份 shared contract 解释而再次漂移。
+  - `LifeOS/packages/web/src/components/WorkerTaskCard.vue`、`LifeOS/packages/web/src/components/WorkerTaskDetail.vue`、`LifeOS/packages/web/src/components/NoteDetail.vue`、`LifeOS/packages/web/src/views/SettingsView.vue` 全部改为复用该 helper；其中 `WorkerTaskDetail.vue` 的 retry/cancel 成功反馈也同步收敛为与 `NoteDetail` 一致的 action-aware 本地化文案。
+  - 新增 `LifeOS/packages/web/src/utils/workerTaskLabels.test.ts`，把共享 helper 本身作为事实源锁住，直接覆盖 `人格快照更新 / 等待执行 / LifeOS` 等映射以及 create/retry/cancel 三条消息前缀。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/workerTaskLabels.test.ts src/components/WorkerTaskCard.test.ts src/components/WorkerTaskDetail.test.ts src/components/NoteDetail.test.ts src/views/SettingsView.test.ts` 通过，7 files / 64 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 当前未完成项再补充：
+  - 本轮 web 变更待提交 git commit。
+- 下一步建议再补充：
+  - 若继续沿同一条 worker-task contract consumption 主线推进，可检查 server/shared 是否还有新的 worker task enum 值尚未被 web 侧共享 helper 与测试覆盖，优先补新增 contract 的集中事实源保护。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts:803` 将现有 dispatch worker-task convergence contract 收紧为三方对齐：除了原本已锁住的 `result.workerTaskId -> worker-task-updated -> /api/worker-tasks` 链路外，新增断言 `DispatchSoulActionResponse.task` 本身也必须与同一 worker task id / sourceNoteId / taskType / status 集合同步。
   - 同文件顶部同时把 websocket 测试里的事件类型收紧为 `SoulActionWsEvent` / `WorkerTaskWsEvent`，消除 `WsEvent` 联合类型中 `index-queue-complete` 无 `data` 字段造成的 tsc 漂移；这次不是纯类型整理，而是修复“定向测试能过、server build 却失败”的真实验证缺口。
   - 这次补的是 web/client 直接可消费的共享 contract 缺口：前面只证明“任务确实被创建并能从 websocket/list 看到”，现在进一步锁住“dispatch 响应里直接返回的 `task` 也不能和后续事实源漂移”。

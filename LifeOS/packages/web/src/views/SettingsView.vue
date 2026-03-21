@@ -766,6 +766,7 @@ import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.v
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, dispatchSoulAction, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction } from '@lifeos/shared';
+import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
 import { buildSoulActionGroups, getSoulActionGroupCount, getSoulActionGroupQuickFilterLabel, getSoulActionGroupQuickFilterStats, type SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
@@ -1207,25 +1208,6 @@ function soulActionStatusText(action: SoulAction) {
   return '待治理';
 }
 
-function workerTaskStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    pending: '等待执行',
-    running: '执行中',
-    succeeded: '已完成',
-    failed: '失败',
-    cancelled: '已取消',
-  };
-  return labels[status] || status;
-}
-
-function workerTaskWorkerLabel(worker: string): string {
-  const labels: Record<string, string> = {
-    lifeos: 'LifeOS',
-    openclaw: 'OpenClaw',
-  };
-  return labels[worker] || worker;
-}
-
 function toggleReintegrationExpanded(id: string) {
   if (reintegrationExpandedIds.value.includes(id)) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
@@ -1327,7 +1309,7 @@ async function handleDispatchSoulAction(action: SoulAction) {
   soulActionMessage.value = '';
   try {
     const result = await dispatchSoulAction(action.id);
-    const workerTaskLabel = result.task ? taskTypeLabel(result.task.taskType) : null;
+    const workerTaskLabel = result.task ? workerTaskTypeLabel(result.task.taskType) : null;
     const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
     const workerTaskWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
     const workerTaskMeta = [workerTaskLabel, workerTaskStatus, workerTaskWorker].filter(Boolean).join(' · ');
@@ -1738,16 +1720,7 @@ function formatTime(ts: string) {
 }
 
 function taskTypeLabel(taskType: string): string {
-  const labels: Record<string, string> = {
-    openclaw_task: 'OpenClaw 任务',
-    summarize_note: '笔记摘要',
-    classify_inbox: 'Inbox 整理',
-    extract_tasks: '提取行动项',
-    update_persona_snapshot: '人格快照更新',
-    daily_report: '每日回顾',
-    weekly_report: '每周回顾',
-  };
-  return labels[taskType] || taskType;
+  return workerTaskTypeLabel(taskType);
 }
 
 function openWorkerOutput(note: WorkerTaskOutputNote) {
