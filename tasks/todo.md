@@ -325,8 +325,14 @@
 - 下一步建议再补充：
   - 若继续沿同一主线推进，可直接提交当前 group quick action 反馈回归补强。
   - 若还要继续补一轮，可评估 grouped governance filter / quick filter 组合切换在 `SettingsView` 父层是否还值得补一条 round-trip 断言。
-- 本轮继续完成的真实实现再补充：
-  - `LifeOS/packages/web/src/components/PromotionProjectionPanel.vue` 将 projection 列表里原本裸显示的 `sourceReintegrationId` 收紧为显式 `Reintegration {{ ... }}` 标签，让 PR6 promotion projection 的来源语义与前面 governance panel 保持一致，不再把内部 source id 直接裸投到用户可见层。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts` 新增 `promote_event_node` 分支的 legacy source fallback 断言，锁定当旧数据仍把 reintegration id 存在 `sourceNoteId = reint:...` 且 `sourceReintegrationId` 为空时，PR6 event promotion 仍能正确回退到对应 reintegration record 执行。
+  - 这次补的是新的事实源一致性缺口：此前 continuity promotion 已有 legacy fallback 测试，但 event-node promotion 仍缺同一条来源回退保护；若两者未来分叉，PR6 会出现“同一历史数据，一类 promotion 能执行、另一类不能”的主路径断裂。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts` 通过，52 tests / 52 pass。
+- 当前未完成项再补充：
+  - 代码里仍保留 legacy `sourceNoteId = reint:...` 回退兼容；若后续准备彻底去掉这层兼容，需要先确认历史数据迁移策略。
+  - 本轮 server 测试变更已提交，但本任务记录此前未同步写入，现已补齐。
   - `LifeOS/packages/web/src/views/SettingsView.test.ts` 同步补一条 view 级断言，锁定 promotion projections 初始渲染时会展示 `Reintegration record-ready`；同时顺手把已迁移的 classify-inbox 按钮文案断言对齐到当前真实入口 `手动整理 Inbox（创建任务）`，消除一条已有测试漂移。
 - 本轮验证再补充：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，9 files / 110 tests。
