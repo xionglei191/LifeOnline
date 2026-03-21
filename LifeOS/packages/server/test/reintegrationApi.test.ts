@@ -875,6 +875,125 @@ test('grouped settings list converges after full accept-approve-dispatch chain',
   }
 });
 
+test('grouped settings list stays coherent across staggered approve and dispatch updates', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-staggered-group-');
+  const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-staggered-group-updates',
+      sourceNoteId: null,
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api staggered group summary',
+      evidence: { source: 'api-staggered-group-test' },
+      now: '2026-03-21T19:00:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-staggered-group-updates');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for staggered grouped settings test' }),
+      },
+    );
+    assert.equal(accepted.soulActions.length, 2);
+
+    const firstAction = accepted.soulActions[0]!;
+    const secondAction = accepted.soulActions[1]!;
+
+    const firstApproved = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve first staggered action' }),
+      },
+    );
+    assert.equal(firstApproved.soulAction.id, firstAction.id);
+    assert.equal(firstApproved.soulAction.governanceStatus, 'approved');
+
+    const listedAfterFirstApprove = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const firstApproveById = new Map(listedAfterFirstApprove.soulActions.map((action) => [action.id, action]));
+    assert.equal(firstApproveById.get(firstAction.id)?.governanceStatus, 'approved');
+    assert.equal(firstApproveById.get(firstAction.id)?.executionStatus, 'not_dispatched');
+    assert.equal(firstApproveById.get(secondAction.id)?.governanceStatus, 'pending_review');
+    assert.equal(firstApproveById.get(secondAction.id)?.executionStatus, 'not_dispatched');
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(secondAction.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve second staggered action' }),
+      },
+    );
+
+    const firstDispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(firstAction.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+    assert.ok(firstDispatched.soulAction);
+
+    const listedAfterMixedUpdate = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceNoteId=${encodeURIComponent(record!.id)}`,
+    );
+    const mixedById = new Map(listedAfterMixedUpdate.soulActions.map((action) => [action.id, action]));
+    assert.equal(mixedById.get(firstAction.id)?.sourceNoteId, record!.id);
+    assert.equal(mixedById.get(firstAction.id)?.governanceStatus, 'approved');
+    assert.equal(mixedById.get(firstAction.id)?.executionStatus, firstDispatched.soulAction!.executionStatus);
+    assert.equal(mixedById.get(secondAction.id)?.sourceNoteId, record!.id);
+    assert.equal(mixedById.get(secondAction.id)?.governanceStatus, 'approved');
+    assert.equal(mixedById.get(secondAction.id)?.executionStatus, 'not_dispatched');
+
+    const pendingReview = listedAfterMixedUpdate.soulActions.filter((action) => action.governanceStatus === 'pending_review');
+    const dispatchReady = listedAfterMixedUpdate.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
+    const dispatched = listedAfterMixedUpdate.soulActions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus !== 'not_dispatched');
+    assert.equal(pendingReview.length, 0);
+    assert.equal(dispatchReady.length, 1);
+    assert.equal(dispatchReady[0]?.id, secondAction.id);
+    assert.equal(dispatched.length, 1);
+    assert.equal(dispatched[0]?.id, firstAction.id);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action approve emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-');
   const configFile = path.resolve('/home/xionglei/LifeOnline/LifeOS/packages/server/config.json');

@@ -94,6 +94,9 @@
 - 本轮继续完成的真实实现：
   - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 accept -> approve -> dispatch 全链路组状态收敛测试，锁定 daily-report 分组在完整治理链路走完后，再次 list 时整组 action 都保持 `approved` 且不再落回 `pending_review` / `not_dispatched`。
   - 该测试与上一条单 action dispatch/list 对齐测试互补：前者锁定单条响应和 follow-up list 一致，新增这条则锁定整组双 action 在完整主链结束后的最终 grouped settings 视图收敛。
+- 本轮继续完成的真实实现：
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts` 新增 staggered approve/dispatch 收敛测试，锁定同一 `sourceNoteId` 分组里“一条已 dispatch、另一条刚 approved 仍待 dispatch”的混合状态也能被后续 list 稳定读出。
+  - 该测试直接覆盖 grouped settings 在真实操作顺序下最容易隐含出错的场景：先 approve 第一条、再 approve 第二条、随后只 dispatch 第一条时，分组列表仍必须同时保留 1 条 dispatched action 和 1 条 dispatch-ready action，而不是被瞬时刷新顺序冲掉。
 - 当前未完成项：
   - 当前 reintegration review 仍挂在 `SettingsView.vue` 里，适合作为 admin 入口，但还不是独立的治理控制面。
   - web 侧仍没有前端交互测试设施；当前 grouped governance 的显示/启用语义主要依赖 server contract test 与 web build 做回归保护。
