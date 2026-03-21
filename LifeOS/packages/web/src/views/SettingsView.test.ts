@@ -735,6 +735,55 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps batch approve feedback visible across consecutive worker-task and soul-action websocket refreshes', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+    apiMocks.approveSoulAction.mockClear();
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    const panel = wrapper.findComponent(SoulActionGovernancePanel);
+    const groups = panel.props('groups') as Array<{ sourceNoteId: string; actions: SoulAction[] }>;
+    const pendingGroup = groups.find((group) => group.sourceNoteId === 'record-mixed');
+    expect(pendingGroup).toBeTruthy();
+
+    panel.vm.$emit('approve-group', pendingGroup);
+    await flushPromises();
+
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量批准 1/1 条 soul actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'worker-task-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量批准 1/1 条 soul actions');
+    apiMocks.fetchSoulActions.mockClear();
+    apiMocks.fetchReintegrationRecords.mockClear();
+    apiMocks.fetchWorkerTasks.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'soul-action-updated' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
+    expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量批准 1/1 条 soul actions');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
+
+    wrapper.unmount();
+  });
+
   it('shows error feedback without refreshing soul actions when approve-group fails', async () => {
     const wrapper = mountSettingsView();
 

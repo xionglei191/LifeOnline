@@ -600,6 +600,12 @@
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 77 tests。
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
 - 本轮继续完成的真实实现再补充：
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts` 新增 1 条 group approve quick action 连续 retention 断言，锁定批量 approve 成功提示在先收到 `worker-task-updated`、再收到 `soul-action-updated` 两次连续 websocket 刷新后仍保持可见。
+  - 这次补齐 grouped governance 成功反馈的另一条同级主线：批量 dispatch 已有连续刷新保护后，批量 approve 也需要在同样的真实刷新序列里稳定保留消息，避免两种 quick action 行为再次分叉。
+- 本轮验证再补充：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过，7 files / 78 tests。
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web build` 通过。
+- 本轮继续完成的真实实现再补充：
   - `LifeOS/packages/web/src/views/SettingsView.test.ts:381` 新增 `worker-task-updated` 分支下的 grouped summary / filtered groups 收敛回归，锁定当 quick filter 处于 `dispatch_ready_only` 时，websocket 刷新后 `workerTasks` / `reintegrationRecords` / `soulActions` 会一起刷新，同时 `quickFilterStats`、`groupCount`、`groups.length` 与 `summary` 仍保持同一事实源语义。
   - 这次补的是 `SettingsView` 三路刷新中的一条组合 contract：此前只在 `soul-action-updated` 下锁过 grouped 聚合/过滤收敛，还没有覆盖 `worker-task-updated` 这条更宽的联动刷新分支。
 - 本轮验证再补充：
