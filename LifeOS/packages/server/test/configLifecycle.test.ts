@@ -161,6 +161,92 @@ test('AI provider APIs respond with shared provider contracts', async () => {
   }
 });
 
+test('AI provider settings fall back to env key after clearing the stored key', async () => {
+  const env = await createTestEnv('lifeos-ai-provider-clear-key-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    process.env.ANTHROPIC_API_KEY = 'env-provider-key';
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const saved = await api<import('../../shared/src/types.js').AiProviderSettings>(baseUrl, '/api/ai/provider', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        apiKey: 'stored-provider-key',
+        enabled: true,
+      } satisfies import('../../shared/src/types.js').UpdateAiProviderSettingsRequest),
+    });
+    assert.equal(saved.apiKeySource, 'database');
+    assert.equal(saved.hasApiKey, true);
+
+    const cleared = await api<import('../../shared/src/types.js').AiProviderSettings>(baseUrl, '/api/ai/provider', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        clearApiKey: true,
+      } satisfies import('../../shared/src/types.js').UpdateAiProviderSettingsRequest),
+    });
+    assert.equal(cleared.apiKeySource, 'env');
+    assert.equal(cleared.hasApiKey, true);
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+      if (url.includes('codeflow.asia/v1/messages')) {
+        const authorization = init?.headers && typeof init.headers === 'object'
+          ? (init.headers as Record<string, string | undefined>).Authorization ?? (init.headers as Record<string, string | undefined>).authorization
+          : undefined;
+        assert.equal(authorization, 'Bearer env-provider-key');
+
+        return new Response(JSON.stringify({
+          content: [{ type: 'text', text: 'ok' }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return originalFetch(input as Parameters<typeof originalFetch>[0], init);
+    };
+
+    const tested = await api<import('../../shared/src/types.js').TestAiProviderConnectionResponse>(baseUrl, '/api/ai/provider/test', {
+      method: 'POST',
+      body: JSON.stringify({
+        clearApiKey: true,
+      } satisfies import('../../shared/src/types.js').TestAiProviderConnectionRequest),
+    });
+    assert.equal(tested.success, true);
+    assert.equal(tested.message, 'AI provider connection succeeded');
+  } finally {
+    globalThis.fetch = originalFetch;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  }
+});
+
 test('AI prompt APIs respond with shared prompt contracts', async () => {
   const env = await createTestEnv('lifeos-ai-prompt-contract-');
   const configFile = CONFIG_FILE;

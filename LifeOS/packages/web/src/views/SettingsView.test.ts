@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { PromptRecord, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -243,6 +244,81 @@ function mountSettingsView(): VueWrapper {
     },
   });
 }
+
+it('clears the saved ai provider key and reflects env fallback in the settings summary', async () => {
+  vi.clearAllMocks();
+  vi.stubGlobal('localStorage', {
+    getItem: vi.fn(() => null),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  });
+  apiMocks.fetchConfig.mockResolvedValue({ vaultPath: '/vault' });
+  apiMocks.fetchIndexStatus.mockResolvedValue({
+    isIndexing: false,
+    queued: 0,
+    lastIndexedAt: null,
+    currentFile: null,
+  });
+  apiMocks.fetchIndexErrors.mockResolvedValue([]);
+  apiMocks.fetchWorkerTasks.mockResolvedValue([]);
+  apiMocks.fetchTaskSchedules.mockResolvedValue([]);
+  apiMocks.fetchReintegrationRecords.mockResolvedValue([]);
+  apiMocks.fetchSoulActions.mockResolvedValue([]);
+  apiMocks.fetchEventNodes.mockResolvedValue([]);
+  apiMocks.fetchContinuityRecords.mockResolvedValue([]);
+  apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
+
+  const clientMocks = vi.mocked(client);
+  apiMocks.fetchAiProviderSettings.mockResolvedValue({
+    baseUrl: 'http://localhost:3000',
+    model: 'test-model',
+    enabled: true,
+    updatedAt: '2026-03-21T10:30:00.000Z',
+    hasApiKey: true,
+    apiKeyMasked: 'abcd...wxyz',
+    apiKeySource: 'database',
+  });
+  clientMocks.updateAiProviderSettings.mockResolvedValue({
+    baseUrl: 'http://localhost:3000',
+    model: 'test-model',
+    enabled: true,
+    updatedAt: '2026-03-21T10:31:00.000Z',
+    hasApiKey: true,
+    apiKeyMasked: 'envk...key',
+    apiKeySource: 'env',
+  });
+
+  const wrapper = mountSettingsView();
+  await flushPromises();
+  await nextTick();
+  await flushPromises();
+
+  expect(apiMocks.fetchAiProviderSettings).toHaveBeenCalled();
+  expect(wrapper.text()).toContain('数据库');
+
+  const providerCard = wrapper.findAll('.settings-card').find((card) => card.text().includes('AI Provider 配置'));
+  expect(providerCard).toBeTruthy();
+
+  const clearButton = providerCard!.findAll('button').find((button) => button.text().includes('清空已保存 Key'));
+  expect(clearButton).toBeTruthy();
+  await clearButton!.trigger('click');
+  await flushPromises();
+
+  const saveButton = providerCard!.findAll('button').find((button) => button.text().includes('保存配置'));
+  expect(saveButton).toBeTruthy();
+  await saveButton!.trigger('click');
+  await flushPromises();
+
+  expect(clientMocks.updateAiProviderSettings).toHaveBeenCalledWith({
+    baseUrl: 'http://localhost:3000',
+    model: 'test-model',
+    enabled: true,
+    clearApiKey: true,
+  });
+  expect(wrapper.text()).toContain('环境变量');
+  expect(wrapper.text()).toContain('AI Provider 配置已保存并立即生效');
+});
 
 describe('SettingsView soul action governance wiring', () => {
   beforeEach(() => {

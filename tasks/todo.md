@@ -1,10 +1,9 @@
-# 当前轮：Dashboard schedule-health 收口
+# 当前轮：AI provider settings 收口
 
 ## 进展
-- [x] 让 Dashboard 在 `schedule-updated` websocket 到达后主动重拉 schedule health，避免首页状态滞后。
-- [x] 将 `_Inbox` 主入口从复用维度路由改为专用 `/inbox` 路由，避免特殊桶继续冒充可选维度视图。
-- [x] 为 Dashboard 补回归，锁定 schedule websocket 事件会触发健康状态刷新。
-- [x] 跑 focused web 验证并确认 build 通过。
+- [x] 补上 AI provider settings 的 `clearApiKey` / env fallback contract 覆盖，避免清空后运行时读到错误来源。
+- [x] 为 SettingsView 补回归，锁定 AI provider key 来源与清空路径的 UI / API 一致性。
+- [ ] 跑 focused server/web 验证并确认通过。
 - [ ] 如果验证稳定，清理并提交这轮改动。
 
 ---
