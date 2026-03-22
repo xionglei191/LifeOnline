@@ -154,6 +154,36 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('renders localized worker-task metadata after creating persona snapshot task', async () => {
+    apiMocks.createWorkerTask.mockResolvedValue(createTask({ taskType: 'update_persona_snapshot', worker: 'lifeos', status: 'pending' }));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    clickButtonByText('更新人格快照');
+    await flushPromises();
+
+    expect(apiMocks.createWorkerTask).toHaveBeenCalledWith({
+      taskType: 'update_persona_snapshot',
+      sourceNoteId: 'note-1.md',
+      input: { noteId: 'note-1.md' },
+    });
+    expect(document.body.textContent).toContain('已创建任务 worker-task-1 · 人格快照更新 · 等待执行 · LifeOS');
+
+    wrapper.unmount();
+  });
+
   it('renders localized worker-task metadata after creating OpenClaw task', async () => {
     apiMocks.createWorkerTask.mockResolvedValue(createTask({ taskType: 'openclaw_task', worker: 'openclaw', status: 'running' }));
 

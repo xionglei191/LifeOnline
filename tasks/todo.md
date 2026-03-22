@@ -1,3 +1,89 @@
+# update_persona_snapshot web delivery gap 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 server/web/shared contract gap 主线推进。
+- [x] 把 `update_persona_snapshot` 从“shared/server 已支持、web 仍半隐形”的状态补到真正可触发、可筛选、可理解。
+- [x] 补最小 web 回归并跑定向验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`，以及上轮已完成但未提交的 worker-task structured result 相关文件。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 在笔记详情的 worker task 入口中新增“更新人格快照”按钮。
+    - 新增 `handleCreatePersonaSnapshotTask()`，直接创建 `update_persona_snapshot` worker task，并复用现有成功/失败消息与关联任务刷新链路。
+  - `LifeOS/packages/web/src/components/WorkerTaskCard.vue`
+    - 为 `update_persona_snapshot` 增加专门的输入投射，显示 `人格源笔记`，不再退化成“无额外参数”。
+  - `LifeOS/packages/web/src/views/SettingsView.vue`
+    - 最近任务筛选中补入 `update_persona_snapshot`。
+    - 定时任务类型下拉中显式补入 `summarize_note` / `update_persona_snapshot`，并在创建时对这两类需要具体 `noteId` 的任务给出阻断性错误，避免 settings 页构造出无 note context 的无效 schedule。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增 persona snapshot 创建回归，锁定按钮行为、API 请求 shape 与本地化反馈文案。
+  - `LifeOS/packages/web/src/components/WorkerTaskCard.test.ts`
+    - 新增 persona snapshot 输入投射回归，锁定卡片不再回退到 generic fallback。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts`
+    - 新增回归，锁定 worker task filter 可见 `人格快照更新`，并验证 settings 页不会为缺少笔记上下文的 persona snapshot schedule 发请求。
+- 这次修的不是再补一条 grouped governance 同类稳定性测试，而是把 shared/server 已支持的 `update_persona_snapshot` 真正交付到 web 入口、筛选与参数展示层，补上真实的 contract gap 和主路径可见性缺口。
+
+## 本轮选择依据
+- 这是新的 server/web/shared contract gap：`update_persona_snapshot` 已在 shared 类型、server 执行、soul action dispatch 中具备真实语义，但 web 之前没有完整交付入口和过滤/展示支持。
+- 上轮刚补完 worker-task structured result 后，这条线自然成为更高价值的下一步，因为它决定用户能不能真正创建、发现并理解这类任务，而不是只在后端存在。
+- 同时顺手修正了 schedule 配置面上的任务类型事实源漂移，避免 UI 暴露出实际上缺失必需 `noteId` 上下文的无效入口。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts src/components/WorkerTaskCard.test.ts src/views/SettingsView.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 140 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 如果继续沿 worker task contract/UI 主线推进，最合理的下一步仍是把上轮 structured result 闭环 + 本轮 persona snapshot web delivery 一起提交，形成一组完整交付提交。
+
+
+# worker-task structured result contract gap 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 server/web/shared contract gap 主线推进。
+- [x] 完成 `worker_tasks` 的 `result_json` 持久化链路，让 shared `WorkerTask.result` 真正由 server DB / API 承载，而不再只是类型层定义。
+- [x] 让 `WorkerTaskDetail` 展示结构化结果，补上 contract-to-UI 的真实投射缺口。
+- [x] 补最小 server/web 回归并跑定向验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts`
+    - `WorkerTask` contract 正式承载 `result?: WorkerTaskResultMap[T] | null`，不再只靠 `resultSummary` 表示执行结果。
+  - `LifeOS/packages/server/src/db/schema.ts`
+    - `worker_tasks` schema 新增 `result_json` 列。
+  - `LifeOS/packages/server/src/db/client.ts`
+    - `worker_tasks` rebuild/migration 选择列同步纳入 `result_json`，避免旧表重建时丢失 structured result。
+  - `LifeOS/packages/server/src/workers/workerTasks.ts`
+    - `WorkerTaskRow`/`rowToWorkerTask()` 接入 `result_json`。
+    - `createWorkerTask()` 初始化 `result: null` 并写入 DB。
+    - `updateTaskStatus()` 持久化 `result_json`。
+    - `retryWorkerTask()`、running/failed 分支清空 `result`。
+    - `executeWorkerTask()` 成功完成时把 typed `result` 与 `resultSummary` 一起落库并通过 API 返回。
+  - `LifeOS/packages/web/src/components/WorkerTaskDetail.vue`
+    - 新增“结构化结果”区块，直接显示 `task.result` JSON，而不是只能看摘要。
+  - `LifeOS/packages/server/test/workerTasks.test.ts`
+    - 新增成功态 structured result 落库回归，并补失败/重试时 `result` 清空断言。
+  - `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts`
+    - 新增 structured result UI 展示回归。
+- 这次修的不是再补一条同类 UI 稳定性测试，而是把 shared 已声明但未真正交付的 `WorkerTaskResultMap` 从类型层打通到 DB、API 和详情 UI，补上真实 contract gap。
+
+## 本轮选择依据
+- 这条线正中用户当前优先级第一项：新的 `server/web/shared contract gap`。
+- shared 里原本已有 `WorkerTaskResultMap`，但 server 不持久化、web detail 不展示，属于“定义了 contract 但没有真正 deliver”的主路径缺口。
+- 相比继续做 grouped governance / SettingsView 同类对称补强，这条线更直接改善 worker task 详情的可见信息密度和跨端一致性。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/workerTasks.test.ts` 通过，6/6。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskDetail.test.ts src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 137 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- `WorkerTaskDetail` 现阶段先以 JSON 形式展示 structured result；如果后续继续沿 contract-to-UI 投射推进，可再按 task type 做更细的结果卡片，但不属于本轮闭环所必需。
+
+
 # parser file-date boundary 单一事实源收口
 
 ## 计划

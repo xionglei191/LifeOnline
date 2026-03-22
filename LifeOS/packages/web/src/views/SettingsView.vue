@@ -283,6 +283,7 @@
               <option value="summarize_note">笔记摘要</option>
               <option value="classify_inbox">Inbox 自动整理</option>
               <option value="extract_tasks">提取行动项</option>
+              <option value="update_persona_snapshot">人格快照更新</option>
               <option value="daily_report">每日回顾</option>
               <option value="weekly_report">每周回顾</option>
             </select>
@@ -497,6 +498,8 @@
           <label>任务类型</label>
           <select v-model="scheduleTaskType" :disabled="scheduleSubmitting">
             <option value="openclaw_task">OpenClaw 通用任务</option>
+            <option value="summarize_note">笔记摘要</option>
+            <option value="update_persona_snapshot">人格快照更新</option>
             <option value="classify_inbox">Inbox 自动整理</option>
             <option value="daily_report">每日回顾</option>
             <option value="weekly_report">每周回顾</option>
@@ -1588,6 +1591,8 @@ async function handleCreateSchedule() {
     let input: any = undefined;
     if (scheduleTaskType.value === 'openclaw_task') {
       input = { instruction: scheduleInstruction.value.trim(), outputDimension: scheduleDimension.value };
+    } else if (scheduleTaskType.value === 'summarize_note' || scheduleTaskType.value === 'update_persona_snapshot') {
+      throw new Error('该任务类型需要绑定具体笔记，暂不支持在设置页创建定时任务');
     }
     // classify_inbox, daily_report, weekly_report use default inputs (no extra config needed)
     await createTaskSchedule({

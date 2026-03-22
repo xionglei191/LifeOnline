@@ -2840,4 +2840,35 @@ describe('SettingsView soul action governance wiring', () => {
 
     wrapper.unmount();
   });
+
+  it('includes persona snapshot in the worker task filter and blocks schedule creation without note context', async () => {
+    const createTaskScheduleMock = vi.mocked((await import('../api/client')).createTaskSchedule);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    const workerTaskTypeSelect = wrapper.findAll('select').find((select) => select.html().includes('全部任务'));
+    expect(workerTaskTypeSelect?.html()).toContain('value="update_persona_snapshot"');
+    expect(workerTaskTypeSelect?.text()).toContain('人格快照更新');
+
+    const scheduleTypeSelect = wrapper.findAll('select').find((select) => select.html().includes('OpenClaw 通用任务'));
+    expect(scheduleTypeSelect).toBeTruthy();
+    await scheduleTypeSelect!.setValue('update_persona_snapshot');
+    await flushPromises();
+
+    const labelInput = wrapper.findAll('input').find((input) => input.attributes('placeholder') === '例如：每日新闻采集');
+    expect(labelInput).toBeTruthy();
+    await labelInput!.setValue('人格快照定时任务');
+    await flushPromises();
+
+    const createButton = wrapper.findAll('button').find((button) => button.text().includes('创建定时任务'));
+    expect(createButton).toBeTruthy();
+    await createButton!.trigger('click');
+    await flushPromises();
+
+    expect(createTaskScheduleMock).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('该任务类型需要绑定具体笔记，暂不支持在设置页创建定时任务');
+
+    wrapper.unmount();
+  });
 });

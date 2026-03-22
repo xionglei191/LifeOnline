@@ -50,6 +50,11 @@
             <div class="summary-box">{{ task.resultSummary }}</div>
           </div>
 
+          <div v-if="task.result" class="detail-block">
+            <p class="block-title">结构化结果</p>
+            <pre class="json-box">{{ formatJson(task.result) }}</pre>
+          </div>
+
           <div v-if="task.error" class="detail-block">
             <p class="block-title">错误信息</p>
             <div class="error-box">{{ task.error }}</div>

@@ -440,6 +440,7 @@ export interface WorkerTask<T extends WorkerTaskType = WorkerTaskType> {
   startedAt?: string | null;
   finishedAt?: string | null;
   error?: string | null;
+  result?: WorkerTaskResultMap[T] | null;
   resultSummary?: string | null;
   sourceNoteId?: string | null;
   scheduleId?: string | null;

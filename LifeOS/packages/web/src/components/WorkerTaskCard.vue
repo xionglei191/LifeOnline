@@ -106,6 +106,9 @@ function formatWorkerInput(task: WorkerTask) {
   if (task.taskType === 'extract_tasks') {
     return `源笔记：${shortId((input as any).noteId || task.sourceNoteId || '—')}`;
   }
+  if (task.taskType === 'update_persona_snapshot') {
+    return `人格源笔记：${shortId((input as any).noteId || task.sourceNoteId || '—')}`;
+  }
   if (task.taskType === 'daily_report') {
     return `日期：${(input as any).date || '今天'}`;
   }

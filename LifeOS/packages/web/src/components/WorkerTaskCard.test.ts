@@ -37,6 +37,20 @@ describe('WorkerTaskCard', () => {
     expect(wrapper.text()).toContain('人格快照更新');
   });
 
+  it('renders persona snapshot input details instead of generic fallback text', () => {
+    const wrapper = mount(WorkerTaskCard, {
+      props: {
+        task: createTask({
+          taskType: 'update_persona_snapshot',
+          input: { noteId: 'note-source-123456' },
+        }),
+      },
+    });
+
+    expect(wrapper.text()).toContain('人格源笔记：note-s…3456');
+    expect(wrapper.text()).not.toContain('无额外参数');
+  });
+
   it('renders OpenClaw worker label for external worker tasks', () => {
     const wrapper = mount(WorkerTaskCard, {
       props: {

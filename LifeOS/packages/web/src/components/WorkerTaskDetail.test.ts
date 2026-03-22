@@ -24,6 +24,7 @@ function createTask(overrides: Partial<WorkerTask> = {}): WorkerTask {
     status: overrides.status ?? 'pending',
     input: overrides.input ?? { noteId: 'note-1' },
     outputNotes: overrides.outputNotes ?? [],
+    result: overrides.result ?? null,
     resultSummary: overrides.resultSummary ?? null,
     error: overrides.error ?? null,
     sourceNoteId: overrides.sourceNoteId ?? '2025-02-01.md',
@@ -250,6 +251,48 @@ describe('WorkerTaskDetail', () => {
     const noteDetail = document.body.querySelector('.note-detail-stub');
     expect(noteDetail?.getAttribute('data-note-id')).toBe('output-note-1');
     expect(document.body.textContent).toContain('Output Note');
+
+    wrapper.unmount();
+  });
+
+  it('renders structured worker task result JSON when present', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask({
+      taskType: 'extract_tasks',
+      result: {
+        title: 'Source Note 行动项提取',
+        summary: '已创建 1 个行动项',
+        created: 1,
+        sourceNoteTitle: 'Source Note',
+        items: [
+          {
+            title: 'First task',
+            dimension: 'learning',
+            priority: 'medium',
+            due: null,
+            filePath: '/vault/学习/2026-03-22-First-task.md',
+          },
+        ],
+      },
+      resultSummary: '已创建 1 个行动项',
+      status: 'succeeded',
+    }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('结构化结果');
+    expect(document.body.textContent).toContain('Source Note 行动项提取');
+    expect(document.body.textContent).toContain('First task');
 
     wrapper.unmount();
   });

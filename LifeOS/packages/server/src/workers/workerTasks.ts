@@ -56,6 +56,7 @@ interface WorkerTaskRow {
   started_at: string | null;
   finished_at: string | null;
   error: string | null;
+  result_json: string | null;
   result_summary: string | null;
   source_note_id: string | null;
   output_note_paths: string | null;
@@ -172,6 +173,7 @@ function rowToWorkerTask(row: WorkerTaskRow): WorkerTask {
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     error: row.error,
+    result: row.result_json ? JSON.parse(row.result_json) : null,
     resultSummary: row.result_summary,
     sourceNoteId: row.source_note_id,
     scheduleId: row.schedule_id,
@@ -795,6 +797,7 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     startedAt: null,
     finishedAt: null,
     error: null,
+    result: null,
     resultSummary: null,
     sourceNoteId: request.sourceNoteId || null,
     scheduleId: scheduleId || null,
@@ -804,8 +807,8 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
   db.prepare(`
     INSERT INTO worker_tasks (
       id, task_type, input_json, status, worker, created_at, updated_at,
-      started_at, finished_at, error, result_summary, source_note_id, output_note_paths, schedule_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      started_at, finished_at, error, result_json, result_summary, source_note_id, output_note_paths, schedule_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     task.id,
     task.taskType,
@@ -817,6 +820,7 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     task.startedAt,
     task.finishedAt,
     task.error,
+    task.result ? JSON.stringify(task.result) : null,
     task.resultSummary,
     task.sourceNoteId,
     JSON.stringify(task.outputNotePaths),
@@ -877,7 +881,7 @@ function updateTaskStatus(taskId: string, updates: Partial<WorkerTask>) {
 
   db.prepare(`
     UPDATE worker_tasks
-    SET status = ?, updated_at = ?, started_at = ?, finished_at = ?, error = ?, result_summary = ?, output_note_paths = ?
+    SET status = ?, updated_at = ?, started_at = ?, finished_at = ?, error = ?, result_json = ?, result_summary = ?, output_note_paths = ?
     WHERE id = ?
   `).run(
     next.status,
@@ -885,6 +889,7 @@ function updateTaskStatus(taskId: string, updates: Partial<WorkerTask>) {
     next.startedAt || null,
     next.finishedAt || null,
     next.error || null,
+    next.result ? JSON.stringify(next.result) : null,
     next.resultSummary || null,
     JSON.stringify(next.outputNotePaths || []),
     taskId
@@ -945,6 +950,7 @@ export function retryWorkerTask(taskId: string): WorkerTask {
     startedAt: null,
     finishedAt: null,
     error: null,
+    result: null,
     resultSummary: null,
     outputNotePaths: [],
   });
@@ -1023,7 +1029,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
   const startedAt = new Date().toISOString();
   const controller = new AbortController();
   runningTaskControllers.set(taskId, controller);
-  updateTaskStatus(taskId, { status: 'running', startedAt, finishedAt: null, error: null });
+  updateTaskStatus(taskId, { status: 'running', startedAt, finishedAt: null, error: null, result: null });
 
   try {
     const handler = workerTaskExecutionRegistry[task.taskType];
@@ -1047,6 +1053,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
     updateTaskStatus(taskId, {
       status: 'succeeded',
       finishedAt: new Date().toISOString(),
+      result: result as WorkerTaskResultMap[WorkerTaskType],
       resultSummary: handler.summarize(result as never),
       outputNotePaths,
       error: null,
@@ -1063,6 +1070,7 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
         status: 'failed',
         finishedAt: new Date().toISOString(),
         error: error?.message || String(error),
+        result: null,
         outputNotePaths: [],
       });
 

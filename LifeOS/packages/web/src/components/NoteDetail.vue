@@ -183,6 +183,9 @@
               <button @click="handleCreateSummarizeTask" :disabled="workerSubmitting" class="primary-btn secondary">
                 {{ workerSubmitting ? '发起中...' : '生成笔记摘要' }}
               </button>
+              <button @click="handleCreatePersonaSnapshotTask" :disabled="workerSubmitting" class="primary-btn secondary">
+                {{ workerSubmitting ? '发起中...' : '更新人格快照' }}
+              </button>
             </div>
             <div v-if="workerMessage" :class="['inline-msg', workerMessageType]">{{ workerMessage }}</div>
           </section>
@@ -537,6 +540,29 @@ async function handleCreateSummarizeTask() {
     workerMessageType.value = 'success';
   } catch (e: any) {
     workerMessage.value = e.message || '摘要任务创建失败';
+    workerMessageType.value = 'error';
+  } finally {
+    workerSubmitting.value = false;
+  }
+}
+
+async function handleCreatePersonaSnapshotTask() {
+  if (!currentNoteId.value || !note.value) return;
+  workerSubmitting.value = true;
+  workerMessage.value = '';
+  try {
+    const task = await createWorkerTask({
+      taskType: 'update_persona_snapshot',
+      sourceNoteId: currentNoteId.value,
+      input: {
+        noteId: currentNoteId.value,
+      },
+    });
+    await loadRelatedWorkerTasks(currentNoteId.value);
+    workerMessage.value = workerTaskActionMessage('created', task);
+    workerMessageType.value = 'success';
+  } catch (e: any) {
+    workerMessage.value = e.message || '人格快照任务创建失败';
     workerMessageType.value = 'error';
   } finally {
     workerSubmitting.value = false;
