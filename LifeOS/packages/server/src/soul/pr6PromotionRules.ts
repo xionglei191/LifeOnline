@@ -77,3 +77,19 @@ export function getContinuityScopeForKind(continuityKind: ContinuityRecordKind):
       ? 'daily'
       : 'weekly';
 }
+
+export function buildEventPromotionExplanation(record: ReintegrationRecord): Record<string, unknown> {
+  return {
+    whyHighThreshold: 'review-backed PR6 promotion',
+    whyNow: record.summary,
+    reviewBacked: true,
+  };
+}
+
+export function buildContinuityPromotionExplanation(record: ReintegrationRecord): Record<string, unknown> {
+  return {
+    whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+    whyReviewBacked: record.reviewReason ?? 'accepted reintegration record',
+    reviewBacked: true,
+  };
+}

@@ -1,7 +1,7 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
-import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getContinuityScopeForKind, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, buildContinuityPromotionExplanation, buildEventPromotionExplanation, getContinuityKindForReintegrationSignal, getContinuityScopeForKind, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
 import { resolveSoulActionSourceReintegrationId, type SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
@@ -36,7 +36,7 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
       threshold: 'high',
       status: 'active',
       evidence: record.evidence,
-      explanation: { whyHighThreshold: 'review-backed PR6 promotion', whyNow: record.summary, reviewBacked: true },
+      explanation: buildEventPromotionExplanation(record),
       occurredAt: record.updatedAt,
     });
     return { summary: existing ? `已更新 event node: ${node.id}` : `已创建 event node: ${node.id}` };
@@ -61,7 +61,7 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
         scope: getContinuityScopeForKind(continuityKind),
       },
       evidence: record.evidence,
-      explanation: { whyNotOrdinaryArtifact: 'PR6 continuity promotion', whyReviewBacked: record.reviewReason ?? 'accepted reintegration record', reviewBacked: true },
+      explanation: buildContinuityPromotionExplanation(record),
       recordedAt: record.updatedAt,
     });
     return { summary: existing ? `已更新 continuity record: ${continuity.id}` : `已创建 continuity record: ${continuity.id}` };

@@ -21,7 +21,7 @@ import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions }
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
-import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind } from '../src/soul/pr6PromotionRules.js';
+import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -53,6 +53,38 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('build PR6 promotion explanations from reintegration review context', () => {
+  const record = {
+    id: 'reint:explanation-test',
+    workerTaskId: 'task-explanation-test',
+    sourceNoteId: 'note-explanation-test',
+    soulActionId: 'soul-action-explanation-test',
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'A reviewed daily pattern emerged',
+    evidence: { source: 'test' },
+    reviewReason: 'accepted by reviewer',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:00:00.000Z',
+    reviewedAt: '2026-03-22T10:00:00.000Z',
+  } as const;
+
+  assert.deepEqual(buildEventPromotionExplanation(record), {
+    whyHighThreshold: 'review-backed PR6 promotion',
+    whyNow: record.summary,
+    reviewBacked: true,
+  });
+  assert.deepEqual(buildContinuityPromotionExplanation(record), {
+    whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+    whyReviewBacked: record.reviewReason,
+    reviewBacked: true,
+  });
+});
 
 test('getPromotionSourceForReintegration falls back to reintegration id when source note is missing', () => {
   const source = getPromotionSourceForReintegration({

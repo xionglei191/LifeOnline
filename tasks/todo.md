@@ -1,3 +1,36 @@
+# PR6 promotion explanation helper 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的事实源一致性问题主线推进。
+- [x] 复核 PR6 promotion executor，确认 event/continuity explanation 组装仍以内联对象散落在执行层。
+- [x] 把 promotion explanation 组装提升到 `pr6PromotionRules.ts` 单点 helper，并补测试锁定 review-backed explanation 语义。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/soul/pr6PromotionRules.ts`
+    - 新增 `buildEventPromotionExplanation()` 与 `buildContinuityPromotionExplanation()`，集中 review-backed explanation 组装规则。
+  - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts`
+    - event / continuity promotion 执行改为复用上述 helpers，移除 executor 内联 explanation 对象。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 新增 helper 回归，锁定 PR6 promotion explanation 必须由 reintegration review 上下文派生。
+- 这次修的不是继续补同类 UI 稳定性测试，而是把 PR6 promotion explanation 的规则从执行层收回到 rules 单点，避免 event/continuity explanation 语义将来在多个执行分支里再次分叉。
+
+## 本轮选择依据
+- 用户优先级允许在 contract gap 之后继续处理新的事实源一致性问题。
+- continuity scope 收口后，下一条仍明显散落在 executor 中的规则就是 explanation 组装；它同样属于 PR6 promotion rules，而不是执行层职责。
+- 这条线可以继续减少 PR6 promotion 语义在 rules / executor 之间的重复维护。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "build PR6 promotion explanations from reintegration review context|getPromotionSourceForReintegration falls back to reintegration id when source note is missing|getContinuityScopeForKind maps PR6 continuity kinds to stable scopes|normalizeSoulActionSourceFilters collapses legacy reintegration note filters into sourceReintegrationId" test/feedbackReintegration.test.ts` 通过，4/4。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮定向验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- PR6 promotion explanation helper 收口完成后，可继续检查 PR6 promotion rules / executor 中是否还存在其它重复 explanation、title、threshold 或 source 组装逻辑。
+
+
 # PR6 continuity scope helper 单一事实源收口
 
 ## 计划
