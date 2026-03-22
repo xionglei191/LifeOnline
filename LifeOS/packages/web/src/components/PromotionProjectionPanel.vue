@@ -45,9 +45,9 @@
               <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
             </div>
             <div class="projection-detail-grid">
-              <div v-if="eventNode.sourceNoteId" class="projection-detail-block">
-                <span class="projection-detail-label">Source Note</span>
-                <code>{{ eventNode.sourceNoteId }}</code>
+              <div class="projection-detail-block">
+                <span class="projection-detail-label">{{ getSourceProvenanceLabel(eventNode.sourceNoteId, eventNode.sourceReintegrationId) }}</span>
+                <code>{{ eventNode.sourceNoteId ?? '未提供' }}</code>
               </div>
               <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
                 <span class="projection-detail-label">Source Action</span>
@@ -83,9 +83,9 @@
               <span>记录于 {{ formatTime(continuity.recordedAt) }}</span>
             </div>
             <div class="projection-detail-grid">
-              <div v-if="continuity.sourceNoteId" class="projection-detail-block">
-                <span class="projection-detail-label">Source Note</span>
-                <code>{{ continuity.sourceNoteId }}</code>
+              <div class="projection-detail-block">
+                <span class="projection-detail-label">{{ getSourceProvenanceLabel(continuity.sourceNoteId, continuity.sourceReintegrationId) }}</span>
+                <code>{{ continuity.sourceNoteId ?? '未提供' }}</code>
               </div>
               <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
                 <span class="projection-detail-label">Source Action</span>
@@ -115,7 +115,7 @@
 <script setup lang="ts">
 import type { ContinuityRecord, EventNode } from '@lifeos/shared';
 
-defineProps<{
+const props = defineProps<{
   eventNodes: EventNode[];
   continuityRecords: ContinuityRecord[];
   loading: boolean;
@@ -130,6 +130,11 @@ const emit = defineEmits<{
 
 function formatJson(value: Record<string, unknown>) {
   return JSON.stringify(value, null, 2);
+}
+
+function getSourceProvenanceLabel(sourceNoteId: string | null, sourceReintegrationId: string) {
+  if (sourceNoteId) return 'Source Note';
+  return sourceReintegrationId ? 'Source Reintegration' : 'Source Note';
 }
 </script>
 
