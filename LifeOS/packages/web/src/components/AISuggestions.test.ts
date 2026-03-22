@@ -24,6 +24,21 @@ function createSuggestion(overrides: Partial<AISuggestion> = {}): AISuggestion {
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function triggerRefreshWhileLoading(wrapper: ReturnType<typeof mount>) {
+  wrapper.get('.refresh-btn').element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await nextTick();
+}
+
 describe('AISuggestions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,25 +118,66 @@ describe('AISuggestions', () => {
     expect(wrapper.find('.error-state').exists()).toBe(true);
   });
 
-  it('shows the loading state while waiting for the auto-load API response', async () => {
-    let resolveFetch: ((value: AISuggestion[]) => void) | undefined;
-    apiMocks.fetchAISuggestions.mockImplementation(() => new Promise((resolve) => {
-      resolveFetch = resolve;
-    }));
+  it('ignores stale refresh responses after a newer refresh succeeds', async () => {
+    const initial = deferred<AISuggestion[]>();
+    const first = deferred<AISuggestion[]>();
+    const second = deferred<AISuggestion[]>();
+    apiMocks.fetchAISuggestions
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
 
     const wrapper = mount(AISuggestions);
-    const refreshButton = wrapper.find('.refresh-btn');
+    await nextTick();
+    await triggerRefreshWhileLoading(wrapper);
+    await triggerRefreshWhileLoading(wrapper);
     await nextTick();
 
-    expect(wrapper.text()).toContain('AI 正在扫描你的生命节律与任务负载。');
-    expect((refreshButton.element as HTMLButtonElement).disabled).toBe(true);
-    expect(refreshButton.text()).toContain('分析中');
-
-    resolveFetch?.([createSuggestion({ type: 'reminder', dimension: 'life' })]);
+    second.resolve([createSuggestion({ id: 'suggestion-2', title: '最新洞察' })]);
+    await second.promise;
     await flushPromises();
 
-    expect(wrapper.findAll('.insight-card')).toHaveLength(1);
-    expect(wrapper.text()).toContain('提醒');
-    expect(wrapper.text()).toContain('生活');
+    expect(wrapper.text()).toContain('最新洞察');
+
+    first.resolve([createSuggestion({ id: 'suggestion-1', title: '过期洞察' })]);
+    await first.promise;
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('最新洞察');
+    expect(wrapper.text()).not.toContain('过期洞察');
+
+    initial.resolve([]);
+    await initial.promise;
+  });
+
+  it('ignores stale refresh errors after a newer refresh succeeds', async () => {
+    const initial = deferred<AISuggestion[]>();
+    const first = deferred<AISuggestion[]>();
+    const second = deferred<AISuggestion[]>();
+    apiMocks.fetchAISuggestions
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+
+    const wrapper = mount(AISuggestions);
+    await nextTick();
+    await triggerRefreshWhileLoading(wrapper);
+    await triggerRefreshWhileLoading(wrapper);
+    await nextTick();
+
+    second.resolve([createSuggestion({ id: 'suggestion-2', title: '稳定洞察' })]);
+    await second.promise;
+    await flushPromises();
+
+    first.reject(new Error('stale ai failure'));
+    await first.promise.catch(() => undefined);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('稳定洞察');
+    expect(wrapper.text()).not.toContain('stale ai failure');
+    expect(wrapper.find('.error-state').exists()).toBe(false);
+
+    initial.resolve([]);
+    await initial.promise;
   });
 });

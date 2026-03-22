@@ -40,6 +40,7 @@ const suggestions = ref<AISuggestion[]>([]);
 const loading = ref(false);
 const error = ref('');
 const fetched = ref(false);
+let activeRequestId = 0;
 
 const typeLabels: Record<string, string> = {
   balance: '平衡提示',
@@ -49,16 +50,22 @@ const typeLabels: Record<string, string> = {
 };
 
 async function handleRefresh() {
+  const requestId = ++activeRequestId;
   loading.value = true;
   error.value = '';
   try {
-    suggestions.value = await fetchAISuggestions();
+    const nextSuggestions = await fetchAISuggestions();
+    if (requestId !== activeRequestId) return;
+    suggestions.value = nextSuggestions;
     fetched.value = true;
   } catch (e: any) {
+    if (requestId !== activeRequestId) return;
     fetched.value = true;
     error.value = e.message || 'AI 建议获取失败';
   } finally {
-    loading.value = false;
+    if (requestId === activeRequestId) {
+      loading.value = false;
+    }
   }
 }
 

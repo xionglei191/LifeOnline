@@ -1,3 +1,39 @@
+# ai-suggestions stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 AI 洞察面板刷新竞态收口。
+- [x] 让 `AISuggestions.vue` 只接受最新刷新请求的回写结果，避免旧洞察请求晚返回或晚报错时覆盖当前面板状态。
+- [x] 补最小组件回归，锁定旧刷新请求晚返回/晚失败时不会把当前洞察和错误态拉回过期状态。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/composables/useCalendar.test.ts`、`LifeOS/packages/web/src/composables/useDimensionNotes.test.ts`、`LifeOS/packages/web/src/composables/useTimeline.test.ts`、`LifeOS/packages/web/src/views/CalendarView.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/AISuggestions.vue`
+    - 用递增 request id 保护自动加载与手动刷新，只允许最新洞察请求写回 `suggestions/error/loading`。
+    - 修复用户连续刷新或自动加载与手动刷新重叠时，旧洞察请求晚返回仍可能把当前面板拉回过期状态的真实主路径风险。
+  - `LifeOS/packages/web/src/components/AISuggestions.test.ts`
+    - 新增旧刷新请求晚返回不会覆盖当前洞察的回归。
+    - 新增旧刷新请求晚失败不会错误污染当前错误态的回归。
+    - 用绕过 disabled 属性的真实 click dispatch 构造 mounted 自动加载与连续手动刷新重叠的三次请求竞态，锁定组件只接受最新请求回写。
+- 这次修的不是补一个对称测试，而是修复 dashboard 首页可见洞察面板里的真实竞态：用户已经拿到新一轮洞察，但旧请求后返回仍可能把面板回写成过期结果。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：当前洞察刷新已经发生后，旧请求结果仍能回写，会让面板退回过期洞察状态。
+- 这属于直接可见的首页行为缺口，而且 AI 洞察既有 mounted 自动加载，又有手动刷新入口，天然存在并发窗口。
+- 这条线承接前几轮 stale-request guard，但作用点是新的首页洞察主路径，不是低边际平移。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/AISuggestions.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 dashboard 其它 mounted 异步面板是否还有同类旧请求回写竞态，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 ai-suggestions stale-request guard 收口相关文件。
+
+
 # worker-task-detail stale-request guard 收口
 
 ## 计划
