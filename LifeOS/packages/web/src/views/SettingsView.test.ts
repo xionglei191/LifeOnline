@@ -683,6 +683,22 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('keeps accepted and planned projection sources visible even when reintegration review defaults to pending records', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledWith(['record-ready']);
+    expect(wrapper.text()).toContain('Ready event node');
+    expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).not.toContain('External event node');
+    expect(wrapper.text()).not.toContain('external continuity');
+
+    wrapper.unmount();
+  });
+
   it('renders promotion projections after initial load and refreshes them on explicit projection websocket updates', async () => {
     const wrapper = mountSettingsView();
 
@@ -1360,6 +1376,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1442,6 +1460,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1526,6 +1546,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1584,6 +1606,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1655,6 +1679,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2008,6 +2034,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2071,6 +2099,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();

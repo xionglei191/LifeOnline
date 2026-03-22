@@ -996,6 +996,15 @@ const reintegrationStatusSummary = computed(() => {
     rejected: 0,
   } as Record<ReintegrationRecord['reviewStatus'], number>);
 });
+const activeProjectionSourceReintegrationIds = computed(() => {
+  const acceptedIds = reintegrationRecords.value
+    .filter((record) => record.reviewStatus === 'accepted')
+    .map((record) => record.id);
+  const plannedIds = Object.entries(reintegrationPlannedActions.value)
+    .filter(([, actions]) => actions.some((action) => action.actionKind === 'promote_event_node' || action.actionKind === 'promote_continuity_record'))
+    .map(([recordId]) => recordId);
+  return [...new Set([...acceptedIds, ...plannedIds])];
+});
 const soulActionSummary = computed(() => {
   return soulActions.value.reduce((acc, action) => {
     acc.pendingReview += action.governanceStatus === 'pending_review' ? 1 : 0;
@@ -1083,7 +1092,7 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
     projectionMessage.value = '';
   }
   try {
-    const sourceReintegrationIds = [...new Set(reintegrationRecords.value.map((record) => record.id))];
+    const sourceReintegrationIds = activeProjectionSourceReintegrationIds.value;
     const [eventNodeResult, continuityResult] = await Promise.allSettled([
       fetchEventNodes(sourceReintegrationIds),
       fetchContinuityRecords(sourceReintegrationIds),
@@ -1462,6 +1471,7 @@ async function handleAcceptReintegration(record: ReintegrationRecord) {
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
+    await loadPromotionProjections({ preserveMessage: true });
   } catch (e: any) {
     reintegrationMessage.value = e.message || '接受 reintegration record 失败';
     reintegrationMessageType.value = 'error';
@@ -1506,6 +1516,7 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
+    await loadPromotionProjections({ preserveMessage: true });
   } catch (e: any) {
     reintegrationMessage.value = e.message || '手动规划 promotion actions 失败';
     reintegrationMessageType.value = 'error';

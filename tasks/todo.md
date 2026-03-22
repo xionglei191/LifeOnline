@@ -1,13 +1,10 @@
-# 当前轮：server test config isolation 收口
+# 当前轮：PR6 projection default visibility 收口
 
 ## 进展
-- [x] 识别 server 测试通过改写仓库 `packages/server/config.json` 运行，遇到中断会污染 working tree 的真实风险。
-- [x] 为 configManager 补可注入 config path，并让 test helper 自动创建临时 config 文件。
-- [x] 把 reintegration/config lifecycle 测试切到临时 config，不再改写仓库配置文件。
-- [x] 跑 focused server 验证并确认通过。
+- [x] 识别 projection 面板默认跟随 `pending_review` reintegration filter，导致真实已落地 PR6 projections 被隐藏的主路径缺口。
+- [x] 改为按 accepted + 当前已规划 promotion 的 reintegration ids 计算 projection scope，不再被 review filter 误伤。
+- [x] accept / manual plan 后立即刷新 projection 面板，并补回归锁定默认可见性。
+- [x] 跑 focused web 验证并确认通过。
 - [ ] 如果验证稳定，清理并提交这轮改动。
-
-## 备注
-- 这一轮目标是根治测试副作用，不再依赖手动恢复仓库 `config.json`。
 
 ---
