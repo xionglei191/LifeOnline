@@ -1,4 +1,94 @@
-# dimension contract 单一事实源收口
+# timeline/calendar local-date + dimension helper 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 timeline/calendar 日期边界与维度语义收口。
+- [x] 把 web 侧仍残留的 UTC `toISOString().split('T')[0]` 日期生成改为复用本地日期 helper，避免 timeline/calendar 在夜间跨日时错位。
+- [x] 把 `TimelineView` / `WeeklyHighlights` / `NotePreview` / `StatsView` 中仍残留的维度 label/color 语义继续收回 shared/web helper。
+- [x] 补最小 web 回归，锁定主路径日期输入和维度展示不再依赖重复内联事实源。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/utils/date.ts`
+    - 新增 web 本地日期 helper，统一产出 `YYYY-MM-DD` 本地日期字符串。
+  - `LifeOS/packages/web/src/utils/dimensions.ts`
+    - 补上 `_inbox` 的 label/color fallback，让主路径组件可直接复用统一维度 helper 而不再自己兜底。
+  - `LifeOS/packages/web/src/views/TimelineView.vue`
+    - 起止日期默认值改为复用本地日期 helper，避免月底夜间打开页面时默认窗口漂到次月。
+    - 最繁忙维度文案改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/components/TimelineTrack.vue`
+    - 时间轴日期轴与 today 标记改为复用本地日期 helper，避免时间轴 tick 与本地日期错位。
+    - 轨道标签颜色/名称改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/components/CalendarGrid.vue`
+    - 月历前导空白格日期与 today 判断改为复用本地日期 helper，避免月历夜间跨日错标。
+  - `LifeOS/packages/web/src/components/WeeklyHighlights.vue`
+    - 重点追踪卡片的维度标签与颜色改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/components/NotePreview.vue`
+    - 预览卡片维度标签与颜色改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/views/StatsView.vue`
+    - 雷达图维度 indicator 改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/views/TimelineView.test.ts`
+    - 新增回归，锁定 timeline hero 默认月份窗口采用本地日期口径，并继续显示 shared helper 提供的维度标签。
+  - `LifeOS/packages/web/src/components/CalendarGrid.test.ts`
+    - 新增回归，锁定月历 today 标记采用本地日期口径。
+  - `LifeOS/packages/web/src/components/WeeklyHighlights.test.ts`
+    - 新增回归，锁定重点追踪维度标签/颜色来源于 shared helper，并覆盖 `_inbox` fallback。
+  - `LifeOS/packages/web/src/components/NotePreview.test.ts`
+    - 新增回归，锁定预览卡片维度标签/颜色来源于 shared helper。
+- 这次修的不是再补一条同类视图对称测试，而是把 web 主路径中仍分叉的本地日期语义和维度事实源继续收口，避免 timeline/calendar/default window 在夜间跨日时出现用户可见错位。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：server 侧日期边界已收口到本地日期 helper，但 web timeline/calendar 仍残留 UTC `toISOString().split('T')[0]`，会在夜间造成默认窗口、today 标记和时间轴 tick 偏移。
+- `TimelineView`、`CalendarGrid`、`TimelineTrack`、`NotePreview`、`WeeklyHighlights` 都属于真实主路径，不是低边际的 grouped governance/filter/retention 对称补强。
+- 顺手继续收走剩余维度语义重复点，可以减少后续新增维度或 `_inbox` 展示时的前端 drift 风险。
+
+## 本轮验证
+- `cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/TimelineView.test.ts src/components/WeeklyHighlights.test.ts src/components/NotePreview.test.ts src/components/CalendarGrid.test.ts` 通过，4 files / 4 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`）；此外直接走默认 `vitest` 池在该环境会触发高内存占用，因此本轮验证显式切到 `vmThreads` 完成 focused 回归。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- web 侧如果继续沿日期/维度事实源主线推进，下一步可检查 `CalendarView.vue` 等是否仍有默认日期窗口或 label/color 语义未复用本地 helper。
+
+
+# PR6 promotion source resolution 单一事实源收口
+
+## 计划
+- [x] 先判断当前仓库是否仍有明确在途同类推进，避免继续在 grouped governance / SettingsView 对称补强上低价值重复劳动。
+- [x] 复核 PR6 promotion planning / payload / execute 链，确认 `record.sourceNoteId ?? record.id` 仍只收口在 planner helper，而 event/continuity payload builder 仍各自直接取 `record.sourceNoteId`，存在 source 语义分叉风险。
+- [x] 把 promotion source 解析统一收口到 `getPromotionSourceForReintegration()`，让 planner 与 event/continuity payload 复用同一事实源。
+- [x] 补最小 server 回归，锁定缺少 `sourceNoteId` 的 accepted reintegration record 在 event/continuity payload 中也会稳定落回同一 source note / source reintegration 口径。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`。本轮未覆盖这些无关文件。
+- 已确认最近已完成链路包括 shared dimension contract、promotion projection richer contract-to-UI、persona snapshot read path 等；当前不再继续沿 grouped governance / SettingsView 同类 retention 测试扩张，而是切到新的 PR6 source 事实源收口。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/soul/pr6PromotionRules.ts`
+    - `buildEventNodePromotionInput()` 与 `buildContinuityPromotionInput()` 改为统一复用 `getPromotionSourceForReintegration()`。
+    - 这样 `sourceNoteId` / `sourceReintegrationId` 的 fallback 逻辑不再只停留在 planner，event/continuity promotion payload 也和 planning action 身份保持同一事实源。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 新增 `build PR6 promotion payloads reuse centralized source resolution when source note is missing` 回归。
+    - 锁定 accepted reintegration record 若没有 `sourceNoteId`，event/continuity payload 会一致地把 `sourceNoteId` 与 `sourceReintegrationId` 都落到 reintegration id，而不会 planner 一套、payload 另一套。
+- 这次修的不是再补一条 SettingsView 或 websocket retention 对称测试，而是把 PR6 promotion source 语义从“planner 已收口、payload 仍分叉”补到单点 helper 闭环，降低后续 event/continuity 对象层与 action/planner 身份漂移的风险。
+
+## 本轮选择依据
+- `tasks/todo.md` 上一轮已经明确提示：promotion action 的 `sourceNoteId` 兼容回退仍保留，下一步更值得检查 plan/list/API/web label 这条新的事实源链，而不是继续在 worker-task filter / grouped governance 上做低边际对称扩张。
+- 代码复核确认：`getPromotionSourceForReintegration()` 已存在，但 `buildEventNodePromotionInput()` / `buildContinuityPromotionInput()` 仍直接读取 `record.sourceNoteId`，会导致 source note 缺失时 planner action 与最终 payload 身份不一致。
+- 这条线属于新的事实源一致性问题，且直接影响 PR6 event/continuity 持久化对象层，不是单纯展示层小修。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "build PR6 promotion payloads|getPromotionSourceForReintegration"` 通过，4/4。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮 server 变更尚未提交 git commit。
+- PR6 历史 legacy 数据中仍允许 `sourceNoteId = reint:*` 兼容存在；当前已把 planning + payload 收口到统一 helper，但若后续继续沿同一主线推进，仍可再检查 list/API/web label 是否还会把 legacy fallback 直接暴露为“源笔记”。
+
+## 下一步建议
+- 若继续沿 PR6 source identity 主线推进，优先检查 `event_nodes` / `continuity_records` list API 与 web projection 上的 source label 是否还需要把 `sourceReintegrationId` 和 `sourceNoteId` 语义做更明确区分。
+- 若没有新的用户可见事实源缺口，也可以直接提交这一轮 source resolution 收口，避免再次掉回低价值对称补强。
+
 
 ## 计划
 - [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 dimension contract 收口。

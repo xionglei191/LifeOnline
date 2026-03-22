@@ -9,8 +9,8 @@
         <!-- Single note -->
         <template v-if="displayNotes.length === 1">
           <div class="preview-head">
-            <span class="preview-dim" :style="{ color: `var(--dim-${displayNotes[0].dimension})` }">
-              {{ dimensionLabels[displayNotes[0].dimension] }}
+            <span class="preview-dim" :style="{ color: dimensionColor(displayNotes[0].dimension) }">
+              {{ dimensionLabel(displayNotes[0].dimension) }}
             </span>
             <span class="preview-type">{{ typeLabels[displayNotes[0].type] }}</span>
             <span class="preview-status" :class="'status-' + displayNotes[0].status">{{ statusLabels[displayNotes[0].status] }}</span>
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Note } from '@lifeos/shared';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{
   note?: Note | null;
@@ -66,11 +67,6 @@ const displayNotes = computed(() => {
   return [];
 });
 
-const dimensionLabels: Record<string, string> = {
-  health: '健康', career: '事业', finance: '财务', learning: '学习',
-  relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-};
-
 const typeLabels: Record<string, string> = {
   task: '任务', schedule: '日程', note: '笔记', record: '记录',
   milestone: '里程碑', review: '复盘',
@@ -83,6 +79,14 @@ const statusLabels: Record<string, string> = {
 const priorityLabels: Record<string, string> = {
   high: '高', medium: '中', low: '低',
 };
+
+function dimensionLabel(dimension: Note['dimension']) {
+  return getDimensionLabel(dimension);
+}
+
+function dimensionColor(dimension: Note['dimension']) {
+  return getDimensionColor(dimension);
+}
 
 function truncate(text: string, len: number) {
   const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();

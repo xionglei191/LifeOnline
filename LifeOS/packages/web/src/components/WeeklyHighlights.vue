@@ -34,31 +34,10 @@
 
 <script setup lang="ts">
 import type { Note } from '@lifeos/shared';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 defineProps<{ highlights: Note[] }>();
 defineEmits<{ selectNote: [noteId: string] }>();
-
-const labels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
-
-const colors: Record<string, string> = {
-  health: 'var(--dim-health)',
-  career: 'var(--dim-career)',
-  finance: 'var(--dim-finance)',
-  learning: 'var(--dim-learning)',
-  relationship: 'var(--dim-relationship)',
-  life: 'var(--dim-life)',
-  hobby: 'var(--dim-hobby)',
-  growth: 'var(--dim-growth)',
-};
 
 const statuses: Record<string, string> = {
   pending: '待办',
@@ -67,8 +46,8 @@ const statuses: Record<string, string> = {
   cancelled: '已取消',
 };
 
-const dimensionLabel = (dim: string) => labels[dim] || dim;
-const dimensionColor = (dim: string) => colors[dim] || 'var(--signal)';
+const dimensionLabel = (dim: Note['dimension']) => getDimensionLabel(dim);
+const dimensionColor = (dim: Note['dimension']) => getDimensionColor(dim);
 const statusLabel = (status: string) => statuses[status] || status;
 
 const formatDay = (date: string) => date.slice(8, 10);

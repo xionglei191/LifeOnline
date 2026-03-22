@@ -1,5 +1,8 @@
 import type { Dimension } from '@lifeos/shared';
 
+const FALLBACK_DIMENSION_LABEL = 'Inbox';
+const FALLBACK_DIMENSION_COLOR = 'var(--signal)';
+
 export const DIMENSION_LABELS: Record<Exclude<Dimension, '_inbox'>, string> = {
   health: '健康',
   career: '事业',
@@ -27,10 +30,10 @@ export const DIMENSION_COLORS: Record<Exclude<Dimension, '_inbox'>, string> = {
   growth: 'var(--dim-growth)',
 };
 
-export function getDimensionLabel(dimension: Dimension | Exclude<Dimension, '_inbox'>) {
-  return dimension === '_inbox' ? 'Inbox' : DIMENSION_LABELS[dimension];
+export function getDimensionLabel(dimension: Dimension) {
+  return dimension === '_inbox' ? FALLBACK_DIMENSION_LABEL : DIMENSION_LABELS[dimension];
 }
 
-export function getDimensionColor(dimension: Exclude<Dimension, '_inbox'>) {
-  return DIMENSION_COLORS[dimension];
+export function getDimensionColor(dimension: Dimension) {
+  return dimension === '_inbox' ? FALLBACK_DIMENSION_COLOR : DIMENSION_COLORS[dimension];
 }

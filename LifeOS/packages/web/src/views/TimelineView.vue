@@ -70,24 +70,15 @@ import { useTimeline } from '../composables/useTimeline';
 import TimelineTrack from '../components/TimelineTrack.vue';
 import NoteDetail from '../components/NoteDetail.vue';
 import StateDisplay from '../components/StateDisplay.vue';
+import { formatLocalDate } from '../utils/date';
+import { getDimensionLabel } from '../utils/dimensions';
 
 const { data, loading, error, load } = useTimeline();
 
 const now = new Date();
-const startDate = ref(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
-const endDate = ref(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+const startDate = ref(formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1)));
+const endDate = ref(formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)));
 const selectedNoteId = ref<string | null>(null);
-
-const dimensionLabels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
 
 const spanDays = computed(() => {
   if (!data.value) return 0;
@@ -110,7 +101,7 @@ const busiestTrack = computed(() => {
 
 const busiestLabel = computed(() => {
   if (!busiestTrack.value) return '暂无';
-  return dimensionLabels[busiestTrack.value.dimension] || busiestTrack.value.dimension;
+  return getDimensionLabel(busiestTrack.value.dimension);
 });
 
 const busiestCount = computed(() => busiestTrack.value?.notes.length ?? 0);

@@ -94,6 +94,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { TimelineTrack, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
+import { formatLocalDate } from '../utils/date';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{
   tracks: TimelineTrack[];
@@ -153,7 +155,7 @@ const allDates = computed(() => {
   const d = new Date(props.startDate);
   const end = new Date(props.endDate);
   while (d <= end) {
-    dates.push(d.toISOString().split('T')[0]);
+    dates.push(formatLocalDate(d));
     d.setDate(d.getDate() + 1);
   }
   return dates;
@@ -179,7 +181,7 @@ interface Tick {
 const ticks = computed((): Tick[] => {
   const result: Tick[] = [];
   const interval = tickInterval.value;
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
 
   for (let i = 0; i < allDates.value.length; i += interval) {
     const date = allDates.value[i];
@@ -251,20 +253,8 @@ function bucketDotClass(notes: Note[]) {
   return 'dot-muted';
 }
 
-const dimensionLabels: Record<string, string> = {
-  health: '健康', career: '事业', finance: '财务', learning: '学习',
-  relationship: '关系', life: '生活', hobby: '兴趣', growth: '成长',
-};
-
-const dimensionColors: Record<string, string> = {
-  health: 'var(--dim-health)', career: 'var(--dim-career)',
-  finance: 'var(--dim-finance)', learning: 'var(--dim-learning)',
-  relationship: 'var(--dim-relationship)', life: 'var(--dim-life)',
-  hobby: 'var(--dim-hobby)', growth: 'var(--dim-growth)',
-};
-
-const dimLabel = (d: string) => dimensionLabels[d] || d;
-const dimColor = (d: string) => dimensionColors[d] || 'var(--signal)';
+const dimLabel = (d: Note['dimension']) => getDimensionLabel(d);
+const dimColor = (d: Note['dimension']) => getDimensionColor(d);
 
 // Preview
 const previewNotes = ref<Note[]>([]);

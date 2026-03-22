@@ -45,6 +45,7 @@
 import { computed, ref } from 'vue';
 import type { CalendarData, CalendarDay, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
+import { formatLocalDate } from '../utils/date';
 
 const props = defineProps<{
   calendarData: CalendarData;
@@ -104,7 +105,7 @@ const calendarDays = computed(() => {
     const emptyDate = new Date(firstDay);
     emptyDate.setDate(emptyDate.getDate() - (startDayOfWeek - i));
     days.push({
-      date: emptyDate.toISOString().split('T')[0],
+      date: formatLocalDate(emptyDate),
       notes: [],
       count: 0,
     });
@@ -120,7 +121,7 @@ function getDayNumber(date: string) {
 }
 
 function isToday(date: string) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
   return date === today;
 }
 

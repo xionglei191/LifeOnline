@@ -89,6 +89,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
+import { getDimensionLabel } from '../utils/dimensions';
 
 const trendEl = ref<HTMLElement | null>(null);
 const radarEl = ref<HTMLElement | null>(null);
@@ -174,16 +175,6 @@ async function loadRadar() {
   const data = await fetchStatsRadar();
   const c = charts[1];
   if (!c) return;
-  const labels: Record<string, string> = {
-    health: '健康',
-    career: '事业',
-    finance: '财务',
-    learning: '学习',
-    relationship: '关系',
-    life: '生活',
-    hobby: '兴趣',
-    growth: '成长',
-  };
   c.setOption({
     tooltip: {
       trigger: 'item',
@@ -192,7 +183,7 @@ async function loadRadar() {
       textStyle: { color: '#e2edf8' },
     },
     radar: {
-      indicator: data.map((d) => ({ name: labels[d.dimension], max: 100 })),
+      indicator: data.map((d) => ({ name: getDimensionLabel(d.dimension), max: 100 })),
       radius: '68%',
       splitNumber: 4,
       axisName: { color: chartText },
