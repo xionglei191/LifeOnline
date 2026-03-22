@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse } from '@lifeos/shared';
-import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot } from '@lifeos/shared';
+import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -413,6 +413,32 @@ describe('api client promotion projections', () => {
     });
   });
 
+  it('fetches typed persona snapshot contracts from shared response shapes', async () => {
+    const snapshot: PersonaSnapshot = {
+      id: 'persona:note-1',
+      sourceNoteId: 'note-1',
+      soulActionId: null,
+      workerTaskId: 'worker-task-1',
+      summary: '已更新人格快照：Source Note',
+      snapshot: {
+        sourceNoteTitle: 'Source Note',
+        summary: '已更新人格快照：Source Note',
+        contentPreview: 'Persona content preview',
+        updatedAt: '2026-03-22T10:00:00.000Z',
+      },
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ snapshot }),
+    }));
+
+    await expect(fetchPersonaSnapshot('note-1')).resolves.toEqual(snapshot);
+    expect(fetch).toHaveBeenCalledWith('/api/persona-snapshots/note-1');
+  });
+
   it('surfaces API errors for worker-task contract actions', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'create failed' }) })
@@ -420,7 +446,8 @@ describe('api client promotion projections', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'fetch failed' }) })
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'retry failed' }) })
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'cancel failed' }) })
-      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'clear failed' }) }));
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'clear failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'snapshot failed' }) }));
 
     await expect(createWorkerTask({
       taskType: 'openclaw_task',
@@ -431,6 +458,7 @@ describe('api client promotion projections', () => {
     await expect(retryWorkerTask('worker-task-1')).rejects.toThrow('retry failed');
     await expect(cancelWorkerTask('worker-task-1')).rejects.toThrow('cancel failed');
     await expect(clearFinishedWorkerTasks()).rejects.toThrow('clear failed');
+    await expect(fetchPersonaSnapshot('note-1')).rejects.toThrow('snapshot failed');
   });
 
   it('fetches typed config and index contracts from shared response shapes', async () => {

@@ -173,6 +173,28 @@ export interface ListContinuityRecordsResponse {
   continuityRecords: ContinuityRecord[];
 }
 
+export interface PersonaSnapshotPayload {
+  sourceNoteTitle: string;
+  summary: string;
+  contentPreview: string;
+  updatedAt: string;
+}
+
+export interface PersonaSnapshot {
+  id: string;
+  sourceNoteId: string;
+  soulActionId: string | null;
+  workerTaskId: string | null;
+  summary: string;
+  snapshot: PersonaSnapshotPayload;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PersonaSnapshotResponse {
+  snapshot: PersonaSnapshot | null;
+}
+
 export interface WorkerTaskListFilters {
   sourceNoteId?: string;
   status?: WorkerTaskStatus;

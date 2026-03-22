@@ -1,3 +1,44 @@
+# persona snapshot first-class read path 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 server/web/shared contract gap 主线推进人格快照读路径。
+- [x] 把 server 已持久化的 persona snapshot 提升为 shared contract + API + web 可直接读取的对象，而不是只藏在 worker task result JSON 内。
+- [x] 在 NoteDetail 里补上最近人格快照展示，并补最小 client/component 回归。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts`
+    - 新增 `PersonaSnapshotPayload`、`PersonaSnapshot`、`PersonaSnapshotResponse`，把人格快照提升为共享 contract。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - 新增 `getPersonaSnapshotHandler()`，通过 `sourceNoteId` 直接返回当前笔记最近的人格快照。
+  - `LifeOS/packages/server/src/api/routes.ts`
+    - 新增 `GET /api/persona-snapshots/:sourceNoteId` 路由。
+  - `LifeOS/packages/web/src/api/client.ts`
+    - 新增 `fetchPersonaSnapshot()`，按 shared response shape 读取人格快照。
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 在笔记详情里新增 `Persona Snapshot` 区块，展示最近快照的标题、更新时间、摘要和内容预览。
+    - 在载入笔记与手动触发人格快照任务后同步刷新 persona snapshot，避免 UI 继续停留在旧值。
+  - `LifeOS/packages/web/src/api/client.test.ts`
+    - 新增 persona snapshot client contract 回归，并补错误透传断言。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增 persona snapshot 展示回归，锁定 NoteDetail 会按 source note 读取并显示最近快照。
+- 这次修的不是再补一条 grouped governance 同类测试，而是把 server 已真实持久化的人格快照补成 shared/server/web 闭环对象，解决“任务能执行但结果没有一等读取入口”的新 contract gap。
+
+## 本轮选择依据
+- 这是新的 server/web/shared contract gap：`persona_snapshots` 已在 server 持久化并被 reintegration 使用，但 shared contract、API 和 web 主入口一直缺位。
+- 相比继续做同类 SettingsView/filter/websocket 对称补强，这条线直接让“更新人格快照”从隐性后端产物变成用户可见能力。
+- 这条线也补上 NoteDetail 主路径的可见性缺口：用户现在不用翻 worker task JSON 就能看到最近一次 persona snapshot。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts src/components/NoteDetail.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 142 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿 persona snapshot 主线推进，可再补历史列表或独立视图；但本轮最小 contract/API/UI 闭环已完成。
+
+
 # update_persona_snapshot web delivery gap 闭环
 
 ## 计划

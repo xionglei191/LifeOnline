@@ -4,6 +4,7 @@ import type { Note, WorkerTask, ApprovalStatus } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNoteById: vi.fn(),
+  fetchPersonaSnapshot: vi.fn(),
   extractTasks: vi.fn(),
   updateNote: vi.fn(),
   appendNote: vi.fn(),
@@ -16,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock('../api/client', () => ({
   fetchNoteById: apiMocks.fetchNoteById,
+  fetchPersonaSnapshot: apiMocks.fetchPersonaSnapshot,
   extractTasks: apiMocks.extractTasks,
   updateNote: apiMocks.updateNote,
   appendNote: apiMocks.appendNote,
@@ -115,6 +117,7 @@ describe('NoteDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiMocks.fetchNoteById.mockResolvedValue(createNote());
+    apiMocks.fetchPersonaSnapshot.mockResolvedValue(null);
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
     apiMocks.retryWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'pending' }));
     apiMocks.cancelWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'cancelled' }));
@@ -122,6 +125,46 @@ describe('NoteDetail', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('renders latest persona snapshot for the current note', async () => {
+    apiMocks.fetchPersonaSnapshot.mockResolvedValue({
+      id: 'persona:note-1.md',
+      sourceNoteId: 'note-1.md',
+      soulActionId: null,
+      workerTaskId: 'worker-task-1',
+      summary: '已更新人格快照：Test Note',
+      snapshot: {
+        sourceNoteTitle: 'Test Note',
+        summary: '已更新人格快照：Test Note',
+        contentPreview: 'Current note preview for persona snapshot.',
+        updatedAt: '2026-03-22T10:00:00.000Z',
+      },
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+    });
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(apiMocks.fetchPersonaSnapshot).toHaveBeenCalledWith('note-1.md');
+    expect(document.body.textContent).toContain('Persona Snapshot');
+    expect(document.body.textContent).toContain('已更新人格快照：Test Note');
+    expect(document.body.textContent).toContain('Current note preview for persona snapshot.');
+
+    wrapper.unmount();
   });
 
   it('renders localized worker-task metadata after creating summarize task', async () => {

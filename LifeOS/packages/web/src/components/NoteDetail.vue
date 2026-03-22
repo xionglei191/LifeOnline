@@ -152,6 +152,21 @@
             </PrivacyMask>
           </section>
 
+          <section v-if="personaSnapshot" class="ai-panel">
+            <div class="append-head">
+              <p class="panel-kicker">Persona Snapshot</p>
+              <span class="append-hint">当前笔记最近一次人格快照</span>
+            </div>
+            <div class="snapshot-card">
+              <div class="snapshot-meta-row">
+                <span class="meta-pill">{{ personaSnapshot.snapshot.sourceNoteTitle }}</span>
+                <span class="meta-pill">{{ personaSnapshot.snapshot.updatedAt }}</span>
+              </div>
+              <p class="snapshot-summary">{{ personaSnapshot.summary }}</p>
+              <p class="snapshot-preview">{{ personaSnapshot.snapshot.contentPreview }}</p>
+            </div>
+          </section>
+
           <section class="ai-panel">
             <div class="append-head">
               <p class="panel-kicker">External Worker Task</p>
@@ -262,8 +277,8 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
-import type { Note, WorkerTask, WsEvent } from '@lifeos/shared';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
@@ -288,6 +303,7 @@ const relatedWorkerTasks = ref<WorkerTask[]>([]);
 const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
 const selectedWorkerTaskId = ref<string | null>(null);
+const personaSnapshot = ref<PersonaSnapshot | null>(null);
 const saving = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
@@ -387,6 +403,14 @@ async function loadRelatedWorkerTasks(sourceNoteId: string) {
   }
 }
 
+async function loadPersonaSnapshot(sourceNoteId: string) {
+  try {
+    personaSnapshot.value = await fetchPersonaSnapshot(sourceNoteId);
+  } catch {
+    personaSnapshot.value = null;
+  }
+}
+
 async function reloadRelatedWorkerTasks() {
   if (!currentNoteId.value) return;
   await loadRelatedWorkerTasks(currentNoteId.value);
@@ -405,6 +429,7 @@ watch(currentNoteId, async (id) => {
     note.value = null;
     decryptedContent.value = null;
     relatedWorkerTasks.value = [];
+    personaSnapshot.value = null;
     showDeleteConfirm.value = false;
     return;
   }
@@ -421,7 +446,10 @@ watch(currentNoteId, async (id) => {
   try {
     note.value = await fetchNoteById(id) as any;
     workerInstruction.value = '';
-    await loadRelatedWorkerTasks(id);
+    await Promise.all([
+      loadRelatedWorkerTasks(id),
+      loadPersonaSnapshot(id),
+    ]);
 
     // Auto-decrypt if encrypted
     if (note.value?.encrypted && note.value.content) {
@@ -558,7 +586,10 @@ async function handleCreatePersonaSnapshotTask() {
         noteId: currentNoteId.value,
       },
     });
-    await loadRelatedWorkerTasks(currentNoteId.value);
+    await Promise.all([
+      loadRelatedWorkerTasks(currentNoteId.value),
+      loadPersonaSnapshot(currentNoteId.value),
+    ]);
     workerMessage.value = workerTaskActionMessage('created', task);
     workerMessageType.value = 'success';
   } catch (e: any) {
@@ -917,6 +948,35 @@ function showMsg(msg: string, type: 'success' | 'error') {
 .extract-hint {
   color: var(--text-muted);
   font-size: 0.84rem;
+}
+
+.snapshot-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--border));
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.snapshot-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.snapshot-summary {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.snapshot-preview {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .append-input {
