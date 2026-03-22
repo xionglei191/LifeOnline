@@ -19,6 +19,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
   const notes = ref<Note[]>([]);
   const loading = ref(false);
   const error = ref<Error | null>(null);
+  let activeRequestId = 0;
 
   const filters = ref<Filters>({
     types: [],
@@ -93,14 +94,20 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
   });
 
   async function load() {
+    const requestId = ++activeRequestId;
     loading.value = true;
     error.value = null;
     try {
-      notes.value = await fetchNotes({ dimension: dimension.value });
+      const nextNotes = await fetchNotes({ dimension: dimension.value });
+      if (requestId !== activeRequestId) return;
+      notes.value = nextNotes;
     } catch (e) {
+      if (requestId !== activeRequestId) return;
       error.value = e as Error;
     } finally {
-      loading.value = false;
+      if (requestId === activeRequestId) {
+        loading.value = false;
+      }
     }
   }
 
