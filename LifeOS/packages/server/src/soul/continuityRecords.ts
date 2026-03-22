@@ -117,7 +117,15 @@ export function upsertContinuityRecord(input: Omit<ContinuityRecord, 'id' | 'cre
   return continuityRecord;
 }
 
-export function listContinuityRecords(): ContinuityRecord[] {
+export function listContinuityRecords(sourceReintegrationIds?: string[]): ContinuityRecord[] {
+  if (sourceReintegrationIds?.length) {
+    const placeholders = sourceReintegrationIds.map(() => '?').join(', ');
+    const rows = getDb().prepare(
+      `SELECT * FROM continuity_records WHERE source_reintegration_id IN (${placeholders}) ORDER BY created_at DESC`,
+    ).all(...sourceReintegrationIds) as ContinuityRecordRow[];
+    return rows.map(rowToContinuityRecord);
+  }
+
   const rows = getDb().prepare('SELECT * FROM continuity_records ORDER BY created_at DESC').all() as ContinuityRecordRow[];
   return rows.map(rowToContinuityRecord);
 }

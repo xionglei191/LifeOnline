@@ -738,13 +738,27 @@ export async function planPromotionsHandler(
   }
 }
 
+function getSourceReintegrationIds(query: unknown): string[] | undefined {
+  const raw = (query as { sourceReintegrationIds?: unknown })?.sourceReintegrationIds;
+  if (typeof raw !== 'string') return undefined;
+  const ids = raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return ids.length ? ids : undefined;
+}
+
 export async function listEventNodesHandler(
-  _req: Request<Record<string, never>, ApiResponse<ListEventNodesResponse>>,
+  req: Request<Record<string, never>, ApiResponse<ListEventNodesResponse>, Record<string, never>, { sourceReintegrationIds?: string }>,
   res: Response<ApiResponse<ListEventNodesResponse>>,
 ): Promise<void> {
   try {
+    const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const response: ListEventNodesResponse = {
-      eventNodes: listEventNodes(),
+      eventNodes: listEventNodes(sourceReintegrationIds),
+      filters: {
+        sourceReintegrationIds,
+      },
     };
     res.json(response);
   } catch (error) {
@@ -754,12 +768,16 @@ export async function listEventNodesHandler(
 }
 
 export async function listContinuityRecordsHandler(
-  _req: Request<Record<string, never>, ApiResponse<ListContinuityRecordsResponse>>,
+  req: Request<Record<string, never>, ApiResponse<ListContinuityRecordsResponse>, Record<string, never>, { sourceReintegrationIds?: string }>,
   res: Response<ApiResponse<ListContinuityRecordsResponse>>,
 ): Promise<void> {
   try {
+    const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const response: ListContinuityRecordsResponse = {
-      continuityRecords: listContinuityRecords(),
+      continuityRecords: listContinuityRecords(sourceReintegrationIds),
+      filters: {
+        sourceReintegrationIds,
+      },
     };
     res.json(response);
   } catch (error) {

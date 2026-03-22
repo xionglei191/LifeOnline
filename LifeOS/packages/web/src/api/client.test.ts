@@ -59,11 +59,11 @@ describe('api client promotion projections', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ eventNodes }),
+      json: async () => ({ eventNodes, filters: { sourceReintegrationIds: ['reint:test'] } }),
     }));
 
-    await expect(fetchEventNodes()).resolves.toEqual(eventNodes);
-    expect(fetch).toHaveBeenCalledWith('/api/event-nodes');
+    await expect(fetchEventNodes(['reint:test'])).resolves.toEqual(eventNodes);
+    expect(fetch).toHaveBeenCalledWith('/api/event-nodes?sourceReintegrationIds=reint%3Atest');
   });
 
   it('fetches typed continuity projections from the shared response shape', async () => {
@@ -89,11 +89,11 @@ describe('api client promotion projections', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ continuityRecords }),
+      json: async () => ({ continuityRecords, filters: { sourceReintegrationIds: ['reint:test'] } }),
     }));
 
-    await expect(fetchContinuityRecords()).resolves.toEqual(continuityRecords);
-    expect(fetch).toHaveBeenCalledWith('/api/continuity-records');
+    await expect(fetchContinuityRecords(['reint:test'])).resolves.toEqual(continuityRecords);
+    expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
   });
 
   it('normalizes legacy reintegration note filters to sourceReintegrationId for soul-action fetches', async () => {

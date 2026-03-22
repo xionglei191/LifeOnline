@@ -115,7 +115,15 @@ export function upsertEventNode(input: Omit<EventNode, 'id' | 'createdAt' | 'upd
   return eventNode;
 }
 
-export function listEventNodes(): EventNode[] {
+export function listEventNodes(sourceReintegrationIds?: string[]): EventNode[] {
+  if (sourceReintegrationIds?.length) {
+    const placeholders = sourceReintegrationIds.map(() => '?').join(', ');
+    const rows = getDb().prepare(
+      `SELECT * FROM event_nodes WHERE source_reintegration_id IN (${placeholders}) ORDER BY created_at DESC`,
+    ).all(...sourceReintegrationIds) as EventNodeRow[];
+    return rows.map(rowToEventNode);
+  }
+
   const rows = getDb().prepare('SELECT * FROM event_nodes ORDER BY created_at DESC').all() as EventNodeRow[];
   return rows.map(rowToEventNode);
 }

@@ -148,6 +148,23 @@ const eventNodes: EventNode[] = [
     createdAt: '2026-03-21T10:03:00.000Z',
     updatedAt: '2026-03-21T10:03:00.000Z',
   },
+  {
+    id: 'event:record-external',
+    sourceReintegrationId: 'record-external',
+    sourceNoteId: 'note-external',
+    sourceSoulActionId: 'external-1',
+    promotionSoulActionId: 'external-1',
+    eventKind: 'weekly_reflection',
+    title: 'External event node',
+    summary: 'external group',
+    threshold: 'high',
+    status: 'active',
+    evidence: { source: 'settings-test-external' },
+    explanation: { reason: 'projection' },
+    occurredAt: '2026-03-19T10:03:00.000Z',
+    createdAt: '2026-03-19T10:03:00.000Z',
+    updatedAt: '2026-03-19T10:03:00.000Z',
+  },
 ];
 
 const continuityRecords: ContinuityRecord[] = [
@@ -167,6 +184,23 @@ const continuityRecords: ContinuityRecord[] = [
     recordedAt: '2026-03-21T10:04:00.000Z',
     createdAt: '2026-03-21T10:04:00.000Z',
     updatedAt: '2026-03-21T10:04:00.000Z',
+  },
+  {
+    id: 'continuity:record-external',
+    sourceReintegrationId: 'record-external',
+    sourceNoteId: 'note-external',
+    sourceSoulActionId: 'external-2',
+    promotionSoulActionId: 'external-2',
+    continuityKind: 'daily_rhythm',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'external continuity',
+    continuity: { trend: 'external' },
+    evidence: { source: 'settings-test-external' },
+    explanation: { reason: 'projection' },
+    recordedAt: '2026-03-19T10:04:00.000Z',
+    createdAt: '2026-03-19T10:04:00.000Z',
+    updatedAt: '2026-03-19T10:04:00.000Z',
   },
 ];
 
@@ -341,8 +375,18 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchTaskSchedules.mockResolvedValue([]);
     apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
     apiMocks.fetchSoulActions.mockResolvedValue(soulActions);
-    apiMocks.fetchEventNodes.mockResolvedValue(eventNodes);
-    apiMocks.fetchContinuityRecords.mockResolvedValue(continuityRecords);
+    apiMocks.fetchEventNodes.mockImplementation(async (sourceReintegrationIds?: string[]) => {
+      if (!sourceReintegrationIds?.length) {
+        return eventNodes;
+      }
+      return eventNodes.filter((eventNode) => sourceReintegrationIds.includes(eventNode.sourceReintegrationId));
+    });
+    apiMocks.fetchContinuityRecords.mockImplementation(async (sourceReintegrationIds?: string[]) => {
+      if (!sourceReintegrationIds?.length) {
+        return continuityRecords;
+      }
+      return continuityRecords.filter((continuity) => sourceReintegrationIds.includes(continuity.sourceReintegrationId));
+    });
     apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
     apiMocks.fetchAiProviderSettings.mockResolvedValue({
       baseUrl: 'http://localhost:3000',
@@ -649,6 +693,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('Continuity Records');
     expect(wrapper.text()).toContain('Ready event node');
     expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).not.toContain('External event node');
+    expect(wrapper.text()).not.toContain('external continuity');
     expect(wrapper.text()).toContain('Reintegration record-ready');
     expect(wrapper.text()).toContain('Promotion: ready-1');
     expect(wrapper.text()).toContain('Promotion: ready-2');

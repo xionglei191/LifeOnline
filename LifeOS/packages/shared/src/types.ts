@@ -174,6 +174,9 @@ export interface EventNode {
 
 export interface ListEventNodesResponse {
   eventNodes: EventNode[];
+  filters: {
+    sourceReintegrationIds?: string[];
+  };
 }
 
 export interface ContinuityRecord {
@@ -196,6 +199,9 @@ export interface ContinuityRecord {
 
 export interface ListContinuityRecordsResponse {
   continuityRecords: ContinuityRecord[];
+  filters: {
+    sourceReintegrationIds?: string[];
+  };
 }
 
 export interface PersonaSnapshotPayload {

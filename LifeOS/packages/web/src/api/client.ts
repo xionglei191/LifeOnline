@@ -426,8 +426,11 @@ export async function fetchAISuggestions(): Promise<AISuggestion[]> {
   return data.suggestions || [];
 }
 
-export async function fetchEventNodes(): Promise<EventNode[]> {
-  const res = await fetch(`${API_BASE}/event-nodes`);
+export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promise<EventNode[]> {
+  const query = sourceReintegrationIds?.length
+    ? `?sourceReintegrationIds=${encodeURIComponent(sourceReintegrationIds.join(','))}`
+    : '';
+  const res = await fetch(`${API_BASE}/event-nodes${query}`);
   const data = await res.json().catch(() => ({} as Partial<ListEventNodesResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch event nodes');
@@ -435,8 +438,11 @@ export async function fetchEventNodes(): Promise<EventNode[]> {
   return data.eventNodes || [];
 }
 
-export async function fetchContinuityRecords(): Promise<ContinuityRecord[]> {
-  const res = await fetch(`${API_BASE}/continuity-records`);
+export async function fetchContinuityRecords(sourceReintegrationIds?: string[]): Promise<ContinuityRecord[]> {
+  const query = sourceReintegrationIds?.length
+    ? `?sourceReintegrationIds=${encodeURIComponent(sourceReintegrationIds.join(','))}`
+    : '';
+  const res = await fetch(`${API_BASE}/continuity-records${query}`);
   const data = await res.json().catch(() => ({} as Partial<ListContinuityRecordsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch continuity records');

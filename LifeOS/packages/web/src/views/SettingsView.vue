@@ -1083,9 +1083,10 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
     projectionMessage.value = '';
   }
   try {
+    const sourceReintegrationIds = [...new Set(reintegrationRecords.value.map((record) => record.id))];
     const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodes(),
-      fetchContinuityRecords(),
+      fetchEventNodes(sourceReintegrationIds),
+      fetchContinuityRecords(sourceReintegrationIds),
     ]);
 
     const projectionErrors: string[] = [];
@@ -1694,7 +1695,7 @@ onMounted(async () => {
   await loadSchedules();
   await loadReintegrationRecords();
   await loadSoulActions();
-  await loadPromotionProjections();
+  await loadPromotionProjections({ preserveMessage: true });
   await loadPrompts();
   await loadAiProviderSettings();
   document.addEventListener('ws-update', handleWsUpdate);

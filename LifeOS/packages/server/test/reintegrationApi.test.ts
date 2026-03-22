@@ -2325,10 +2325,14 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
       eventKind: string;
       title: string;
       summary: string;
-    }> }>(baseUrl, '/api/event-nodes');
+    }>; filters: { sourceReintegrationIds?: string[] } }>(
+      baseUrl,
+      `/api/event-nodes?sourceReintegrationIds=${encodeURIComponent(record!.id)}`,
+    );
     const eventNode = listedEventNodes.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
 
     assert.equal(filteredSoulActions.filters.sourceReintegrationId, record!.id);
+    assert.deepEqual(listedEventNodes.filters.sourceReintegrationIds, [record!.id]);
     assert.equal(filteredSoulActions.filters.governanceStatus, 'approved');
     assert.equal(filteredSoulActions.filters.executionStatus, dispatched.soulAction!.executionStatus);
     assert.equal(filteredAction?.id, dispatched.soulAction?.id);
@@ -2433,10 +2437,14 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
       promotionSoulActionId: string | null;
       continuityKind: string;
       summary: string;
-    }> }>(baseUrl, '/api/continuity-records');
+    }>; filters: { sourceReintegrationIds?: string[] } }>(
+      baseUrl,
+      `/api/continuity-records?sourceReintegrationIds=${encodeURIComponent(record!.id)}`,
+    );
     const continuity = listedContinuity.continuityRecords.find((item) => item.sourceReintegrationId === record!.id);
 
     assert.equal(filteredSoulActions.filters.sourceReintegrationId, record!.id);
+    assert.deepEqual(listedContinuity.filters.sourceReintegrationIds, [record!.id]);
     assert.equal(filteredSoulActions.filters.governanceStatus, 'approved');
     assert.equal(filteredSoulActions.filters.executionStatus, dispatched.soulAction!.executionStatus);
     assert.equal(filteredAction?.id, dispatched.soulAction?.id);
