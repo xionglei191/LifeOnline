@@ -1718,6 +1718,8 @@ function handleWsUpdate(event: Event) {
   if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated' || wsEvent.type === 'reintegration-record-updated') {
     loadReintegrationRecords({ preserveMessage: preserveReintegrationMessage });
     loadSoulActions({ preserveMessage: preserveSoulActionMessage });
+  }
+  if (wsEvent.type === 'event-node-updated' || wsEvent.type === 'continuity-record-updated') {
     loadPromotionProjections();
   }
 }

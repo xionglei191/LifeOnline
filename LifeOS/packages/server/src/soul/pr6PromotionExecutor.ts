@@ -1,11 +1,13 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
-import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
-import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
+import { getEventNodeBySourceReintegrationId, upsertEventNode, type EventNode } from './eventNodes.js';
+import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord, type ContinuityRecord } from './continuityRecords.js';
 import { assertAcceptedPromotionReintegration, buildContinuityPromotionInput, buildEventNodePromotionInput, getPromotionExecutionSummary } from './pr6PromotionRules.js';
 import { resolveSoulActionSourceReintegrationId, type SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
   summary: string;
+  eventNode: EventNode | null;
+  continuityRecord: ContinuityRecord | null;
 }
 
 export function executePromotionSoulAction(action: SoulAction): PromotionExecutionResult {
@@ -24,13 +26,21 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
   if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
     const node = upsertEventNode(buildEventNodePromotionInput(record, action.id));
-    return { summary: getPromotionExecutionSummary(action.actionKind, node.id, Boolean(existing)) };
+    return {
+      summary: getPromotionExecutionSummary(action.actionKind, node.id, Boolean(existing)),
+      eventNode: node,
+      continuityRecord: null,
+    };
   }
 
   if (action.actionKind === 'promote_continuity_record') {
     const existing = getContinuityRecordBySourceReintegrationId(record.id);
     const continuity = upsertContinuityRecord(buildContinuityPromotionInput(record, action.id));
-    return { summary: getPromotionExecutionSummary(action.actionKind, continuity.id, Boolean(existing)) };
+    return {
+      summary: getPromotionExecutionSummary(action.actionKind, continuity.id, Boolean(existing)),
+      eventNode: null,
+      continuityRecord: continuity,
+    };
   }
 
   throw new Error(`Unsupported PR6 promotion action kind: ${action.actionKind}`);

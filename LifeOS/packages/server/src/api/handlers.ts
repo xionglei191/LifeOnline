@@ -14,8 +14,8 @@ import { normalizeSoulActionSourceFilters } from '../soul/types.js';
 import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
 import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
-import { listEventNodes } from '../soul/eventNodes.js';
-import { listContinuityRecords } from '../soul/continuityRecords.js';
+import { listEventNodes, type EventNode } from '../soul/eventNodes.js';
+import { listContinuityRecords, type ContinuityRecord } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
@@ -573,6 +573,16 @@ function broadcastReintegrationRecordUpdate(record: ReturnType<typeof getReinteg
   broadcastUpdate({ type: 'reintegration-record-updated', data: record });
 }
 
+function broadcastEventNodeUpdate(eventNode: EventNode | null | undefined): void {
+  if (!eventNode) return;
+  broadcastUpdate({ type: 'event-node-updated', data: { eventNode } });
+}
+
+function broadcastContinuityRecordUpdate(continuityRecord: ContinuityRecord | null | undefined): void {
+  if (!continuityRecord) return;
+  broadcastUpdate({ type: 'continuity-record-updated', data: { continuityRecord } });
+}
+
 export async function approveSoulActionHandler(
   req: Request<{ id: string }, ApiResponse<SoulActionResponse>, ReintegrationReviewRequest>,
   res: Response<ApiResponse<SoulActionResponse>>,
@@ -645,6 +655,8 @@ export async function dispatchSoulActionHandler(
     const soulAction = getSoulAction(result.soulActionId);
     const task = result.workerTaskId ? getWorkerTask(result.workerTaskId) : null;
     broadcastSoulActionUpdate(soulAction);
+    broadcastEventNodeUpdate(result.eventNode);
+    broadcastContinuityRecordUpdate(result.continuityRecord);
     const response: DispatchSoulActionResponse = { result, soulAction, task };
     res.status(202).json(response);
   } catch (error) {

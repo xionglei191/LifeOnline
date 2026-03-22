@@ -596,6 +596,14 @@ export interface NoteWorkerTasksUpdatedEventData {
   task: WorkerTask;
 }
 
+export interface EventNodeUpdatedEventData {
+  eventNode: EventNode;
+}
+
+export interface ContinuityRecordUpdatedEventData {
+  continuityRecord: ContinuityRecord;
+}
+
 export type WsEvent =
   | { type: 'file-changed'; data: { filePath: string; operation: IndexOperation } }
   | { type: 'index-complete'; data: IndexResult }
@@ -605,6 +613,8 @@ export type WsEvent =
   | { type: 'note-worker-tasks-updated'; data: NoteWorkerTasksUpdatedEventData }
   | { type: 'soul-action-updated'; data: SoulAction }
   | { type: 'reintegration-record-updated'; data: ReintegrationRecord }
+  | { type: 'event-node-updated'; data: EventNodeUpdatedEventData }
+  | { type: 'continuity-record-updated'; data: ContinuityRecordUpdatedEventData }
   | { type: 'schedule-updated' };
 
 export type WsEventType = WsEvent['type'];

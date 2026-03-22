@@ -639,7 +639,7 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
-  it('renders promotion projections after initial load and refreshes them on websocket updates', async () => {
+  it('renders promotion projections after initial load and refreshes them on explicit projection websocket updates', async () => {
     const wrapper = mountSettingsView();
 
     await flushPromises();
@@ -672,7 +672,24 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchContinuityRecords.mockClear();
 
     document.dispatchEvent(new CustomEvent('ws-update', {
-      detail: { type: 'soul-action-updated' },
+      detail: {
+        type: 'event-node-updated',
+        data: { eventNode: eventNodes[0] },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+
+    apiMocks.fetchEventNodes.mockClear();
+    apiMocks.fetchContinuityRecords.mockClear();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'continuity-record-updated',
+        data: { continuityRecord: continuityRecords[0] },
+      },
     }));
     await flushPromises();
 

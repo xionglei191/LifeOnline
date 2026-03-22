@@ -2,6 +2,8 @@ import { createWorkerTask, executeWorkerTask } from '../workers/workerTasks.js';
 import { createOrReuseSoulAction, getSoulAction } from './soulActions.js';
 import { getDb } from '../db/client.js';
 import { executePromotionSoulAction } from './pr6PromotionExecutor.js';
+import type { EventNode } from './eventNodes.js';
+import type { ContinuityRecord } from './continuityRecords.js';
 import type { SoulActionCandidate } from './soulActionGenerator.js';
 import type { InterventionGateDecision } from './interventionGate.js';
 import type { SoulAction } from './types.js';
@@ -11,6 +13,8 @@ export interface SoulActionDispatchResult {
   reason: string;
   soulActionId: string | null;
   workerTaskId: string | null;
+  eventNode?: EventNode | null;
+  continuityRecord?: ContinuityRecord | null;
 }
 
 function buildWorkerTaskRequestFromSoulAction(action: SoulAction) {
@@ -106,6 +110,8 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       reason: result.summary,
       soulActionId: soulAction.id,
       workerTaskId: null,
+      eventNode: result.eventNode,
+      continuityRecord: result.continuityRecord,
     };
   }
 
@@ -118,5 +124,7 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     reason: 'approved soul action dispatched through worker host',
     soulActionId: soulAction.id,
     workerTaskId: task.id,
+    eventNode: null,
+    continuityRecord: null,
   };
 }
