@@ -9,18 +9,25 @@ export function useTimeline() {
   const error = ref<Error | null>(null);
   let currentStart = '';
   let currentEnd = '';
+  let activeRequestId = 0;
 
   async function load(start: string, end: string) {
     currentStart = start;
     currentEnd = end;
+    const requestId = ++activeRequestId;
     loading.value = true;
     error.value = null;
     try {
-      data.value = await fetchTimeline(start, end);
+      const nextData = await fetchTimeline(start, end);
+      if (requestId !== activeRequestId) return;
+      data.value = nextData;
     } catch (e) {
+      if (requestId !== activeRequestId) return;
       error.value = e as Error;
     } finally {
-      loading.value = false;
+      if (requestId === activeRequestId) {
+        loading.value = false;
+      }
     }
   }
 

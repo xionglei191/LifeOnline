@@ -10,19 +10,26 @@ export function useCalendar() {
   const selectedDay = ref<string | null>(null);
   let currentYear = 0;
   let currentMonth = 0;
+  let activeRequestId = 0;
 
   async function load(year: number, month: number) {
     currentYear = year;
     currentMonth = month;
+    const requestId = ++activeRequestId;
     loading.value = true;
     error.value = null;
     selectedDay.value = null;
     try {
-      data.value = await fetchCalendar(year, month);
+      const nextData = await fetchCalendar(year, month);
+      if (requestId !== activeRequestId) return;
+      data.value = nextData;
     } catch (e) {
+      if (requestId !== activeRequestId) return;
       error.value = e as Error;
     } finally {
-      loading.value = false;
+      if (requestId === activeRequestId) {
+        loading.value = false;
+      }
     }
   }
 

@@ -1,3 +1,43 @@
+# timeline+calendar stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 timeline/calendar 并发请求回写保护收口。
+- [x] 让 `useTimeline.ts` / `useCalendar.ts` 只接受最新窗口请求的回写结果，避免旧请求在后返回时覆盖当前窗口状态。
+- [x] 补 composable focused 回归，锁定旧请求晚返回或晚报错时不会把新窗口数据/error 覆盖回去。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/views/CalendarView.vue`、`LifeOS/packages/web/src/views/CalendarView.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/composables/useTimeline.ts`
+    - 为每次 load 分配递增 request id，只允许最新请求写回 `data/error/loading`。
+    - 修复快速切换时间窗口或 websocket reload 重叠时，旧 timeline 请求晚返回仍可能把新窗口数据覆盖回去的真实主路径风险。
+  - `LifeOS/packages/web/src/composables/useCalendar.ts`
+    - 采用同样的 request id 守卫，只接受当前月份请求的回写结果。
+    - 修复快速切月或 reload 重叠时，旧 calendar 请求晚返回/晚失败会把新月份状态污染回去的问题。
+  - `LifeOS/packages/web/src/composables/useTimeline.test.ts`
+    - 新增最新窗口成功后旧请求晚返回不会覆盖数据的回归。
+    - 新增最新窗口成功后旧请求晚失败不会错误污染 UI 状态的回归。
+  - `LifeOS/packages/web/src/composables/useCalendar.test.ts`
+    - 新增同类月份并发回写保护回归。
+- 这次修的不是再补一个对称测试，而是修复主路径里的真实竞态：用户已切到新窗口/月窗，但旧请求后返回仍可能把页面回写成过期状态。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：当前窗口/月窗已经变化后，旧请求结果仍能回写，就会让 UI 数据重新退回过期事实源。
+- 这属于真实用户可见行为缺口，尤其在快速切换月份、时间窗口或 websocket 刷新叠加时会直接出现错位。
+- 这次把相同竞态规则集中收口到 timeline/calendar composable，而不是继续做低边际 view 对称补强。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/composables/useTimeline.test.ts src/composables/useCalendar.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `useDimensionNotes` 是否也需要同类并发回写保护，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 stale-request guard 收口相关文件。
+
+
 # calendar month-reactivity 收口
 
 ## 计划
