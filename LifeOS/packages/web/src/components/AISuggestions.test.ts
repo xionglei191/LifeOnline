@@ -7,9 +7,15 @@ const apiMocks = vi.hoisted(() => ({
   fetchAISuggestions: vi.fn(),
 }));
 
+const websocketMocks = vi.hoisted(() => ({
+  isIndexRefreshEvent: vi.fn(() => false),
+}));
+
 vi.mock('../api/client', () => ({
   fetchAISuggestions: apiMocks.fetchAISuggestions,
 }));
+
+vi.mock('../composables/useWebSocket', () => websocketMocks);
 
 import AISuggestions from './AISuggestions.vue';
 
@@ -42,7 +48,84 @@ async function triggerRefreshWhileLoading(wrapper: ReturnType<typeof mount>) {
 describe('AISuggestions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    websocketMocks.isIndexRefreshEvent.mockReset();
+    websocketMocks.isIndexRefreshEvent.mockReturnValue(false);
     apiMocks.fetchAISuggestions.mockResolvedValue([]);
+  });
+
+  it('reloads AI suggestions when note-created websocket events arrive', async () => {
+    apiMocks.fetchAISuggestions
+      .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-old', title: '旧洞察' })])
+      .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-new', title: '新建笔记后洞察' })]);
+
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('旧洞察');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchAISuggestions).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('新建笔记后洞察');
+    expect(wrapper.text()).not.toContain('旧洞察');
+
+    wrapper.unmount();
+  });
+
+  it('refreshes on note-worker and index websocket events', async () => {
+    apiMocks.fetchAISuggestions
+      .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-old', title: '旧洞察' })])
+      .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-worker', title: '任务回流洞察' })])
+      .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-index', title: '索引后洞察' })]);
+
+    websocketMocks.isIndexRefreshEvent.mockImplementation((wsEvent) => wsEvent.type === 'index-complete');
+
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: 'note-1.md',
+          task: {
+            id: 'worker-task-1',
+            taskType: 'extract_tasks',
+            worker: 'lifeos',
+            status: 'pending',
+            input: {},
+            result: null,
+            error: null,
+            createdAt: '2026-03-23T10:00:00.000Z',
+            updatedAt: '2026-03-23T10:00:00.000Z',
+            startedAt: null,
+            finishedAt: null,
+            sourceNoteId: 'note-1.md',
+            scheduleId: null,
+            outputNotePaths: [],
+            outputNotes: [],
+            resultSummary: null,
+          },
+        },
+      },
+    }));
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'index-complete' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchAISuggestions).toHaveBeenCalledTimes(3);
+    expect(wrapper.text()).toContain('索引后洞察');
+
+    wrapper.unmount();
   });
 
   it('auto-loads suggestions on mount so the dashboard shows insights immediately', async () => {

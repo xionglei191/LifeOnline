@@ -31,10 +31,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import type { AISuggestion } from '@lifeos/shared';
+import { onMounted, onUnmounted, ref } from 'vue';
+import type { AISuggestion, WsEvent } from '@lifeos/shared';
 import { fetchAISuggestions } from '../api/client';
 import { getDimensionLabel } from '../utils/dimensions';
+import { isIndexRefreshEvent } from '../composables/useWebSocket';
+
+function doesAISuggestionsNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted'
+    || wsEvent.type === 'note-worker-tasks-updated';
+}
 
 const suggestions = ref<AISuggestion[]>([]);
 const loading = ref(false);
@@ -69,8 +78,19 @@ async function handleRefresh() {
   }
 }
 
-onMounted(() => {
+function handleWsUpdate(event: Event) {
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  if (!doesAISuggestionsNeedRefresh(wsEvent)) return;
   void handleRefresh();
+}
+
+onMounted(() => {
+  document.addEventListener('ws-update', handleWsUpdate);
+  void handleRefresh();
+});
+
+onUnmounted(() => {
+  document.removeEventListener('ws-update', handleWsUpdate);
 });
 </script>
 
