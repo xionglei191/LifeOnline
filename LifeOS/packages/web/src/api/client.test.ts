@@ -463,6 +463,36 @@ describe('api client promotion projections', () => {
     });
   });
 
+  it('uses the shared clear-finished worker-task response shape', async () => {
+    const task: WorkerTask = {
+      id: 'worker-task-1',
+      taskType: 'openclaw_task',
+      sourceNoteId: 'note-1',
+      worker: 'openclaw',
+      status: 'pending',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+      result: null,
+      error: null,
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      startedAt: null,
+      completedAt: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ task }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, deleted: 2 }) }));
+
+    await expect(createWorkerTask({
+      taskType: 'openclaw_task',
+      input: { instruction: 'Collect daily notes', outputDimension: 'learning' },
+    })).resolves.toEqual(task);
+    await expect(clearFinishedWorkerTasks()).resolves.toBe(2);
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/worker-tasks/finished', {
+      method: 'DELETE',
+    });
+  });
+
   it('fetches typed persona snapshot contracts from shared response shapes', async () => {
     const snapshot: PersonaSnapshot = {
       id: 'persona:note-1',
