@@ -947,6 +947,12 @@ function handleWsUpdate(event: Event) {
     void loadCurrentNote(currentNoteId.value);
     return;
   }
+  if (wsEvent.type === 'note-deleted') {
+    if (wsEvent.data.noteId !== currentNoteId.value) return;
+    emit('deleted');
+    emit('close');
+    return;
+  }
   if (wsEvent.type === 'event-node-updated') {
     if (!doesProjectionArtifactAffectCurrentNote(
       wsEvent.data.eventNode.sourceNoteId,

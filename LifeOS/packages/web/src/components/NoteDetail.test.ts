@@ -1039,11 +1039,7 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
-  it('reloads note content when a note-updated websocket event arrives for the current note', async () => {
-    apiMocks.fetchNoteById
-      .mockResolvedValueOnce(createNote({ id: 'note-1.md', file_name: 'note-1.md', title: 'Test Note', content: 'old note body' }))
-      .mockResolvedValueOnce(createNote({ id: 'note-1.md', file_name: 'note-1.md', title: 'Test Note', content: 'fresh note body' }));
-
+  it('closes and emits deleted when a note-deleted websocket event arrives for the current note', async () => {
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
       global: {
@@ -1058,21 +1054,18 @@ describe('NoteDetail', () => {
     });
 
     await flushPromises();
-    expect(document.body.textContent).toContain('old note body');
+    expect(document.body.textContent).toContain('Test Note');
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
-        type: 'note-updated',
-        data: { noteId: 'note-1.md' },
+        type: 'note-deleted',
+        data: { noteId: 'note-1.md', filePath: '/vault/learning/note-1.md' },
       },
     }));
     await flushPromises();
 
-    expect(apiMocks.fetchNoteById).toHaveBeenCalledTimes(2);
-    expect(document.body.textContent).toContain('fresh note body');
-    expect(document.body.textContent).not.toContain('old note body');
-
-    wrapper.unmount();
+    expect(wrapper.emitted('deleted')).toHaveLength(1);
+    expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
   it('ignores stale note-detail responses after switching to a newer note', async () => {
