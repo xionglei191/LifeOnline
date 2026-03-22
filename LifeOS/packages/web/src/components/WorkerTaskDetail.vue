@@ -126,6 +126,7 @@ const message = ref('');
 const messageType = ref<'success' | 'error'>('success');
 const actionTaskId = ref<string | null>(null);
 const selectedNoteId = ref<string | null>(null);
+let activeTaskRequestId = 0;
 
 function shortId(value: string) {
   return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
@@ -144,16 +145,21 @@ function formatJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
 
-async function loadTask() {
-  if (!props.taskId) return;
+async function loadTask(taskId = props.taskId, requestId?: number) {
+  if (!taskId) return;
   loading.value = true;
   error.value = '';
   try {
-    task.value = await fetchWorkerTask(props.taskId);
+    const nextTask = await fetchWorkerTask(taskId);
+    if (requestId != null && (requestId !== activeTaskRequestId || props.taskId !== taskId)) return;
+    task.value = nextTask;
   } catch (e: any) {
+    if (requestId != null && (requestId !== activeTaskRequestId || props.taskId !== taskId)) return;
     error.value = e.message || '加载任务详情失败';
   } finally {
-    loading.value = false;
+    if (requestId == null || (requestId === activeTaskRequestId && props.taskId === taskId)) {
+      loading.value = false;
+    }
   }
 }
 
@@ -206,13 +212,15 @@ function handleWsUpdate(event: Event) {
 }
 
 watch(() => props.taskId, async (taskId) => {
+  const requestId = ++activeTaskRequestId;
   message.value = '';
   if (!taskId) {
     task.value = null;
     error.value = '';
+    loading.value = false;
     return;
   }
-  await loadTask();
+  await loadTask(taskId, requestId);
 }, { immediate: true });
 
 onMounted(() => {

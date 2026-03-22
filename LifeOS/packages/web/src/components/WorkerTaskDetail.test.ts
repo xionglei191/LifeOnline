@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { WorkerTask } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -40,6 +41,16 @@ function noteDetailStub() {
     props: ['noteId'],
     template: '<div class="note-detail-stub" :data-note-id="noteId"></div>',
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 describe('WorkerTaskDetail', () => {
@@ -321,8 +332,13 @@ describe('WorkerTaskDetail', () => {
     wrapper.unmount();
   });
 
-  it('emits close when clicking the overlay itself', async () => {
-    apiMocks.fetchWorkerTask.mockResolvedValue(createTask());
+  it('ignores stale worker-task responses after switching to a newer task', async () => {
+    const first = deferred<WorkerTask>();
+    const second = deferred<WorkerTask>();
+    apiMocks.fetchWorkerTask.mockReset();
+    apiMocks.fetchWorkerTask
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
 
     const wrapper = mount(WorkerTaskDetail, {
       props: { taskId: 'worker-task-1' },
@@ -335,13 +351,59 @@ describe('WorkerTaskDetail', () => {
       attachTo: document.body,
     });
 
-    await flushPromises();
-    const overlay = document.body.querySelector('.worker-task-overlay');
-    expect(overlay).toBeTruthy();
-    overlay!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await nextTick();
+    await wrapper.setProps({ taskId: 'worker-task-2' });
+    await nextTick();
+
+    second.resolve(createTask({ id: 'worker-task-2', resultSummary: 'new task summary' }));
     await flushPromises();
 
-    expect(wrapper.emitted('close')).toHaveLength(1);
+    expect(document.body.textContent).toContain('worker…sk-2');
+    expect(document.body.textContent).toContain('new task summary');
+
+    first.resolve(createTask({ id: 'worker-task-1', resultSummary: 'old task summary' }));
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('worker…sk-2');
+    expect(document.body.textContent).toContain('new task summary');
+    expect(document.body.textContent).not.toContain('old task summary');
+
+    wrapper.unmount();
+  });
+
+  it('ignores stale worker-task errors after switching to a newer task', async () => {
+    const first = deferred<WorkerTask>();
+    const second = deferred<WorkerTask>();
+    apiMocks.fetchWorkerTask.mockReset();
+    apiMocks.fetchWorkerTask
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await nextTick();
+    await wrapper.setProps({ taskId: 'worker-task-2' });
+    await nextTick();
+
+    second.resolve(createTask({ id: 'worker-task-2', resultSummary: 'fresh task summary' }));
+    await flushPromises();
+
+    first.reject(new Error('stale task failed'));
+    await first.promise.catch(() => undefined);
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('worker…sk-2');
+    expect(document.body.textContent).toContain('fresh task summary');
+    expect(document.body.textContent).not.toContain('stale task failed');
 
     wrapper.unmount();
   });
