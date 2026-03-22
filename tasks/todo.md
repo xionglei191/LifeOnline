@@ -1,3 +1,38 @@
+# search view stale-result + typed error delivery 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的主路径断裂 / contract-to-UI 缺口推进 search 页结果状态收口。
+- [x] 把 `SearchView.vue` 中“query 被清空后保留旧结果”的行为修正为及时清空结果与错误状态。
+- [x] 补最小 search 回归，锁定 typed search error 会真实显示，且 query 消失时不会残留旧结果。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/SearchView.vue`
+    - `performSearch()` 在 query 为空时会主动清空 `result` / `error` / `loading`，不再把上一轮搜索结果错误地留在页面上。
+    - 路由 query 监听和 mounted 初始化统一走空值安全分支，确保搜索词被移除时页面状态能回到干净基线。
+  - `LifeOS/packages/web/src/views/SearchView.test.ts`
+    - 新增 search 主路径错误投射回归，锁定 typed search error 会显示到页面。
+    - 新增 stale-result 回归，锁定 query 从有值变为空后旧 hero summary / 列表不会残留。
+- 这次修的不是再补一个同类测试，而是修复 search 主路径里一个真实的用户可见断裂：搜索词被清空后，页面仍继续展示上一次结果，造成事实源与 URL 不一致。
+
+## 本轮选择依据
+- 这是新的主路径断裂：当前 `SearchView` 只在 query 有值时更新状态，query 被清空时不会复位，导致 URL 已无查询参数但页面还保留旧搜索结果。
+- 同时 search client 已能透传 typed error，这里补的是视图层的真实交付与状态一致性，不是低边际对称补强。
+- 这条线也符合“事实源一致性问题”：route query 才是搜索页当前事实源，UI 不应继续显示过期结果。
+
+## 本轮验证
+- 待运行：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/SearchView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- search 页若后续继续沿同一主线推进，还可再检查 query 改变过快时是否需要显式取消旧请求，但这还未开始。
+
+## 下一步建议
+- 跑 focused search view 测试；若通过，提交本轮 focused commit，只包含 search 页 stale-result + typed error 收口。
+
+
 # dashboard schedule-health error-state delivery 收口
 
 ## 计划

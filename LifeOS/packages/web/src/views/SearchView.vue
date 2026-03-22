@@ -42,7 +42,12 @@ const error = ref<Error | null>(null);
 const selectedNoteId = ref<string | null>(null);
 
 async function performSearch(query: string) {
-  if (!query) return;
+  if (!query) {
+    result.value = null;
+    error.value = null;
+    loading.value = false;
+    return;
+  }
 
   loading.value = true;
   error.value = null;
@@ -68,16 +73,12 @@ async function handleDeleted() {
 }
 
 watch(() => route.query.q, (newQuery) => {
-  if (newQuery) {
-    performSearch(newQuery as string);
-  }
+  performSearch(typeof newQuery === 'string' ? newQuery : '');
 }, { immediate: true });
 
 onMounted(() => {
-  const query = route.query.q as string;
-  if (query) {
-    performSearch(query);
-  }
+  const query = route.query.q;
+  performSearch(typeof query === 'string' ? query : '');
 });
 </script>
 
