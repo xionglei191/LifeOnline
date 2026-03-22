@@ -1,3 +1,40 @@
+# dashboard schedule-health fact-source 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 dashboard 顶部 schedule health banner 收口。
+- [x] 让 `DashboardOverview.vue` 在 dashboard 刷新事件发生时同步刷新 `scheduleHealth`，避免首页主数据更新后 banner 仍停留在 mount 时旧状态。
+- [x] 补最小组件 focused 回归，锁定刷新事件和重叠请求下 schedule health 不会回写成过期状态。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/DashboardOverview.vue`
+    - 把 `scheduleHealth` 从 mount-only 一次性加载，收口为 `loadScheduleHealth()` 真实事实源。
+    - 在 today todos refresh 和 note deleted 导致的 dashboard reload 时，同步刷新 schedule health banner。
+    - 用递增 request id 保护 schedule health 请求，只允许最新刷新回写 banner 和错误态。
+  - `LifeOS/packages/web/src/components/DashboardOverview.test.ts`
+    - 新增 dashboard refresh 事件会同步刷新 schedule health 的回归。
+    - 新增旧 schedule health 请求晚返回不会覆盖当前 banner 的回归。
+    - 保留原有 dimension label / error state 回归。
+- 这次修的不是对称补强，而是修复 dashboard 首页内部出现“双事实源漂移”的真实问题：today todos / weekly highlights / dimension stats 已经刷新，但顶部 schedule banner 仍停在旧快照。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：dashboard 主数据会在 refresh / deleted 等主路径事件后更新，但 `scheduleHealth` 旧实现只在 mount 取一次。
+- 这属于直接可见的首页行为缺口，用户会在同一页同时看到“新主数据 + 旧 schedule banner”的错位状态。
+- 这条线是 dashboard 首页新的事实源收口，不是 grouped governance / SettingsView 一类低边际链路平移。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/DashboardOverview.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `TodayTodos` 里的 optimistic toggle / parent refresh 是否还存在新的 server/web contract-to-UI 投射缺口，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 dashboard schedule-health fact-source 收口相关文件。
+
+
 # stats trend stale-request guard 收口
 
 ## 计划

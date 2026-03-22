@@ -79,7 +79,7 @@
 
       <section class="mission-grid">
         <div class="mission-column">
-          <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" @refresh="load" />
+          <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" @refresh="handleRefresh" />
           <WeeklyHighlights :highlights="data.weeklyHighlights" @selectNote="selectedNoteId = $event" />
         </div>
 
@@ -110,6 +110,7 @@ const { data, loading, error, load } = useDashboard();
 const selectedNoteId = ref<string | null>(null);
 const scheduleHealth = ref<ScheduleHealth | null>(null);
 const scheduleHealthError = ref<Error | null>(null);
+let activeScheduleHealthRequestId = 0;
 
 const rankedStats = computed(() => {
   return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
@@ -144,22 +145,35 @@ const lowestDimensionLabel = computed(() => {
   return getDimensionLabel(lowest.dimension);
 });
 
+async function handleRefresh() {
+  await Promise.all([
+    load(),
+    loadScheduleHealth(),
+  ]);
+}
+
 async function handleDeleted() {
   selectedNoteId.value = null;
-  await load();
+  await handleRefresh();
+}
+
+async function loadScheduleHealth() {
+  const requestId = ++activeScheduleHealthRequestId;
+  scheduleHealthError.value = null;
+  try {
+    const health = await fetchScheduleHealth();
+    if (requestId !== activeScheduleHealthRequestId) return;
+    scheduleHealth.value = health;
+  } catch (e) {
+    if (requestId !== activeScheduleHealthRequestId) return;
+    scheduleHealth.value = null;
+    scheduleHealthError.value = e as Error;
+  }
 }
 
 onMounted(() => {
   load();
-  scheduleHealthError.value = null;
-  fetchScheduleHealth()
-    .then((health) => {
-      scheduleHealth.value = health;
-    })
-    .catch((e) => {
-      scheduleHealth.value = null;
-      scheduleHealthError.value = e as Error;
-    });
+  loadScheduleHealth();
 });
 </script>
 

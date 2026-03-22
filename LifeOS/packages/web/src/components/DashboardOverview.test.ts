@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { nextTick, ref } from 'vue';
 import type { DashboardData, ScheduleHealth } from '../api/client';
 
 const composableMocks = vi.hoisted(() => ({
@@ -38,7 +39,134 @@ const scheduleHealth: ScheduleHealth = {
   failingSchedules: [],
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('DashboardOverview', () => {
+  it('refreshes schedule health together with dashboard refresh events', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    apiMocks.fetchScheduleHealth
+      .mockResolvedValueOnce(scheduleHealth)
+      .mockResolvedValueOnce({
+        total: 2,
+        active: 1,
+        failing: 1,
+        failingSchedules: [{ id: 'sched-1', label: '周报同步' }],
+      });
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: {
+            props: ['todos'],
+            emits: ['selectNote', 'refresh'],
+            template: '<button class="today-todos-refresh" @click="$emit(\'refresh\')">refresh</button>',
+          },
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+    await wrapper.get('.today-todos-refresh').trigger('click');
+    await flushPromises();
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('1 个异常');
+    expect(wrapper.text()).toContain('周报同步');
+  });
+
+  it('ignores stale schedule health responses after a newer refresh succeeds', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    const initial = deferred<ScheduleHealth>();
+    const refresh = deferred<ScheduleHealth>();
+    apiMocks.fetchScheduleHealth
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(refresh.promise);
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: {
+            props: ['todos'],
+            emits: ['selectNote', 'refresh'],
+            template: '<button class="today-todos-refresh" @click="$emit(\'refresh\')">refresh</button>',
+          },
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await nextTick();
+    await wrapper.get('.today-todos-refresh').trigger('click');
+    await nextTick();
+
+    refresh.resolve({
+      total: 2,
+      active: 1,
+      failing: 1,
+      failingSchedules: [{ id: 'sched-1', label: '最新周报同步' }],
+    });
+    await refresh.promise;
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('最新周报同步');
+
+    initial.resolve({
+      total: 1,
+      active: 1,
+      failing: 0,
+      failingSchedules: [],
+    });
+    await initial.promise;
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('最新周报同步');
+    expect(wrapper.text()).not.toContain('0 个异常');
+  });
+
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
