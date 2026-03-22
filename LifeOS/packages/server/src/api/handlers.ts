@@ -307,11 +307,11 @@ export async function getPersonaSnapshotHandler(
 // GET /api/search?q=keyword
 export async function searchNotes(req: Request<Record<string, never>, ApiResponse<SearchResult>, Record<string, never>, { q?: string }>, res: Response<ApiResponse<SearchResult>>): Promise<void> {
   try {
-    const { q } = req.query;
-    if (!q) { res.status(400).json({ error: 'query parameter required' }); return; }
+    const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (!query) { res.status(400).json({ error: 'query parameter required' }); return; }
 
     const db = getDb();
-    const keyword = `%${q}%`;
+    const keyword = `%${query}%`;
     const notes = db.prepare(`
       SELECT * FROM notes
       WHERE file_name LIKE ?
@@ -324,9 +324,9 @@ export async function searchNotes(req: Request<Record<string, never>, ApiRespons
     const result: SearchResult = {
       notes,
       total: notes.length,
-      query: q,
+      query,
       filters: {
-        q,
+        q: query,
       },
     };
     res.json(result);

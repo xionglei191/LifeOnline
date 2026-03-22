@@ -67,6 +67,23 @@ describe('SearchView', () => {
     wrapper = null;
   });
 
+  it('renders the canonical trimmed search query from the shared response contract', async () => {
+    routeState.current!.query.q = ' growth ';
+    apiMocks.searchNotes.mockResolvedValue({
+      query: 'growth',
+      total: 1,
+      filters: { q: 'growth' },
+      notes: [{ id: 'note-growth' }],
+    });
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    expect(apiMocks.searchNotes).toHaveBeenCalledWith(' growth ');
+    expect(wrapper.text()).toContain('找到 1 条关于 “growth” 的结果。');
+    expect(wrapper.text()).not.toContain('找到 1 条关于 “ growth ” 的结果。');
+  });
+
   it('reloads the current query when index refresh events arrive', async () => {
     apiMocks.searchNotes
       .mockResolvedValueOnce({

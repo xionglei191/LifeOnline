@@ -1483,6 +1483,37 @@ test('AI suggestions API responds with shared list contract', async () => {
   }
 });
 
+test('search API trims query whitespace before returning shared search filters', async () => {
+  const env = await createTestEnv('lifeos-search-trimmed-query-contract-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=%20growth%20');
+    assert.equal(result.query, 'growth');
+    assert.deepEqual(result.filters, { q: 'growth' });
+    assert.ok(result.notes.length > 0);
+    assert.ok(result.notes.some((note) => note.dimension === 'growth'));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('search API matches dimension terms used by search view copy', async () => {
   const env = await createTestEnv('lifeos-search-dimension-contract-');
   const configFile = env.configPath;

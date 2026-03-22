@@ -7,6 +7,23 @@ describe('api client promotion projections', () => {
     vi.restoreAllMocks();
   });
 
+  it('normalizes search query whitespace at the API boundary', async () => {
+    const searchResult: SearchResult = {
+      query: 'growth',
+      total: 1,
+      filters: { q: 'growth' },
+      notes: [{ id: 'note-growth' } as SearchResult['notes'][number]],
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => searchResult,
+    }));
+
+    await expect(searchNotes(' growth ')).resolves.toEqual(searchResult);
+    expect(fetch).toHaveBeenCalledWith('/api/search?q=+growth+');
+  });
+
   it('fetches typed AI suggestion contracts from shared response shapes', async () => {
     const suggestions = [
       {
