@@ -18,7 +18,12 @@
         :style="{ '--priority-color': priorityColor(todo.priority || 'medium') }"
       >
         <label class="todo-check">
-          <input type="checkbox" :checked="todo.status === 'done'" @change="handleToggle(todo)" />
+          <input
+            type="checkbox"
+            :checked="todo.status === 'done'"
+            :disabled="syncingTodoIds.includes(todo.id)"
+            @change="handleToggle(todo)"
+          />
           <span class="checkmark"></span>
         </label>
 
@@ -40,12 +45,14 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
 import { getDimensionLabel } from '../utils/dimensions';
 
 defineProps<{ todos: Note[] }>();
 const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
+const syncingTodoIds = ref<string[]>([]);
 
 const priorities: Record<string, string> = {
   high: '高压',
@@ -74,12 +81,18 @@ const statusLabel = (status: string) => statuses[status] || status;
 const formatDue = (due: string) => due.slice(5);
 
 async function handleToggle(todo: Note) {
+  if (syncingTodoIds.value.includes(todo.id)) {
+    return;
+  }
   const newStatus = todo.status === 'done' ? 'pending' : 'done';
+  syncingTodoIds.value = [...syncingTodoIds.value, todo.id];
   try {
     await updateNote(todo.id, { status: newStatus });
     emit('refresh');
   } catch (e) {
     console.error('Toggle failed:', e);
+  } finally {
+    syncingTodoIds.value = syncingTodoIds.value.filter((id) => id !== todo.id);
   }
 }
 </script>

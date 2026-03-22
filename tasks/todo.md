@@ -1,3 +1,39 @@
+# today-todos toggle dedupe 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI 投射缺口推进 TodayTodos 切换交互收口。
+- [x] 让 `TodayTodos.vue` 在同一 todo 的状态更新尚未完成时阻止重复 toggle，避免前端连续点击触发重复写入和重复 refresh。
+- [x] 补最小组件 focused 回归，锁定同一 todo 请求进行中时 checkbox 会禁用且不会重复调用 `updateNote`。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/TodayTodos.vue`
+    - 为同一 todo 引入 `syncingTodoIds`，在请求进行中禁用对应 checkbox，并阻止重复 toggle。
+    - 修复用户快速连续点击同一任务时，前端会并发发出多次 `updateNote`、触发多次 dashboard refresh，导致局部交互状态与真实后端事实源错位的主路径风险。
+  - `LifeOS/packages/web/src/components/TodayTodos.test.ts`
+    - 新增同一 todo 请求未完成时不会重复调用 `updateNote` 的回归。
+    - 断言请求进行中 checkbox 会禁用，请求结束后恢复，并且只触发一次 `refresh`。
+    - 保留原有 dimension label 投射回归。
+- 这次修的不是再补一个对称测试，而是修复 dashboard 今日任务主路径里的真实 contract-to-UI 缺口：UI 允许同一操作被短时间重复发出，造成重复写入与重复刷新噪音。
+
+## 本轮选择依据
+- 这是新的 contract-to-UI 投射缺口：前端 checkbox 没有把“同一 todo 正在同步”这个真实状态投射到交互层，导致用户可以连续触发重复写请求。
+- 这属于直接可见的主路径行为缺口，而且 TodayTodos 位于 dashboard 首页核心操作区，用户最容易在这里连续点击。
+- 这条线不是低边际对称补强，而是降低真实重复写入与重复 refresh 风险的交互收口。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/TodayTodos.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `TodayTodos` / `NoteList` / `NoteDetail` 之间是否还存在状态标签文案或禁用态投射不一致的问题，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 today-todos toggle dedupe 收口相关文件。
+
+
 # dashboard schedule-health fact-source 收口
 
 ## 计划

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { Note } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -41,7 +42,47 @@ function createTodo(overrides: Partial<Note> = {}): Note {
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('TodayTodos', () => {
+  it('prevents duplicate toggles while the same todo is still syncing', async () => {
+    const pendingUpdate = deferred<void>();
+    apiMocks.updateNote.mockReturnValueOnce(pendingUpdate.promise);
+
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [createTodo()],
+      },
+    });
+
+    const checkbox = wrapper.get('input[type="checkbox"]');
+    checkbox.element.dispatchEvent(new Event('change', { bubbles: true }));
+    await nextTick();
+
+    expect(apiMocks.updateNote).toHaveBeenCalledTimes(1);
+    expect((checkbox.element as HTMLInputElement).disabled).toBe(true);
+
+    checkbox.element.dispatchEvent(new Event('change', { bubbles: true }));
+    await nextTick();
+
+    expect(apiMocks.updateNote).toHaveBeenCalledTimes(1);
+
+    pendingUpdate.resolve();
+    await pendingUpdate.promise;
+    await flushPromises();
+
+    expect((checkbox.element as HTMLInputElement).disabled).toBe(false);
+    expect(wrapper.emitted('refresh')).toHaveLength(1);
+  });
+
   it('renders dimension labels from the shared dimension helper', () => {
     const wrapper = mount(TodayTodos, {
       props: {
