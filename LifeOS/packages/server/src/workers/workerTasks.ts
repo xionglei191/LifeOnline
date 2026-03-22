@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
 import matter from 'gray-matter';
@@ -28,6 +27,7 @@ import { getIndexQueue, broadcastUpdate } from '../index.js';
 import { runOpenClawTask } from '../integrations/openclawClient.js';
 import { classifyNote } from '../ai/classifier.js';
 import { extractTasks } from '../ai/taskExtractor.js';
+import { buildNoteId } from '../indexer/parser.js';
 import { callClaude } from '../ai/aiClient.js';
 import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
@@ -145,10 +145,6 @@ function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerT
     throwWorkerTaskValidationError(`Unsupported task type: ${taskType}`);
   }
   return definition;
-}
-
-function buildNoteId(filePath: string): string {
-  return crypto.createHash('md5').update(filePath).digest('hex');
 }
 
 function buildOutputNote(filePath: string): WorkerTaskOutputNote {

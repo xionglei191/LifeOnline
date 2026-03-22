@@ -4,6 +4,13 @@ import { parseLocalDate } from '../utils/date';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { Note, Dimension, WsEvent } from '@lifeos/shared';
 
+export function doesDimensionNotesNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
+}
+
 interface Filters {
   types: string[];
   statuses: string[];
@@ -122,7 +129,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
 
   function handleWsUpdate(event: Event) {
     const wsEvent = (event as CustomEvent<WsEvent>).detail;
-    if (isIndexRefreshEvent(wsEvent)) load();
+    if (doesDimensionNotesNeedRefresh(wsEvent)) load();
   }
 
   onMounted(() => {

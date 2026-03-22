@@ -23,6 +23,7 @@ import { getPersonaSnapshotBySourceNoteId } from '../soul/personaSnapshots.js';
 import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse, PersonaSnapshotResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
+import { buildNoteId } from '../indexer/parser.js';
 
 export async function getDashboard(_req: Request<Record<string, never>, ApiResponse<DashboardData>>, res: Response<ApiResponse<DashboardData>>): Promise<void> {
   try {
@@ -958,6 +959,7 @@ export async function updateNote(req: Request<{ id: string }, ApiResponse<Update
 
     await updateFrontmatter(note.file_path, updates);
 
+    broadcastUpdate({ type: 'note-updated', data: { noteId: id } });
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
   } catch (error) {
@@ -982,6 +984,7 @@ export async function appendNote(req: Request, res: Response): Promise<void> {
       `${content.trimEnd()}\n\n---\n\n**备注** (${timestamp})\n\n${text}\n`
     ));
 
+    broadcastUpdate({ type: 'note-updated', data: { noteId: id } });
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
   } catch (error) {
@@ -1000,6 +1003,10 @@ export async function deleteNote(req: Request, res: Response): Promise<void> {
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
 
     await deleteFile(note.file_path);
+    broadcastUpdate({
+      type: 'note-deleted',
+      data: { noteId: id, filePath: note.file_path },
+    });
     res.json({ success: true });
   } catch (error: any) {
     if (error?.code === 'ENOENT') {
@@ -1038,6 +1045,10 @@ export async function createNote(req: Request<Record<string, never>, ApiResponse
     const fileContent = matter.stringify(`\n# ${title}\n\n${content || ''}`, frontmatter);
     await createFile(filePath, fileContent);
 
+    broadcastUpdate({
+      type: 'note-created',
+      data: { filePath },
+    });
     getIndexQueue()?.enqueue(filePath, 'upsert');
     res.json({ success: true, filePath });
   } catch (error) {

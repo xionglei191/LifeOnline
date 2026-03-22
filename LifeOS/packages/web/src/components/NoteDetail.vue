@@ -528,6 +528,31 @@ function dimensionColor(dimension: string) {
   return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
 }
 
+async function loadCurrentNote(noteId: string, requestId?: number) {
+  const nextNote = await fetchNoteById(noteId) as any;
+  if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) {
+    return null;
+  }
+
+  note.value = nextNote;
+  decryptedContent.value = null;
+
+  if (note.value?.encrypted && note.value.content) {
+    try {
+      const key = getEncryptionKey();
+      const decrypted = await decryptContent(note.value.content, key);
+      if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) {
+        return note.value;
+      }
+      decryptedContent.value = decrypted;
+    } catch (e) {
+      console.error('Auto-decrypt failed:', e);
+    }
+  }
+
+  return note.value;
+}
+
 async function loadRelatedWorkerTasks(sourceNoteId: string, requestId?: number) {
   try {
     const tasks = await fetchWorkerTasks(5, {
@@ -667,9 +692,8 @@ watch(currentNoteId, async (id) => {
   decryptedContent.value = null;
   showDeleteConfirm.value = false;
   try {
-    const nextNote = await fetchNoteById(id) as any;
-    if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
-    note.value = nextNote;
+    const loadedNote = await loadCurrentNote(id, requestId);
+    if (!loadedNote || requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
     workerInstruction.value = '';
     await Promise.all([
       loadRelatedWorkerTasks(id, requestId),
@@ -678,18 +702,6 @@ watch(currentNoteId, async (id) => {
     ]);
 
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
-
-    // Auto-decrypt if encrypted
-    if (note.value?.encrypted && note.value.content) {
-      try {
-        const key = getEncryptionKey();
-        const decrypted = await decryptContent(note.value.content, key);
-        if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
-        decryptedContent.value = decrypted;
-      } catch (e) {
-        console.error('Auto-decrypt failed:', e);
-      }
-    }
   } catch (e) {
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
     error.value = e as Error;
@@ -928,6 +940,11 @@ function handleWsUpdate(event: Event) {
     if (wsEvent.data.task.taskType === 'update_persona_snapshot') {
       void loadPersonaSnapshot(currentNoteId.value);
     }
+    return;
+  }
+  if (wsEvent.type === 'note-updated') {
+    if (wsEvent.data.noteId !== currentNoteId.value) return;
+    void loadCurrentNote(currentNoteId.value);
     return;
   }
   if (wsEvent.type === 'event-node-updated') {

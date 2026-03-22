@@ -177,6 +177,59 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('0 个异常');
   });
 
+  it('reloads schedule health when note-created websocket updates arrive', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    apiMocks.fetchScheduleHealth
+      .mockResolvedValueOnce(scheduleHealth)
+      .mockResolvedValueOnce({
+        total: 2,
+        active: 1,
+        failing: 1,
+        failingSchedules: [{ id: 'sched-1', label: '新建笔记后周报同步' }],
+      });
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('新建笔记后周报同步');
+  });
+
   it('reloads schedule health when schedule websocket updates arrive without reloading dashboard data', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     composableMocks.useDashboard.mockReturnValue({

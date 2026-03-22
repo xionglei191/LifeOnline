@@ -5,7 +5,10 @@ import type { DashboardData, WsEvent } from '@lifeos/shared';
 
 export function doesDashboardNeedRefresh(wsEvent: WsEvent) {
   return isIndexRefreshEvent(wsEvent)
-    || wsEvent.type === 'note-worker-tasks-updated';
+    || wsEvent.type === 'note-worker-tasks-updated'
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
 }
 
 export function useDashboard() {

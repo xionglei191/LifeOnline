@@ -80,10 +80,17 @@ async function handleDeleted() {
   }
 }
 
+function doesSearchNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
+}
+
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
   const query = route.query.q;
-  if (!isIndexRefreshEvent(wsEvent) || typeof query !== 'string' || !query) {
+  if (!doesSearchNeedRefresh(wsEvent) || typeof query !== 'string' || !query) {
     return;
   }
   void performSearch(query);

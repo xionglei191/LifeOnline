@@ -8,15 +8,17 @@ const apiMocks = vi.hoisted(() => ({
   fetchNotes: vi.fn(),
 }));
 
+const websocketMocks = vi.hoisted(() => ({
+  isIndexRefreshEvent: vi.fn(() => false),
+}));
+
 vi.mock('../api/client', () => ({
   fetchNotes: apiMocks.fetchNotes,
 }));
 
-vi.mock('./useWebSocket', () => ({
-  isIndexRefreshEvent: vi.fn(() => true),
-}));
+vi.mock('./useWebSocket', () => websocketMocks);
 
-import { useDimensionNotes } from './useDimensionNotes';
+import { useDimensionNotes, doesDimensionNotesNeedRefresh } from './useDimensionNotes';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -73,6 +75,20 @@ function mountUseDimensionNotes(initialDimension: Dimension = 'life') {
 describe('useDimensionNotes', () => {
   beforeEach(() => {
     apiMocks.fetchNotes.mockReset();
+    websocketMocks.isIndexRefreshEvent.mockReset();
+    websocketMocks.isIndexRefreshEvent.mockReturnValue(false);
+  });
+
+  it('refreshes on note-created and note-deleted websocket events for main dimension lists', () => {
+    expect(doesDimensionNotesNeedRefresh({
+      type: 'note-created',
+      data: { filePath: '/vault/生活/2026-03-23-new-note.md' },
+    })).toBe(true);
+
+    expect(doesDimensionNotesNeedRefresh({
+      type: 'note-deleted',
+      data: { noteId: 'note-1.md', filePath: '/vault/生活/2026-03-23-old-note.md' },
+    })).toBe(true);
   });
 
   it('keeps the latest dimension notes when an older request resolves afterwards', async () => {
@@ -201,6 +217,7 @@ describe('useDimensionNotes', () => {
   });
 
   it('reloads notes when websocket index refresh events arrive', async () => {
+    websocketMocks.isIndexRefreshEvent.mockReturnValue(true);
     apiMocks.fetchNotes
       .mockResolvedValueOnce([createNote('note-life-1', 'life')])
       .mockResolvedValueOnce([{ ...createNote('note-life-2', 'life'), status: 'done' }]);

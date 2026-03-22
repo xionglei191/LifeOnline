@@ -6,6 +6,10 @@ import crypto from 'crypto';
 import { getDimensionKeyForDirectory } from '../utils/dimensions.js';
 import { formatLocalDate } from '../utils/date.js';
 
+export function buildNoteId(filePath: string): string {
+  return crypto.createHash('md5').update(filePath).digest('hex');
+}
+
 export interface ParseResult {
   success: boolean;
   data?: {
@@ -55,7 +59,7 @@ export async function parseMarkdownFile(filePath: string): Promise<ParseResult> 
     if (!data.date) data.date = fileDate;
     if (!data.created) data.created = now;
 
-    const id = crypto.createHash('md5').update(filePath).digest('hex');
+    const id = buildNoteId(filePath);
 
     return {
       success: true,

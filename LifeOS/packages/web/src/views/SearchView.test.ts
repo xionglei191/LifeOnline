@@ -101,6 +101,37 @@ describe('SearchView', () => {
     expect(wrapper.find('.note-list-stub').text()).toBe('1');
   });
 
+  it('reloads the current query when note-created websocket events arrive', async () => {
+    apiMocks.searchNotes
+      .mockResolvedValueOnce({
+        query: 'growth',
+        total: 1,
+        filters: { q: 'growth' },
+        notes: [{ id: 'note-growth' }],
+      })
+      .mockResolvedValueOnce({
+        query: 'growth',
+        total: 2,
+        filters: { q: 'growth' },
+        notes: [{ id: 'note-growth' }, { id: 'note-new' }],
+      });
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.searchNotes).toHaveBeenNthCalledWith(1, 'growth');
+    expect(apiMocks.searchNotes).toHaveBeenNthCalledWith(2, 'growth');
+    expect(wrapper.text()).toContain('找到 2 条关于 “growth” 的结果。');
+  });
+
   it('reloads the current query when index refresh events arrive', async () => {
     apiMocks.searchNotes
       .mockResolvedValueOnce({

@@ -605,6 +605,19 @@ export interface NoteWorkerTasksUpdatedEventData {
   task: WorkerTask;
 }
 
+export interface NoteUpdatedEventData {
+  noteId: string;
+}
+
+export interface NoteCreatedEventData {
+  filePath: string;
+}
+
+export interface NoteDeletedEventData {
+  noteId: string;
+  filePath: string;
+}
+
 export interface EventNodeUpdatedEventData {
   eventNode: EventNode;
 }
@@ -620,6 +633,9 @@ export type WsEvent =
   | { type: 'index-error'; data: IndexErrorEventData }
   | { type: 'worker-task-updated'; data: WorkerTask }
   | { type: 'note-worker-tasks-updated'; data: NoteWorkerTasksUpdatedEventData }
+  | { type: 'note-updated'; data: NoteUpdatedEventData }
+  | { type: 'note-created'; data: NoteCreatedEventData }
+  | { type: 'note-deleted'; data: NoteDeletedEventData }
   | { type: 'soul-action-updated'; data: SoulAction }
   | { type: 'reintegration-record-updated'; data: ReintegrationRecord }
   | { type: 'event-node-updated'; data: EventNodeUpdatedEventData }

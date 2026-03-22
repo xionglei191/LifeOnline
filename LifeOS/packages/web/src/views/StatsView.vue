@@ -308,9 +308,16 @@ async function loadAllCharts() {
   }
 }
 
+function doesStatsNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
+}
+
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
-  if (!isIndexRefreshEvent(wsEvent)) return;
+  if (!doesStatsNeedRefresh(wsEvent)) return;
   void loadAllCharts();
 }
 

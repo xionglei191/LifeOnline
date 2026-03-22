@@ -1039,6 +1039,42 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('reloads note content when a note-updated websocket event arrives for the current note', async () => {
+    apiMocks.fetchNoteById
+      .mockResolvedValueOnce(createNote({ id: 'note-1.md', file_name: 'note-1.md', title: 'Test Note', content: 'old note body' }))
+      .mockResolvedValueOnce(createNote({ id: 'note-1.md', file_name: 'note-1.md', title: 'Test Note', content: 'fresh note body' }));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    expect(document.body.textContent).toContain('old note body');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-updated',
+        data: { noteId: 'note-1.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchNoteById).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('fresh note body');
+    expect(document.body.textContent).not.toContain('old note body');
+
+    wrapper.unmount();
+  });
+
   it('ignores stale note-detail responses after switching to a newer note', async () => {
     const first = deferred<Note>();
     const second = deferred<Note>();

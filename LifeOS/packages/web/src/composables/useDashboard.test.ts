@@ -76,6 +76,18 @@ describe('useDashboard', () => {
     })).toBe(true);
   });
 
+  it('refreshes on note-created and note-deleted websocket events for dashboard-visible note changes', () => {
+    expect(doesDashboardNeedRefresh({
+      type: 'note-created',
+      data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+    })).toBe(true);
+
+    expect(doesDashboardNeedRefresh({
+      type: 'note-deleted',
+      data: { noteId: 'note-1.md', filePath: '/vault/成长/2026-03-23-note-old.md' },
+    })).toBe(true);
+  });
+
   it('keeps the latest dashboard data when an older reload resolves afterwards', async () => {
     const first = deferred<DashboardData>();
     const second = deferred<DashboardData>();

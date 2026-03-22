@@ -84,6 +84,76 @@ describe('StatsView', () => {
     });
   });
 
+  it('reloads all stats panels when note-created websocket events arrive', async () => {
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
+      .mockResolvedValueOnce([{ day: '2026-03-02', total: 4, done: 3 }]);
+    apiMocks.fetchStatsRadar
+      .mockResolvedValueOnce([{ dimension: 'life', rate: 80 }])
+      .mockResolvedValueOnce([{ dimension: 'growth', rate: 65 }]);
+    apiMocks.fetchStatsMonthly
+      .mockResolvedValueOnce([{ month: '2026-03', total: 8, done: 5 }])
+      .mockResolvedValueOnce([{ month: '2026-04', total: 10, done: 7 }]);
+    apiMocks.fetchStatsTags
+      .mockResolvedValueOnce([{ tag: 'focus', count: 3 }])
+      .mockResolvedValueOnce([{ tag: 'health', count: 5 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchStatsTrend).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsRadar).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsMonthly).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsTags).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+  });
+
+  it('reloads all stats panels when index refresh events arrive', async () => {
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
+      .mockResolvedValueOnce([{ day: '2026-03-02', total: 4, done: 3 }]);
+    apiMocks.fetchStatsRadar
+      .mockResolvedValueOnce([{ dimension: 'life', rate: 80 }])
+      .mockResolvedValueOnce([{ dimension: 'growth', rate: 65 }]);
+    apiMocks.fetchStatsMonthly
+      .mockResolvedValueOnce([{ month: '2026-03', total: 8, done: 5 }])
+      .mockResolvedValueOnce([{ month: '2026-04', total: 10, done: 7 }]);
+    apiMocks.fetchStatsTags
+      .mockResolvedValueOnce([{ tag: 'focus', count: 3 }])
+      .mockResolvedValueOnce([{ tag: 'health', count: 5 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchStatsTrend).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsRadar).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsMonthly).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsTags).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+  });
+
   it('reloads all stats panels when index refresh events arrive', async () => {
     apiMocks.fetchStatsTrend
       .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
