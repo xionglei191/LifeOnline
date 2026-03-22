@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useTimeline } from '../composables/useTimeline';
 import TimelineTrack from '../components/TimelineTrack.vue';
 import NoteDetail from '../components/NoteDetail.vue';
@@ -79,6 +79,11 @@ const now = new Date();
 const startDate = ref(formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1)));
 const endDate = ref(formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)));
 const selectedNoteId = ref<string | null>(null);
+
+watch([startDate, endDate], ([start, end], [prevStart, prevEnd]) => {
+  if (start === prevStart && end === prevEnd) return;
+  load(start, end);
+}, { immediate: true });
 
 const spanDays = computed(() => {
   if (!data.value) return 0;
@@ -118,10 +123,6 @@ async function handleDeleted() {
   selectedNoteId.value = null;
   await load(startDate.value, endDate.value);
 }
-
-onMounted(() => {
-  loadData();
-});
 </script>
 
 <style scoped>

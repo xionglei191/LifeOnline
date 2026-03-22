@@ -1,3 +1,37 @@
+# timeline window-reactivity 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 timeline 窗口响应性收口。
+- [x] 把 `TimelineView.vue` 从“首次挂载时加载一次”改为随起止日期输入变化自动同步时间窗口数据。
+- [x] 补最小 view 回归，锁定窗口变化后会重新请求新范围，而不是继续停留在初始时间窗。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/TimelineView.vue`
+    - 用 `watch([startDate, endDate], ..., { immediate: true })` 取代仅在 mounted 时加载一次，让时间窗口的真实事实源回到当前输入值。
+    - 保留手动“刷新轨道”按钮，但输入值变化时也会立即同步到 timeline 数据，不再出现控件显示已变、轨道仍停在旧窗口的分叉。
+  - `LifeOS/packages/web/src/views/TimelineView.test.ts`
+    - 新增窗口响应性回归，锁定起止日期变化后会按新窗口重新请求 timeline 数据。
+- 这次修的不是再补一个同类测试，而是修复 timeline 主路径里的事实源一致性缺口：时间窗口输入已经变化，但页面数据仍停留在首次加载结果。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：`startDate` / `endDate` 输入才是 TimelineView 当前窗口事实源，但旧实现只有 mounted 和按钮点击才触发加载，导致输入框状态与数据面板可能脱节。
+- 这会直接影响 timeline 主路径判断，属于明确的用户可见行为缺口。
+- 这条线与 search / dimension 的 route-state 修复一致，都是把当前 UI 状态真正绑定回数据加载事实源。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/TimelineView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 calendar 月份切换是否也存在只靠手动入口触发加载的问题，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 timeline window-reactivity 收口相关文件。
+
+
 # dimension route-reactivity + typed error delivery 收口
 
 ## 计划

@@ -55,4 +55,35 @@ describe('TimelineView', () => {
 
     vi.useRealTimers();
   });
+
+  it('reloads the timeline when the window changes instead of pinning the initial mount state', async () => {
+    const load = vi.fn();
+    composableMocks.useTimeline.mockReturnValue({
+      data: ref(timelineData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+
+    const wrapper = mount(TimelineView, {
+      global: {
+        stubs: {
+          TimelineTrack: true,
+          NoteDetail: true,
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const dateInputs = wrapper.findAll('input[type="date"]');
+    await dateInputs[0].setValue('2026-03-05');
+    await dateInputs[1].setValue('2026-03-20');
+    await flushPromises();
+
+    expect(load).toHaveBeenNthCalledWith(1, '2026-03-01', '2026-03-31');
+    expect(load).toHaveBeenNthCalledWith(2, '2026-03-05', '2026-03-31');
+    expect(load).toHaveBeenNthCalledWith(3, '2026-03-05', '2026-03-20');
+  });
 });
