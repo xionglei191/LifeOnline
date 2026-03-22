@@ -1,12 +1,11 @@
 import { createOrReuseSoulAction } from './soulActions.js';
 import { type ReintegrationRecord } from './reintegrationRecords.js';
-import { assertAcceptedPromotionReintegration, getPromotionActionKindsForReintegration } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, getPromotionActionKindsForReintegration, getPromotionSourceForReintegration } from './pr6PromotionRules.js';
 
 export function planPromotionSoulActions(record: ReintegrationRecord) {
   assertAcceptedPromotionReintegration(record);
 
-  const sourceNoteId = record.sourceNoteId ?? record.id;
-  const sourceReintegrationId = record.id;
+  const { sourceNoteId, sourceReintegrationId } = getPromotionSourceForReintegration(record);
   const planned = [] as ReturnType<typeof createOrReuseSoulAction>[];
 
   for (const actionKind of getPromotionActionKindsForReintegration(record)) {

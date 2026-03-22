@@ -31,6 +31,16 @@ export function assertAcceptedPromotionReintegration(record: ReintegrationRecord
   }
 }
 
+export function getPromotionSourceForReintegration(record: ReintegrationRecord): {
+  sourceNoteId: string;
+  sourceReintegrationId: string;
+} {
+  return {
+    sourceNoteId: record.sourceNoteId ?? record.id,
+    sourceReintegrationId: record.id,
+  };
+}
+
 export function getPromotionActionKindsForReintegration(record: ReintegrationRecord): SoulActionKind[] {
   assertAcceptedPromotionReintegration(record);
   return [...(PR6_SIGNAL_ACTION_MATRIX[record.signalKind] ?? [])];

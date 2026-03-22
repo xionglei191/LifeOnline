@@ -21,7 +21,7 @@ import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions }
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
-import { getPromotionActionKindsForReintegration } from '../src/soul/pr6PromotionRules.js';
+import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -53,6 +53,32 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('getPromotionSourceForReintegration falls back to reintegration id when source note is missing', () => {
+  const source = getPromotionSourceForReintegration({
+    id: 'reint:promotion-source',
+    workerTaskId: 'worker-task-promotion-source',
+    sourceNoteId: null,
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'promotion source helper test',
+    evidence: { source: 'feedbackReintegration.test.ts' },
+    reviewReason: 'accepted',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:00:00.000Z',
+    reviewedAt: '2026-03-22T10:00:00.000Z',
+  });
+
+  assert.deepEqual(source, {
+    sourceNoteId: 'reint:promotion-source',
+    sourceReintegrationId: 'reint:promotion-source',
+  });
+});
 
 test('normalizeSoulActionSourceFilters collapses legacy reintegration note filters into sourceReintegrationId', () => {
   const normalized = normalizeSoulActionSourceFilters(

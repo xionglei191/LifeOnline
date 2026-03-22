@@ -1,3 +1,35 @@
+# PR6 promotion source helper 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的事实源一致性问题主线推进。
+- [x] 复核 PR6 promotion planner，确认 `record.sourceNoteId ?? record.id` / `record.id` 这组 source identity 规则仍以内联形式散落在 planner 中。
+- [x] 把 promotion source identity 提升为 `pr6PromotionRules.ts` 单点 helper，并补测试锁定 sourceNote fallback 语义。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/soul/pr6PromotionRules.ts`
+    - 新增 `getPromotionSourceForReintegration()`，集中 PR6 promotion 的 source note / reintegration identity 规则。
+  - `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts`
+    - 改为复用 `getPromotionSourceForReintegration()`，移除 planner 内联 fallback 规则。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 新增 helper 回归，锁定 `sourceNoteId` 缺失时必须回退到 reintegration id 的语义。
+- 这次修的不是再补一条同类 contract 测试，而是把 PR6 promotion planner 自己的 source identity fallback 从内联逻辑收回到 rules 单点，减少 planner / executor / legacy identity 未来再次分叉的风险。
+
+## 本轮选择依据
+- 用户优先级允许在 contract gap 之后继续处理新的事实源一致性问题。
+- source filter 收口后，下一条仍明显重复的规则是 PR6 promotion planner 对 `sourceNoteId ?? record.id` 的 fallback，它本质上也是 source identity 规则，应该与 PR6 rules 放在同一事实源层。
+- 这条线可以继续减少 PR6 promotion source 语义在 planner 与其它模块之间的分叉。
+
+## 本轮验证
+- 待执行。
+
+## 当前未完成项
+- 跑定向验证。
+- 若验证通过，直接提交本轮 PR6 promotion source helper 收口。
+
+
 # soul action source identity 单一事实源收口
 
 ## 计划
