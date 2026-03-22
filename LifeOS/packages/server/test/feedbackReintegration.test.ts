@@ -419,6 +419,23 @@ test('createReintegrationRecordInput keeps persona evidence nullable when absent
   assert.equal(recordInput.evidence.personaContentPreview, null);
 });
 
+test('createReintegrationRecordInput allows callers to drop stale persona evidence from another worker task', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-record-input-extract',
+    sourceNoteId: 'note-record-input',
+    resultSummary: '已提取行动项',
+  });
+
+  const recordInput = createReintegrationRecordInput(task, {
+    personaSnapshot: null,
+  });
+
+  assert.equal(recordInput.signalKind, 'task_extraction_reintegration');
+  assert.equal(recordInput.evidence.personaSnapshotId, null);
+  assert.equal(recordInput.evidence.personaSnapshotSummary, null);
+  assert.equal(recordInput.evidence.personaContentPreview, null);
+});
+
 async function waitFor(condition: () => boolean | Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -1834,6 +1851,173 @@ test('executeWorkerTask hits reintegration wiring on extract_tasks success path'
   const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
   assert.ok(reintegrationRecord);
   assert.equal(reintegrationRecord?.signalKind, 'task_extraction_reintegration');
+});
+
+test('executeWorkerTask keeps reintegration persona evidence scoped to the worker task that produced the snapshot', async (t) => {
+  const env = await createTestEnv('lifeos-reintegration-persona-scope-');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+  let fetchCalls = 0;
+
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    if (fetchCalls === 1) {
+      return new Response(JSON.stringify({
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            summary: '更稳定地围绕长期主义推进。',
+            contentPreview: '长期主义、节奏感、系统化推进',
+          }),
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      content: [{
+        type: 'text',
+        text: JSON.stringify({ tasks: [] }),
+      }],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  t.after(async () => {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-reintegration-persona-scope', '/tmp/note-reintegration-persona-scope.md', 'note-reintegration-persona-scope.md', 'Persona 作用域测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我最近更强调长期主义与稳定节奏。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const personaTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-reintegration-persona-scope' },
+    sourceNoteId: 'note-reintegration-persona-scope',
+  });
+  const personaResult = await executeWorkerTask(personaTask.id);
+  assert.equal(personaResult.status, 'succeeded');
+
+  const personaSnapshot = getPersonaSnapshotBySourceNoteId('note-reintegration-persona-scope');
+  const personaRecord = getReintegrationRecordByWorkerTaskId(personaTask.id);
+  assert.ok(personaSnapshot);
+  assert.ok(personaRecord);
+  assert.equal(personaRecord?.evidence.personaSnapshotId, personaSnapshot?.id);
+  assert.equal(personaRecord?.evidence.personaSnapshotSummary, personaSnapshot?.summary);
+
+  const extractTask = createWorkerTask({
+    taskType: 'extract_tasks',
+    input: { noteId: 'note-reintegration-persona-scope' },
+    sourceNoteId: 'note-reintegration-persona-scope',
+  });
+  const extractResult = await executeWorkerTask(extractTask.id);
+  assert.equal(extractResult.status, 'succeeded');
+
+  const extractRecord = getReintegrationRecordByWorkerTaskId(extractTask.id);
+  assert.ok(extractRecord);
+  assert.equal(extractRecord?.signalKind, 'task_extraction_reintegration');
+  assert.equal(extractRecord?.evidence.personaSnapshotId, null);
+  assert.equal(extractRecord?.evidence.personaSnapshotSummary, null);
+  assert.equal(extractRecord?.evidence.personaContentPreview, null);
+});
+
+test('executeWorkerTask does not reuse older persona snapshot evidence for later non-persona tasks on the same note', async (t) => {
+  const env = await createTestEnv('lifeos-reintegration-persona-followup-scope-');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+  let fetchCalls = 0;
+
+  process.env.ANTHROPIC_API_KEY = 'test-key';
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    if (fetchCalls === 1) {
+      return new Response(JSON.stringify({
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            summary: '先建立稳定节奏。',
+            contentPreview: '稳定节奏、长期推进',
+          }),
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      content: [{
+        type: 'text',
+        text: JSON.stringify({ tasks: [] }),
+      }],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  t.after(async () => {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-reintegration-persona-followup', '/tmp/note-reintegration-persona-followup.md', 'note-reintegration-persona-followup.md', 'Persona 后续作用域测试笔记', 'note', 'growth', 'done', 'medium', 'private', '2026-03-20', NULL, '[]', 'auto', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z', '我想保持稳定节奏。', '2026-03-20T09:00:00.000Z', '2026-03-20T09:00:00.000Z'
+    )
+  `).run();
+
+  const personaTask = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-reintegration-persona-followup' },
+    sourceNoteId: 'note-reintegration-persona-followup',
+  });
+  const personaResult = await executeWorkerTask(personaTask.id);
+  assert.equal(personaResult.status, 'succeeded');
+
+  const currentSnapshot = getPersonaSnapshotBySourceNoteId('note-reintegration-persona-followup');
+  assert.ok(currentSnapshot);
+  assert.equal(currentSnapshot?.workerTaskId, personaTask.id);
+
+  const followupTask = createWorkerTask({
+    taskType: 'extract_tasks',
+    input: { noteId: 'note-reintegration-persona-followup' },
+    sourceNoteId: 'note-reintegration-persona-followup',
+  });
+  const followupResult = await executeWorkerTask(followupTask.id);
+  assert.equal(followupResult.status, 'succeeded');
+
+  const followupRecord = getReintegrationRecordByWorkerTaskId(followupTask.id);
+  assert.ok(followupRecord);
+  assert.equal(followupRecord?.signalKind, 'task_extraction_reintegration');
+  assert.equal(followupRecord?.evidence.personaSnapshotId, null);
+  assert.equal(followupRecord?.evidence.personaSnapshotSummary, null);
+  assert.equal(followupRecord?.evidence.personaContentPreview, null);
 });
 
 test('executeWorkerTask hits reintegration wiring on supported success path', async (t) => {

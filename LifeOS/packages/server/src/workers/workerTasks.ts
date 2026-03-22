@@ -233,9 +233,16 @@ function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
 
 function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
   try {
+    const personaSnapshot = task.sourceNoteId
+      ? getPersonaSnapshotBySourceNoteId(task.sourceNoteId)
+      : null;
+    const personaSnapshotForTask = personaSnapshot?.workerTaskId === task.id
+      ? personaSnapshot
+      : null;
+
     const reintegrationInput = createReintegrationRecordInput(task, {
       soulActionId: getSoulActionByWorkerTaskId(task.id)?.id ?? null,
-      personaSnapshot: task.sourceNoteId ? getPersonaSnapshotBySourceNoteId(task.sourceNoteId) : null,
+      personaSnapshot: personaSnapshotForTask,
     });
 
     upsertReintegrationRecord(reintegrationInput);

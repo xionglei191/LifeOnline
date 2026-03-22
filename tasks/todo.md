@@ -1,3 +1,40 @@
+# reintegration persona evidence fact-source 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 reintegration persona evidence 收口。
+- [x] 阻止非当前 worker task 产出的旧 persona snapshot 被误挂到新的 reintegration record 上。
+- [x] 补 focused server 回归，锁定 persona task 自身仍保留 snapshot evidence，但同 note 的后续非 persona task 不会继承旧快照事实。
+- [x] 运行 focused server 验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/workers/workerTasks.ts`
+    - 收紧 `tryBestEffortReintegrateTerminalTask()`：只有 `personaSnapshot.workerTaskId === task.id` 时，才把 snapshot evidence 注入当前 reintegration record。
+    - 修复“同一 note 上已有旧 persona snapshot 时，后续 `extract_tasks` / `summarize_note` 等任务也会把旧快照错挂到自己证据里”的事实源污染。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 新增 `createReintegrationRecordInput` 级回归，锁定调用方可显式丢弃来自其他 worker task 的旧 persona evidence。
+    - 新增执行链回归，锁定：
+      - `update_persona_snapshot` 自己产出的 reintegration record 仍保留对应 snapshot evidence；
+      - 同 note 后续的非 persona task 不会继承旧 snapshot evidence。
+- 这次修的不是再补一个对称测试，而是修复 reintegration review 读取证据时可能看到“并非当前 task 产出的 persona snapshot”这一真实事实源错挂。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：`tryBestEffortReintegrateTerminalTask()` 之前只按 `sourceNoteId` 取最新 persona snapshot，没有校验该快照是否属于当前 worker task。
+- 这会直接污染 reintegration record 的 evidence，影响后续 review / promotion 对任务结果来源的判断。
+- 相比继续补 grouped governance / SettingsView 对称链路，这条线更贴近当前主线里的真实后端事实源风险。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/server" && pnpm exec node --import tsx --test --test-name-pattern "createReintegrationRecordInput allows callers to drop stale persona evidence from another worker task|executeWorkerTask keeps reintegration persona evidence scoped to the worker task that produced the snapshot|executeWorkerTask does not reuse older persona snapshot evidence for later non-persona tasks on the same note" test/feedbackReintegration.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 还未继续审查是否存在其他 reintegration evidence 字段也在复用“同 note 最新状态”而非“当前 task 产出状态”的类似污染点。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 reintegration persona evidence fact-source 收口相关文件。
+
+
 # note-worker-tasks websocket contract 收口
 
 ## 计划
