@@ -175,7 +175,32 @@
               </div>
               <div class="projection-note-meta" v-if="noteProjectionSourceReintegrationIds.length">
                 <span class="meta-pill">Sources {{ noteProjectionSourceReintegrationIds.length }}</span>
+                <span class="meta-pill" v-if="relevantNoteSoulActions.length">Actions {{ relevantNoteSoulActions.length }}</span>
               </div>
+            </div>
+            <div v-if="relevantNoteSoulActions.length" class="projection-action-summary">
+              <span class="meta-pill">待治理 {{ notePendingSoulActions.length }}</span>
+              <span class="meta-pill">待派发 {{ noteApprovedSoulActions.length }}</span>
+              <span class="meta-pill">已执行 {{ noteDispatchedSoulActions.length }}</span>
+            </div>
+            <div v-if="relevantNoteSoulActions.length" class="projection-action-list">
+              <article v-for="action in relevantNoteSoulActions" :key="action.id" class="projection-action-item">
+                <div class="projection-action-top">
+                  <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
+                  <span class="prompt-status">{{ soulActionStatusText(action) }}</span>
+                </div>
+                <div class="projection-action-meta">
+                  <span>治理 {{ action.governanceStatus }}</span>
+                  <span>执行 {{ action.executionStatus }}</span>
+                  <span v-if="action.sourceReintegrationId">Reintegration {{ action.sourceReintegrationId }}</span>
+                  <span>创建于 {{ formatProjectionTime(action.createdAt) }}</span>
+                </div>
+                <div v-if="action.governanceReason || action.resultSummary || action.error" class="projection-action-detail-grid">
+                  <div v-if="action.governanceReason" class="reintegration-review-reason">治理理由：{{ action.governanceReason }}</div>
+                  <div v-if="action.resultSummary" class="reintegration-review-reason">执行摘要：{{ action.resultSummary }}</div>
+                  <div v-if="action.error" class="reintegration-review-reason soul-action-error">执行错误：{{ action.error }}</div>
+                </div>
+              </article>
             </div>
             <PromotionProjectionPanel
               :event-nodes="noteEventNodes"
@@ -291,8 +316,8 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodes, fetchContinuityRecords } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord } from '@lifeos/shared';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodes, fetchContinuityRecords, fetchSoulActions } from '../api/client';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
@@ -324,6 +349,7 @@ const personaSnapshot = ref<PersonaSnapshot | null>(null);
 const eventNodes = ref<EventNode[]>([]);
 const continuityRecords = ref<ContinuityRecord[]>([]);
 const projectionSourceRecords = ref<Array<{ id: string; sourceNoteId: string | null; reviewStatus: string }>>([]);
+const noteSoulActions = ref<SoulAction[]>([]);
 const projectionLoading = ref(false);
 const projectionMessage = ref('');
 const projectionMessageType = ref<'success' | 'error'>('success');
@@ -397,13 +423,16 @@ const noteProjectionSourceReintegrationIds = computed(() => {
   const acceptedIds = projectionSourceRecords.value
     .filter((record) => record.sourceNoteId === sourceNoteId && record.reviewStatus === 'accepted')
     .map((record) => record.id);
+  const actionIds = noteSoulActions.value
+    .map((action) => action.sourceReintegrationId)
+    .filter((value): value is string => Boolean(value));
   const eventNodeIds = eventNodes.value
     .filter((eventNode) => eventNode.sourceNoteId === sourceNoteId)
     .map((eventNode) => eventNode.sourceReintegrationId);
   const continuityIds = continuityRecords.value
     .filter((continuity) => continuity.sourceNoteId === sourceNoteId)
     .map((continuity) => continuity.sourceReintegrationId);
-  return [...new Set([...acceptedIds, ...eventNodeIds, ...continuityIds])];
+  return [...new Set([...acceptedIds, ...actionIds, ...eventNodeIds, ...continuityIds])];
 });
 
 const noteEventNodes = computed(() => {
@@ -416,16 +445,56 @@ const noteContinuityRecords = computed(() => {
   return continuityRecords.value.filter((continuity) => continuity.sourceNoteId === currentNoteId.value);
 });
 
+const relevantNoteSoulActions = computed(() => {
+  if (!currentNoteId.value) return [];
+  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
+  return noteSoulActions.value.filter((action) => {
+    if (action.sourceNoteId !== currentNoteId.value) return false;
+    return !action.sourceReintegrationId || sourceIds.has(action.sourceReintegrationId);
+  });
+});
+
+const notePendingSoulActions = computed(() => {
+  return relevantNoteSoulActions.value.filter((action) => action.governanceStatus === 'pending_review');
+});
+
+const noteApprovedSoulActions = computed(() => {
+  return relevantNoteSoulActions.value.filter((action) => action.governanceStatus === 'approved');
+});
+
+const noteDispatchedSoulActions = computed(() => {
+  return relevantNoteSoulActions.value.filter((action) => action.executionStatus === 'succeeded');
+});
+
 const hasPromotionProjectionSection = computed(() => {
   return projectionLoading.value
     || noteEventNodes.value.length > 0
     || noteContinuityRecords.value.length > 0
+    || relevantNoteSoulActions.value.length > 0
     || noteProjectionSourceReintegrationIds.value.length > 0
     || Boolean(projectionMessage.value);
 });
 
 function formatProjectionTime(ts: string) {
   return new Date(ts).toLocaleString('zh-CN');
+}
+
+function promotionActionLabel(actionKind: SoulAction['actionKind']) {
+  if (actionKind === 'create_event_node') return '创建 Event Node';
+  if (actionKind === 'promote_event_node') return '提升 Event Node';
+  if (actionKind === 'promote_continuity_record') return '提升 Continuity Record';
+  return actionKind;
+}
+
+function soulActionStatusText(action: SoulAction) {
+  if (action.executionStatus === 'succeeded') return '已执行';
+  if (action.executionStatus === 'running') return '执行中';
+  if (action.executionStatus === 'failed') return '执行失败';
+  if (action.executionStatus === 'cancelled') return '已取消';
+  if (action.governanceStatus === 'approved') return '待派发';
+  if (action.governanceStatus === 'deferred') return '已延后';
+  if (action.governanceStatus === 'discarded') return '已丢弃';
+  return '待治理';
 }
 
 function dimensionColor(dimension: string) {
@@ -461,19 +530,26 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
   projectionLoading.value = true;
   projectionMessage.value = '';
   try {
-    const reintegrationRecords = await fetchReintegrationRecords({ sourceNoteId });
+    const [reintegrationRecords, soulActions] = await Promise.all([
+      fetchReintegrationRecords({ sourceNoteId }),
+      fetchSoulActions({ sourceNoteId }),
+    ]);
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     projectionSourceRecords.value = reintegrationRecords.filter((record) => record.sourceNoteId === sourceNoteId);
-    const sourceReintegrationIds = projectionSourceRecords.value.map((record) => record.id);
-    if (!sourceReintegrationIds.length) {
+    noteSoulActions.value = soulActions.filter((action) => action.sourceNoteId === sourceNoteId);
+    const sourceReintegrationIds = [...new Set(noteSoulActions.value
+      .map((action) => action.sourceReintegrationId)
+      .filter((value): value is string => Boolean(value)))];
+    const scopedSourceIds = [...new Set([...projectionSourceRecords.value.map((record) => record.id), ...sourceReintegrationIds])];
+    if (!scopedSourceIds.length) {
       eventNodes.value = [];
       continuityRecords.value = [];
       return;
     }
 
     const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodes(sourceReintegrationIds),
-      fetchContinuityRecords(sourceReintegrationIds),
+      fetchEventNodes(scopedSourceIds),
+      fetchContinuityRecords(scopedSourceIds),
     ]);
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
 
@@ -500,6 +576,7 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
   } catch (e: any) {
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     projectionSourceRecords.value = [];
+    noteSoulActions.value = [];
     eventNodes.value = [];
     continuityRecords.value = [];
     projectionMessage.value = e.message || '加载 promotion projections 失败';
@@ -534,6 +611,7 @@ watch(currentNoteId, async (id) => {
     relatedWorkerTasks.value = [];
     personaSnapshot.value = null;
     projectionSourceRecords.value = [];
+    noteSoulActions.value = [];
     eventNodes.value = [];
     continuityRecords.value = [];
     projectionLoading.value = false;
@@ -1138,6 +1216,48 @@ function showMsg(msg: string, type: 'success' | 'error') {
 .projection-note-meta {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.projection-action-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.projection-action-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.projection-action-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-muted) 88%, transparent);
+  display: grid;
+  gap: 8px;
+}
+
+.projection-action-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.projection-action-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.projection-action-detail-grid {
+  display: grid;
   gap: 8px;
 }
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
-import type { Note, WorkerTask, ApprovalStatus, ReintegrationRecord, EventNode, ContinuityRecord } from '@lifeos/shared';
+import type { Note, WorkerTask, ApprovalStatus, ReintegrationRecord, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNoteById: vi.fn(),
@@ -9,6 +9,7 @@ const apiMocks = vi.hoisted(() => ({
   fetchReintegrationRecords: vi.fn(),
   fetchEventNodes: vi.fn(),
   fetchContinuityRecords: vi.fn(),
+  fetchSoulActions: vi.fn(),
   extractTasks: vi.fn(),
   updateNote: vi.fn(),
   appendNote: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('../api/client', () => ({
   fetchReintegrationRecords: apiMocks.fetchReintegrationRecords,
   fetchEventNodes: apiMocks.fetchEventNodes,
   fetchContinuityRecords: apiMocks.fetchContinuityRecords,
+  fetchSoulActions: apiMocks.fetchSoulActions,
   extractTasks: apiMocks.extractTasks,
   updateNote: apiMocks.updateNote,
   appendNote: apiMocks.appendNote,
@@ -163,6 +165,29 @@ function createContinuityRecord(overrides: Partial<ContinuityRecord> = {}): Cont
   };
 }
 
+function createSoulAction(overrides: Partial<SoulAction> = {}): SoulAction {
+  return {
+    id: overrides.id ?? 'soul-action-1',
+    sourceNoteId: overrides.sourceNoteId ?? 'note-1.md',
+    sourceReintegrationId: overrides.sourceReintegrationId ?? 'record-1',
+    actionKind: overrides.actionKind ?? 'promote_event_node',
+    governanceStatus: overrides.governanceStatus ?? 'pending_review',
+    executionStatus: overrides.executionStatus ?? 'not_dispatched',
+    status: overrides.status ?? (overrides.executionStatus ?? 'not_dispatched'),
+    governanceReason: overrides.governanceReason ?? null,
+    workerTaskId: overrides.workerTaskId ?? null,
+    createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
+    approvedAt: overrides.approvedAt ?? null,
+    deferredAt: overrides.deferredAt ?? null,
+    discardedAt: overrides.discardedAt ?? null,
+    startedAt: overrides.startedAt ?? null,
+    finishedAt: overrides.finishedAt ?? null,
+    error: overrides.error ?? null,
+    resultSummary: overrides.resultSummary ?? null,
+  };
+}
+
 function clickButtonByText(text: string) {
   const button = Array.from(document.body.querySelectorAll('button')).find((element) => element.textContent?.trim() === text);
   expect(button).toBeTruthy();
@@ -200,6 +225,7 @@ describe('NoteDetail', () => {
     apiMocks.fetchReintegrationRecords.mockResolvedValue([]);
     apiMocks.fetchEventNodes.mockResolvedValue([]);
     apiMocks.fetchContinuityRecords.mockResolvedValue([]);
+    apiMocks.fetchSoulActions.mockResolvedValue([]);
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
     apiMocks.retryWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'pending' }));
     apiMocks.cancelWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'cancelled' }));
@@ -416,6 +442,10 @@ describe('NoteDetail', () => {
       createContinuityRecord({ id: 'continuity-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', summary: 'ready continuity' }),
       createContinuityRecord({ id: 'continuity-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', summary: 'external continuity' }),
     ]);
+    apiMocks.fetchSoulActions.mockResolvedValue([
+      createSoulAction({ id: 'action-ready', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+      createSoulAction({ id: 'action-other', sourceNoteId: 'note-2.md', sourceReintegrationId: 'record-other', actionKind: 'promote_continuity_record', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+    ]);
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -433,9 +463,13 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
     expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledWith(['record-ready']);
     expect(document.body.textContent).toContain('Promotion Projection');
+    expect(document.body.textContent).toContain('Actions 1');
+    expect(document.body.textContent).toContain('待派发 1');
+    expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('Ready event node');
     expect(document.body.textContent).toContain('ready continuity');
     expect(document.body.textContent).not.toContain('External event node');
@@ -449,6 +483,9 @@ describe('NoteDetail', () => {
       .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
       .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
       .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })]);
+    apiMocks.fetchSoulActions
+      .mockResolvedValueOnce([createSoulAction({ id: 'action-old', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' })])
+      .mockResolvedValueOnce([createSoulAction({ id: 'action-new', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' })]);
     apiMocks.fetchEventNodes
       .mockResolvedValueOnce([createEventNode({ id: 'event-old', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Old event node' })])
       .mockResolvedValueOnce([createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' })]);
@@ -471,6 +508,7 @@ describe('NoteDetail', () => {
 
     await flushPromises();
     expect(document.body.textContent).toContain('Old event node');
+    expect(document.body.textContent).toContain('待治理 1');
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
@@ -483,9 +521,48 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(2);
     expect(apiMocks.fetchEventNodes).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).toContain('New event node');
+    expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).not.toContain('Old event node');
+
+    wrapper.unmount();
+  });
+
+  it('surfaces pending and approved promotion soul actions on the current note path', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchSoulActions.mockResolvedValueOnce([
+      createSoulAction({ id: 'action-pending', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched', governanceReason: 'need manual review' }),
+      createSoulAction({ id: 'action-approved', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_continuity_record', governanceStatus: 'approved', executionStatus: 'not_dispatched', resultSummary: 'approved for dispatch' }),
+    ]);
+    apiMocks.fetchEventNodes.mockResolvedValueOnce([]);
+    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Actions 2');
+    expect(document.body.textContent).toContain('待治理 1');
+    expect(document.body.textContent).toContain('待派发 1');
+    expect(document.body.textContent).toContain('提升 Event Node');
+    expect(document.body.textContent).toContain('提升 Continuity Record');
+    expect(document.body.textContent).toContain('治理理由：need manual review');
+    expect(document.body.textContent).toContain('执行摘要：approved for dispatch');
 
     wrapper.unmount();
   });
