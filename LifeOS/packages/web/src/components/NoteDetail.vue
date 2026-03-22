@@ -60,7 +60,7 @@
           <header class="note-hero">
             <div class="hero-copy">
               <p class="hero-kicker">Record Detail</p>
-              <h2>{{ note.file_name.replace('.md', '') }}</h2>
+              <h2>{{ note.title || note.file_name.replace('.md', '') }}</h2>
               <div class="hero-meta">
                 <span class="meta-pill dimension">{{ getDimensionLabel(note.dimension) }}</span>
                 <span class="meta-pill">{{ typeLabels[note.type] || note.type }}</span>
@@ -297,7 +297,7 @@
         <div class="confirm-card">
           <h3>删除笔记</h3>
           <p>将删除 Vault 中的真实 Markdown 文件，删除后该笔记会从看板中消失。</p>
-          <p class="confirm-note">当前笔记：{{ note.file_name.replace('.md', '') }}</p>
+          <p class="confirm-note">当前笔记：{{ note.title || note.file_name.replace('.md', '') }}</p>
           <div class="confirm-actions">
             <button class="btn-cancel" @click="showDeleteConfirm = false" :disabled="deleting">取消</button>
             <button class="btn-confirm-danger" @click="handleDelete" :disabled="deleting">

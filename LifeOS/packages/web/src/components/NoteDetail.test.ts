@@ -235,6 +235,36 @@ describe('NoteDetail', () => {
     document.body.innerHTML = '';
   });
 
+  it('prefers shared note titles on the main detail and delete-confirm paths', async () => {
+    apiMocks.fetchNoteById.mockResolvedValue(createNote({ title: 'Shared detail title', file_name: 'fallback-detail-name.md' }));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Shared detail title');
+    expect(document.body.textContent).not.toContain('fallback-detail-name');
+
+    clickButtonByText('删除笔记');
+    await nextTick();
+
+    expect(document.body.textContent).toContain('当前笔记：Shared detail title');
+    expect(document.body.textContent).not.toContain('当前笔记：fallback-detail-name');
+
+    wrapper.unmount();
+  });
+
   it('uses neutral related-task copy for LifeOS and OpenClaw note tasks', async () => {
     apiMocks.fetchWorkerTasks.mockResolvedValue([
       createTask({ id: 'worker-task-lifeos', taskType: 'update_persona_snapshot', worker: 'lifeos', status: 'pending' }),
