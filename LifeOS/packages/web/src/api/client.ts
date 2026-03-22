@@ -491,26 +491,28 @@ export async function updateNote(id: string, updates: UpdateNoteRequest): Promis
   return data as UpdateNoteResponse;
 }
 
-export async function appendNote(id: string, text: string): Promise<void> {
+export async function appendNote(id: string, text: string): Promise<{ success: true }> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}/append`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
+  const data = await res.json().catch(() => ({} as { success?: true; error?: string }));
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to append note');
   }
+  return { success: true };
 }
 
-export async function deleteNote(id: string): Promise<void> {
+export async function deleteNote(id: string): Promise<{ success: true }> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+  const data = await res.json().catch(() => ({} as { success?: true; error?: string }));
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to delete note');
   }
+  return { success: true };
 }
 
 export async function createNote(data: CreateNoteRequest): Promise<CreateNoteResponse> {
