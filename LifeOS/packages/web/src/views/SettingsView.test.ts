@@ -2853,6 +2853,30 @@ describe('SettingsView soul action governance wiring', () => {
     wrapper.unmount();
   });
 
+  it('shows neutral related-task error copy when creating an OpenClaw worker task fails', async () => {
+    const createWorkerTaskMock = vi.mocked(client.createWorkerTask);
+
+    createWorkerTaskMock.mockRejectedValueOnce(new Error(''));
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    const instructionInput = wrapper.findAll('textarea').find((textarea) => textarea.attributes('placeholder') === '输入自然语言指令，例如：搜索最近一周 AI Agent 领域的重要进展并整理');
+    expect(instructionInput).toBeTruthy();
+    await instructionInput!.setValue('search latest progress');
+    await flushPromises();
+
+    const createButton = wrapper.findAll('button').find((button) => button.text().includes('执行任务'));
+    expect(createButton).toBeTruthy();
+    await createButton!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('关联任务创建失败');
+    expect(wrapper.text()).not.toContain('外部任务执行失败');
+
+    wrapper.unmount();
+  });
+
   it('includes persona snapshot in the worker task filter and blocks schedule creation without note context', async () => {
     const createTaskScheduleMock = vi.mocked((await import('../api/client')).createTaskSchedule);
 

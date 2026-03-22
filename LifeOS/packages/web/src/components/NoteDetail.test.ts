@@ -425,6 +425,37 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('shows neutral related-task error copy when creating an OpenClaw task fails', async () => {
+    apiMocks.createWorkerTask.mockRejectedValueOnce(new Error(''));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    const instructionInput = document.body.querySelector('textarea[placeholder="输入自然语言指令，例如：搜索相关领域最新进展"]') as HTMLTextAreaElement | null;
+    expect(instructionInput).toBeTruthy();
+    instructionInput!.value = 'search latest progress';
+    instructionInput!.dispatchEvent(new Event('input'));
+    await flushPromises();
+    clickButtonByText('执行 OpenClaw 任务');
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('关联任务创建失败');
+    expect(document.body.textContent).not.toContain('外部任务创建失败');
+
+    wrapper.unmount();
+  });
+
   it('renders localized worker-task metadata after extracting tasks', async () => {
     apiMocks.extractTasks.mockResolvedValue(createTask({ taskType: 'extract_tasks', worker: 'lifeos', status: 'succeeded' }));
 

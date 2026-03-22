@@ -1,3 +1,36 @@
+# worker-task error copy cross-view 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI 投射缺口继续收口 worker-task 错误文案。
+- [x] 修复 SettingsView 仍把 OpenClaw / LifeOS 混合任务失败写成“外部任务执行失败”的残留表达。
+- [x] 继续补 focused web 回归，锁定 SettingsView 与 NoteDetail 一致使用中性 related-task 错误文案。
+- [x] 运行 focused web 验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍保留：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 把 OpenClaw 创建失败兜底提示从“外部任务创建失败”改为“关联任务创建失败”，与当前列表/面板文案保持一致。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增错误态回归，锁定失败提示不再退回 external-task 旧文案。
+  - `LifeOS/packages/web/src/views/SettingsView.vue`
+    - 把设置页 OpenClaw worker 创建失败兜底提示从“外部任务执行失败”改为“关联任务创建失败”。
+    - 修复 SettingsView 与 NoteDetail 在同一 worker contract 上的错误态文案漂移。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts`
+    - 新增 focused 回归，锁定设置页失败提示也不再暴露“外部任务执行失败”。
+- 这次修的不是重复重命名，而是继续收口新的 contract-to-UI 投射缺口：同一套 worker task 事实在 NoteDetail 已改成 related-task 语义后，SettingsView 的失败提示仍残留 external-only 心智模型。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts src/views/SettingsView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 还未继续检查 server/web 其他入口是否仍残留同类 external-task 错误文案，但本轮未扩散到 grouped governance / retention 链路。
+
+## 下一步建议
+- 若验证通过，提交包含 `NoteDetail` / `SettingsView` worker-task error copy 收口的 focused commit。
+
+
 # note-detail worker-task wording 收口
 
 ## 计划
@@ -3710,3 +3743,39 @@
   - 本轮 server 变更仍未提交 git commit。
 - 下一步建议再补充：
   - 下一轮优先检查 `plan/list/API/web label` 这条新事实源链上，是否还能在用户可见层误把 reintegration id 当作 source note 展示；若没有新的真实 gap，就直接提交这一轮 schema + migration 根因修复，不再回去深挖 grouped governance 的同类补强。
+
+# note-detail related-task error copy 收口
+
+## 计划
+- [x] 先判断当前工作树里已有的 NoteDetail 文案改动是否就是上一轮未收口的同类推进，避免重复开新线。
+- [x] 收掉 NoteDetail 创建 OpenClaw 任务失败时仍残留的“外部任务创建失败”旧文案，使失败提示与已完成的 related-task 命名统一。
+- [x] 补 focused web 回归，锁定错误提示使用“关联任务创建失败”，不再回退到“外部任务创建失败”。
+- [x] 运行 focused web 验证。
+
+## 当前执行
+- 已先检查仓库状态：当前未提交改动只涉及 `CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/components/NoteDetail.vue`、`LifeOS/packages/web/src/components/NoteDetail.test.ts`；其中 `CLAUDE.md` 与 `config.json` 属并行脏文件，本轮未碰。
+- 进一步核对后确认：这不是新的大范围推进，而是上一轮 NoteDetail related-task wording 收口里遗漏的一处错误提示文案，属于同一条主线的自然收尾，继续本轮有意义。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 将 `handleCreateOpenClawTask()` 失败时的兜底提示从 `外部任务创建失败` 改为 `关联任务创建失败`。
+    - 让创建入口的错误反馈与当前面板已使用的 `Worker Task / Recent Related Tasks / 关联任务` 语义保持一致。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增回归：当 OpenClaw 任务创建失败且后端未返回有效错误消息时，页面显示 `关联任务创建失败`，并明确断言不再出现 `外部任务创建失败`。
+- 这次修的不是表面换词，而是把 NoteDetail 同一任务面板里的成功/列表/空态/失败四条用户可见反馈统一到同一个 related-task 心智模型，避免用户在同一屏里看到混杂语义。
+
+## 本轮选择依据
+- 当前工作树里已经存在与 NoteDetail related-task wording 同主线的未提交改动，继续把最后一处失败文案收干净，比另起新缺口更合理。
+- 这是直接用户可见的主路径收尾：如果失败提示仍写“外部任务创建失败”，会和已改成“关联任务”的列表/标题/空态形成新的 UI 语义裂缝。
+- 相比继续扩散检查其他页面，这一笔更像高性价比的未完工收口，而不是重复劳动。
+
+## 本轮验证
+- 已通过：`NODE_OPTIONS="--max-old-space-size=4096" pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/web" exec vitest run --pool vmThreads src/components/NoteDetail.test.ts`
+
+## 当前未完成项
+- 本轮 NoteDetail 改动仍未提交 git commit。
+- 仓库里仍有并行脏文件：`CLAUDE.md`、`LifeOS/packages/server/config.json`；当前不适合直接整仓提交。
+- 还未继续系统排查其他页面/提示里是否仍残留 `external task / 外部任务` 旧措辞。
+
+## 下一步建议
+- 先将 `NoteDetail.vue` 与 `NoteDetail.test.ts` 这组 focused 改动单独提交，避免继续和并行脏文件混在一起。
+- 提交后若继续推进，优先全局排查仍把 LifeOS / OpenClaw 混合任务写成 `external task / 外部任务` 的其他直接用户可见入口，但只在发现真实残留时再动手，不做无意义对称清扫。

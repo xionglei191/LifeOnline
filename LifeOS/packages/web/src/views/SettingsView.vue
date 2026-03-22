@@ -1772,7 +1772,7 @@ async function handleCreateWorkerTask() {
     workerMessageType.value = 'success';
     await loadWorkerTasks();
   } catch (e: any) {
-    workerMessage.value = e.message || '外部任务执行失败';
+    workerMessage.value = e.message || '关联任务创建失败';
     workerMessageType.value = 'error';
   } finally {
     workerSubmitting.value = false;
