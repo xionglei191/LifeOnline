@@ -96,6 +96,24 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
   });
 
+  it('normalizes reintegration ids before projection fetch query serialization', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ eventNodes: [], filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ continuityRecords: [], filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] } }),
+      }));
+
+    await expect(fetchEventNodes([' reint:test ', '', 'reint:test', 'reint:second '])).resolves.toEqual([]);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/event-nodes?sourceReintegrationIds=reint%3Atest%2Creint%3Asecond');
+
+    await expect(fetchContinuityRecords(['', ' reint:test ', 'reint:test', 'reint:second '])).resolves.toEqual([]);
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/continuity-records?sourceReintegrationIds=reint%3Atest%2Creint%3Asecond');
+  });
+
   it('normalizes legacy reintegration note filters to sourceReintegrationId for soul-action fetches', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,

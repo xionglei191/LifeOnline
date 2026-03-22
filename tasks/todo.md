@@ -1,13 +1,13 @@
-# 当前轮：notes query contract 补面
+# 当前轮：projection query contract 补面
 
 ## 进展
-- [x] 识别 `fetchNotes` 仍直接把可选 filters 丢给 `URLSearchParams`，会把 `undefined` 漏进 `/api/notes?...` 查询串，形成不必要的 client-to-server contract 噪音。
-- [x] 改为只序列化实际存在的 `dimension/status/type`，让 notes 列表请求与 server handler 的可选过滤语义保持一致。
-- [x] 补 focused 回归，锁定未传过滤项时不会生成 `undefined` 查询参数。
+- [x] 识别 `fetchEventNodes` / `fetchContinuityRecords` 仍直接 `join(',')` 序列化 reintegration ids，重复值和空白值会被原样带进 query string，与 server 端 `trim + filter(Boolean)` 的实际过滤语义不完全对齐。
+- [x] 改为在 web client 侧先做 `trim`、去空、去重，再拼接 projection 查询参数，避免把噪音 id 继续漏进 server/web contract 边界。
+- [x] 补 focused 回归，锁定 projection query 只发送规范化后的 reintegration ids。
 - [x] 跑 focused web 验证并确认通过：`pnpm --dir /home/xionglei/LifeOnline/LifeOS --filter web test -- src/api/client.test.ts`
 
 ## 结果
-- `fetchNotes` 现在只会把真实存在的 filters 编进 query string，避免 `/api/notes?status=undefined` 这类伪参数继续向 server 漏出。
-- web client boundary test 已锁住有过滤和无过滤两条路径的 query shape，可继续扫描新的 response metadata / fact-source 缺口。
+- `fetchEventNodes` 与 `fetchContinuityRecords` 现在会先规范化 reintegration ids，再生成 query string，避免重复值、空白值把 projection 请求形状污染到 server 边界。
+- web client boundary test 已锁住 event / continuity 两条 projection query 的规范化行为，可继续扫描下一处 response metadata gap。
 
 ---

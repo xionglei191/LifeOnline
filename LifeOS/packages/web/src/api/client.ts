@@ -6,6 +6,14 @@ const API_BASE = '/api';
 
 type ApiErrorLike = Partial<ApiErrorResponse>;
 
+function normalizeSourceReintegrationIds(sourceReintegrationIds?: string[]): string[] {
+  if (!sourceReintegrationIds?.length) return [];
+
+  return [...new Set(sourceReintegrationIds
+    .map((value) => value.trim())
+    .filter(Boolean))];
+}
+
 async function readApiResponse<T>(res: Response): Promise<ApiResponse<T> & ApiErrorLike> {
   return res.json().catch(() => ({} as ApiResponse<T> & ApiErrorLike));
 }
@@ -444,8 +452,9 @@ export async function fetchAISuggestions(): Promise<AISuggestion[]> {
 }
 
 export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promise<EventNode[]> {
-  const query = sourceReintegrationIds?.length
-    ? `?sourceReintegrationIds=${encodeURIComponent(sourceReintegrationIds.join(','))}`
+  const normalizedSourceReintegrationIds = normalizeSourceReintegrationIds(sourceReintegrationIds);
+  const query = normalizedSourceReintegrationIds.length
+    ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
     : '';
   const res = await fetch(`${API_BASE}/event-nodes${query}`);
   const data = await res.json().catch(() => ({} as Partial<ListEventNodesResponse> & { error?: string }));
@@ -456,8 +465,9 @@ export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promis
 }
 
 export async function fetchContinuityRecords(sourceReintegrationIds?: string[]): Promise<ContinuityRecord[]> {
-  const query = sourceReintegrationIds?.length
-    ? `?sourceReintegrationIds=${encodeURIComponent(sourceReintegrationIds.join(','))}`
+  const normalizedSourceReintegrationIds = normalizeSourceReintegrationIds(sourceReintegrationIds);
+  const query = normalizedSourceReintegrationIds.length
+    ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
     : '';
   const res = await fetch(`${API_BASE}/continuity-records${query}`);
   const data = await res.json().catch(() => ({} as Partial<ListContinuityRecordsResponse> & { error?: string }));
