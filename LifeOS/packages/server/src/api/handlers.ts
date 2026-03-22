@@ -42,8 +42,10 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
 
     const weeklyHighlights = db.prepare(`
       SELECT * FROM notes
-      WHERE date BETWEEN ? AND ?
+      WHERE type IN ('task', 'schedule')
+      AND date BETWEEN ? AND ?
       AND priority = 'high'
+      AND status != 'done'
       ORDER BY date ASC, created ASC
     `).all(startOfWeek, endOfWeek);
 

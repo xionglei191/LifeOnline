@@ -356,6 +356,53 @@ test('worker task APIs respond with shared worker task contracts', async () => {
   }
 });
 
+test('dashboard weekly highlights only include unfinished high-priority tasks and schedules', async () => {
+  const env = await createTestEnv('lifeos-dashboard-weekly-highlights-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const focusTaskPath = path.join(env.vaultPath, '事业', '2026-03-24-focus-task.md');
+  const focusSchedulePath = path.join(env.vaultPath, '生活', '2026-03-25-focus-schedule.md');
+  const doneTaskPath = path.join(env.vaultPath, '成长', '2026-03-26-done-task.md');
+  const notePath = path.join(env.vaultPath, '学习', '2026-03-27-high-note.md');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await fs.mkdir(path.dirname(focusTaskPath), { recursive: true });
+    await fs.mkdir(path.dirname(focusSchedulePath), { recursive: true });
+    await fs.mkdir(path.dirname(doneTaskPath), { recursive: true });
+    await fs.mkdir(path.dirname(notePath), { recursive: true });
+
+    await fs.writeFile(focusTaskPath, `---\ntype: "task"\ndimension: "career"\nstatus: "pending"\npriority: "high"\ndate: "2026-03-24"\ncreated: "2026-03-24T09:00:00.000Z"\nupdated: "2026-03-24T09:00:00.000Z"\n---\n\nPending weekly task\n`);
+    await fs.writeFile(focusSchedulePath, `---\ntype: "schedule"\ndimension: "life"\nstatus: "in_progress"\npriority: "high"\ndate: "2026-03-25"\ncreated: "2026-03-25T09:00:00.000Z"\nupdated: "2026-03-25T09:00:00.000Z"\n---\n\nIn-progress weekly schedule\n`);
+    await fs.writeFile(doneTaskPath, `---\ntype: "task"\ndimension: "growth"\nstatus: "done"\npriority: "high"\ndate: "2026-03-26"\ncreated: "2026-03-26T09:00:00.000Z"\nupdated: "2026-03-26T09:00:00.000Z"\n---\n\nDone weekly task\n`);
+    await fs.writeFile(notePath, `---\ntype: "note"\ndimension: "learning"\nstatus: "pending"\npriority: "high"\ndate: "2026-03-27"\ncreated: "2026-03-27T09:00:00.000Z"\nupdated: "2026-03-27T09:00:00.000Z"\n---\n\nHigh-priority note that should not appear in weekly highlights\n`);
+
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const dashboard = await api<import('../../shared/src/types.js').DashboardData>(baseUrl, '/api/dashboard');
+    const highlightTitles = dashboard.weeklyHighlights.map((note) => note.title);
+
+    assert.deepEqual(highlightTitles, ['Pending weekly task', 'In-progress weekly schedule']);
+    assert.ok(dashboard.weeklyHighlights.every((note) => note.priority === 'high'));
+    assert.ok(dashboard.weeklyHighlights.every((note) => note.status !== 'done'));
+    assert.ok(dashboard.weeklyHighlights.every((note) => note.type === 'task' || note.type === 'schedule'));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dashboard, timeline, and calendar APIs respond with shared view contracts', async () => {
   const env = await createTestEnv('lifeos-view-contracts-');
   const configFile = env.configPath;
