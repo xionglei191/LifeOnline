@@ -1,6 +1,6 @@
 import { createOrReuseSoulAction } from './soulActions.js';
 import { type ReintegrationRecord } from './reintegrationRecords.js';
-import { assertAcceptedPromotionReintegration, getPromotionActionKindsForReintegration, getPromotionSourceForReintegration } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, getPromotionActionKindsForReintegration, getPromotionGovernanceReason, getPromotionSourceForReintegration } from './pr6PromotionRules.js';
 
 export function planPromotionSoulActions(record: ReintegrationRecord) {
   assertAcceptedPromotionReintegration(record);
@@ -13,7 +13,7 @@ export function planPromotionSoulActions(record: ReintegrationRecord) {
       sourceNoteId,
       sourceReintegrationId,
       actionKind,
-      governanceReason: `PR6 promotion planned from reintegration record ${record.id}`,
+      governanceReason: getPromotionGovernanceReason(record),
     }));
   }
 

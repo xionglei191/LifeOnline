@@ -21,7 +21,7 @@ import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions }
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
-import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation, buildEventNodePromotionInput, buildContinuityPromotionInput } from '../src/soul/pr6PromotionRules.js';
+import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation, buildEventNodePromotionInput, buildContinuityPromotionInput, getPromotionGovernanceReason, getPromotionExecutionSummary } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -53,6 +53,32 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('build PR6 promotion governance and execution summaries from centralized rules', () => {
+  const record = {
+    id: 'reint:promotion-summary-test',
+    workerTaskId: 'task-promotion-summary-test',
+    sourceNoteId: 'note-promotion-summary-test',
+    soulActionId: 'soul-action-promotion-summary-test',
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'A reviewed daily pattern emerged',
+    evidence: { source: 'test' },
+    reviewReason: 'accepted by reviewer',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:00:00.000Z',
+    reviewedAt: '2026-03-22T10:00:00.000Z',
+  } as const;
+
+  assert.equal(getPromotionGovernanceReason(record), 'PR6 promotion planned from reintegration record reint:promotion-summary-test');
+  assert.equal(getPromotionExecutionSummary('promote_event_node', 'event:reint:promotion-summary-test', false), '已创建 event node: event:reint:promotion-summary-test');
+  assert.equal(getPromotionExecutionSummary('create_event_node', 'event:reint:promotion-summary-test', true), '已更新 event node: event:reint:promotion-summary-test');
+  assert.equal(getPromotionExecutionSummary('promote_continuity_record', 'continuity:reint:promotion-summary-test', false), '已创建 continuity record: continuity:reint:promotion-summary-test');
+});
 
 test('build PR6 promotion payloads from reintegration review context', () => {
   const record = {

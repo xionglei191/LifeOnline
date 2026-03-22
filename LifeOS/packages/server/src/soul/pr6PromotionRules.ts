@@ -142,3 +142,19 @@ export function buildContinuityPromotionInput(
     recordedAt: record.updatedAt,
   };
 }
+
+export function getPromotionGovernanceReason(record: ReintegrationRecord): string {
+  return `PR6 promotion planned from reintegration record ${record.id}`;
+}
+
+export function getPromotionExecutionSummary(
+  actionKind: Extract<SoulActionKind, 'promote_event_node' | 'create_event_node' | 'promote_continuity_record'>,
+  id: string,
+  existed: boolean,
+): string {
+  if (actionKind === 'promote_event_node' || actionKind === 'create_event_node') {
+    return existed ? `已更新 event node: ${id}` : `已创建 event node: ${id}`;
+  }
+
+  return existed ? `已更新 continuity record: ${id}` : `已创建 continuity record: ${id}`;
+}
