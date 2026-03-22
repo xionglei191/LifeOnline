@@ -51,6 +51,7 @@ describe('TimelineView', () => {
     expect((dateInputs[0].element as HTMLInputElement).value).toBe('2026-03-01');
     expect((dateInputs[1].element as HTMLInputElement).value).toBe('2026-03-31');
     expect(wrapper.text()).toContain('生活');
+    expect(wrapper.find('.hero-summary').text()).toContain('31 天');
     expect(load).toHaveBeenCalledWith('2026-03-01', '2026-03-31');
 
     vi.useRealTimers();

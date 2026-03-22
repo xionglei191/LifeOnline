@@ -6,8 +6,8 @@
 - [x] 为 suggestions 主路径补回归，确认 override prompt 会真正进入 provider 请求并产出 AI 建议。
 - [x] 收口 `reintegrationApi.test.ts` 里遗留的 `config.json` 绝对路径硬编码。
 - [x] 让 `/api/worker-tasks` 明确回传 `filters`，并把 shared `WorkerTaskListResponse` 契约同步到 server/web/test。
-- [ ] 跑最终 focused 验证并确认 server/web 构建通过。
-- [ ] 如果验证稳定，清理并提交这轮改动。
+- [x] 跑最终 focused 验证并确认 web 构建通过。
+- [x] 如果验证稳定，清理并提交这轮改动。
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## 待办
 - [x] 跑最终 focused 验证并确认 server/web 构建通过。
-- [ ] 如果验证稳定，清理并提交这轮改动。
+- [x] 如果验证稳定，清理并提交这轮改动。
 
 ## 本轮补充
 - [x] 为 `TimelineTrack` 补本地日期语义回归，锁定共享 dimension label 与 today tick 在本地时区边界下仍正确。

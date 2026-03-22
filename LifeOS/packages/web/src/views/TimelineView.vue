@@ -70,7 +70,7 @@ import { useTimeline } from '../composables/useTimeline';
 import TimelineTrack from '../components/TimelineTrack.vue';
 import NoteDetail from '../components/NoteDetail.vue';
 import StateDisplay from '../components/StateDisplay.vue';
-import { formatLocalDate } from '../utils/date';
+import { formatLocalDate, parseLocalDate } from '../utils/date';
 import { getDimensionLabel } from '../utils/dimensions';
 
 const { data, loading, error, load } = useTimeline();
@@ -87,8 +87,8 @@ watch([startDate, endDate], ([start, end], [prevStart, prevEnd]) => {
 
 const spanDays = computed(() => {
   if (!data.value) return 0;
-  const start = new Date(data.value.startDate);
-  const end = new Date(data.value.endDate);
+  const start = parseLocalDate(data.value.startDate);
+  const end = parseLocalDate(data.value.endDate);
   return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
 });
 
