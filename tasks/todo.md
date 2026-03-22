@@ -1,14 +1,14 @@
-# 当前轮：AISuggestions websocket refresh 收口
+# 当前轮：Inbox canonical dimension 与 Stats worker refresh 收口
 
 ## 进展
-- [x] 识别 `DashboardOverview` 内的 `AISuggestions` 仍然只在 mount 或手动点击“刷新洞察”时拉取数据，没有消费已经逐步补齐的 note lifecycle / worker websocket 事实源；这会让 dashboard 上的 AI 洞察在笔记变化或任务回流后继续停留旧状态，属于新的主路径 contract-to-UI 缺口。
-- [x] 在 `LifeOS/packages/web/src/components/AISuggestions.vue` 接入 websocket 监听，把 `note-updated` / `note-created` / `note-deleted` / `note-worker-tasks-updated` 以及 index refresh 纳入洞察刷新触发器，让 dashboard 洞察流与主路径数据变化同步。
-- [x] 保留并复用现有 `activeRequestId` 防抖 / 抗陈旧响应机制，确保 websocket 连续到达时不会把旧洞察覆盖新洞察。
-- [x] 在 `LifeOS/packages/web/src/components/AISuggestions.test.ts` 增加 focused 回归，锁定 AI 洞察会在 note-created 和 worker/index websocket 事件后自动刷新，而不是继续依赖手工刷新。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/AISuggestions.test.ts src/components/DashboardOverview.test.ts`。
+- [x] 识别 `/inbox` 主路径与 shared canonical dimension contract 不一致：shared 使用 `_inbox`，但 web 路由把 `/inbox` 复用到 `DimensionView` 时没有 `:dimension` 参数，实际会把 dimension 读成空值并退化到 `fetchNotes` 的无过滤查询，存在 Inbox 页面误读成全量笔记的主路径断裂风险。
+- [x] 在 `LifeOS/packages/web/src/views/DimensionView.vue` 抽出 `normalizeRouteDimension`，把 `/inbox` 这类无参数 inbox 路由统一映射到 canonical `_inbox`，避免 web 与 shared contract 再次漂移。
+- [x] 补 `LifeOS/packages/web/src/views/DimensionView.test.ts` focused 回归，锁定 inbox route 会以 `{ dimension: '_inbox' }` 调用 `fetchNotes`，而不是退化成空过滤。
+- [x] 收完当前手上的 `StatsView note-worker websocket refresh`：`LifeOS/packages/web/src/views/StatsView.vue` 已把 `note-worker-tasks-updated` 纳入统计页刷新门禁；同时修复 `StatsView.test.ts` 中重复拼接的测试块，恢复 focused 验证可运行状态并保留 worker refresh 回归。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/DimensionView.test.ts src/views/StatsView.test.ts src/components/DashboardOverview.test.ts`。
 
 ## 结果
-- Dashboard 上的 AI 洞察流现在会跟随 note lifecycle 与 worker websocket 事件自动更新，减少主路径“主数据已变但洞察仍旧”的事实源漂移。
-- 当前这一轮 AISuggestions websocket refresh 收口已完成并通过 focused 验证；下一轮可继续找新的非 Settings 主路径事实源缺口。
+- Dashboard 的 inbox banner 现在会落到 canonical `_inbox` 维度，不再存在 `/inbox` 主路径把 inbox 页面误拉成全量笔记列表的 contract break。
+- StatsView 也已经完成 note-worker websocket refresh 收口并恢复 focused test 通过；当前这一轮两项 main-path 修复都已完成并通过验证。
 
 ---

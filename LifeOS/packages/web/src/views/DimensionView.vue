@@ -42,8 +42,13 @@ import NoteDetail from '../components/NoteDetail.vue';
 import type { Dimension } from '@lifeos/shared';
 import StateDisplay from '../components/StateDisplay.vue';
 
+function normalizeRouteDimension(routeDimension: string | string[] | undefined): Dimension {
+  if (routeDimension === 'inbox' || routeDimension == null) return '_inbox';
+  return routeDimension as Dimension;
+}
+
 const route = useRoute();
-const dimension = computed(() => route.params.dimension as Dimension);
+const dimension = computed(() => normalizeRouteDimension(route.params.dimension));
 
 const { notes, loading, error, filters, filteredNotes, availableTags, stats, load } = useDimensionNotes(dimension);
 

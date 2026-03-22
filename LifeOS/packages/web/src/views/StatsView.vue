@@ -310,6 +310,7 @@ async function loadAllCharts() {
 
 function doesStatsNeedRefresh(wsEvent: WsEvent) {
   return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-worker-tasks-updated'
     || wsEvent.type === 'note-updated'
     || wsEvent.type === 'note-created'
     || wsEvent.type === 'note-deleted';

@@ -68,6 +68,20 @@ describe('DimensionView', () => {
     wrapper = null;
   });
 
+  it('maps the inbox route to the canonical _inbox dimension', async () => {
+    routeState.current!.params.dimension = undefined as unknown as string;
+    apiMocks.fetchNotes.mockResolvedValueOnce([
+      { id: 'inbox-note', dimension: '_inbox', status: 'pending', type: 'note', date: '2026-03-23', file_name: 'inbox.md' },
+    ]);
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    expect(apiMocks.fetchNotes).toHaveBeenNthCalledWith(1, { dimension: '_inbox' });
+    expect(wrapper.find('.dimension-stats-stub').text()).toContain('_inbox:1');
+    expect(wrapper.find('.note-list-stub').text()).toContain('inbox-note');
+  });
+
   it('surfaces typed note-fetch errors on the main dimension path', async () => {
     routeState.current!.params.dimension = 'life';
     apiMocks.fetchNotes.mockRejectedValue(new Error('dimension unavailable'));

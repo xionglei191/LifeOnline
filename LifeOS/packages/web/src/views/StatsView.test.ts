@@ -119,7 +119,7 @@ describe('StatsView', () => {
     wrapper.unmount();
   });
 
-  it('reloads all stats panels when index refresh events arrive', async () => {
+  it('reloads all stats panels when note worker websocket events arrive', async () => {
     apiMocks.fetchStatsTrend
       .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
       .mockResolvedValueOnce([{ day: '2026-03-02', total: 4, done: 3 }]);
@@ -140,8 +140,15 @@ describe('StatsView', () => {
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
-        type: 'note-created',
-        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: 'note-growth',
+          task: {
+            id: 'task-1',
+            taskType: 'extract_tasks',
+            status: 'succeeded',
+          },
+        },
       },
     }));
     await flushPromises();
