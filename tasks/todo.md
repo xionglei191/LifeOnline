@@ -1,3 +1,37 @@
+# soul action source filter shared 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的事实源一致性问题主线推进。
+- [x] 复核 soul action legacy reintegration source filter 归一逻辑，确认 web client 仍保留一份独立内联实现，与 server/domain helper 分叉。
+- [x] 把 source filter 归一规则提升到 `packages/shared` 单点，并让 server/web 同时复用。
+- [x] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts`
+    - 新增 shared `normalizeSoulActionSourceFilters()`，把 legacy `sourceNoteId=reint:*` → `sourceReintegrationId` 的归一规则收回 shared 单点。
+  - `LifeOS/packages/server/src/soul/types.ts`
+    - 改为转调 shared helper，保留 server domain seam，不再自持一份重复实现。
+  - `LifeOS/packages/web/src/api/client.ts`
+    - `fetchSoulActions()` 改为复用 shared helper，移除 web client 内联 legacy reintegration filter 归一逻辑。
+- 这次修的不是再补一条同类稳定性测试，而是把已经在 server/domain 收口过的 legacy reintegration filter 规则继续收回真正的 shared 单点，避免 web / server 对同一查询归一语义再次分叉。
+
+## 本轮选择依据
+- 用户优先级允许在 contract gap 之后继续处理新的事实源一致性问题。
+- 上轮刚完成 server-side source identity/helper 收口后，web client 仍保留同一 legacy reintegration filter 的内联实现，已经形成新的 server/web 事实源分叉。
+- 这条线同时降低 web query 归一漂移风险，并让 shared contract 层真正承载跨端共用规则。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 136 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "normalizeSoulActionSourceFilters collapses legacy reintegration note filters into sourceReintegrationId|getPromotionSourceForReintegration falls back to reintegration id when source note is missing|build PR6 promotion explanations from reintegration review context" test/feedbackReintegration.test.ts` 通过，3/3。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- source filter shared 收口完成后，可继续检查是否还有其它仅在 web 或 server 一侧保留、但应进入 `packages/shared` 的跨端归一规则。
+
+
 # PR6 promotion explanation helper 单一事实源收口
 
 ## 计划

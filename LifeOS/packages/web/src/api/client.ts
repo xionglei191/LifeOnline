@@ -1,4 +1,4 @@
-import type { DashboardData, Note, TimelineData, CalendarData, WorkerTask, CreateWorkerTaskRequest, WorkerTaskListFilters, TaskSchedule, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, PromptKey, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, UpdatePromptRequest, AiProviderSettings, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, AISuggestion, ListAiSuggestionsResponse, ReintegrationRecord, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, SoulAction, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, SoulActionGovernanceStatus, SoulActionExecutionStatus, SoulActionKind, EventNode, ListEventNodesResponse, ContinuityRecord, ListContinuityRecordsResponse, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, CreateWorkerTaskResponse, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import { normalizeSoulActionSourceFilters, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -272,13 +272,17 @@ export async function fetchSoulActions(filters?: {
   actionKind?: SoulActionKind;
 }): Promise<SoulAction[]> {
   const params = new URLSearchParams();
-  const normalizedSourceReintegrationId = filters?.sourceReintegrationId
-    ?? (filters?.sourceNoteId?.startsWith('reint:') ? filters.sourceNoteId : undefined);
-  const normalizedSourceNoteId = normalizedSourceReintegrationId === filters?.sourceNoteId
-    ? undefined
-    : filters?.sourceNoteId;
-  if (normalizedSourceNoteId) params.set('sourceNoteId', normalizedSourceNoteId);
-  if (normalizedSourceReintegrationId) params.set('sourceReintegrationId', normalizedSourceReintegrationId);
+  const normalizedSourceFilters = normalizeSoulActionSourceFilters(
+    {
+      sourceNoteId: filters?.sourceNoteId,
+      sourceReintegrationId: filters?.sourceReintegrationId,
+    },
+    filters?.sourceReintegrationId || !filters?.sourceNoteId?.startsWith('reint:')
+      ? []
+      : [{ sourceReintegrationId: filters.sourceNoteId }],
+  );
+  if (normalizedSourceFilters.sourceNoteId) params.set('sourceNoteId', normalizedSourceFilters.sourceNoteId);
+  if (normalizedSourceFilters.sourceReintegrationId) params.set('sourceReintegrationId', normalizedSourceFilters.sourceReintegrationId);
   if (filters?.governanceStatus) params.set('governanceStatus', filters.governanceStatus);
   if (filters?.executionStatus) params.set('executionStatus', filters.executionStatus);
   if (filters?.actionKind) params.set('actionKind', filters.actionKind);

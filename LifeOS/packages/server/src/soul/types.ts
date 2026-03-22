@@ -1,3 +1,5 @@
+import { normalizeSoulActionSourceFilters as normalizeSharedSoulActionSourceFilters, type ListSoulActionsResponse as SharedListSoulActionsResponse } from '@lifeos/shared';
+
 export const SUPPORTED_SOUL_ACTION_KINDS = [
   'extract_tasks',
   'update_persona_snapshot',
@@ -22,20 +24,10 @@ export function resolveSoulActionSourceReintegrationId(action: Pick<SoulAction, 
 }
 
 export function normalizeSoulActionSourceFilters(
-  filters: Pick<ListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'>,
+  filters: Pick<SharedListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'>,
   soulActions: Array<Pick<SoulAction, 'sourceReintegrationId'>>,
-): Pick<ListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'> {
-  const matchesLegacyReintegrationIdentity = Boolean(
-    filters.sourceNoteId?.startsWith('reint:')
-      && !filters.sourceReintegrationId
-      && soulActions.some((action) => action.sourceReintegrationId === filters.sourceNoteId),
-  );
-
-  return {
-    sourceNoteId: matchesLegacyReintegrationIdentity ? undefined : filters.sourceNoteId,
-    sourceReintegrationId: filters.sourceReintegrationId
-      ?? (matchesLegacyReintegrationIdentity ? filters.sourceNoteId : undefined),
-  };
+): Pick<SharedListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'> {
+  return normalizeSharedSoulActionSourceFilters(filters, soulActions);
 }
 
 export interface SoulAction {
