@@ -52,7 +52,7 @@
         </div>
       </section>
 
-      <section v-if="data.inboxCount > 0" class="inbox-banner" @click="$router.push('/dimension/_inbox')">
+      <section v-if="data.inboxCount > 0" class="inbox-banner" @click="$router.push('/inbox')">
         <span class="inbox-icon">📥</span>
         <span class="inbox-text">_Inbox 中有 <strong>{{ data.inboxCount }}</strong> 条待整理笔记</span>
         <span class="inbox-action">前往整理 →</span>
@@ -95,10 +95,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useDashboard } from '../composables/useDashboard';
 import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
+import { isIndexRefreshEvent } from '../composables/useWebSocket';
+import type { WsEvent } from '@lifeos/shared';
 import TodayTodos from './TodayTodos.vue';
 import WeeklyHighlights from './WeeklyHighlights.vue';
 import DimensionHealth from './DimensionHealth.vue';
@@ -157,6 +159,17 @@ async function handleDeleted() {
   await handleRefresh();
 }
 
+function handleWsUpdate(event: Event) {
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  load();
+  if (isIndexRefreshEvent(wsEvent)) {
+    loadScheduleHealth();
+  }
+  if (wsEvent.type === 'schedule-updated') {
+    loadScheduleHealth();
+  }
+}
+
 async function loadScheduleHealth() {
   const requestId = ++activeScheduleHealthRequestId;
   scheduleHealthError.value = null;
@@ -174,6 +187,11 @@ async function loadScheduleHealth() {
 onMounted(() => {
   load();
   loadScheduleHealth();
+  document.addEventListener('ws-update', handleWsUpdate);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('ws-update', handleWsUpdate);
 });
 </script>
 

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { mount, flushPromises } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
 import type { DashboardData, ScheduleHealth } from '../api/client';
 
@@ -19,8 +19,9 @@ vi.mock('../api/client', () => ({
   fetchScheduleHealth: apiMocks.fetchScheduleHealth,
 }));
 
-import { ref } from 'vue';
 import DashboardOverview from './DashboardOverview.vue';
+
+enableAutoUnmount(afterEach);
 
 const dashboardData: DashboardData = {
   todayTodos: [],
@@ -50,6 +51,11 @@ function deferred<T>() {
 }
 
 describe('DashboardOverview', () => {
+  beforeEach(() => {
+    composableMocks.useDashboard.mockReset();
+    apiMocks.fetchScheduleHealth.mockReset();
+  });
+
   it('refreshes schedule health together with dashboard refresh events', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     composableMocks.useDashboard.mockReturnValue({
@@ -167,6 +173,55 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('0 个异常');
   });
 
+  it('reloads schedule health when schedule websocket updates arrive', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    apiMocks.fetchScheduleHealth
+      .mockResolvedValueOnce(scheduleHealth)
+      .mockResolvedValueOnce({
+        total: 2,
+        active: 1,
+        failing: 1,
+        failingSchedules: [{ id: 'sched-1', label: '周报同步' }],
+      });
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'schedule-updated' } }));
+    await flushPromises();
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain('1 个异常');
+    expect(wrapper.text()).toContain('周报同步');
+  });
+
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
@@ -202,6 +257,42 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).toContain('成长');
     expect(wrapper.text()).toContain('正在占据最高关注度');
     expect(wrapper.find('.signal-chip').attributes('style')).toContain('var(--dim-life)');
+  });
+
+  it('navigates the inbox banner to the dedicated inbox route', async () => {
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref({ ...dashboardData, inboxCount: 2 }),
+      loading: ref(false),
+      error: ref(null),
+      load: vi.fn(),
+    });
+    apiMocks.fetchScheduleHealth.mockResolvedValue(scheduleHealth);
+    const push = vi.fn();
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          TodayTodos: true,
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    await wrapper.get('.inbox-banner').trigger('click');
+    expect(push).toHaveBeenCalledWith('/inbox');
   });
 
   it('renders the schedule health error state when the typed health fetch fails', async () => {

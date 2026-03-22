@@ -4,6 +4,7 @@ const routes = [
   { path: '/', name: 'dashboard', component: () => import('./views/DashboardView.vue') },
   { path: '/timeline', name: 'timeline', component: () => import('./views/TimelineView.vue') },
   { path: '/calendar', name: 'calendar', component: () => import('./views/CalendarView.vue') },
+  { path: '/inbox', name: 'inbox', component: () => import('./views/DimensionView.vue') },
   { path: '/dimension/:dimension', name: 'dimension', component: () => import('./views/DimensionView.vue') },
   { path: '/search', name: 'search', component: () => import('./views/SearchView.vue') },
   { path: '/stats', name: 'stats', component: () => import('./views/StatsView.vue') },
