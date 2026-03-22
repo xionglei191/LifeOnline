@@ -139,6 +139,37 @@ describe('NoteDetail', () => {
     document.body.innerHTML = '';
   });
 
+  it('uses neutral related-task copy for LifeOS and OpenClaw note tasks', async () => {
+    apiMocks.fetchWorkerTasks.mockResolvedValue([
+      createTask({ id: 'worker-task-lifeos', taskType: 'update_persona_snapshot', worker: 'lifeos', status: 'pending' }),
+      createTask({ id: 'worker-task-openclaw', taskType: 'openclaw_task', worker: 'openclaw', status: 'running' }),
+    ]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Worker Task');
+    expect(document.body.textContent).toContain('Recent Related Tasks');
+    expect(document.body.textContent).toContain('基于当前笔记内容发起关联任务，包含 LifeOS 与 OpenClaw 执行路径');
+    expect(document.body.textContent).not.toContain('External Worker Task');
+    expect(document.body.textContent).not.toContain('Recent External Tasks');
+    expect(document.body.textContent).not.toContain('当前笔记还没有发起过外部任务');
+
+    wrapper.unmount();
+  });
+
   it('renders note dimension labels and worker dimension options from the shared helper', async () => {
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -161,6 +192,30 @@ describe('NoteDetail', () => {
     const dimensionOptions = dimensionSelect?.querySelectorAll('option');
     const dimensionTexts = Array.from(dimensionOptions ?? []).map((option) => option.textContent?.trim() ?? '');
     expect(dimensionTexts).toEqual(SELECTABLE_DIMENSIONS.map((dimension) => getDimensionLabel(dimension.value)));
+
+    wrapper.unmount();
+  });
+
+  it('shows neutral empty-state copy when there are no related tasks', async () => {
+    apiMocks.fetchWorkerTasks.mockResolvedValue([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('当前笔记还没有发起过关联任务');
+    expect(document.body.textContent).not.toContain('当前笔记还没有发起过外部任务');
 
     wrapper.unmount();
   });

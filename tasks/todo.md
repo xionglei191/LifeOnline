@@ -1,3 +1,39 @@
+# note-detail worker-task wording 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿真实的 contract-to-UI 投射缺口推进 NoteDetail 任务面板文案收口。
+- [x] 把 NoteDetail 中把 LifeOS 与 OpenClaw 混合任务统称为“外部任务”的旧文案改成中性 `worker/related task` 表达。
+- [x] 补 focused web 回归，锁定列表标题、说明与空态都不再把 LifeOS 任务错误描述成外部任务。
+- [x] 运行 focused web 验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 将任务操作面板标题从 `External Worker Task` 改为 `Worker Task`。
+    - 将任务列表标题从 `Recent External Tasks` 改为 `Recent Related Tasks`。
+    - 将说明与空态从“外部任务”改为“关联任务”，并明确这里同时覆盖 LifeOS 与 OpenClaw 执行路径。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增回归，锁定同时存在 LifeOS / OpenClaw 任务时使用中性 related-task 文案。
+    - 新增空态回归，锁定不再显示“当前笔记还没有发起过外部任务”。
+- 这次修的不是简单重命名，而是修复 NoteDetail 主路径上的真实投射错位：用户点击“生成笔记摘要/更新人格快照”后，任务列表却把这些一方任务描述成“外部任务”。
+
+## 本轮选择依据
+- 这是新的 contract-to-UI 投射缺口：当前 note 的任务列表已经承载 LifeOS 与 OpenClaw 两类任务，但界面文案仍沿用旧的 external-only 心智模型。
+- 这是直接用户可见的主路径问题，且刚好位于上一轮 note-worker-tasks websocket contract 收口后的同一任务面板里。
+- 相比继续深挖 grouped governance / SettingsView 对称链路，这条线更贴近当前 note detail 主路径的真实 UI 语义错误。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 还未继续检查其他页面是否仍把 LifeOS worker 与 OpenClaw worker 混称为 external task，但本轮未扩散范围。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 NoteDetail worker-task wording 收口相关文件。
+
+
 # reintegration persona evidence fact-source 收口
 
 ## 计划

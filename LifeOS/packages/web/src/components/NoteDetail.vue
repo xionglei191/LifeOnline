@@ -169,8 +169,8 @@
 
           <section class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">External Worker Task</p>
-              <span class="append-hint">基于当前笔记内容发起按需外部任务</span>
+              <p class="panel-kicker">Worker Task</p>
+              <span class="append-hint">基于当前笔记内容发起关联任务，包含 LifeOS 与 OpenClaw 执行路径</span>
             </div>
             <div class="worker-form-grid">
               <div class="worker-field" style="grid-column: 1 / -1">
@@ -200,8 +200,8 @@
 
           <section class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">Recent External Tasks</p>
-              <span class="append-hint">展示由当前笔记发起的最近任务</span>
+              <p class="panel-kicker">Recent Related Tasks</p>
+              <span class="append-hint">展示由当前笔记发起的最近关联任务</span>
             </div>
             <div class="related-worker-toolbar">
               <select v-model="relatedWorkerFilterStatus" class="related-worker-filter" @change="handleRelatedWorkerFilterChange">
@@ -226,7 +226,7 @@
                 @retry="handleRetryRelatedTask"
               />
             </div>
-            <div v-else class="empty-worker-tasks">{{ relatedWorkerFilterStatus ? '当前筛选下没有关联任务' : '当前笔记还没有发起过外部任务' }}</div>
+            <div v-else class="empty-worker-tasks">{{ relatedWorkerFilterStatus ? '当前筛选下没有关联任务' : '当前笔记还没有发起过关联任务' }}</div>
           </section>
 
           <section class="ai-panel">
