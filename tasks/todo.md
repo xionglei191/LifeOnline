@@ -1,3 +1,34 @@
+# AI suggestions shared list contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 AI suggestions 主路径，确认 shared `ListAiSuggestionsResponse` 已存在，但 handler 层仍未显式 typed、web 侧缺少独立 client 回归。
+- [x] 让 server handler 显式接回 shared AI suggestions contract，并补最小 web + server 回归。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `listAiSuggestionsHandler()` 显式接回 shared `ListAiSuggestionsResponse`。
+  - `LifeOS/packages/web/src/api/client.test.ts`
+    - 新增 AI suggestions shared contract 回归。
+    - 新增 AI suggestions 错误分支回归。
+- 这次修的不是重复堆 UI 稳定性测试，而是 AI suggestions 已经作为真实主路径返回 shared list contract，但 handler 层仍未显式 typed，client 侧也缺少对该 contract 的独立锁定，后续最容易在 provider/fallback 分支上再次漂移。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- soul action 收口后，AI suggestions 是剩余成本最低但真实存在的一条主路径：shared 已定义 `ListAiSuggestionsResponse`，client 已消费该 shape，但 server handler 仍未显式接回，也缺少 web client 定向回归。
+- 这条线可以继续减少建议列表在 provider/fallback 双路径下的 contract 漂移风险。
+
+## 本轮验证
+- 待执行。
+
+## 当前未完成项
+- 跑定向验证。
+- 若验证通过，直接提交本轮 AI suggestions contract 收口。
+
+
 # soul action shared governance contract 闭环
 
 ## 计划

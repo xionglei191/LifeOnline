@@ -471,7 +471,10 @@ export async function testAiProviderHandler(
   }
 }
 
-export async function listAiSuggestionsHandler(_req: Request, res: Response): Promise<void> {
+export async function listAiSuggestionsHandler(
+  _req: Request<Record<string, never>, ListAiSuggestionsResponse>,
+  res: Response<ListAiSuggestionsResponse>,
+): Promise<void> {
   try {
     const response: ListAiSuggestionsResponse = {
       suggestions: await listAiSuggestions(),
