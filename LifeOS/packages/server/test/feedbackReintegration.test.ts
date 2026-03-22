@@ -164,9 +164,11 @@ test('build PR6 promotion payloads reuse centralized source resolution when sour
     reviewedAt: '2026-03-22T10:11:00.000Z',
   } as const;
 
-  assert.equal(buildEventNodePromotionInput(record, 'soul-action-event').sourceNoteId, record.id);
+  assert.equal(getPromotionSourceForReintegration(record).sourceNoteId, record.id);
+  assert.equal(getPromotionSourceForReintegration(record).sourceReintegrationId, record.id);
+  assert.equal(buildEventNodePromotionInput(record, 'soul-action-event').sourceNoteId, null);
   assert.equal(buildEventNodePromotionInput(record, 'soul-action-event').sourceReintegrationId, record.id);
-  assert.equal(buildContinuityPromotionInput(record, 'soul-action-continuity').sourceNoteId, record.id);
+  assert.equal(buildContinuityPromotionInput(record, 'soul-action-continuity').sourceNoteId, null);
   assert.equal(buildContinuityPromotionInput(record, 'soul-action-continuity').sourceReintegrationId, record.id);
 });
 
@@ -202,7 +204,7 @@ test('build PR6 promotion explanations from reintegration review context', () =>
   });
 });
 
-test('getPromotionSourceForReintegration falls back to reintegration id when source note is missing', () => {
+test('getPromotionSourceForReintegration keeps reintegration identity for soul action planning when source note is missing', () => {
   const source = getPromotionSourceForReintegration({
     id: 'reint:promotion-source',
     workerTaskId: 'worker-task-promotion-source',

@@ -657,6 +657,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('Strength: medium');
     expect(wrapper.text()).toContain('Source Reintegration');
     expect(wrapper.text()).toContain('未提供');
+    expect(wrapper.text()).toContain('record-ready');
+    expect(wrapper.text()).toContain('record-ready');
     expect(wrapper.text()).toContain('Source Action');
     expect(wrapper.text()).toContain('Explanation');
     expect(wrapper.text()).toContain('Evidence');

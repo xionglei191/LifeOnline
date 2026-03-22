@@ -46,8 +46,12 @@
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
-                <span class="projection-detail-label">{{ getSourceProvenanceLabel(eventNode.sourceNoteId, eventNode.sourceReintegrationId) }}</span>
+                <span class="projection-detail-label">Source Note</span>
                 <code>{{ eventNode.sourceNoteId ?? '未提供' }}</code>
+              </div>
+              <div class="projection-detail-block">
+                <span class="projection-detail-label">Source Reintegration</span>
+                <code>{{ eventNode.sourceReintegrationId }}</code>
               </div>
               <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
                 <span class="projection-detail-label">Source Action</span>
@@ -84,8 +88,12 @@
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
-                <span class="projection-detail-label">{{ getSourceProvenanceLabel(continuity.sourceNoteId, continuity.sourceReintegrationId) }}</span>
+                <span class="projection-detail-label">Source Note</span>
                 <code>{{ continuity.sourceNoteId ?? '未提供' }}</code>
+              </div>
+              <div class="projection-detail-block">
+                <span class="projection-detail-label">Source Reintegration</span>
+                <code>{{ continuity.sourceReintegrationId }}</code>
               </div>
               <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
                 <span class="projection-detail-label">Source Action</span>
@@ -130,11 +138,6 @@ const emit = defineEmits<{
 
 function formatJson(value: Record<string, unknown>) {
   return JSON.stringify(value, null, 2);
-}
-
-function getSourceProvenanceLabel(sourceNoteId: string | null, sourceReintegrationId: string) {
-  if (sourceNoteId) return 'Source Note';
-  return sourceReintegrationId ? 'Source Reintegration' : 'Source Note';
 }
 </script>
 

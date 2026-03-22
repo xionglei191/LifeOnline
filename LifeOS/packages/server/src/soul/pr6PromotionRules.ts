@@ -43,6 +43,16 @@ export function getPromotionSourceForReintegration(record: ReintegrationRecord):
   };
 }
 
+export function getPromotionProjectionSourceForReintegration(record: ReintegrationRecord): {
+  sourceNoteId: string | null;
+  sourceReintegrationId: string;
+} {
+  return {
+    sourceNoteId: record.sourceNoteId,
+    sourceReintegrationId: record.id,
+  };
+}
+
 export function getPromotionActionKindsForReintegration(record: ReintegrationRecord): SoulActionKind[] {
   assertAcceptedPromotionReintegration(record);
   return [...(PR6_SIGNAL_ACTION_MATRIX[record.signalKind] ?? [])];
@@ -100,7 +110,7 @@ export function buildEventNodePromotionInput(
   record: ReintegrationRecord,
   promotionSoulActionId: string,
 ): Omit<EventNode, 'id' | 'createdAt' | 'updatedAt'> {
-  const { sourceNoteId, sourceReintegrationId } = getPromotionSourceForReintegration(record);
+  const { sourceNoteId, sourceReintegrationId } = getPromotionProjectionSourceForReintegration(record);
 
   return {
     sourceReintegrationId,
@@ -123,7 +133,7 @@ export function buildContinuityPromotionInput(
   promotionSoulActionId: string,
 ): Omit<ContinuityRecord, 'id' | 'createdAt' | 'updatedAt'> {
   const continuityKind = getContinuityKindForReintegrationSignal(record.signalKind);
-  const { sourceNoteId, sourceReintegrationId } = getPromotionSourceForReintegration(record);
+  const { sourceNoteId, sourceReintegrationId } = getPromotionProjectionSourceForReintegration(record);
 
   return {
     sourceReintegrationId,
