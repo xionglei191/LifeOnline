@@ -1,4 +1,6 @@
 import type { ReintegrationRecord } from './reintegrationRecords.js';
+import type { ContinuityRecord } from './continuityRecords.js';
+import type { EventNode } from './eventNodes.js';
 import type { ContinuityRecordKind, EventKind, SoulActionKind } from './types.js';
 
 const PR6_SIGNAL_ACTION_MATRIX: Partial<Record<ReintegrationRecord['signalKind'], SoulActionKind[]>> = {
@@ -91,5 +93,52 @@ export function buildContinuityPromotionExplanation(record: ReintegrationRecord)
     whyNotOrdinaryArtifact: 'PR6 continuity promotion',
     whyReviewBacked: record.reviewReason ?? 'accepted reintegration record',
     reviewBacked: true,
+  };
+}
+
+export function buildEventNodePromotionInput(
+  record: ReintegrationRecord,
+  promotionSoulActionId: string,
+): Omit<EventNode, 'id' | 'createdAt' | 'updatedAt'> {
+  return {
+    sourceReintegrationId: record.id,
+    sourceNoteId: record.sourceNoteId,
+    sourceSoulActionId: record.soulActionId,
+    promotionSoulActionId,
+    eventKind: getEventKindForReintegrationSignal(record.signalKind),
+    title: getEventTitleForReintegrationSignal(record.signalKind),
+    summary: record.summary,
+    threshold: 'high',
+    status: 'active',
+    evidence: record.evidence,
+    explanation: buildEventPromotionExplanation(record),
+    occurredAt: record.updatedAt,
+  };
+}
+
+export function buildContinuityPromotionInput(
+  record: ReintegrationRecord,
+  promotionSoulActionId: string,
+): Omit<ContinuityRecord, 'id' | 'createdAt' | 'updatedAt'> {
+  const continuityKind = getContinuityKindForReintegrationSignal(record.signalKind);
+
+  return {
+    sourceReintegrationId: record.id,
+    sourceNoteId: record.sourceNoteId,
+    sourceSoulActionId: record.soulActionId,
+    promotionSoulActionId,
+    continuityKind,
+    target: record.target,
+    strength: 'medium',
+    summary: record.summary,
+    continuity: {
+      anchor: record.summary,
+      observationWindow: 'single_reviewed_signal',
+      claim: record.summary,
+      scope: getContinuityScopeForKind(continuityKind),
+    },
+    evidence: record.evidence,
+    explanation: buildContinuityPromotionExplanation(record),
+    recordedAt: record.updatedAt,
   };
 }

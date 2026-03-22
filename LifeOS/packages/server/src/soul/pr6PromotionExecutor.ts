@@ -1,7 +1,7 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
-import { assertAcceptedPromotionReintegration, buildContinuityPromotionExplanation, buildEventPromotionExplanation, getContinuityKindForReintegrationSignal, getContinuityScopeForKind, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, buildContinuityPromotionInput, buildEventNodePromotionInput } from './pr6PromotionRules.js';
 import { resolveSoulActionSourceReintegrationId, type SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
@@ -23,47 +23,13 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
 
   if (action.actionKind === 'promote_event_node' || action.actionKind === 'create_event_node') {
     const existing = getEventNodeBySourceReintegrationId(record.id);
-    const eventKind = getEventKindForReintegrationSignal(record.signalKind);
-    const title = getEventTitleForReintegrationSignal(record.signalKind);
-    const node = upsertEventNode({
-      sourceReintegrationId: record.id,
-      sourceNoteId: record.sourceNoteId,
-      sourceSoulActionId: record.soulActionId,
-      promotionSoulActionId: action.id,
-      eventKind,
-      title,
-      summary: record.summary,
-      threshold: 'high',
-      status: 'active',
-      evidence: record.evidence,
-      explanation: buildEventPromotionExplanation(record),
-      occurredAt: record.updatedAt,
-    });
+    const node = upsertEventNode(buildEventNodePromotionInput(record, action.id));
     return { summary: existing ? `已更新 event node: ${node.id}` : `已创建 event node: ${node.id}` };
   }
 
   if (action.actionKind === 'promote_continuity_record') {
     const existing = getContinuityRecordBySourceReintegrationId(record.id);
-    const continuityKind = getContinuityKindForReintegrationSignal(record.signalKind);
-    const continuity = upsertContinuityRecord({
-      sourceReintegrationId: record.id,
-      sourceNoteId: record.sourceNoteId,
-      sourceSoulActionId: record.soulActionId,
-      promotionSoulActionId: action.id,
-      continuityKind,
-      target: record.target,
-      strength: 'medium',
-      summary: record.summary,
-      continuity: {
-        anchor: record.summary,
-        observationWindow: 'single_reviewed_signal',
-        claim: record.summary,
-        scope: getContinuityScopeForKind(continuityKind),
-      },
-      evidence: record.evidence,
-      explanation: buildContinuityPromotionExplanation(record),
-      recordedAt: record.updatedAt,
-    });
+    const continuity = upsertContinuityRecord(buildContinuityPromotionInput(record, action.id));
     return { summary: existing ? `已更新 continuity record: ${continuity.id}` : `已创建 continuity record: ${continuity.id}` };
   }
 

@@ -21,7 +21,7 @@ import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions }
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
-import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation } from '../src/soul/pr6PromotionRules.js';
+import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation, buildEventNodePromotionInput, buildContinuityPromotionInput } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -53,6 +53,70 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('build PR6 promotion payloads from reintegration review context', () => {
+  const record = {
+    id: 'reint:promotion-payload-test',
+    workerTaskId: 'task-promotion-payload-test',
+    sourceNoteId: 'note-promotion-payload-test',
+    soulActionId: 'soul-action-promotion-payload-test',
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'A reviewed weekly pattern emerged',
+    evidence: { source: 'test' },
+    reviewReason: 'accepted for weekly pattern',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:10:00.000Z',
+    reviewedAt: '2026-03-22T10:11:00.000Z',
+  } as const;
+
+  assert.deepEqual(buildEventNodePromotionInput(record, 'soul-action-event'), {
+    sourceReintegrationId: record.id,
+    sourceNoteId: record.sourceNoteId,
+    sourceSoulActionId: record.soulActionId,
+    promotionSoulActionId: 'soul-action-event',
+    eventKind: 'weekly_reflection',
+    title: '周回顾事件',
+    summary: record.summary,
+    threshold: 'high',
+    status: 'active',
+    evidence: record.evidence,
+    explanation: {
+      whyHighThreshold: 'review-backed PR6 promotion',
+      whyNow: record.summary,
+      reviewBacked: true,
+    },
+    occurredAt: record.updatedAt,
+  });
+
+  assert.deepEqual(buildContinuityPromotionInput(record, 'soul-action-continuity'), {
+    sourceReintegrationId: record.id,
+    sourceNoteId: record.sourceNoteId,
+    sourceSoulActionId: record.soulActionId,
+    promotionSoulActionId: 'soul-action-continuity',
+    continuityKind: 'weekly_theme',
+    target: record.target,
+    strength: 'medium',
+    summary: record.summary,
+    continuity: {
+      anchor: record.summary,
+      observationWindow: 'single_reviewed_signal',
+      claim: record.summary,
+      scope: 'weekly',
+    },
+    evidence: record.evidence,
+    explanation: {
+      whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+      whyReviewBacked: record.reviewReason,
+      reviewBacked: true,
+    },
+    recordedAt: record.updatedAt,
+  });
+});
 
 test('build PR6 promotion explanations from reintegration review context', () => {
   const record = {
