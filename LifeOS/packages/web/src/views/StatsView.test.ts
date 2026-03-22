@@ -1,0 +1,116 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+
+const apiMocks = vi.hoisted(() => ({
+  fetchStatsTrend: vi.fn(),
+  fetchStatsRadar: vi.fn(),
+  fetchStatsMonthly: vi.fn(),
+  fetchStatsTags: vi.fn(),
+}));
+
+const chartMocks = vi.hoisted(() => {
+  const instances = Array.from({ length: 4 }, () => ({
+    setOption: vi.fn(),
+    resize: vi.fn(),
+    dispose: vi.fn(),
+  }));
+
+  return {
+    init: vi.fn()
+      .mockImplementationOnce(() => instances[0])
+      .mockImplementationOnce(() => instances[1])
+      .mockImplementationOnce(() => instances[2])
+      .mockImplementationOnce(() => instances[3]),
+    instances,
+  };
+});
+
+vi.mock('../api/client', () => ({
+  fetchStatsTrend: apiMocks.fetchStatsTrend,
+  fetchStatsRadar: apiMocks.fetchStatsRadar,
+  fetchStatsMonthly: apiMocks.fetchStatsMonthly,
+  fetchStatsTags: apiMocks.fetchStatsTags,
+}));
+
+vi.mock('../lib/echarts', () => ({
+  echarts: {
+    init: chartMocks.init,
+  },
+}));
+
+import StatsView from './StatsView.vue';
+
+function buildWrapper() {
+  return mount(StatsView, {
+    attachTo: document.body,
+    global: {
+      stubs: {
+        StateDisplay: {
+          props: ['type', 'message'],
+          template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+        },
+      },
+    },
+  });
+}
+
+describe('StatsView', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    apiMocks.fetchStatsTrend.mockReset();
+    apiMocks.fetchStatsRadar.mockReset();
+    apiMocks.fetchStatsMonthly.mockReset();
+    apiMocks.fetchStatsTags.mockReset();
+    chartMocks.init.mockClear();
+    chartMocks.instances.forEach((instance) => {
+      instance.setOption.mockClear();
+      instance.resize.mockClear();
+      instance.dispose.mockClear();
+    });
+  });
+
+  it('surfaces typed API errors instead of rendering empty charts', async () => {
+    apiMocks.fetchStatsTrend.mockRejectedValue(new Error('trend unavailable'));
+    apiMocks.fetchStatsRadar.mockResolvedValue([]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([]);
+    apiMocks.fetchStatsTags.mockResolvedValue([]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('trend unavailable');
+    expect(wrapper.find('.state-display-stub').attributes('data-type')).toBe('error');
+    expect(chartMocks.instances[0].setOption).not.toHaveBeenCalled();
+  });
+
+  it('reloads the trend panel when the window changes and keeps the other panels intact', async () => {
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([
+        { day: '2026-03-01', total: 2, done: 1 },
+        { day: '2026-03-02', total: 3, done: 2 },
+      ])
+      .mockResolvedValueOnce([
+        { day: '2026-03-01', total: 4, done: 3 },
+      ]);
+    apiMocks.fetchStatsRadar.mockResolvedValue([{ dimension: 'life', rate: 80 }]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    const buttons = wrapper.findAll('.day-btn');
+    await buttons[0].trigger('click');
+    await flushPromises();
+
+    expect(apiMocks.fetchStatsTrend).toHaveBeenNthCalledWith(1, 30);
+    expect(apiMocks.fetchStatsTrend).toHaveBeenNthCalledWith(2, 7);
+    expect(apiMocks.fetchStatsRadar).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchStatsMonthly).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchStatsTags).toHaveBeenCalledTimes(1);
+  });
+});

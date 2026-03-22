@@ -30,7 +30,9 @@
         </div>
       </section>
 
-      <div class="stats-grid">
+      <StateDisplay v-if="loading" type="loading" message="正在汇总生命信号..." />
+      <StateDisplay v-else-if="error" type="error" :message="error.message" />
+      <div v-else class="stats-grid">
         <section class="stats-card wide">
           <div class="card-header">
             <div>
@@ -42,7 +44,7 @@
                 v-for="d in [7, 30, 90]"
                 :key="d"
                 :class="['day-btn', { active: trendDays === d }]"
-                @click="trendDays = d; loadTrend()"
+                @click="trendDays = d; refreshTrend()"
               >
                 近{{ d }}天
               </button>
@@ -87,8 +89,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
+import StateDisplay from '../components/StateDisplay.vue';
 import { getDimensionLabel } from '../utils/dimensions';
 
 const trendEl = ref<HTMLElement | null>(null);
@@ -97,6 +101,8 @@ const monthlyEl = ref<HTMLElement | null>(null);
 const tagsEl = ref<HTMLElement | null>(null);
 
 const trendDays = ref(30);
+const loading = ref(false);
+const error = ref<Error | null>(null);
 
 let charts: echarts.ECharts[] = [];
 let resizeHandler: (() => void) | null = null;
@@ -107,9 +113,7 @@ const gridLine = 'rgba(123, 145, 170, 0.16)';
 
 function initChart(el: HTMLElement | null): echarts.ECharts | null {
   if (!el) return null;
-  const instance = echarts.init(el);
-  charts.push(instance);
-  return instance;
+  return echarts.init(el);
 }
 
 function baseTooltip() {
@@ -129,8 +133,7 @@ function baseAxis() {
   };
 }
 
-async function loadTrend() {
-  const data = await fetchStatsTrend(trendDays.value);
+async function loadTrend(data: StatsTrendPoint[]) {
   const c = charts[0];
   if (!c) return;
   c.setOption({
@@ -171,8 +174,7 @@ async function loadTrend() {
   }, true);
 }
 
-async function loadRadar() {
-  const data = await fetchStatsRadar();
+async function loadRadar(data: StatsRadarPoint[]) {
   const c = charts[1];
   if (!c) return;
   c.setOption({
@@ -204,8 +206,7 @@ async function loadRadar() {
   }, true);
 }
 
-async function loadMonthly() {
-  const data = await fetchStatsMonthly();
+async function loadMonthly(data: StatsMonthlyPoint[]) {
   const c = charts[2];
   if (!c) return;
   c.setOption({
@@ -238,8 +239,7 @@ async function loadMonthly() {
   }, true);
 }
 
-async function loadTags() {
-  const data = await fetchStatsTags();
+async function loadTags(data: StatsTagPoint[]) {
   const c = charts[3];
   if (!c) return;
   c.setOption({
@@ -265,6 +265,39 @@ async function loadTags() {
   }, true);
 }
 
+async function refreshTrend() {
+  error.value = null;
+  try {
+    const data = await fetchStatsTrend(trendDays.value);
+    await loadTrend(data);
+  } catch (e) {
+    error.value = e as Error;
+  }
+}
+
+async function loadAllCharts() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const [trendData, radarData, monthlyData, tagData] = await Promise.all([
+      fetchStatsTrend(trendDays.value),
+      fetchStatsRadar(),
+      fetchStatsMonthly(),
+      fetchStatsTags(),
+    ]);
+    await Promise.all([
+      loadTrend(trendData),
+      loadRadar(radarData),
+      loadMonthly(monthlyData),
+      loadTags(tagData),
+    ]);
+  } catch (e) {
+    error.value = e as Error;
+  } finally {
+    loading.value = false;
+  }
+}
+
 onMounted(async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
   charts.push(initChart(trendEl.value)!);
@@ -272,7 +305,7 @@ onMounted(async () => {
   charts.push(initChart(monthlyEl.value)!);
   charts.push(initChart(tagsEl.value)!);
   charts = charts.filter(Boolean);
-  await Promise.all([loadTrend(), loadRadar(), loadMonthly(), loadTags()]);
+  await loadAllCharts();
 
   resizeHandler = () => {
     charts.forEach((chart) => chart?.resize());

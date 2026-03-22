@@ -1,3 +1,39 @@
+# stats view typed error-state delivery 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的主路径断裂 / contract-to-UI 缺口推进 stats 页错误交付。
+- [x] 把 `StatsView.vue` 从“任何一个 stats API 失败就直接抛错或停在半初始化图表状态”改为显式展示 loading/error 状态。
+- [x] 补最小 view 回归，锁定 shared `ApiResponse<T>` 错误会真实投射到 stats 页，而不是变成空图或未处理异常。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/StatsView.vue`
+    - 新增 `loading` / `error` 状态，并接入 `StateDisplay`，让 stats 主路径在图表数据尚未加载或 API 返回 typed error 时有明确用户可见反馈。
+    - 将趋势按钮改为走 `refreshTrend()`，只重拉趋势面板且保留其它面板状态。
+    - 将初始加载改为 `loadAllCharts()`，统一收拢四个 stats API 的错误处理，避免任一请求失败时页面停在未处理异常或半渲染图表状态。
+  - `LifeOS/packages/web/src/views/StatsView.test.ts`
+    - 新增错误投射回归，锁定 `fetchStatsTrend()` 失败时 stats 页展示服务端错误文案而不是空图。
+    - 新增趋势窗口切换回归，锁定点击“近7天”只刷新趋势数据，不重复拉取 radar/monthly/tags。
+- 这次修的不是再补一个同类测试，而是把上一轮 web client 已透传的 typed API error 真正投射到 stats 用户主路径，修复“API 失败时图表页没有稳定错误交付”的真实可见行为缺口。
+
+## 本轮选择依据
+- 这是新的主路径断裂 / contract-to-UI 投射缺口：`fetchStats*()` 已开始显式抛出服务端 `error`，但 `StatsView.vue` 仍没有 loading/error 展示与集中错误处理，导致用户在失败时看不到可理解状态。
+- stats 是 dashboard 之外的重要判断面板，若继续把错误吞成空图或未处理异常，会直接误导“暂无数据”和“后端失败”的区别。
+- 这条线承接上一轮 contract gap，但落点是用户可见行为修复，不是低边际对称补强。
+
+## 本轮验证
+- 待运行：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/StatsView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 其它主路径若也存在“client 已透传 typed error，但 view 还没显式交付”的情况，后续可继续检查 dashboard / calendar 等入口，但这还未开始。
+
+## 下一步建议
+- 跑 focused stats view 测试；若通过，提交本轮 focused commit，只包含 stats 页 error-state delivery 收口。
+
+
 # web client ApiResponse error-handling contract 收口
 
 ## 计划
