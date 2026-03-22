@@ -65,6 +65,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
     if (filters.value.keyword) {
       const kw = filters.value.keyword.toLowerCase();
       result = result.filter(n =>
+        n.title?.toLowerCase().includes(kw) ||
         n.file_name.toLowerCase().includes(kw) ||
         n.content?.toLowerCase().includes(kw)
       );

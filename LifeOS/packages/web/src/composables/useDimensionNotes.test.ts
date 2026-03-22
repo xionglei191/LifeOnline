@@ -136,6 +136,24 @@ describe('useDimensionNotes', () => {
     wrapper.unmount();
   });
 
+  it('matches keyword filters against shared note titles on the main dimension path', async () => {
+    apiMocks.fetchNotes.mockResolvedValueOnce([
+      { ...createNote('file-fallback', 'life'), title: 'Shared Title Match' },
+      { ...createNote('other-note', 'life'), title: 'Other title' },
+    ]);
+
+    const { state, wrapper } = mountUseDimensionNotes('life');
+    await nextTick();
+    await nextTick();
+
+    state.filters.value.keyword = 'title match';
+    await nextTick();
+
+    expect(state.filteredNotes.value.map((note) => note.id)).toEqual(['file-fallback']);
+
+    wrapper.unmount();
+  });
+
   it('sorts notes by local calendar date rather than UTC parsing', async () => {
     apiMocks.fetchNotes.mockResolvedValueOnce([
       createNote('late-march', 'life', '2026-03-31'),
