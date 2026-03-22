@@ -167,6 +167,27 @@
             </div>
           </section>
 
+          <section v-if="hasPromotionProjectionSection" class="ai-panel projection-panel-shell">
+            <div class="append-head">
+              <div>
+                <p class="panel-kicker">Promotion Projection</p>
+                <span class="append-hint">当前笔记触发的 PR6 promotion 落地结果</span>
+              </div>
+              <div class="projection-note-meta" v-if="noteProjectionSourceReintegrationIds.length">
+                <span class="meta-pill">Sources {{ noteProjectionSourceReintegrationIds.length }}</span>
+              </div>
+            </div>
+            <PromotionProjectionPanel
+              :event-nodes="noteEventNodes"
+              :continuity-records="noteContinuityRecords"
+              :loading="projectionLoading"
+              :message="projectionMessage"
+              :message-type="projectionMessageType"
+              :format-time="formatProjectionTime"
+              @refresh="() => currentNoteId && loadPromotionProjections(currentNoteId)"
+            />
+          </section>
+
           <section class="ai-panel">
             <div class="append-head">
               <p class="panel-kicker">Worker Task</p>
@@ -270,11 +291,12 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension } from '@lifeos/shared';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodes, fetchContinuityRecords } from '../api/client';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
+import PromotionProjectionPanel from './PromotionProjectionPanel.vue';
 import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -299,6 +321,12 @@ const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
 const selectedWorkerTaskId = ref<string | null>(null);
 const personaSnapshot = ref<PersonaSnapshot | null>(null);
+const eventNodes = ref<EventNode[]>([]);
+const continuityRecords = ref<ContinuityRecord[]>([]);
+const projectionSourceRecords = ref<Array<{ id: string; sourceNoteId: string | null; reviewStatus: string }>>([]);
+const projectionLoading = ref(false);
+const projectionMessage = ref('');
+const projectionMessageType = ref<'success' | 'error'>('success');
 const saving = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
@@ -363,6 +391,43 @@ const typeLabels: Record<string, string> = {
   review: '复盘',
 };
 
+const noteProjectionSourceReintegrationIds = computed(() => {
+  if (!currentNoteId.value) return [];
+  const sourceNoteId = currentNoteId.value;
+  const acceptedIds = projectionSourceRecords.value
+    .filter((record) => record.sourceNoteId === sourceNoteId && record.reviewStatus === 'accepted')
+    .map((record) => record.id);
+  const eventNodeIds = eventNodes.value
+    .filter((eventNode) => eventNode.sourceNoteId === sourceNoteId)
+    .map((eventNode) => eventNode.sourceReintegrationId);
+  const continuityIds = continuityRecords.value
+    .filter((continuity) => continuity.sourceNoteId === sourceNoteId)
+    .map((continuity) => continuity.sourceReintegrationId);
+  return [...new Set([...acceptedIds, ...eventNodeIds, ...continuityIds])];
+});
+
+const noteEventNodes = computed(() => {
+  if (!currentNoteId.value) return [];
+  return eventNodes.value.filter((eventNode) => eventNode.sourceNoteId === currentNoteId.value);
+});
+
+const noteContinuityRecords = computed(() => {
+  if (!currentNoteId.value) return [];
+  return continuityRecords.value.filter((continuity) => continuity.sourceNoteId === currentNoteId.value);
+});
+
+const hasPromotionProjectionSection = computed(() => {
+  return projectionLoading.value
+    || noteEventNodes.value.length > 0
+    || noteContinuityRecords.value.length > 0
+    || noteProjectionSourceReintegrationIds.value.length > 0
+    || Boolean(projectionMessage.value);
+});
+
+function formatProjectionTime(ts: string) {
+  return new Date(ts).toLocaleString('zh-CN');
+}
+
 function dimensionColor(dimension: string) {
   return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
 }
@@ -392,6 +457,60 @@ async function loadPersonaSnapshot(sourceNoteId: string, requestId?: number) {
   }
 }
 
+async function loadPromotionProjections(sourceNoteId: string, requestId?: number) {
+  projectionLoading.value = true;
+  projectionMessage.value = '';
+  try {
+    const reintegrationRecords = await fetchReintegrationRecords({ sourceNoteId });
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    projectionSourceRecords.value = reintegrationRecords.filter((record) => record.sourceNoteId === sourceNoteId);
+    const sourceReintegrationIds = projectionSourceRecords.value.map((record) => record.id);
+    if (!sourceReintegrationIds.length) {
+      eventNodes.value = [];
+      continuityRecords.value = [];
+      return;
+    }
+
+    const [eventNodeResult, continuityResult] = await Promise.allSettled([
+      fetchEventNodes(sourceReintegrationIds),
+      fetchContinuityRecords(sourceReintegrationIds),
+    ]);
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+
+    const projectionErrors: string[] = [];
+
+    if (eventNodeResult.status === 'fulfilled') {
+      eventNodes.value = eventNodeResult.value.filter((eventNode) => eventNode.sourceNoteId === sourceNoteId);
+    } else {
+      eventNodes.value = [];
+      projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
+    }
+
+    if (continuityResult.status === 'fulfilled') {
+      continuityRecords.value = continuityResult.value.filter((continuity) => continuity.sourceNoteId === sourceNoteId);
+    } else {
+      continuityRecords.value = [];
+      projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');
+    }
+
+    if (projectionErrors.length) {
+      projectionMessage.value = projectionErrors.join('；');
+      projectionMessageType.value = 'error';
+    }
+  } catch (e: any) {
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    projectionSourceRecords.value = [];
+    eventNodes.value = [];
+    continuityRecords.value = [];
+    projectionMessage.value = e.message || '加载 promotion projections 失败';
+    projectionMessageType.value = 'error';
+  } finally {
+    if (requestId == null || (requestId === activeNoteRequestId && currentNoteId.value === sourceNoteId)) {
+      projectionLoading.value = false;
+    }
+  }
+}
+
 async function reloadRelatedWorkerTasks() {
   if (!currentNoteId.value) return;
   await loadRelatedWorkerTasks(currentNoteId.value);
@@ -414,6 +533,11 @@ watch(currentNoteId, async (id) => {
     decryptedContent.value = null;
     relatedWorkerTasks.value = [];
     personaSnapshot.value = null;
+    projectionSourceRecords.value = [];
+    eventNodes.value = [];
+    continuityRecords.value = [];
+    projectionLoading.value = false;
+    projectionMessage.value = '';
     showDeleteConfirm.value = false;
     return;
   }
@@ -435,6 +559,7 @@ watch(currentNoteId, async (id) => {
     await Promise.all([
       loadRelatedWorkerTasks(id, requestId),
       loadPersonaSnapshot(id, requestId),
+      loadPromotionProjections(id, requestId),
     ]);
 
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
@@ -688,6 +813,26 @@ function handleWsUpdate(event: Event) {
     if (wsEvent.data.task.taskType === 'update_persona_snapshot') {
       void loadPersonaSnapshot(currentNoteId.value);
     }
+    return;
+  }
+  if (wsEvent.type === 'event-node-updated') {
+    if (wsEvent.data.eventNode.sourceNoteId !== currentNoteId.value) return;
+    void loadPromotionProjections(currentNoteId.value);
+    return;
+  }
+  if (wsEvent.type === 'continuity-record-updated') {
+    if (wsEvent.data.continuityRecord.sourceNoteId !== currentNoteId.value) return;
+    void loadPromotionProjections(currentNoteId.value);
+    return;
+  }
+  if (wsEvent.type === 'reintegration-record-updated') {
+    if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
+    void loadPromotionProjections(currentNoteId.value);
+    return;
+  }
+  if (wsEvent.type === 'soul-action-updated') {
+    if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
+    void loadPromotionProjections(currentNoteId.value);
     return;
   }
   if (isIndexRefreshEvent(wsEvent)) {
@@ -978,6 +1123,22 @@ function showMsg(msg: string, type: 'success' | 'error') {
   color: var(--text-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.projection-panel-shell :deep(.projection-card) {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.projection-panel-shell :deep(.reintegration-head) {
+  display: none;
+}
+
+.projection-note-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .append-input {

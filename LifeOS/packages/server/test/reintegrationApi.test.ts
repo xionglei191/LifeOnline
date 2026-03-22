@@ -125,6 +125,80 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
   });
 }
 
+test('reintegration list API supports source-note scoping for main-path projection reads', async () => {
+  const env = await createTestEnv('lifeos-reintegration-source-note-filter-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-filter-note-1',
+      sourceNoteId: 'note-filter-1',
+      soulActionId: null,
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'candidate_task',
+      reviewStatus: 'accepted',
+      target: 'task_record',
+      strength: 'medium',
+      summary: 'first scoped reintegration record',
+      evidence: { source: 'api-test-filter-1' },
+      reviewReason: null,
+      now: '2026-03-22T12:00:00.000Z',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-filter-note-2',
+      sourceNoteId: 'note-filter-2',
+      soulActionId: null,
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'candidate_task',
+      reviewStatus: 'pending_review',
+      target: 'task_record',
+      strength: 'medium',
+      summary: 'second scoped reintegration record',
+      evidence: { source: 'api-test-filter-2' },
+      reviewReason: null,
+      now: '2026-03-22T12:01:00.000Z',
+    });
+
+    const scoped = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?sourceNoteId=note-filter-1',
+    );
+    assert.deepEqual(scoped.filters, { sourceNoteId: 'note-filter-1' });
+    assert.equal(scoped.reintegrationRecords.length, 1);
+    assert.equal(scoped.reintegrationRecords[0]?.workerTaskId, 'api-filter-note-1');
+    assert.equal(scoped.reintegrationRecords[0]?.sourceNoteId, 'note-filter-1');
+
+    const acceptedScoped = await api<ListReintegrationRecordsResponse>(
+      baseUrl,
+      '/api/reintegration-records?reviewStatus=accepted&sourceNoteId=note-filter-1',
+    );
+    assert.deepEqual(acceptedScoped.filters, { reviewStatus: 'accepted', sourceNoteId: 'note-filter-1' });
+    assert.equal(acceptedScoped.reintegrationRecords.length, 1);
+    assert.equal(acceptedScoped.reintegrationRecords[0]?.workerTaskId, 'api-filter-note-1');
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('soul-action defer and discard APIs keep governance detail and list views aligned', async () => {
   const env = await createTestEnv('lifeos-soul-action-defer-discard-');
   const configFile = env.configPath;

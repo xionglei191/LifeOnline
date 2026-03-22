@@ -668,13 +668,20 @@ export async function dispatchSoulActionHandler(
 }
 
 export async function listReintegrationRecordsHandler(
-  req: Request<Record<string, never>, ApiResponse<ListReintegrationRecordsResponse>, Record<string, never>, { reviewStatus?: 'pending_review' | 'accepted' | 'rejected' }>,
+  req: Request<Record<string, never>, ApiResponse<ListReintegrationRecordsResponse>, Record<string, never>, { reviewStatus?: 'pending_review' | 'accepted' | 'rejected'; sourceNoteId?: string }>,
   res: Response<ApiResponse<ListReintegrationRecordsResponse>>,
 ): Promise<void> {
   try {
     const reviewStatus = typeof req.query.reviewStatus === 'string' ? req.query.reviewStatus.trim() as 'pending_review' | 'accepted' | 'rejected' : undefined;
+    const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
+      ? req.query.sourceNoteId.trim()
+      : undefined;
     const response: ListReintegrationRecordsResponse = {
-      reintegrationRecords: listReintegrationRecords({ reviewStatus }),
+      reintegrationRecords: listReintegrationRecords({ reviewStatus, sourceNoteId }),
+      filters: {
+        reviewStatus,
+        sourceNoteId,
+      },
     };
     res.json(response);
   } catch (error) {

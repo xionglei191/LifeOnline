@@ -43,12 +43,19 @@ function rowToReintegrationRecord(row: ReintegrationRecordRow): ReintegrationRec
   };
 }
 
-export function listReintegrationRecords(filters?: { reviewStatus?: ReintegrationRecord['reviewStatus'] }): ReintegrationRecord[] {
+export function listReintegrationRecords(filters?: {
+  reviewStatus?: ReintegrationRecord['reviewStatus'];
+  sourceNoteId?: string;
+}): ReintegrationRecord[] {
   const clauses: string[] = [];
   const params: string[] = [];
   if (filters?.reviewStatus) {
     clauses.push('review_status = ?');
     params.push(filters.reviewStatus);
+  }
+  if (filters?.sourceNoteId) {
+    clauses.push('source_note_id = ?');
+    params.push(filters.sourceNoteId);
   }
   const whereClause = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const rows = getDb().prepare(`SELECT * FROM reintegration_records ${whereClause} ORDER BY created_at DESC`).all(...params) as ReintegrationRecordRow[];

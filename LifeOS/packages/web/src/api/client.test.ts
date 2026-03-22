@@ -226,12 +226,12 @@ describe('api client promotion projections', () => {
       reintegrationRecord: { ...reintegrationRecord, reviewStatus: 'rejected', reviewReason: 'not useful', reviewedAt: '2026-03-22T10:07:00.000Z' },
     };
     vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ reintegrationRecords: [reintegrationRecord] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ reintegrationRecords: [reintegrationRecord], filters: { reviewStatus: 'pending_review' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => accepted })
       .mockResolvedValueOnce({ ok: true, json: async () => rejected })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ soulActions: [plannedSoulAction] }) }));
 
-    await expect(fetchReintegrationRecords('pending_review')).resolves.toEqual([reintegrationRecord]);
+    await expect(fetchReintegrationRecords({ reviewStatus: 'pending_review' })).resolves.toEqual([reintegrationRecord]);
     await expect(acceptReintegrationRecord('reint:worker-task-1', { reason: 'looks good' })).resolves.toEqual(accepted);
     await expect(rejectReintegrationRecord('reint:worker-task-1', { reason: 'not useful' })).resolves.toEqual(rejected);
     await expect(planReintegrationPromotions('reint:worker-task-1')).resolves.toEqual([plannedSoulAction]);
@@ -249,6 +249,38 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenNthCalledWith(4, '/api/reintegration-records/reint%3Aworker-task-1/plan-promotions', {
       method: 'POST',
     });
+  });
+
+  it('supports reintegration list source-note filters for scoped projection reads', async () => {
+    const reintegrationRecord: ReintegrationRecord = {
+      id: 'reint:worker-task-note-scope',
+      workerTaskId: 'worker-task-note-scope',
+      sourceNoteId: 'note-1.md',
+      soulActionId: null,
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'candidate_task',
+      reviewStatus: 'accepted',
+      target: 'task_record',
+      strength: 'medium',
+      summary: 'scoped reintegration record',
+      evidence: { source: 'client-test' },
+      reviewReason: null,
+      createdAt: '2026-03-22T10:08:00.000Z',
+      updatedAt: '2026-03-22T10:08:00.000Z',
+      reviewedAt: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        reintegrationRecords: [reintegrationRecord],
+        filters: { sourceNoteId: 'note-1.md' },
+      }),
+    }));
+
+    await expect(fetchReintegrationRecords({ sourceNoteId: 'note-1.md' })).resolves.toEqual([reintegrationRecord]);
+    expect(fetch).toHaveBeenCalledWith('/api/reintegration-records?sourceNoteId=note-1.md');
   });
 
   it('surfaces API errors for reintegration contract actions', async () => {

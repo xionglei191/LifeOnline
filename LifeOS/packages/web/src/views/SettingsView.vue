@@ -1059,7 +1059,7 @@ async function loadReintegrationRecords(options?: { preserveMessage?: boolean })
     reintegrationMessage.value = '';
   }
   try {
-    reintegrationRecords.value = await fetchReintegrationRecords(reintegrationFilterStatus.value || undefined);
+    reintegrationRecords.value = await fetchReintegrationRecords({ reviewStatus: reintegrationFilterStatus.value || undefined });
   } catch (e: any) {
     reintegrationMessage.value = e.message || '加载 reintegration records 失败';
     reintegrationMessageType.value = 'error';

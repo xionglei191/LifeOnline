@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
-import type { Note, WorkerTask, ApprovalStatus } from '@lifeos/shared';
+import type { Note, WorkerTask, ApprovalStatus, ReintegrationRecord, EventNode, ContinuityRecord } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNoteById: vi.fn(),
   fetchPersonaSnapshot: vi.fn(),
+  fetchReintegrationRecords: vi.fn(),
+  fetchEventNodes: vi.fn(),
+  fetchContinuityRecords: vi.fn(),
   extractTasks: vi.fn(),
   updateNote: vi.fn(),
   appendNote: vi.fn(),
@@ -19,6 +22,9 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock('../api/client', () => ({
   fetchNoteById: apiMocks.fetchNoteById,
   fetchPersonaSnapshot: apiMocks.fetchPersonaSnapshot,
+  fetchReintegrationRecords: apiMocks.fetchReintegrationRecords,
+  fetchEventNodes: apiMocks.fetchEventNodes,
+  fetchContinuityRecords: apiMocks.fetchContinuityRecords,
   extractTasks: apiMocks.extractTasks,
   updateNote: apiMocks.updateNote,
   appendNote: apiMocks.appendNote,
@@ -96,6 +102,67 @@ function createTask(overrides: Partial<WorkerTask> = {}): WorkerTask {
   };
 }
 
+function createReintegrationRecord(overrides: Partial<ReintegrationRecord> = {}): ReintegrationRecord {
+  return {
+    id: overrides.id ?? 'record-1',
+    workerTaskId: overrides.workerTaskId ?? 'worker-task-1',
+    sourceNoteId: overrides.sourceNoteId ?? 'note-1.md',
+    soulActionId: overrides.soulActionId ?? 'soul-action-1',
+    taskType: overrides.taskType ?? 'extract_tasks',
+    terminalStatus: overrides.terminalStatus ?? 'succeeded',
+    signalKind: overrides.signalKind ?? 'candidate_task',
+    reviewStatus: overrides.reviewStatus ?? 'accepted',
+    target: overrides.target ?? 'task_record',
+    strength: overrides.strength ?? 'medium',
+    summary: overrides.summary ?? 'Projection source',
+    evidence: overrides.evidence ?? {},
+    reviewReason: overrides.reviewReason ?? null,
+    createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
+    reviewedAt: overrides.reviewedAt ?? '2026-03-22T10:00:00.000Z',
+  };
+}
+
+function createEventNode(overrides: Partial<EventNode> = {}): EventNode {
+  return {
+    id: overrides.id ?? 'event-1',
+    sourceReintegrationId: overrides.sourceReintegrationId ?? 'record-1',
+    sourceNoteId: overrides.sourceNoteId ?? 'note-1.md',
+    sourceSoulActionId: overrides.sourceSoulActionId ?? 'soul-action-1',
+    promotionSoulActionId: overrides.promotionSoulActionId ?? 'promotion-1',
+    eventKind: overrides.eventKind ?? 'milestone_report',
+    title: overrides.title ?? 'Ready event node',
+    summary: overrides.summary ?? 'Projection summary',
+    threshold: overrides.threshold ?? 'high',
+    status: overrides.status ?? 'active',
+    evidence: overrides.evidence ?? { proof: true },
+    explanation: overrides.explanation ?? { why: 'matched' },
+    occurredAt: overrides.occurredAt ?? '2026-03-22T10:00:00.000Z',
+    createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
+  };
+}
+
+function createContinuityRecord(overrides: Partial<ContinuityRecord> = {}): ContinuityRecord {
+  return {
+    id: overrides.id ?? 'continuity-1',
+    sourceReintegrationId: overrides.sourceReintegrationId ?? 'record-1',
+    sourceNoteId: overrides.sourceNoteId ?? 'note-1.md',
+    sourceSoulActionId: overrides.sourceSoulActionId ?? 'soul-action-1',
+    promotionSoulActionId: overrides.promotionSoulActionId ?? 'promotion-2',
+    continuityKind: overrides.continuityKind ?? 'persona_direction',
+    target: overrides.target ?? 'task_record',
+    strength: overrides.strength ?? 'medium',
+    summary: overrides.summary ?? 'ready continuity',
+    continuity: overrides.continuity ?? { focus: 'deep work' },
+    evidence: overrides.evidence ?? { source: 'note' },
+    explanation: overrides.explanation ?? { why: 'persisted' },
+    recordedAt: overrides.recordedAt ?? '2026-03-22T10:00:00.000Z',
+    createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
+  };
+}
+
 function clickButtonByText(text: string) {
   const button = Array.from(document.body.querySelectorAll('button')).find((element) => element.textContent?.trim() === text);
   expect(button).toBeTruthy();
@@ -130,6 +197,9 @@ describe('NoteDetail', () => {
     vi.clearAllMocks();
     apiMocks.fetchNoteById.mockResolvedValue(createNote());
     apiMocks.fetchPersonaSnapshot.mockResolvedValue(null);
+    apiMocks.fetchReintegrationRecords.mockResolvedValue([]);
+    apiMocks.fetchEventNodes.mockResolvedValue([]);
+    apiMocks.fetchContinuityRecords.mockResolvedValue([]);
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
     apiMocks.retryWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'pending' }));
     apiMocks.cancelWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-cancel', taskType: 'openclaw_task', worker: 'openclaw', status: 'cancelled' }));
@@ -329,6 +399,149 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain('新人格快照');
     expect(document.body.textContent).toContain('new snapshot preview');
     expect(document.body.textContent).not.toContain('old snapshot preview');
+
+    wrapper.unmount();
+  });
+
+  it('surfaces promotion projections for the current note only', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValue([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+      createReintegrationRecord({ id: 'record-other', sourceNoteId: 'note-2.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchEventNodes.mockResolvedValue([
+      createEventNode({ id: 'event-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Ready event node' }),
+      createEventNode({ id: 'event-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', title: 'External event node' }),
+    ]);
+    apiMocks.fetchContinuityRecords.mockResolvedValue([
+      createContinuityRecord({ id: 'continuity-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', summary: 'ready continuity' }),
+      createContinuityRecord({ id: 'continuity-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', summary: 'external continuity' }),
+    ]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledWith(['record-ready']);
+    expect(document.body.textContent).toContain('Promotion Projection');
+    expect(document.body.textContent).toContain('Ready event node');
+    expect(document.body.textContent).toContain('ready continuity');
+    expect(document.body.textContent).not.toContain('External event node');
+    expect(document.body.textContent).not.toContain('external continuity');
+
+    wrapper.unmount();
+  });
+
+  it('reloads promotion projections when a projection websocket update arrives for the current note', async () => {
+    apiMocks.fetchReintegrationRecords
+      .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
+      .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
+      .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })]);
+    apiMocks.fetchEventNodes
+      .mockResolvedValueOnce([createEventNode({ id: 'event-old', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Old event node' })])
+      .mockResolvedValueOnce([createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' })]);
+    apiMocks.fetchContinuityRecords
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    expect(document.body.textContent).toContain('Old event node');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'event-node-updated',
+        data: {
+          eventNode: createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' }),
+        },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('New event node');
+    expect(document.body.textContent).not.toContain('Old event node');
+
+    wrapper.unmount();
+  });
+
+  it('shows projection empty state when scoped projection fetch finds no persisted artifacts for the current note', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchEventNodes.mockResolvedValueOnce([]);
+    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Promotion Projection');
+    expect(document.body.textContent).toContain('当前还没有 promotion projections');
+
+    wrapper.unmount();
+  });
+
+  it('shows projection error copy when scoped projection artifact fetch fails for the current note', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchEventNodes.mockRejectedValueOnce(new Error('projection fetch failed'));
+    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('projection fetch failed');
+    expect(document.body.textContent).toContain('Promotion Projection');
 
     wrapper.unmount();
   });

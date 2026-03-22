@@ -696,6 +696,10 @@ export interface DispatchSoulActionResponse {
 
 export interface ListReintegrationRecordsResponse {
   reintegrationRecords: ReintegrationRecord[];
+  filters: {
+    reviewStatus?: ReintegrationRecord['reviewStatus'];
+    sourceNoteId?: string;
+  };
 }
 
 export interface ReintegrationReviewRequest {

@@ -219,10 +219,16 @@ export async function fetchWorkerTasks(
   return data.tasks || [];
 }
 
-export async function fetchReintegrationRecords(reviewStatus?: ReintegrationRecord['reviewStatus']): Promise<ReintegrationRecord[]> {
+export async function fetchReintegrationRecords(filters?: {
+  reviewStatus?: ReintegrationRecord['reviewStatus'];
+  sourceNoteId?: string;
+}): Promise<ReintegrationRecord[]> {
   const params = new URLSearchParams();
-  if (reviewStatus) {
-    params.set('reviewStatus', reviewStatus);
+  if (filters?.reviewStatus) {
+    params.set('reviewStatus', filters.reviewStatus);
+  }
+  if (filters?.sourceNoteId) {
+    params.set('sourceNoteId', filters.sourceNoteId);
   }
   const query = params.toString();
   const res = await fetch(`${API_BASE}/reintegration-records${query ? `?${query}` : ''}`);
