@@ -1,3 +1,40 @@
+# date/week boundary 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的高价值主路径缺口推进。
+- [x] 复核 dashboard / calendar / weekly_report 的日期边界逻辑，确认 server 侧同时存在 UTC `toISOString().split('T')[0]` 与本地周起始计算，且 dashboard 与 weekly_report 的周起始定义不一致。
+- [x] 把本地日期格式、Monday 起始周、月范围/日期列表统一提升到 `server/src/utils/date.ts` 单点 helper，并让 dashboard / calendar / weekly_report 复用。
+- [x] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/utils/date.ts`
+    - 新增 `formatLocalDate()`、`getWeekStartDateString()`、`getWeekEndDateString()`、`getMonthDateRange()`、`getMonthDateStrings()`，集中本地日期与周/月边界规则。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `getDashboard()` 改为复用 Monday 起始周边界 helper，避免继续使用 Sunday 起始与 UTC 字符串混算。
+    - `getCalendar()` 改为复用 month range/day helpers，移除按 `toISOString().split('T')[0]` 生成月起止与日列表的 UTC 口径。
+  - `LifeOS/packages/server/src/workers/workerTasks.ts`
+    - `weekly_report` 默认 `weekStart` 与 `weekEnd` 改为复用同一组 date helpers，消除与 dashboard 的周定义分叉。
+  - `LifeOS/packages/server/test/dateUtils.test.ts`
+    - 新增 date helper 回归，锁定本地日期格式、Monday 起始周、月范围/日期列表语义。
+- 这次修的不是同类稳定性测试平移，而是修复 dashboard / calendar / weekly_report 三条真实主路径共享的日期事实源分叉，避免周边界、月边界、晚间时区下的可见统计不一致。
+
+## 本轮选择依据
+- 新一轮优先级中，date/week boundary 属于新的主路径断裂 / 事实源一致性问题，比继续补 grouped governance 对称测试更高价值。
+- explore 结果显示 dashboard 使用 Sunday 起始周，而 weekly_report 使用 Monday 起始周；同时多个 API 仍用 `toISOString().split('T')[0]` 生成本地业务日期，存在真实的用户可见错位风险。
+- 这条线直接降低 dashboard、calendar、weekly report 之间“今天 / 本周 / 本月”口径不一致的风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/dateUtils.test.ts` 通过，3/3。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "worker task APIs respond with shared worker task contracts|dashboard, timeline, and calendar APIs respond with shared view contracts" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- date/week 边界收口完成后，可继续检查 server 其它仍使用 UTC `toISOString().split('T')[0]` 的业务路径，优先判断是否会影响用户可见统计或任务默认参数。
+
+
 # SettingsView reintegration reject 文案中文化收口
 
 ## 计划

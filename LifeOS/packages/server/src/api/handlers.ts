@@ -21,17 +21,15 @@ import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettin
 import { listAiSuggestions } from '../ai/suggestions.js';
 import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
-import { getTodayDateString } from '../utils/date.js';
+import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
 
 export async function getDashboard(_req: Request<Record<string, never>, DashboardData>, res: Response<DashboardData>): Promise<void> {
   try {
     const db = getDb();
     const today = getTodayDateString();
 
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    const startOfWeek = getWeekStartDateString();
+    const endOfWeek = getWeekEndDateString(startOfWeek);
 
     const todayTodos = db.prepare(`
       SELECT * FROM notes
@@ -46,7 +44,7 @@ export async function getDashboard(_req: Request<Record<string, never>, Dashboar
       WHERE date BETWEEN ? AND ?
       AND priority = 'high'
       ORDER BY date ASC, created ASC
-    `).all(startOfWeek.toISOString().split('T')[0], endOfWeek.toISOString().split('T')[0]);
+    `).all(startOfWeek, endOfWeek);
 
     const dimensions: Dimension[] = ['health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
     const dimensionStats: DimensionStat[] = [];
@@ -248,9 +246,7 @@ export async function getCalendar(
 
     const y = parseInt(year as string);
     const m = parseInt(month as string);
-    const endDate = new Date(y, m, 0);
-    const start = new Date(y, m - 1, 1).toISOString().split('T')[0];
-    const end = endDate.toISOString().split('T')[0];
+    const { start, end } = getMonthDateRange(y, m);
 
     const db = getDb();
     const notes = db.prepare(`
@@ -264,12 +260,10 @@ export async function getCalendar(
       dayMap.get(noteDate)!.push(note);
     });
 
-    const days: CalendarDay[] = [];
-    for (let d = 1; d <= endDate.getDate(); d++) {
-      const date = new Date(y, m - 1, d).toISOString().split('T')[0];
+    const days: CalendarDay[] = getMonthDateStrings(y, m).map((date) => {
       const dayNotes = dayMap.get(date) || [];
-      days.push({ date, notes: dayNotes, count: dayNotes.length });
-    }
+      return { date, notes: dayNotes, count: dayNotes.length };
+    });
 
     const response: CalendarData = { year: y, month: m, days };
     res.json(response);

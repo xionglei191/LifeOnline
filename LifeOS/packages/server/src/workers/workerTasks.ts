@@ -31,7 +31,7 @@ import { extractTasks } from '../ai/taskExtractor.js';
 import { callClaude } from '../ai/aiClient.js';
 import { getEffectivePrompt } from '../ai/promptService.js';
 import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
-import { getTodayDateString } from '../utils/date.js';
+import { formatLocalDate, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
 import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
 import { createReintegrationRecordInput } from './feedbackReintegration.js';
 import {
@@ -134,7 +134,7 @@ const workerTaskDefinitions: WorkerTaskDefinitionMap = {
   },
   weekly_report: {
     worker: 'lifeos',
-    normalizeInput: (input) => ({ weekStart: input?.weekStart || getCurrentWeekMonday() }),
+    normalizeInput: (input) => ({ weekStart: input?.weekStart || getWeekStartDateString() }),
   },
 };
 
@@ -144,13 +144,6 @@ function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerT
     throwWorkerTaskValidationError(`Unsupported task type: ${taskType}`);
   }
   return definition;
-}
-
-function getCurrentWeekMonday(): string {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  return monday.toISOString().split('T')[0];
 }
 
 function buildNoteId(filePath: string): string {
@@ -713,11 +706,8 @@ async function runWeeklyReport(
   task: WorkerTask<'weekly_report'>
 ): Promise<WorkerTaskResultMap['weekly_report']> {
   const input = task.input as WorkerTaskInputMap['weekly_report'];
-  const weekStart = input.weekStart || getCurrentWeekMonday();
-  const weekStartDate = new Date(weekStart);
-  const weekEndDate = new Date(weekStartDate);
-  weekEndDate.setDate(weekStartDate.getDate() + 6);
-  const weekEnd = weekEndDate.toISOString().split('T')[0];
+  const weekStart = input.weekStart || getWeekStartDateString();
+  const weekEnd = getWeekEndDateString(weekStart);
 
   const db = getDb();
   const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ?').get(weekStart, weekEnd) as any;
