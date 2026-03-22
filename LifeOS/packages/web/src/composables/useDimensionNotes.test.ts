@@ -177,6 +177,29 @@ describe('useDimensionNotes', () => {
     wrapper.unmount();
   });
 
+  it('uses visible shared titles as a stable tie-breaker on the main dimension list path', async () => {
+    apiMocks.fetchNotes.mockResolvedValueOnce([
+      createNote('note-z', 'life', '2026-03-31'),
+      createNote('note-a', 'life', '2026-03-31'),
+    ]);
+
+    const { state, wrapper } = mountUseDimensionNotes('life');
+    await nextTick();
+    await nextTick();
+
+    state.notes.value = [
+      { ...state.notes.value[0], title: 'Zeta title', file_name: 'b-file.md' },
+      { ...state.notes.value[1], title: 'Alpha title', file_name: 'z-file.md' },
+    ];
+    state.filters.value.sortOrder = 'asc';
+    state.filters.value.sortBy = 'date';
+    await nextTick();
+
+    expect(state.filteredNotes.value.map((note) => note.title)).toEqual(['Alpha title', 'Zeta title']);
+
+    wrapper.unmount();
+  });
+
   it('reloads notes when websocket index refresh events arrive', async () => {
     apiMocks.fetchNotes
       .mockResolvedValueOnce([createNote('note-life-1', 'life')])

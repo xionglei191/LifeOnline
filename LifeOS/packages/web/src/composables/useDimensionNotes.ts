@@ -81,7 +81,14 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
         const bPriority = b.priority ? priorityOrder[b.priority as keyof typeof priorityOrder] : 0;
         compareValue = bPriority - aPriority;
       }
-      return filters.value.sortOrder === 'desc' ? -compareValue : compareValue;
+
+      if (compareValue !== 0) {
+        return filters.value.sortOrder === 'desc' ? -compareValue : compareValue;
+      }
+
+      const leftLabel = (a.title || a.file_name.replace('.md', '')).toLocaleLowerCase();
+      const rightLabel = (b.title || b.file_name.replace('.md', '')).toLocaleLowerCase();
+      return leftLabel.localeCompare(rightLabel, 'zh-CN');
     });
 
     return result;

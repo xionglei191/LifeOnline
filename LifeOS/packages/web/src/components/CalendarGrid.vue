@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <NotePreview :notes="previewNotes" :visible="previewVisible" :pos="previewPos" />
+    <NotePreview :notes="previewNotes" :preserve-order="true" :visible="previewVisible" :pos="previewPos" />
   </section>
 </template>
 
@@ -46,6 +46,7 @@ import { computed, ref } from 'vue';
 import type { CalendarData, CalendarDay, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
 import { formatLocalDate, parseLocalDate } from '../utils/date';
+import { sortCalendarNotes } from '../utils/noteOrdering';
 
 const props = defineProps<{
   calendarData: CalendarData;
@@ -69,7 +70,7 @@ function onCellEnter(day: CalendarDay, e: MouseEvent) {
   if (hideTimer) clearTimeout(hideTimer);
   if (day.notes.length === 0) return;
 
-  previewNotes.value = day.notes;
+  previewNotes.value = sortCalendarNotes(day.notes);
 
   // Calculate preview dimensions
   const previewWidth = 320;
@@ -126,24 +127,7 @@ function isToday(date: string) {
 }
 
 function getDisplayItems(notes: Note[]) {
-  // Prioritize schedule and task types
-  const sorted = [...notes].sort((a, b) => {
-    const typeOrder: Record<string, number> = { schedule: 0, task: 1, milestone: 2, note: 3, record: 4, review: 5 };
-    const orderA = typeOrder[a.type] ?? 99;
-    const orderB = typeOrder[b.type] ?? 99;
-    if (orderA !== orderB) return orderA - orderB;
-
-    // Then by status (pending first)
-    const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, done: 2, cancelled: 3 };
-    const statusDelta = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
-    if (statusDelta !== 0) return statusDelta;
-
-    const labelA = (a.title || a.file_name.replace('.md', '')).toLocaleLowerCase();
-    const labelB = (b.title || b.file_name.replace('.md', '')).toLocaleLowerCase();
-    return labelA.localeCompare(labelB, 'zh-CN');
-  });
-
-  return sorted.slice(0, 3);
+  return sortCalendarNotes(notes).slice(0, 3);
 }
 
 function handleSelectDay(day: CalendarDay) {

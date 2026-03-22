@@ -60,7 +60,7 @@
     </div>
 
     <!-- Preview -->
-    <NotePreview :notes="previewNotes" :visible="previewVisible" :pos="previewPos" />
+    <NotePreview :notes="previewNotes" :preserve-order="true" :visible="previewVisible" :pos="previewPos" />
 
     <!-- Multi-note picker -->
     <Teleport to="body">
@@ -264,7 +264,11 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
 function onDotEnter(notes: Note[], e: MouseEvent) {
   if (hideTimer) clearTimeout(hideTimer);
-  previewNotes.value = notes;
+  previewNotes.value = [...notes].sort((left, right) => {
+    const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+    const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+    return leftLabel.localeCompare(rightLabel, 'zh-CN');
+  });
 
   // Calculate preview dimensions (estimate)
   const previewWidth = 320;

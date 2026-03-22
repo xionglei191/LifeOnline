@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { CalendarData, Note } from '@lifeos/shared';
 import CalendarGrid from './CalendarGrid.vue';
 
@@ -62,7 +63,7 @@ describe('CalendarGrid', () => {
     vi.useRealTimers();
   });
 
-  it('orders same-priority day items by visible shared titles', () => {
+  it('orders calendar hover previews by the shared grid/detail note ordering', async () => {
     const wrapper = mount(CalendarGrid, {
       props: {
         calendarData: {
@@ -71,10 +72,11 @@ describe('CalendarGrid', () => {
           days: [
             {
               date: '2026-03-02',
-              count: 2,
+              count: 3,
               notes: [
                 createNote({ id: 'note-z', date: '2026-03-02', title: 'Zeta title', file_name: 'b-file.md', type: 'note', status: 'pending' }),
-                createNote({ id: 'note-a', date: '2026-03-02', title: 'Alpha title', file_name: 'z-file.md', type: 'note', status: 'pending' }),
+                createNote({ id: 'task-a', date: '2026-03-02', title: 'Alpha task', file_name: 'z-task.md', type: 'task', status: 'pending' }),
+                createNote({ id: 'schedule-b', date: '2026-03-02', title: 'Beta schedule', file_name: 'y-schedule.md', type: 'schedule', status: 'pending' }),
               ],
             },
           ],
@@ -82,12 +84,20 @@ describe('CalendarGrid', () => {
       },
       global: {
         stubs: {
-          NotePreview: true,
+          NotePreview: false,
+          Teleport: false,
         },
       },
+      attachTo: document.body,
     });
 
-    const itemTexts = wrapper.findAll('.day-item .item-text').map((node) => node.text());
-    expect(itemTexts).toEqual(['Alpha title', 'Zeta title']);
+    await wrapper.get('.calendar-cell.has-notes').trigger('mouseenter', { clientX: 80, clientY: 80 });
+    await nextTick();
+
+    const previewTitles = Array.from(document.body.querySelectorAll('.multi-title')).map((node) => node.textContent?.trim());
+    expect(previewTitles).toEqual(['Beta schedule', 'Alpha task', 'Zeta title']);
+
+    wrapper.unmount();
   });
 });
+

@@ -57,12 +57,17 @@ import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 const props = defineProps<{
   note?: Note | null;
   notes?: Note[] | null;
+  preserveOrder?: boolean;
   visible: boolean;
   pos: { x: number; y: number };
 }>();
 
 const displayNotes = computed(() => {
   if (props.notes && props.notes.length > 0) {
+    if (props.preserveOrder) {
+      return props.notes.slice(0, 5);
+    }
+
     return [...props.notes]
       .sort((left, right) => {
         const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
