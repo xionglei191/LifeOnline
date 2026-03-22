@@ -3,6 +3,13 @@ import { fetchCalendar } from '../api/client';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { CalendarData, WsEvent } from '@lifeos/shared';
 
+export function doesCalendarNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
+}
+
 export function useCalendar() {
   const data = ref<CalendarData | null>(null);
   const loading = ref(false);
@@ -35,7 +42,7 @@ export function useCalendar() {
 
   function handleWsUpdate(event: Event) {
     const wsEvent = (event as CustomEvent<WsEvent>).detail;
-    if (isIndexRefreshEvent(wsEvent) && currentYear && currentMonth) {
+    if (doesCalendarNeedRefresh(wsEvent) && currentYear && currentMonth) {
       load(currentYear, currentMonth);
     }
   }

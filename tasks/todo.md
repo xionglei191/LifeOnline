@@ -1,15 +1,14 @@
-# 当前轮：note-created / note-deleted websocket contract 收口
+# 当前轮：calendar / timeline note lifecycle refresh 收口
 
 ## 进展
-- [x] 识别 create / delete 仍然缺失 first-class websocket contract：server 只创建/删除文件并依赖 index 或 watcher 兜底，web 主路径列表与统计面板会继续等待 index-only 事件，属于新的 shared/server/web contract gap。
-- [x] 在 `LifeOS/packages/shared/src/types.ts` 增加 `note-created` / `note-deleted` 事件定义；同时把 note id 计算统一收口到 `LifeOS/packages/server/src/indexer/parser.ts` 导出的 `buildNoteId`，避免继续在 server 侧重复散落同一规则。
-- [x] 在 `LifeOS/packages/server/src/api/handlers.ts` 的 `createNote` / `deleteNote` 成功路径广播 `note-created` / `note-deleted`，让应用内主动创建/删除笔记时立即提供 websocket 事实源，而不是只信后续索引波动。
-- [x] 在 `LifeOS/packages/web/src/composables/useDimensionNotes.ts`、`web/src/composables/useDashboard.ts`、`web/src/views/SearchView.vue`、`web/src/views/StatsView.vue` 把 `note-created` / `note-deleted` 纳入主路径刷新门禁，覆盖维度列表、dashboard、搜索、统计等直接用户可见界面。
-- [x] 补 focused 回归：`useDimensionNotes.test.ts`、`useDashboard.test.ts`、`DashboardOverview.test.ts`、`SearchView.test.ts`、`StatsView.test.ts`，锁定这些主路径会在新 note create/delete contract 到达后刷新，而不是继续只依赖 index-only 路径。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/composables/useDimensionNotes.test.ts src/composables/useDashboard.test.ts src/components/DashboardOverview.test.ts src/views/SearchView.test.ts src/views/StatsView.test.ts`。
+- [x] 识别 `useCalendar` 与 `useTimeline` 仍然只在 `index-complete` 后刷新，和上一轮已经补上的 note lifecycle websocket contract 脱节；这会让日历/月视图与时间线窗口在应用内 create/update/delete note 后继续停留旧数据，属于新的主路径用户可见缺口。
+- [x] 在 `LifeOS/packages/web/src/composables/useCalendar.ts` 抽出 `doesCalendarNeedRefresh`，把 `note-updated` / `note-created` / `note-deleted` 纳入已加载 calendar window 的刷新门禁，不再只信 index-only 事件。
+- [x] 在 `LifeOS/packages/web/src/composables/useTimeline.ts` 抽出 `doesTimelineNeedRefresh`，把同一组 note lifecycle websocket contract 纳入已加载 timeline window 的刷新门禁，保持 timeline 与其他主路径事实源一致。
+- [x] 在 `LifeOS/packages/web/src/composables/useCalendar.test.ts`、`useTimeline.test.ts` 增加 focused 回归，锁定 calendar / timeline 会在 note lifecycle websocket 到达后重载当前窗口，同时保留已有 stale-response 防护测试。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/composables/useCalendar.test.ts src/composables/useTimeline.test.ts`。
 
 ## 结果
-- LifeOS 现在对应用内创建/删除笔记具备 shared/server/web 一致的 websocket contract，主路径列表、dashboard、搜索、统计可以立刻跟进刷新，不再被迫等待 index-only 链路落稳。
-- 当前这一轮 create/delete websocket contract 收口已完成并通过 focused 验证；下一轮可继续找新的非 Settings 主路径事实源或 contract-to-UI 缺口。
+- Calendar 与 Timeline 现在会跟随 note lifecycle websocket contract 立即刷新当前窗口，不再要求等待 index-only 刷新链路才能反映应用内笔记创建、更新、删除。
+- 当前这一轮 calendar / timeline 主路径刷新收口已完成并通过 focused 验证；下一轮可继续找新的非 Settings 事实源或 contract-to-UI 缺口。
 
 ---

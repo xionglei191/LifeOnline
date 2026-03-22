@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick } from 'vue';
 import type { CalendarData } from '@lifeos/shared';
@@ -7,15 +7,17 @@ const apiMocks = vi.hoisted(() => ({
   fetchCalendar: vi.fn(),
 }));
 
+const websocketMocks = vi.hoisted(() => ({
+  isIndexRefreshEvent: vi.fn(() => false),
+}));
+
 vi.mock('../api/client', () => ({
   fetchCalendar: apiMocks.fetchCalendar,
 }));
 
-vi.mock('./useWebSocket', () => ({
-  isIndexRefreshEvent: vi.fn(() => true),
-}));
+vi.mock('./useWebSocket', () => websocketMocks);
 
-import { useCalendar } from './useCalendar';
+import { useCalendar, doesCalendarNeedRefresh } from './useCalendar';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -52,6 +54,54 @@ const aprilData: CalendarData = {
 };
 
 describe('useCalendar', () => {
+  beforeEach(() => {
+    apiMocks.fetchCalendar.mockReset();
+    websocketMocks.isIndexRefreshEvent.mockReset();
+    websocketMocks.isIndexRefreshEvent.mockReturnValue(false);
+  });
+
+  it('refreshes on note lifecycle websocket events for loaded calendar views', () => {
+    expect(doesCalendarNeedRefresh({
+      type: 'note-updated',
+      data: { noteId: 'note-1.md' },
+    })).toBe(true);
+
+    expect(doesCalendarNeedRefresh({
+      type: 'note-created',
+      data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+    })).toBe(true);
+
+    expect(doesCalendarNeedRefresh({
+      type: 'note-deleted',
+      data: { noteId: 'note-1.md', filePath: '/vault/成长/2026-03-23-note-old.md' },
+    })).toBe(true);
+  });
+
+  it('reloads the active calendar window when note-created websocket events arrive', async () => {
+    apiMocks.fetchCalendar
+      .mockResolvedValueOnce(marchData)
+      .mockResolvedValueOnce(aprilData);
+
+    const { state, wrapper } = mountUseCalendar();
+    await state.load(2026, 3);
+    await nextTick();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-created',
+        data: { filePath: '/vault/成长/2026-03-23-note-new.md' },
+      },
+    }));
+    await nextTick();
+    await nextTick();
+
+    expect(apiMocks.fetchCalendar).toHaveBeenNthCalledWith(1, 2026, 3);
+    expect(apiMocks.fetchCalendar).toHaveBeenNthCalledWith(2, 2026, 3);
+    expect(state.data.value).toEqual(aprilData);
+
+    wrapper.unmount();
+  });
+
   it('keeps the latest month data when an older request resolves afterwards', async () => {
     const first = deferred<CalendarData>();
     const second = deferred<CalendarData>();

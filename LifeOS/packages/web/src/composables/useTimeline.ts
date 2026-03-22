@@ -3,6 +3,13 @@ import { fetchTimeline } from '../api/client';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { TimelineData, WsEvent } from '@lifeos/shared';
 
+export function doesTimelineNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-updated'
+    || wsEvent.type === 'note-created'
+    || wsEvent.type === 'note-deleted';
+}
+
 export function useTimeline() {
   const data = ref<TimelineData | null>(null);
   const loading = ref(false);
@@ -33,7 +40,7 @@ export function useTimeline() {
 
   function handleWsUpdate(event: Event) {
     const wsEvent = (event as CustomEvent<WsEvent>).detail;
-    if (isIndexRefreshEvent(wsEvent) && currentStart && currentEnd) {
+    if (doesTimelineNeedRefresh(wsEvent) && currentStart && currentEnd) {
       load(currentStart, currentEnd);
     }
   }
