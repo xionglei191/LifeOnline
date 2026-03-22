@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import type { WorkerTaskResultMap } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb } from '../src/db/client.js';
 import { createWorkerTask, getWorkerTask, normalizeTaskInput, cancelWorkerTask, retryWorkerTask, executeWorkerTask } from '../src/workers/workerTasks.js';
@@ -97,16 +98,19 @@ test('executeWorkerTask stores structured result on successful completion', asyn
     assert.equal(result.status, 'succeeded');
     assert.equal(result.error, null);
     assert.equal(result.resultSummary, '已更新人格快照：Source Note');
-    assert.deepEqual(result.result, {
+    assert.equal(result.taskType, 'update_persona_snapshot');
+    const personaSnapshotResult = result.result as WorkerTaskResultMap['update_persona_snapshot'];
+    assert.ok(personaSnapshotResult);
+    assert.deepEqual(personaSnapshotResult, {
       title: 'Source Note 人格快照更新',
       summary: '已更新人格快照：Source Note',
       sourceNoteTitle: 'Source Note',
-      snapshotId: result.result?.snapshotId,
+      snapshotId: personaSnapshotResult.snapshotId,
       snapshot: {
         sourceNoteTitle: 'Source Note',
         summary: '已更新人格快照：Source Note',
         contentPreview: 'Persona signal content for snapshot.',
-        updatedAt: result.result?.snapshot.updatedAt,
+        updatedAt: personaSnapshotResult.snapshot.updatedAt,
       },
     });
     assert.deepEqual(result.outputNotePaths, []);

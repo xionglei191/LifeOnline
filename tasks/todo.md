@@ -1,3 +1,45 @@
+# shared/server API error-response contract gap 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 server/shared contract gap 推进 API error response typing 收口。
+- [x] 把 `src/api/handlers.ts` 中成功 payload / error payload 分叉的 response typing 统一收口到 shared contract，而不是继续让每个 handler 各自漂移。
+- [x] 顺手清掉阻塞 `server build` 的几个既有测试类型漂移点，恢复完整 build 验证。
+- [x] 更新 `tasks/todo.md`，记录本轮实现与验证结果。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts`
+    - 新增 `ApiErrorResponse` 与 `ApiResponse<T>`，把 API 成功/失败返回统一提升为 shared contract。
+    - 同步放宽 `DispatchSoulActionResponse.result.soulActionId` 为 `string | null`，与当前 runtime 返回值对齐。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - 将 dashboard、index、timeline、calendar、search、config、AI provider、worker task、schedule、reintegration、soul action、persona snapshot 等 handler 的 `Request/Response` 泛型统一改为 `ApiResponse<...>`。
+    - 这样 `res.status(...).json({ error })` 不再和成功 payload 类型冲突，handler 层返回契约恢复和 shared 一致。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts`
+    - 补上 `upsertReintegrationRecord` 导入，消除 build blocker。
+  - `LifeOS/packages/server/test/dimensions.test.ts`
+    - 改为通过公开 helper `getDimensionKeyForDirectory('成长')` 验证目录映射，不再直接索引 const object 导致类型过窄。
+  - `LifeOS/packages/server/test/workerTasks.test.ts`
+    - 显式按 `update_persona_snapshot` 结果类型收窄 `result.result`，消除 `snapshotId` / `snapshot` 访问的 union 类型错误。
+- 这次修的不是给每个 response payload 额外挂一个 `error?: string`，而是把 API 成功/失败返回契约收回 shared 单一事实源，并顺手恢复 `server build` 这条真实验证主链。
+
+## 本轮选择依据
+- 这是新的 server/shared contract gap：handler runtime 长期允许 `{ error: string }`，但 shared 成功 payload 类型并未表达这一点，导致 `handlers.ts` 出现系统性类型漂移并阻塞完整 build。
+- 相比继续回到 grouped governance / SettingsView 对称补强，这条线直接修复 server 主路径的真实契约不一致，并恢复完整验证能力。
+- 顺手清理 `configLifecycle.test.ts`、`dimensions.test.ts`、`workerTasks.test.ts` 的少量类型漂移，可以避免 build 继续被既有 blocker 卡住。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮 build 验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，下一步可检查 web client / 调用侧是否还存在对 `ApiResponse<T>` 错误分支表达不够显式的局部漂移；但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 shared/server API error-response contract 收口与 build blocker 修复。
+
+
 # timeline/calendar local-date + dimension helper 收口
 
 ## 计划

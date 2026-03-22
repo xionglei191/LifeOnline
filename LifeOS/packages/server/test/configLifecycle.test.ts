@@ -10,6 +10,7 @@ import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 import { createWorkerTask as seedWorkerTask, cancelWorkerTask as seedCancelWorkerTask } from '../src/workers/workerTasks.js';
 import { createOrReuseSoulAction } from '../src/soul/soulActions.js';
+import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
 import { upsertEventNode } from '../src/soul/eventNodes.js';
 import { upsertContinuityRecord } from '../src/soul/continuityRecords.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';

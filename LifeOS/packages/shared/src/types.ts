@@ -1,3 +1,9 @@
+export interface ApiErrorResponse {
+  error: string;
+}
+
+export type ApiResponse<T> = T | ApiErrorResponse;
+
 export type NoteType = 'schedule' | 'task' | 'note' | 'record' | 'milestone' | 'review';
 export type Dimension = 'health' | 'career' | 'finance' | 'learning' | 'relationship' | 'life' | 'hobby' | 'growth' | '_inbox';
 export const DIMENSION_LABELS = {
@@ -658,7 +664,7 @@ export interface DispatchSoulActionResponse {
   result: {
     dispatched: boolean;
     reason: string;
-    soulActionId?: string;
+    soulActionId?: string | null;
     workerTaskId?: string | null;
   };
   soulAction: SoulAction | null;

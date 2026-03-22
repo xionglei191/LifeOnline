@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DIMENSION_DIRECTORY_NAMES, DIMENSION_KEY_BY_DIRECTORY, DIMENSION_LABELS, SELECTABLE_DIMENSIONS } from '@lifeos/shared';
+import { DIMENSION_DIRECTORY_NAMES, DIMENSION_LABELS, SELECTABLE_DIMENSIONS } from '@lifeos/shared';
 import { getDimensionDirectoryName, getDimensionDisplayLabel, getDimensionKeyForDirectory, REPORT_DIMENSION_KEYS } from '../src/utils/dimensions.js';
 
 test('shared and server dimension helpers stay aligned', () => {
@@ -16,5 +16,5 @@ test('shared and server dimension helpers stay aligned', () => {
   assert.equal(getDimensionKeyForDirectory('_Inbox'), '_inbox');
   assert.equal(getDimensionKeyForDirectory('_Daily'), 'growth');
   assert.equal(getDimensionKeyForDirectory('_Weekly'), 'growth');
-  assert.equal(DIMENSION_KEY_BY_DIRECTORY['成长'], 'growth');
+  assert.equal(getDimensionKeyForDirectory('成长'), 'growth');
 });

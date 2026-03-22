@@ -20,11 +20,11 @@ import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptO
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../soul/personaSnapshots.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse, PersonaSnapshotResponse } from '@lifeos/shared';
+import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse, PersonaSnapshotResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
 
-export async function getDashboard(_req: Request<Record<string, never>, DashboardData>, res: Response<DashboardData>): Promise<void> {
+export async function getDashboard(_req: Request<Record<string, never>, ApiResponse<DashboardData>>, res: Response<ApiResponse<DashboardData>>): Promise<void> {
   try {
     const db = getDb();
     const today = getTodayDateString();
@@ -122,7 +122,7 @@ export async function getNotes(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function triggerIndex(_req: Request<Record<string, never>, IndexResult>, res: Response<IndexResult>): Promise<void> {
+export async function triggerIndex(_req: Request<Record<string, never>, ApiResponse<IndexResult>>, res: Response<ApiResponse<IndexResult>>): Promise<void> {
   try {
     const config = await loadConfig();
     const result = await indexVault(config.vaultPath);
@@ -210,8 +210,8 @@ function parseNote(row: any): Note {
 
 // GET /api/timeline?start=2026-03-01&end=2026-03-31
 export async function getTimeline(
-  req: Request<Record<string, never>, TimelineData, Record<string, never>, { start?: string; end?: string }>,
-  res: Response<TimelineData>,
+  req: Request<Record<string, never>, ApiResponse<TimelineData>, Record<string, never>, { start?: string; end?: string }>,
+  res: Response<ApiResponse<TimelineData>>,
 ): Promise<void> {
   try {
     const { start, end } = req.query;
@@ -238,8 +238,8 @@ export async function getTimeline(
 
 // GET /api/calendar?year=2026&month=3
 export async function getCalendar(
-  req: Request<Record<string, never>, CalendarData, Record<string, never>, { year?: string; month?: string }>,
-  res: Response<CalendarData>,
+  req: Request<Record<string, never>, ApiResponse<CalendarData>, Record<string, never>, { year?: string; month?: string }>,
+  res: Response<ApiResponse<CalendarData>>,
 ): Promise<void> {
   try {
     const { year, month } = req.query;
@@ -289,8 +289,8 @@ export async function getNoteById(req: Request, res: Response): Promise<void> {
 }
 
 export async function getPersonaSnapshotHandler(
-  req: Request<{ sourceNoteId: string }, PersonaSnapshotResponse>,
-  res: Response<PersonaSnapshotResponse>,
+  req: Request<{ sourceNoteId: string }, ApiResponse<PersonaSnapshotResponse>>,
+  res: Response<ApiResponse<PersonaSnapshotResponse>>,
 ): Promise<void> {
   try {
     const { sourceNoteId } = req.params;
@@ -303,7 +303,7 @@ export async function getPersonaSnapshotHandler(
 }
 
 // GET /api/search?q=keyword
-export async function searchNotes(req: Request<Record<string, never>, SearchResult, Record<string, never>, { q?: string }>, res: Response<SearchResult>): Promise<void> {
+export async function searchNotes(req: Request<Record<string, never>, ApiResponse<SearchResult>, Record<string, never>, { q?: string }>, res: Response<ApiResponse<SearchResult>>): Promise<void> {
   try {
     const { q } = req.query;
     if (!q) { res.status(400).json({ error: 'query parameter required' }); return; }
@@ -328,7 +328,7 @@ export async function searchNotes(req: Request<Record<string, never>, SearchResu
 }
 
 // GET /api/config
-export async function getConfig(_req: Request<Record<string, never>, Config>, res: Response<Config>): Promise<void> {
+export async function getConfig(_req: Request<Record<string, never>, ApiResponse<Config>>, res: Response<ApiResponse<Config>>): Promise<void> {
   try {
     const config = await loadConfig();
     res.json(config);
@@ -339,7 +339,7 @@ export async function getConfig(_req: Request<Record<string, never>, Config>, re
 }
 
 // POST /api/config
-export async function updateConfig(req: Request<Record<string, never>, UpdateConfigResponse, UpdateConfigRequest>, res: Response<UpdateConfigResponse>): Promise<void> {
+export async function updateConfig(req: Request<Record<string, never>, ApiResponse<UpdateConfigResponse>, UpdateConfigRequest>, res: Response<ApiResponse<UpdateConfigResponse>>): Promise<void> {
   try {
     const { vaultPath } = req.body;
     if (!vaultPath) {
@@ -365,8 +365,8 @@ export async function updateConfig(req: Request<Record<string, never>, UpdateCon
 }
 
 export async function listAiPrompts(
-  _req: Request<Record<string, never>, ListAiPromptsResponse>,
-  res: Response<ListAiPromptsResponse>,
+  _req: Request<Record<string, never>, ApiResponse<ListAiPromptsResponse>>,
+  res: Response<ApiResponse<ListAiPromptsResponse>>,
 ): Promise<void> {
   try {
     const response: ListAiPromptsResponse = { prompts: listPromptRecords() };
@@ -378,8 +378,8 @@ export async function listAiPrompts(
 }
 
 export async function updateAiPrompt(
-  req: Request<{ key: string }, AiPromptResponse, UpdatePromptRequest>,
-  res: Response<AiPromptResponse>,
+  req: Request<{ key: string }, ApiResponse<AiPromptResponse>, UpdatePromptRequest>,
+  res: Response<ApiResponse<AiPromptResponse>>,
 ): Promise<void> {
   try {
     const { key } = req.params;
@@ -409,8 +409,8 @@ export async function updateAiPrompt(
 }
 
 export async function resetAiPrompt(
-  req: Request<{ key: string }, ResetAiPromptResponse>,
-  res: Response<ResetAiPromptResponse>,
+  req: Request<{ key: string }, ApiResponse<ResetAiPromptResponse>>,
+  res: Response<ApiResponse<ResetAiPromptResponse>>,
 ): Promise<void> {
   try {
     const { key } = req.params;
@@ -429,8 +429,8 @@ export async function resetAiPrompt(
 }
 
 export async function getAiProviderHandler(
-  _req: Request<Record<string, never>, AiProviderSettings>,
-  res: Response<AiProviderSettings>,
+  _req: Request<Record<string, never>, ApiResponse<AiProviderSettings>>,
+  res: Response<ApiResponse<AiProviderSettings>>,
 ): Promise<void> {
   try {
     const response: AiProviderSettings = getAiProviderSettings();
@@ -442,8 +442,8 @@ export async function getAiProviderHandler(
 }
 
 export async function updateAiProviderHandler(
-  req: Request<Record<string, never>, AiProviderSettings, UpdateAiProviderSettingsRequest>,
-  res: Response<AiProviderSettings>,
+  req: Request<Record<string, never>, ApiResponse<AiProviderSettings>, UpdateAiProviderSettingsRequest>,
+  res: Response<ApiResponse<AiProviderSettings>>,
 ): Promise<void> {
   try {
     const body = req.body;
@@ -462,8 +462,8 @@ export async function updateAiProviderHandler(
 }
 
 export async function testAiProviderHandler(
-  req: Request<Record<string, never>, TestAiProviderConnectionResponse, TestAiProviderConnectionRequest>,
-  res: Response<TestAiProviderConnectionResponse>,
+  req: Request<Record<string, never>, ApiResponse<TestAiProviderConnectionResponse>, TestAiProviderConnectionRequest>,
+  res: Response<ApiResponse<TestAiProviderConnectionResponse>>,
 ): Promise<void> {
   try {
     const body = req.body || {};
@@ -482,8 +482,8 @@ export async function testAiProviderHandler(
 }
 
 export async function listAiSuggestionsHandler(
-  _req: Request<Record<string, never>, ListAiSuggestionsResponse>,
-  res: Response<ListAiSuggestionsResponse>,
+  _req: Request<Record<string, never>, ApiResponse<ListAiSuggestionsResponse>>,
+  res: Response<ApiResponse<ListAiSuggestionsResponse>>,
 ): Promise<void> {
   try {
     const response: ListAiSuggestionsResponse = {
@@ -498,14 +498,14 @@ export async function listAiSuggestionsHandler(
 
 // GET /api/soul-actions
 export async function listSoulActionsHandler(
-  req: Request<Record<string, never>, ListSoulActionsResponse, Record<string, never>, {
+  req: Request<Record<string, never>, ApiResponse<ListSoulActionsResponse>, Record<string, never>, {
     sourceNoteId?: string;
     sourceReintegrationId?: string;
     governanceStatus?: string;
     executionStatus?: string;
     actionKind?: string;
   }>,
-  res: Response<ListSoulActionsResponse>,
+  res: Response<ApiResponse<ListSoulActionsResponse>>,
 ): Promise<void> {
   try {
     const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
@@ -542,8 +542,8 @@ export async function listSoulActionsHandler(
 
 // GET /api/soul-actions/:id
 export async function getSoulActionHandler(
-  req: Request<{ id: string }, SoulActionResponse>,
-  res: Response<SoulActionResponse>,
+  req: Request<{ id: string }, ApiResponse<SoulActionResponse>>,
+  res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
     const soulAction = getSoulAction(req.params.id);
@@ -574,8 +574,8 @@ function broadcastReintegrationRecordUpdate(record: ReturnType<typeof getReinteg
 }
 
 export async function approveSoulActionHandler(
-  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
-  res: Response<SoulActionResponse>,
+  req: Request<{ id: string }, ApiResponse<SoulActionResponse>, ReintegrationReviewRequest>,
+  res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
     const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
@@ -592,8 +592,8 @@ export async function approveSoulActionHandler(
 }
 
 export async function deferSoulActionHandler(
-  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
-  res: Response<SoulActionResponse>,
+  req: Request<{ id: string }, ApiResponse<SoulActionResponse>, ReintegrationReviewRequest>,
+  res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
     const soulAction = deferSoulAction(req.params.id, getGovernanceReason(req.body));
@@ -610,8 +610,8 @@ export async function deferSoulActionHandler(
 }
 
 export async function discardSoulActionHandler(
-  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
-  res: Response<SoulActionResponse>,
+  req: Request<{ id: string }, ApiResponse<SoulActionResponse>, ReintegrationReviewRequest>,
+  res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
     const soulAction = discardSoulAction(req.params.id, getGovernanceReason(req.body));
@@ -628,8 +628,8 @@ export async function discardSoulActionHandler(
 }
 
 export async function dispatchSoulActionHandler(
-  req: Request<{ id: string }, DispatchSoulActionResponse>,
-  res: Response<DispatchSoulActionResponse>,
+  req: Request<{ id: string }, ApiResponse<DispatchSoulActionResponse>>,
+  res: Response<ApiResponse<DispatchSoulActionResponse>>,
 ): Promise<void> {
   try {
     const result = await dispatchApprovedSoulAction(req.params.id);
@@ -654,8 +654,8 @@ export async function dispatchSoulActionHandler(
 }
 
 export async function listReintegrationRecordsHandler(
-  req: Request<Record<string, never>, ListReintegrationRecordsResponse, Record<string, never>, { reviewStatus?: 'pending_review' | 'accepted' | 'rejected' }>,
-  res: Response<ListReintegrationRecordsResponse>,
+  req: Request<Record<string, never>, ApiResponse<ListReintegrationRecordsResponse>, Record<string, never>, { reviewStatus?: 'pending_review' | 'accepted' | 'rejected' }>,
+  res: Response<ApiResponse<ListReintegrationRecordsResponse>>,
 ): Promise<void> {
   try {
     const reviewStatus = typeof req.query.reviewStatus === 'string' ? req.query.reviewStatus.trim() as 'pending_review' | 'accepted' | 'rejected' : undefined;
@@ -670,8 +670,8 @@ export async function listReintegrationRecordsHandler(
 }
 
 export async function acceptReintegrationRecordHandler(
-  req: Request<{ id: string }, AcceptReintegrationRecordResponse, ReintegrationReviewRequest>,
-  res: Response<AcceptReintegrationRecordResponse>,
+  req: Request<{ id: string }, ApiResponse<AcceptReintegrationRecordResponse>, ReintegrationReviewRequest>,
+  res: Response<ApiResponse<AcceptReintegrationRecordResponse>>,
 ): Promise<void> {
   try {
     const result = acceptReintegrationRecordAndPlanPromotions(req.params.id, getGovernanceReason(req.body));
@@ -689,8 +689,8 @@ export async function acceptReintegrationRecordHandler(
 }
 
 export async function rejectReintegrationRecordHandler(
-  req: Request<{ id: string }, RejectReintegrationRecordResponse, ReintegrationReviewRequest>,
-  res: Response<RejectReintegrationRecordResponse>,
+  req: Request<{ id: string }, ApiResponse<RejectReintegrationRecordResponse>, ReintegrationReviewRequest>,
+  res: Response<ApiResponse<RejectReintegrationRecordResponse>>,
 ): Promise<void> {
   try {
     const record = rejectReintegrationRecord(req.params.id, getGovernanceReason(req.body));
@@ -707,8 +707,8 @@ export async function rejectReintegrationRecordHandler(
 }
 
 export async function planPromotionsHandler(
-  req: Request<{ id: string }, PlanReintegrationPromotionsResponse>,
-  res: Response<PlanReintegrationPromotionsResponse>,
+  req: Request<{ id: string }, ApiResponse<PlanReintegrationPromotionsResponse>>,
+  res: Response<ApiResponse<PlanReintegrationPromotionsResponse>>,
 ): Promise<void> {
   try {
     const record = getReintegrationRecord(req.params.id);
@@ -727,8 +727,8 @@ export async function planPromotionsHandler(
 }
 
 export async function listEventNodesHandler(
-  _req: Request<Record<string, never>, ListEventNodesResponse>,
-  res: Response<ListEventNodesResponse>,
+  _req: Request<Record<string, never>, ApiResponse<ListEventNodesResponse>>,
+  res: Response<ApiResponse<ListEventNodesResponse>>,
 ): Promise<void> {
   try {
     const response: ListEventNodesResponse = {
@@ -742,8 +742,8 @@ export async function listEventNodesHandler(
 }
 
 export async function listContinuityRecordsHandler(
-  _req: Request<Record<string, never>, ListContinuityRecordsResponse>,
-  res: Response<ListContinuityRecordsResponse>,
+  _req: Request<Record<string, never>, ApiResponse<ListContinuityRecordsResponse>>,
+  res: Response<ApiResponse<ListContinuityRecordsResponse>>,
 ): Promise<void> {
   try {
     const response: ListContinuityRecordsResponse = {
@@ -758,8 +758,8 @@ export async function listContinuityRecordsHandler(
 
 // POST /api/worker-tasks
 export async function createWorkerTaskHandler(
-  req: Request<Record<string, never>, CreateWorkerTaskResponse, CreateWorkerTaskRequest>,
-  res: Response<CreateWorkerTaskResponse>,
+  req: Request<Record<string, never>, ApiResponse<CreateWorkerTaskResponse>, CreateWorkerTaskRequest>,
+  res: Response<ApiResponse<CreateWorkerTaskResponse>>,
 ): Promise<void> {
   try {
     const body = req.body;
@@ -794,8 +794,8 @@ export async function createWorkerTaskHandler(
 
 // GET /api/worker-tasks
 export async function listWorkerTasksHandler(
-  req: Request<Record<string, never>, WorkerTaskListResponse, Record<string, never>, WorkerTaskListFilters & { limit?: string }>,
-  res: Response<WorkerTaskListResponse>,
+  req: Request<Record<string, never>, ApiResponse<WorkerTaskListResponse>, Record<string, never>, WorkerTaskListFilters & { limit?: string }>,
+  res: Response<ApiResponse<WorkerTaskListResponse>>,
 ): Promise<void> {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
@@ -821,7 +821,7 @@ export async function listWorkerTasksHandler(
 }
 
 // GET /api/worker-tasks/:id
-export async function getWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
+export async function getWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = getWorkerTask(req.params.id);
     if (!task) {
@@ -837,7 +837,7 @@ export async function getWorkerTaskHandler(req: Request<{ id: string }, WorkerTa
 }
 
 // POST /api/worker-tasks/:id/retry
-export async function retryWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
+export async function retryWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = retryWorkerTask(req.params.id);
     const response: WorkerTaskResponse = { task };
@@ -853,7 +853,7 @@ export async function retryWorkerTaskHandler(req: Request<{ id: string }, Worker
 }
 
 // POST /api/worker-tasks/:id/cancel
-export async function cancelWorkerTaskHandler(req: Request<{ id: string }, WorkerTaskResponse>, res: Response<WorkerTaskResponse>): Promise<void> {
+export async function cancelWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = cancelWorkerTask(req.params.id);
     const response: WorkerTaskResponse = { task };
@@ -870,8 +870,8 @@ export async function cancelWorkerTaskHandler(req: Request<{ id: string }, Worke
 
 // DELETE /api/worker-tasks/finished
 export async function clearFinishedWorkerTasksHandler(
-  _req: Request<Record<string, never>, ClearFinishedWorkerTasksResponse>,
-  res: Response<ClearFinishedWorkerTasksResponse>,
+  _req: Request<Record<string, never>, ApiResponse<ClearFinishedWorkerTasksResponse>>,
+  res: Response<ApiResponse<ClearFinishedWorkerTasksResponse>>,
 ): Promise<void> {
   try {
     const deleted = clearFinishedWorkerTasks();
@@ -884,7 +884,7 @@ export async function clearFinishedWorkerTasksHandler(
 
 // PATCH /api/notes/:id — update status/priority/tags in frontmatter
 // 规则：应用内主动写 Vault 文件后，必须显式 enqueue 索引；watcher 只负责外部改动捕获与兜底同步。
-export async function updateNote(req: Request<{ id: string }, UpdateNoteResponse, UpdateNoteRequest>, res: Response<UpdateNoteResponse>): Promise<void> {
+export async function updateNote(req: Request<{ id: string }, ApiResponse<UpdateNoteResponse>, UpdateNoteRequest>, res: Response<ApiResponse<UpdateNoteResponse>>): Promise<void> {
   try {
     const { id } = req.params;
     const { status, priority, tags, approval_status } = req.body;
@@ -955,7 +955,7 @@ export async function deleteNote(req: Request, res: Response): Promise<void> {
 }
 
 // POST /api/notes — create new note in vault
-export async function createNote(req: Request<Record<string, never>, CreateNoteResponse, CreateNoteRequest>, res: Response<CreateNoteResponse>): Promise<void> {
+export async function createNote(req: Request<Record<string, never>, ApiResponse<CreateNoteResponse>, CreateNoteRequest>, res: Response<ApiResponse<CreateNoteResponse>>): Promise<void> {
   try {
     const { title, dimension, type, content, priority, tags } = req.body;
     if (!title || !dimension) { res.status(400).json({ error: 'title and dimension are required' }); return; }
@@ -990,7 +990,7 @@ export async function createNote(req: Request<Record<string, never>, CreateNoteR
 }
 
 // GET /api/stats/trend?days=30
-export async function getStatsTrend(req: Request<Record<string, never>, StatsTrendPoint[], Record<string, never>, { days?: string }>, res: Response<StatsTrendPoint[]>): Promise<void> {
+export async function getStatsTrend(req: Request<Record<string, never>, ApiResponse<StatsTrendPoint[]>, Record<string, never>, { days?: string }>, res: Response<ApiResponse<StatsTrendPoint[]>>): Promise<void> {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const db = getDb();
@@ -1008,7 +1008,7 @@ export async function getStatsTrend(req: Request<Record<string, never>, StatsTre
 }
 
 // GET /api/stats/radar
-export async function getStatsRadar(_req: Request<Record<string, never>, StatsRadarPoint[]>, res: Response<StatsRadarPoint[]>): Promise<void> {
+export async function getStatsRadar(_req: Request<Record<string, never>, ApiResponse<StatsRadarPoint[]>>, res: Response<ApiResponse<StatsRadarPoint[]>>): Promise<void> {
   try {
     const db = getDb();
     const dimensions = ['health','career','finance','learning','relationship','life','hobby','growth'];
@@ -1028,7 +1028,7 @@ export async function getStatsRadar(_req: Request<Record<string, never>, StatsRa
 }
 
 // GET /api/stats/monthly
-export async function getStatsMonthly(_req: Request<Record<string, never>, StatsMonthlyPoint[]>, res: Response<StatsMonthlyPoint[]>): Promise<void> {
+export async function getStatsMonthly(_req: Request<Record<string, never>, ApiResponse<StatsMonthlyPoint[]>>, res: Response<ApiResponse<StatsMonthlyPoint[]>>): Promise<void> {
   try {
     const db = getDb();
     const rows = db.prepare(`
@@ -1046,7 +1046,7 @@ export async function getStatsMonthly(_req: Request<Record<string, never>, Stats
 }
 
 // GET /api/stats/tags
-export async function getStatsTags(_req: Request<Record<string, never>, StatsTagPoint[]>, res: Response<StatsTagPoint[]>): Promise<void> {
+export async function getStatsTags(_req: Request<Record<string, never>, ApiResponse<StatsTagPoint[]>>, res: Response<ApiResponse<StatsTagPoint[]>>): Promise<void> {
   try {
     const db = getDb();
     const notes = db.prepare('SELECT tags FROM notes WHERE tags IS NOT NULL').all() as any[];
@@ -1068,7 +1068,7 @@ export async function getStatsTags(_req: Request<Record<string, never>, StatsTag
 }
 
 // POST /api/schedules
-export async function createScheduleHandler(req: Request<Record<string, never>, TaskScheduleResponse, CreateTaskScheduleRequest>, res: Response<TaskScheduleResponse>): Promise<void> {
+export async function createScheduleHandler(req: Request<Record<string, never>, ApiResponse<TaskScheduleResponse>, CreateTaskScheduleRequest>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const body = req.body;
     if (!body?.taskType || !isSupportedWorkerTaskType(body.taskType)) {
@@ -1101,7 +1101,7 @@ export async function createScheduleHandler(req: Request<Record<string, never>, 
 }
 
 // GET /api/schedules
-export async function listSchedulesHandler(_req: Request<Record<string, never>, TaskScheduleListResponse>, res: Response<TaskScheduleListResponse>): Promise<void> {
+export async function listSchedulesHandler(_req: Request<Record<string, never>, ApiResponse<TaskScheduleListResponse>>, res: Response<ApiResponse<TaskScheduleListResponse>>): Promise<void> {
   try {
     const response: TaskScheduleListResponse = { schedules: listSchedules() };
     res.json(response);
@@ -1111,7 +1111,7 @@ export async function listSchedulesHandler(_req: Request<Record<string, never>, 
 }
 
 // GET /api/schedules/:id
-export async function getScheduleHandler(req: Request<{ id: string }, TaskScheduleResponse>, res: Response<TaskScheduleResponse>): Promise<void> {
+export async function getScheduleHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const schedule = getSchedule(req.params.id);
     if (!schedule) { res.status(404).json({ error: 'Schedule not found' }); return; }
@@ -1123,7 +1123,7 @@ export async function getScheduleHandler(req: Request<{ id: string }, TaskSchedu
 }
 
 // PATCH /api/schedules/:id
-export async function updateScheduleHandler(req: Request<{ id: string }, TaskScheduleResponse, UpdateTaskScheduleRequest>, res: Response<TaskScheduleResponse>): Promise<void> {
+export async function updateScheduleHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>, UpdateTaskScheduleRequest>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const body = req.body;
     if (body.cronExpression !== undefined && !cronValidate(body.cronExpression)) {
@@ -1151,7 +1151,7 @@ export async function updateScheduleHandler(req: Request<{ id: string }, TaskSch
 }
 
 // DELETE /api/schedules/:id
-export async function deleteScheduleHandler(req: Request<{ id: string }, DeleteTaskScheduleResponse>, res: Response<DeleteTaskScheduleResponse>): Promise<void> {
+export async function deleteScheduleHandler(req: Request<{ id: string }, ApiResponse<DeleteTaskScheduleResponse>>, res: Response<ApiResponse<DeleteTaskScheduleResponse>>): Promise<void> {
   try {
     deleteSchedule(req.params.id);
     const response: DeleteTaskScheduleResponse = { success: true };
@@ -1162,7 +1162,7 @@ export async function deleteScheduleHandler(req: Request<{ id: string }, DeleteT
 }
 
 // POST /api/schedules/:id/run
-export async function runScheduleNowHandler(req: Request<{ id: string }, TaskScheduleResponse>, res: Response<TaskScheduleResponse>): Promise<void> {
+export async function runScheduleNowHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const schedule = runScheduleNow(req.params.id);
     const response: TaskScheduleResponse = { schedule };
@@ -1177,7 +1177,7 @@ export async function runScheduleNowHandler(req: Request<{ id: string }, TaskSch
 }
 
 // GET /api/schedules/health
-export async function scheduleHealthHandler(_req: Request<Record<string, never>, ScheduleHealth>, res: Response<ScheduleHealth>): Promise<void> {
+export async function scheduleHealthHandler(_req: Request<Record<string, never>, ApiResponse<ScheduleHealth>>, res: Response<ApiResponse<ScheduleHealth>>): Promise<void> {
   try {
     const health = getScheduleHealth();
     res.json(health);
