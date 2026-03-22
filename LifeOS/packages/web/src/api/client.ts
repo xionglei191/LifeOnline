@@ -4,7 +4,10 @@ export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
 
-type ApiErrorLike = Partial<ApiErrorResponse>;
+type ProjectionListResponse<T> = {
+  items: T[];
+  sourceReintegrationIds: string[];
+};
 
 function normalizeSourceReintegrationIds(sourceReintegrationIds?: string[]): string[] {
   if (!sourceReintegrationIds?.length) return [];
@@ -452,7 +455,7 @@ export async function fetchAISuggestions(): Promise<AISuggestion[]> {
   return data.suggestions || [];
 }
 
-export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promise<EventNode[]> {
+export async function fetchEventNodeProjectionList(sourceReintegrationIds?: string[]): Promise<ProjectionListResponse<EventNode>> {
   const normalizedSourceReintegrationIds = normalizeSourceReintegrationIds(sourceReintegrationIds);
   const query = normalizedSourceReintegrationIds.length
     ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
@@ -462,10 +465,18 @@ export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promis
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch event nodes');
   }
-  return data.eventNodes || [];
+  return {
+    items: data.eventNodes || [],
+    sourceReintegrationIds: normalizeSourceReintegrationIds(data.filters?.sourceReintegrationIds),
+  };
 }
 
-export async function fetchContinuityRecords(sourceReintegrationIds?: string[]): Promise<ContinuityRecord[]> {
+export async function fetchEventNodes(sourceReintegrationIds?: string[]): Promise<EventNode[]> {
+  const data = await fetchEventNodeProjectionList(sourceReintegrationIds);
+  return data.items;
+}
+
+export async function fetchContinuityProjectionList(sourceReintegrationIds?: string[]): Promise<ProjectionListResponse<ContinuityRecord>> {
   const normalizedSourceReintegrationIds = normalizeSourceReintegrationIds(sourceReintegrationIds);
   const query = normalizedSourceReintegrationIds.length
     ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
@@ -475,7 +486,15 @@ export async function fetchContinuityRecords(sourceReintegrationIds?: string[]):
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch continuity records');
   }
-  return data.continuityRecords || [];
+  return {
+    items: data.continuityRecords || [],
+    sourceReintegrationIds: normalizeSourceReintegrationIds(data.filters?.sourceReintegrationIds),
+  };
+}
+
+export async function fetchContinuityRecords(sourceReintegrationIds?: string[]): Promise<ContinuityRecord[]> {
+  const data = await fetchContinuityProjectionList(sourceReintegrationIds);
+  return data.items;
 }
 
 // Note write-back API

@@ -7,8 +7,8 @@ const apiMocks = vi.hoisted(() => ({
   fetchNoteById: vi.fn(),
   fetchPersonaSnapshot: vi.fn(),
   fetchReintegrationRecords: vi.fn(),
-  fetchEventNodes: vi.fn(),
-  fetchContinuityRecords: vi.fn(),
+  fetchEventNodeProjectionList: vi.fn(),
+  fetchContinuityProjectionList: vi.fn(),
   fetchSoulActions: vi.fn(),
   extractTasks: vi.fn(),
   updateNote: vi.fn(),
@@ -24,8 +24,8 @@ vi.mock('../api/client', () => ({
   fetchNoteById: apiMocks.fetchNoteById,
   fetchPersonaSnapshot: apiMocks.fetchPersonaSnapshot,
   fetchReintegrationRecords: apiMocks.fetchReintegrationRecords,
-  fetchEventNodes: apiMocks.fetchEventNodes,
-  fetchContinuityRecords: apiMocks.fetchContinuityRecords,
+  fetchEventNodeProjectionList: apiMocks.fetchEventNodeProjectionList,
+  fetchContinuityProjectionList: apiMocks.fetchContinuityProjectionList,
   fetchSoulActions: apiMocks.fetchSoulActions,
   extractTasks: apiMocks.extractTasks,
   updateNote: apiMocks.updateNote,
@@ -165,6 +165,13 @@ function createContinuityRecord(overrides: Partial<ContinuityRecord> = {}): Cont
   };
 }
 
+function createProjectionListResult<T>(items: T[], sourceReintegrationIds: string[]) {
+  return {
+    items,
+    sourceReintegrationIds,
+  };
+}
+
 function createSoulAction(overrides: Partial<SoulAction> = {}): SoulAction {
   return {
     id: overrides.id ?? 'soul-action-1',
@@ -223,8 +230,8 @@ describe('NoteDetail', () => {
     apiMocks.fetchNoteById.mockResolvedValue(createNote());
     apiMocks.fetchPersonaSnapshot.mockResolvedValue(null);
     apiMocks.fetchReintegrationRecords.mockResolvedValue([]);
-    apiMocks.fetchEventNodes.mockResolvedValue([]);
-    apiMocks.fetchContinuityRecords.mockResolvedValue([]);
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValue(createProjectionListResult([], []));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValue(createProjectionListResult([], []));
     apiMocks.fetchSoulActions.mockResolvedValue([]);
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
     apiMocks.retryWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-retry', taskType: 'extract_tasks', worker: 'lifeos', status: 'pending' }));
@@ -464,14 +471,14 @@ describe('NoteDetail', () => {
       createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
       createReintegrationRecord({ id: 'record-other', sourceNoteId: 'note-2.md', reviewStatus: 'accepted' }),
     ]);
-    apiMocks.fetchEventNodes.mockResolvedValue([
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([
       createEventNode({ id: 'event-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Ready event node' }),
       createEventNode({ id: 'event-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', title: 'External event node' }),
-    ]);
-    apiMocks.fetchContinuityRecords.mockResolvedValue([
+    ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([
       createContinuityRecord({ id: 'continuity-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', summary: 'ready continuity' }),
       createContinuityRecord({ id: 'continuity-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', summary: 'external continuity' }),
-    ]);
+    ], ['record-ready']));
     apiMocks.fetchSoulActions.mockResolvedValue([
       createSoulAction({ id: 'action-ready', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
       createSoulAction({ id: 'action-other', sourceNoteId: 'note-2.md', sourceReintegrationId: 'record-other', actionKind: 'promote_continuity_record', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
@@ -494,8 +501,8 @@ describe('NoteDetail', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready']);
     expect(document.body.textContent).toContain('Promotion Projection');
     expect(document.body.textContent).toContain('Actions 1');
     expect(document.body.textContent).toContain('待派发 1');
@@ -516,12 +523,16 @@ describe('NoteDetail', () => {
     apiMocks.fetchSoulActions
       .mockResolvedValueOnce([createSoulAction({ id: 'action-old', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' })])
       .mockResolvedValueOnce([createSoulAction({ id: 'action-new', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' })]);
-    apiMocks.fetchEventNodes
-      .mockResolvedValueOnce([createEventNode({ id: 'event-old', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Old event node' })])
-      .mockResolvedValueOnce([createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' })]);
-    apiMocks.fetchContinuityRecords
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+    apiMocks.fetchEventNodeProjectionList
+      .mockResolvedValueOnce(createProjectionListResult([
+        createEventNode({ id: 'event-old', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Old event node' }),
+      ], ['record-ready']))
+      .mockResolvedValueOnce(createProjectionListResult([
+        createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' }),
+      ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList
+      .mockResolvedValueOnce(createProjectionListResult([], ['record-ready']))
+      .mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -552,7 +563,7 @@ describe('NoteDetail', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(2);
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledTimes(2);
     expect(document.body.textContent).toContain('New event node');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).not.toContain('Old event node');
@@ -568,10 +579,10 @@ describe('NoteDetail', () => {
       createSoulAction({ id: 'action-via-reint', sourceNoteId: 'reint:record-ready', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
       createSoulAction({ id: 'action-other', sourceNoteId: 'note-2.md', sourceReintegrationId: 'record-other', actionKind: 'promote_continuity_record', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
     ]);
-    apiMocks.fetchEventNodes.mockResolvedValueOnce([
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([
       createEventNode({ id: 'event-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Ready event node' }),
-    ]);
-    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+    ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -590,7 +601,7 @@ describe('NoteDetail', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
     expect(document.body.textContent).toContain('Actions 1');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).toContain('提升 Event Node');
@@ -609,8 +620,8 @@ describe('NoteDetail', () => {
       createSoulAction({ id: 'action-pending', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched', governanceReason: 'need manual review' }),
       createSoulAction({ id: 'action-approved', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_continuity_record', governanceStatus: 'approved', executionStatus: 'not_dispatched', resultSummary: 'approved for dispatch' }),
     ]);
-    apiMocks.fetchEventNodes.mockResolvedValueOnce([]);
-    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -642,8 +653,8 @@ describe('NoteDetail', () => {
     apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
       createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
     ]);
-    apiMocks.fetchEventNodes.mockResolvedValueOnce([]);
-    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },
@@ -670,8 +681,8 @@ describe('NoteDetail', () => {
     apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
       createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
     ]);
-    apiMocks.fetchEventNodes.mockRejectedValueOnce(new Error('projection fetch failed'));
-    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+    apiMocks.fetchEventNodeProjectionList.mockRejectedValueOnce(new Error('projection fetch failed'));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
 
     const wrapper = mount(NoteDetail, {
       props: { noteId: 'note-1.md' },

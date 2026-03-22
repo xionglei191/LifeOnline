@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot, DeleteTaskScheduleResponse, TaskScheduleResponse } from '@lifeos/shared';
-import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
+import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -122,6 +122,72 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('preserves canonical event-node projection filter scope from shared responses', async () => {
+    const eventNodes: EventNode[] = [
+      {
+        id: 'event:reint:test',
+        sourceReintegrationId: 'reint:test',
+        sourceNoteId: null,
+        sourceSoulActionId: null,
+        promotionSoulActionId: 'soul-action-event',
+        eventKind: 'weekly_reflection',
+        title: '周回顾事件',
+        summary: 'weekly reflection summary',
+        threshold: 'high',
+        status: 'active',
+        evidence: { source: 'client-test' },
+        explanation: { reason: 'projection' },
+        occurredAt: '2026-03-22T10:00:00.000Z',
+        createdAt: '2026-03-22T10:00:00.000Z',
+        updatedAt: '2026-03-22T10:00:00.000Z',
+      },
+    ];
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ eventNodes, filters: { sourceReintegrationIds: [' reint:test ', 'reint:test', 'reint:second '] } }),
+    }));
+
+    await expect(fetchEventNodeProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
+      items: eventNodes,
+      sourceReintegrationIds: ['reint:test', 'reint:second'],
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/event-nodes?sourceReintegrationIds=reint%3Atest');
+  });
+
+  it('preserves canonical continuity projection filter scope from shared responses', async () => {
+    const continuityRecords: ContinuityRecord[] = [
+      {
+        id: 'continuity:reint:test',
+        sourceReintegrationId: 'reint:test',
+        sourceNoteId: null,
+        sourceSoulActionId: null,
+        promotionSoulActionId: 'soul-action-continuity',
+        continuityKind: 'daily_rhythm',
+        target: 'derived_outputs',
+        strength: 'medium',
+        summary: 'daily rhythm continuity summary',
+        continuity: { rhythm: 'steady' },
+        evidence: { source: 'client-test' },
+        explanation: { reason: 'projection' },
+        recordedAt: '2026-03-22T10:00:00.000Z',
+        createdAt: '2026-03-22T10:00:00.000Z',
+        updatedAt: '2026-03-22T10:00:00.000Z',
+      },
+    ];
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ continuityRecords, filters: { sourceReintegrationIds: [' reint:test ', 'reint:test', 'reint:second '] } }),
+    }));
+
+    await expect(fetchContinuityProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
+      items: continuityRecords,
+      sourceReintegrationIds: ['reint:test', 'reint:second'],
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
   });
 
   it('fetches typed soul-action contracts from shared response shapes', async () => {

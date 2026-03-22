@@ -316,7 +316,7 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodes, fetchContinuityRecords, fetchSoulActions } from '../api/client';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchSoulActions } from '../api/client';
 import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
@@ -553,22 +553,30 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
     }
 
     const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodes(scopedSourceIds),
-      fetchContinuityRecords(scopedSourceIds),
+      fetchEventNodeProjectionList(scopedSourceIds),
+      fetchContinuityProjectionList(scopedSourceIds),
     ]);
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
 
     const projectionErrors: string[] = [];
 
     if (eventNodeResult.status === 'fulfilled') {
-      eventNodes.value = eventNodeResult.value.filter((eventNode) => eventNode.sourceNoteId === sourceNoteId);
+      const serverScopedIds = new Set(eventNodeResult.value.sourceReintegrationIds);
+      eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
+        eventNode.sourceNoteId === sourceNoteId
+        && (serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId))
+      ));
     } else {
       eventNodes.value = [];
       projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
     }
 
     if (continuityResult.status === 'fulfilled') {
-      continuityRecords.value = continuityResult.value.filter((continuity) => continuity.sourceNoteId === sourceNoteId);
+      const serverScopedIds = new Set(continuityResult.value.sourceReintegrationIds);
+      continuityRecords.value = continuityResult.value.items.filter((continuity) => (
+        continuity.sourceNoteId === sourceNoteId
+        && (serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId))
+      ));
     } else {
       continuityRecords.value = [];
       projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');
