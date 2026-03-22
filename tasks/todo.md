@@ -23,8 +23,12 @@
 - 这轮不是再补一个对称测试，而是把 `suggest` 主路径和 prompt override 收到同一条真实 contract 上，同时把 worker-task 列表回包的事实源补齐，避免 reintegration 断言继续围着旧契约打转。
 
 ## 待办
-- [ ] 跑最终 focused 验证并确认 server/web 构建通过。
+- [x] 跑最终 focused 验证并确认 server/web 构建通过。
 - [ ] 如果验证稳定，清理并提交这轮改动。
+
+## 本轮补充
+- [x] 为 `TimelineTrack` 补本地日期语义回归，锁定共享 dimension label 与 today tick 在本地时区边界下仍正确。
+- [x] 用 focused web test 验证 `TimelineTrack` 回归通过。
 
 # ai-suggestions 主路径收口
 
