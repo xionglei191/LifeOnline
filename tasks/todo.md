@@ -1,3 +1,38 @@
+# search stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 search query 并发请求回写保护收口。
+- [x] 让 `SearchView.vue` 只接受最新 query 请求的回写结果，避免旧搜索请求晚返回或晚报错时覆盖当前结果状态。
+- [x] 补最小 view 回归，锁定旧 query 晚返回/晚失败时不会把当前搜索结果和 error 状态拉回过期 query。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/composables/useCalendar.test.ts`、`LifeOS/packages/web/src/composables/useDimensionNotes.test.ts`、`LifeOS/packages/web/src/composables/useTimeline.test.ts`、`LifeOS/packages/web/src/views/CalendarView.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/SearchView.vue`
+    - 引入递增 `activeRequestId`，让搜索页只接受当前 query 的请求回写。
+    - 删除重复的 mounted 初次加载入口，统一由 route query watch 驱动，避免同一 query 在主路径被双触发。
+  - `LifeOS/packages/web/src/views/SearchView.test.ts`
+    - 新增旧 query 晚返回不会覆盖当前搜索结果的回归。
+    - 新增旧 query 晚失败不会错误污染当前 error 状态的回归。
+- 这次修的不是补一个对称测试，而是修复 search 主路径里的真实竞态：用户已切到新 query，但旧请求后返回仍可能把页面拉回过期搜索事实源。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：当前 route query 已变化后，旧搜索请求结果仍能回写，会让 UI 退回过期 query 状态。
+- 这属于直接可见的主路径行为缺口，而且旧实现还保留了 mounted + watch 双入口，会放大重复请求与竞态窗口。
+- 这条线直接承接前几轮 stale-request guard，但作用点是新的 search 主路径，不是低边际平移。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/SearchView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `NoteDetail` 的 noteId 切换是否也存在旧请求回写污染当前详情的竞态，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 search stale-request guard 收口相关文件。
+
+
 # dimension stale-request guard 收口
 
 ## 计划

@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import type { SearchResult } from '@lifeos/shared';
 import { searchNotes } from '../api/client';
@@ -40,8 +40,10 @@ const result = ref<SearchResult | null>(null);
 const loading = ref(false);
 const error = ref<Error | null>(null);
 const selectedNoteId = ref<string | null>(null);
+let activeRequestId = 0;
 
 async function performSearch(query: string) {
+  const requestId = ++activeRequestId;
   if (!query) {
     result.value = null;
     error.value = null;
@@ -52,11 +54,16 @@ async function performSearch(query: string) {
   loading.value = true;
   error.value = null;
   try {
-    result.value = await searchNotes(query);
+    const nextResult = await searchNotes(query);
+    if (requestId !== activeRequestId) return;
+    result.value = nextResult;
   } catch (e) {
+    if (requestId !== activeRequestId) return;
     error.value = e as Error;
   } finally {
-    loading.value = false;
+    if (requestId === activeRequestId) {
+      loading.value = false;
+    }
   }
 }
 
@@ -75,11 +82,6 @@ async function handleDeleted() {
 watch(() => route.query.q, (newQuery) => {
   performSearch(typeof newQuery === 'string' ? newQuery : '');
 }, { immediate: true });
-
-onMounted(() => {
-  const query = route.query.q;
-  performSearch(typeof query === 'string' ? query : '');
-});
 </script>
 
 <style scoped>
