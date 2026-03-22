@@ -77,17 +77,22 @@
 - 这条线属于新的事实源一致性问题，且直接影响 PR6 event/continuity 持久化对象层，不是单纯展示层小修。
 
 ## 本轮验证
-- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "build PR6 promotion payloads|getPromotionSourceForReintegration"` 通过，4/4。
-- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 通过。
-- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "build PR6 promotion payloads|getPromotionSourceForReintegration"` 通过，62/62。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter server build` 失败；阻塞点来自仓库当前更广泛的既有 TypeScript 问题，而不是本轮 `pr6PromotionRules` 收口本身。当前报错集中在：
+  - `src/api/handlers.ts` 大量 response type 上的 `error` 字段不在声明类型中；
+  - `test/configLifecycle.test.ts` 缺少 `upsertReintegrationRecord`；
+  - `test/dimensions.test.ts` 对 `DIMENSION_KEY_BY_DIRECTORY['成长']` 的索引类型过窄；
+  - `test/workerTasks.test.ts` 对 `result.snapshotId` / `result.snapshot` 的类型收窄缺失。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮定向验证。
 
 ## 当前未完成项
 - 本轮 server 变更尚未提交 git commit。
 - PR6 历史 legacy 数据中仍允许 `sourceNoteId = reint:*` 兼容存在；当前已把 planning + payload 收口到统一 helper，但若后续继续沿同一主线推进，仍可再检查 list/API/web label 是否还会把 legacy fallback 直接暴露为“源笔记”。
+- server package 当前存在与本轮无关的既有 TypeScript build blocker，若继续推进下一轮，优先级更高的是把这些 shared/server contract 类型漂移补齐，否则会持续阻塞完整 build 验证。
 
 ## 下一步建议
-- 若继续沿 PR6 source identity 主线推进，优先检查 `event_nodes` / `continuity_records` list API 与 web projection 上的 source label 是否还需要把 `sourceReintegrationId` 和 `sourceNoteId` 语义做更明确区分。
-- 若没有新的用户可见事实源缺口，也可以直接提交这一轮 source resolution 收口，避免再次掉回低价值对称补强。
+- 直接提交本轮 PR6 source resolution 收口，保持改动聚焦，不把它和更大范围的 build blocker 混在一起。
+- 下一轮优先切到新的 server/shared contract gap：统一 API error response typing，先消除 `src/api/handlers.ts` 与 shared contract 的系统性类型漂移。
 
 
 ## 计划

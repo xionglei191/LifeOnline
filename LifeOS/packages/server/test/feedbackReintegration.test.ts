@@ -144,6 +144,32 @@ test('build PR6 promotion payloads from reintegration review context', () => {
   });
 });
 
+test('build PR6 promotion payloads reuse centralized source resolution when source note is missing', () => {
+  const record = {
+    id: 'reint:promotion-payload-without-note',
+    workerTaskId: 'task-promotion-payload-without-note',
+    sourceNoteId: null,
+    soulActionId: 'soul-action-promotion-payload-without-note',
+    taskType: 'daily_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'A reviewed daily pattern without source note',
+    evidence: { source: 'test' },
+    reviewReason: 'accepted without source note',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:10:00.000Z',
+    reviewedAt: '2026-03-22T10:11:00.000Z',
+  } as const;
+
+  assert.equal(buildEventNodePromotionInput(record, 'soul-action-event').sourceNoteId, record.id);
+  assert.equal(buildEventNodePromotionInput(record, 'soul-action-event').sourceReintegrationId, record.id);
+  assert.equal(buildContinuityPromotionInput(record, 'soul-action-continuity').sourceNoteId, record.id);
+  assert.equal(buildContinuityPromotionInput(record, 'soul-action-continuity').sourceReintegrationId, record.id);
+});
+
 test('build PR6 promotion explanations from reintegration review context', () => {
   const record = {
     id: 'reint:explanation-test',

@@ -100,9 +100,11 @@ export function buildEventNodePromotionInput(
   record: ReintegrationRecord,
   promotionSoulActionId: string,
 ): Omit<EventNode, 'id' | 'createdAt' | 'updatedAt'> {
+  const { sourceNoteId, sourceReintegrationId } = getPromotionSourceForReintegration(record);
+
   return {
-    sourceReintegrationId: record.id,
-    sourceNoteId: record.sourceNoteId,
+    sourceReintegrationId,
+    sourceNoteId,
     sourceSoulActionId: record.soulActionId,
     promotionSoulActionId,
     eventKind: getEventKindForReintegrationSignal(record.signalKind),
@@ -121,10 +123,11 @@ export function buildContinuityPromotionInput(
   promotionSoulActionId: string,
 ): Omit<ContinuityRecord, 'id' | 'createdAt' | 'updatedAt'> {
   const continuityKind = getContinuityKindForReintegrationSignal(record.signalKind);
+  const { sourceNoteId, sourceReintegrationId } = getPromotionSourceForReintegration(record);
 
   return {
-    sourceReintegrationId: record.id,
-    sourceNoteId: record.sourceNoteId,
+    sourceReintegrationId,
+    sourceNoteId,
     sourceSoulActionId: record.soulActionId,
     promotionSoulActionId,
     continuityKind,
