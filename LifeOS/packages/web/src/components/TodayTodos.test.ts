@@ -64,6 +64,20 @@ describe('TodayTodos', () => {
     expect(wrapper.text()).not.toContain('fallback-todo-name');
   });
 
+  it('orders same-priority todos by visible shared titles', () => {
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [
+          createTodo({ id: 'todo-z', title: 'Zeta title', file_name: 'b-file.md', priority: 'medium', status: 'pending' }),
+          createTodo({ id: 'todo-a', title: 'Alpha title', file_name: 'z-file.md', priority: 'medium', status: 'pending' }),
+        ],
+      },
+    });
+
+    const titles = wrapper.findAll('.title').map((node) => node.text());
+    expect(titles).toEqual(['Alpha title', 'Zeta title']);
+  });
+
   it('prevents duplicate toggles while the same todo is still syncing', async () => {
     const pendingUpdate = deferred<void>();
     apiMocks.updateNote.mockReturnValueOnce(pendingUpdate.promise);

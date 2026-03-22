@@ -5,14 +5,14 @@
         <p class="panel-kicker">Execution Queue</p>
         <h3>今日任务队列</h3>
       </div>
-      <span class="panel-badge">{{ todos.length }} items</span>
+      <span class="panel-badge">{{ orderedTodos.length }} items</span>
     </div>
 
-    <div v-if="todos.length === 0" class="empty">今天的任务队列为空，可以把精力留给长期目标。</div>
+    <div v-if="orderedTodos.length === 0" class="empty">今天的任务队列为空，可以把精力留给长期目标。</div>
 
     <ul v-else class="todo-list">
       <li
-        v-for="todo in todos"
+        v-for="todo in orderedTodos"
         :key="todo.id"
         class="todo-item"
         :style="{ '--priority-color': priorityColor(todo.priority || 'medium') }"
@@ -45,14 +45,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
 import { getDimensionLabel } from '../utils/dimensions';
 
-defineProps<{ todos: Note[] }>();
+const props = defineProps<{ todos: Note[] }>();
 const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
 const syncingTodoIds = ref<string[]>([]);
+
+const orderedTodos = computed(() => {
+  return [...props.todos].sort((left, right) => {
+    const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+    const priorityDelta = (priorityOrder[left.priority || 'medium'] ?? 99) - (priorityOrder[right.priority || 'medium'] ?? 99);
+    if (priorityDelta !== 0) return priorityDelta;
+
+    const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, done: 2, cancelled: 3 };
+    const statusDelta = (statusOrder[left.status] ?? 99) - (statusOrder[right.status] ?? 99);
+    if (statusDelta !== 0) return statusDelta;
+
+    const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+    const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+    return leftLabel.localeCompare(rightLabel, 'zh-CN');
+  });
+});
 
 const priorities: Record<string, string> = {
   high: '高压',
