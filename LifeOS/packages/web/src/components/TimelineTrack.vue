@@ -311,10 +311,16 @@ const pickerNotes = ref<Note[]>([]);
 const pickerPos = ref({ x: 0, y: 0 });
 
 function onDotClick(notes: Note[]) {
-  if (notes.length === 1) {
-    emit('selectNote', notes[0].id);
+  const orderedNotes = [...notes].sort((left, right) => {
+    const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+    const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+    return leftLabel.localeCompare(rightLabel, 'zh-CN');
+  });
+
+  if (orderedNotes.length === 1) {
+    emit('selectNote', orderedNotes[0].id);
   } else {
-    pickerNotes.value = notes;
+    pickerNotes.value = orderedNotes;
     pickerPos.value = { x: window.innerWidth / 2 - 120, y: window.innerHeight / 2 - 80 };
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { Note, TimelineTrack as TimelineTrackContract } from '@lifeos/shared';
 import TimelineTrack from './TimelineTrack.vue';
 
@@ -64,5 +65,38 @@ describe('TimelineTrack', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('orders multi-note picker entries by visible shared titles', async () => {
+    const wrapper = mount(TimelineTrack, {
+      props: {
+        tracks: [
+          {
+            dimension: 'growth',
+            notes: [
+              createNote({ id: 'note-z', dimension: 'growth', date: '2026-03-22', title: 'Zeta title', file_name: 'b-file.md' }),
+              createNote({ id: 'note-a', dimension: 'growth', date: '2026-03-22', title: 'Alpha title', file_name: 'z-file.md' }),
+            ],
+          },
+        ],
+        startDate: '2026-03-20',
+        endDate: '2026-03-24',
+      },
+      global: {
+        stubs: {
+          NotePreview: true,
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await wrapper.get('.dot').trigger('click');
+    await nextTick();
+
+    const pickerTitles = Array.from(document.body.querySelectorAll('.picker-title')).map((node) => node.textContent?.trim());
+    expect(pickerTitles).toEqual(['Alpha title', 'Zeta title']);
+
+    wrapper.unmount();
   });
 });
