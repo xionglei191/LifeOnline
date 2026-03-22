@@ -135,7 +135,12 @@ function getDisplayItems(notes: Note[]) {
 
     // Then by status (pending first)
     const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, done: 2, cancelled: 3 };
-    return (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+    const statusDelta = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+    if (statusDelta !== 0) return statusDelta;
+
+    const labelA = (a.title || a.file_name.replace('.md', '')).toLocaleLowerCase();
+    const labelB = (b.title || b.file_name.replace('.md', '')).toLocaleLowerCase();
+    return labelA.localeCompare(labelB, 'zh-CN');
   });
 
   return sorted.slice(0, 3);

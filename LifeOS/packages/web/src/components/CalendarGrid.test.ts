@@ -1,7 +1,36 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import type { CalendarData } from '@lifeos/shared';
+import type { CalendarData, Note } from '@lifeos/shared';
 import CalendarGrid from './CalendarGrid.vue';
+
+function createNote(overrides: Partial<Note> = {}): Note {
+  return {
+    id: overrides.id ?? 'note-1',
+    file_name: overrides.file_name ?? 'note-1.md',
+    file_path: overrides.file_path ?? '/vault/成长/note-1.md',
+    title: overrides.title ?? 'Note 1',
+    content: overrides.content ?? 'content',
+    type: overrides.type ?? 'note',
+    dimension: overrides.dimension ?? 'growth',
+    status: overrides.status ?? 'pending',
+    priority: overrides.priority ?? 'medium',
+    tags: overrides.tags ?? [],
+    date: overrides.date ?? '2026-03-22',
+    due: overrides.due ?? undefined,
+    source: overrides.source ?? 'web',
+    created: overrides.created ?? '2026-03-22T10:00:00.000Z',
+    updated: overrides.updated ?? '2026-03-22T10:00:00.000Z',
+    approval_status: overrides.approval_status ?? null,
+    approval_operation: overrides.approval_operation ?? null,
+    approval_action: overrides.approval_action ?? null,
+    approval_risk: overrides.approval_risk ?? null,
+    approval_scope: overrides.approval_scope ?? null,
+    privacy: overrides.privacy ?? 'private',
+    encrypted: overrides.encrypted ?? false,
+    indexed_at: overrides.indexed_at ?? '2026-03-22T10:00:00.000Z',
+    file_modified_at: overrides.file_modified_at ?? '2026-03-22T10:00:00.000Z',
+  };
+}
 
 const calendarData: CalendarData = {
   year: 2026,
@@ -31,5 +60,34 @@ describe('CalendarGrid', () => {
     expect(todayCells[0].text()).toContain('23');
 
     vi.useRealTimers();
+  });
+
+  it('orders same-priority day items by visible shared titles', () => {
+    const wrapper = mount(CalendarGrid, {
+      props: {
+        calendarData: {
+          year: 2026,
+          month: 3,
+          days: [
+            {
+              date: '2026-03-02',
+              count: 2,
+              notes: [
+                createNote({ id: 'note-z', date: '2026-03-02', title: 'Zeta title', file_name: 'b-file.md', type: 'note', status: 'pending' }),
+                createNote({ id: 'note-a', date: '2026-03-02', title: 'Alpha title', file_name: 'z-file.md', type: 'note', status: 'pending' }),
+              ],
+            },
+          ],
+        },
+      },
+      global: {
+        stubs: {
+          NotePreview: true,
+        },
+      },
+    });
+
+    const itemTexts = wrapper.findAll('.day-item .item-text').map((node) => node.text());
+    expect(itemTexts).toEqual(['Alpha title', 'Zeta title']);
   });
 });
