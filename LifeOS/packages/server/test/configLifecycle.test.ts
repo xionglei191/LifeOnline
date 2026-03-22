@@ -10,7 +10,8 @@ import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 import { createWorkerTask as seedWorkerTask, cancelWorkerTask as seedCancelWorkerTask } from '../src/workers/workerTasks.js';
 import { createOrReuseSoulAction } from '../src/soul/soulActions.js';
-import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
+import { upsertEventNode } from '../src/soul/eventNodes.js';
+import { upsertContinuityRecord } from '../src/soul/continuityRecords.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
 const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
@@ -735,6 +736,71 @@ test('updating config restores original watcher state when restart fails', async
     });
   } finally {
     configUpdateDeps.restartWatcher = originalRestartWatcher;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('event node and continuity APIs respond with shared projection contracts', async () => {
+  const env = await createTestEnv('lifeos-event-continuity-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const eventNode = upsertEventNode({
+      sourceReintegrationId: 'reint:event-contract',
+      sourceNoteId: 'note-event-contract',
+      sourceSoulActionId: 'soul-action-event-contract',
+      promotionSoulActionId: 'soul:promote_event_node:reint:event-contract',
+      eventKind: 'weekly_reflection',
+      title: 'Weekly reflection event',
+      summary: 'A stable weekly reflection pattern',
+      threshold: 'high',
+      status: 'active',
+      evidence: { source: 'configLifecycle.test.ts' },
+      explanation: { reason: 'event contract seed' },
+      occurredAt: '2026-03-22T08:00:00.000Z',
+    });
+
+    const continuityRecord = upsertContinuityRecord({
+      sourceReintegrationId: 'reint:continuity-contract',
+      sourceNoteId: 'note-continuity-contract',
+      sourceSoulActionId: 'soul-action-continuity-contract',
+      promotionSoulActionId: 'soul:promote_continuity_record:reint:continuity-contract',
+      continuityKind: 'daily_rhythm',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'A repeatable daily rhythm is emerging',
+      continuity: {
+        scope: 'daily',
+        pattern: 'Morning reflection and review',
+        cadence: 'daily',
+      },
+      evidence: { source: 'configLifecycle.test.ts' },
+      explanation: { reason: 'continuity contract seed' },
+      recordedAt: '2026-03-22T08:30:00.000Z',
+    });
+
+    const eventResponse = await api<import('../../shared/src/types.js').ListEventNodesResponse>(baseUrl, '/api/event-nodes');
+    const continuityResponse = await api<import('../../shared/src/types.js').ListContinuityRecordsResponse>(baseUrl, '/api/continuity-records');
+
+    assert.ok(eventResponse.eventNodes.some((node) => node.id === eventNode.id));
+    assert.ok(continuityResponse.continuityRecords.some((record) => record.id === continuityRecord.id));
+  } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();

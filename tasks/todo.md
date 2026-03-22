@@ -1,3 +1,35 @@
+# event/continuity shared projection contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 event node / continuity 主路径，确认 web client 已消费 shared list contracts，但 server handler 层仍未显式 typed，也缺少独立 server API 回归。
+- [x] 让 server handlers 显式接回 shared projection contracts，并补最小 server 回归覆盖 event node / continuity 列表返回 shape。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `listEventNodesHandler()` 显式接回 shared `ListEventNodesResponse`。
+    - `listContinuityRecordsHandler()` 显式接回 shared `ListContinuityRecordsResponse`。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts`
+    - 新增 `event node and continuity APIs respond with shared projection contracts`。
+    - 通过直接 seed `event_nodes` / `continuity_records` 锁定 API 返回 shape，而不依赖更深的 promotion 时序。
+- 这次修的不是继续堆前端同类稳定性测试，而是 event/continuity 已经作为 shared projection contracts 被 web client 消费，但 server handler 仍未显式接回，也缺少 API 层独立回归，后续最容易在 PR6 projection 返回 shape 上再次漂移。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- AI suggestions 收口后，event node / continuity 是下一条真实主路径：shared 已定义 `ListEventNodesResponse` / `ListContinuityRecordsResponse`，web client 已直接消费，但 handler 层仍未显式 typed。
+- 这条线可以继续减少 PR6 projection API 在 server/web 两端的 contract 漂移风险。
+
+## 本轮验证
+- 待执行。
+
+## 当前未完成项
+- 跑定向验证。
+- 若验证通过，直接提交本轮 event/continuity contract 收口。
+
+
 # AI suggestions shared list contract 闭环
 
 ## 计划

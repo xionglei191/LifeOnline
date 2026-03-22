@@ -724,7 +724,10 @@ export async function planPromotionsHandler(
   }
 }
 
-export async function listEventNodesHandler(_req: Request, res: Response): Promise<void> {
+export async function listEventNodesHandler(
+  _req: Request<Record<string, never>, ListEventNodesResponse>,
+  res: Response<ListEventNodesResponse>,
+): Promise<void> {
   try {
     const response: ListEventNodesResponse = {
       eventNodes: listEventNodes(),
@@ -736,7 +739,10 @@ export async function listEventNodesHandler(_req: Request, res: Response): Promi
   }
 }
 
-export async function listContinuityRecordsHandler(_req: Request, res: Response): Promise<void> {
+export async function listContinuityRecordsHandler(
+  _req: Request<Record<string, never>, ListContinuityRecordsResponse>,
+  res: Response<ListContinuityRecordsResponse>,
+): Promise<void> {
   try {
     const response: ListContinuityRecordsResponse = {
       continuityRecords: listContinuityRecords(),
