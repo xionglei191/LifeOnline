@@ -18,7 +18,7 @@ import { listContinuityRecords } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
-import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
+import type { DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 import { isSupportedWorkerName } from '@lifeos/shared';
 import { getTodayDateString } from '../utils/date.js';
 
@@ -484,7 +484,16 @@ export async function listAiSuggestionsHandler(_req: Request, res: Response): Pr
 }
 
 // GET /api/soul-actions
-export async function listSoulActionsHandler(req: Request, res: Response): Promise<void> {
+export async function listSoulActionsHandler(
+  req: Request<Record<string, never>, ListSoulActionsResponse, Record<string, never>, {
+    sourceNoteId?: string;
+    sourceReintegrationId?: string;
+    governanceStatus?: string;
+    executionStatus?: string;
+    actionKind?: string;
+  }>,
+  res: Response<ListSoulActionsResponse>,
+): Promise<void> {
   try {
     const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
       ? req.query.sourceNoteId.trim()
@@ -493,7 +502,7 @@ export async function listSoulActionsHandler(req: Request, res: Response): Promi
       ? req.query.sourceReintegrationId.trim()
       : undefined;
 
-    const filters = {
+    const filters: ListSoulActionsResponse['filters'] = {
       sourceNoteId,
       sourceReintegrationId,
       governanceStatus: parseSoulActionGovernanceStatus(req.query.governanceStatus),
@@ -511,14 +520,15 @@ export async function listSoulActionsHandler(req: Request, res: Response): Promi
         ? sourceNoteId
         : undefined);
 
-    res.json({
+    const response: ListSoulActionsResponse = {
       soulActions,
       filters: {
         ...filters,
         sourceNoteId: normalizedSourceNoteId,
         sourceReintegrationId: normalizedSourceReintegrationId,
       },
-    });
+    };
+    res.json(response);
   } catch (error) {
     console.error('List soul actions error:', error);
     res.status(500).json({ error: String(error) });
@@ -526,14 +536,18 @@ export async function listSoulActionsHandler(req: Request, res: Response): Promi
 }
 
 // GET /api/soul-actions/:id
-export async function getSoulActionHandler(req: Request, res: Response): Promise<void> {
+export async function getSoulActionHandler(
+  req: Request<{ id: string }, SoulActionResponse>,
+  res: Response<SoulActionResponse>,
+): Promise<void> {
   try {
     const soulAction = getSoulAction(req.params.id);
     if (!soulAction) {
       res.status(404).json({ error: 'Soul action not found' });
       return;
     }
-    res.json({ soulAction });
+    const response: SoulActionResponse = { soulAction };
+    res.json(response);
   } catch (error) {
     console.error('Get soul action error:', error);
     res.status(500).json({ error: String(error) });
@@ -554,7 +568,10 @@ function broadcastReintegrationRecordUpdate(record: ReturnType<typeof getReinteg
   broadcastUpdate({ type: 'reintegration-record-updated', data: record });
 }
 
-export async function approveSoulActionHandler(req: Request, res: Response): Promise<void> {
+export async function approveSoulActionHandler(
+  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
+  res: Response<SoulActionResponse>,
+): Promise<void> {
   try {
     const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
     if (!soulAction) {
@@ -562,13 +579,17 @@ export async function approveSoulActionHandler(req: Request, res: Response): Pro
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    res.json({ soulAction });
+    const response: SoulActionResponse = { soulAction };
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }
 }
 
-export async function deferSoulActionHandler(req: Request, res: Response): Promise<void> {
+export async function deferSoulActionHandler(
+  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
+  res: Response<SoulActionResponse>,
+): Promise<void> {
   try {
     const soulAction = deferSoulAction(req.params.id, getGovernanceReason(req.body));
     if (!soulAction) {
@@ -576,13 +597,17 @@ export async function deferSoulActionHandler(req: Request, res: Response): Promi
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    res.json({ soulAction });
+    const response: SoulActionResponse = { soulAction };
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }
 }
 
-export async function discardSoulActionHandler(req: Request, res: Response): Promise<void> {
+export async function discardSoulActionHandler(
+  req: Request<{ id: string }, SoulActionResponse, ReintegrationReviewRequest>,
+  res: Response<SoulActionResponse>,
+): Promise<void> {
   try {
     const soulAction = discardSoulAction(req.params.id, getGovernanceReason(req.body));
     if (!soulAction) {
@@ -590,13 +615,17 @@ export async function discardSoulActionHandler(req: Request, res: Response): Pro
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    res.json({ soulAction });
+    const response: SoulActionResponse = { soulAction };
+    res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
   }
 }
 
-export async function dispatchSoulActionHandler(req: Request, res: Response): Promise<void> {
+export async function dispatchSoulActionHandler(
+  req: Request<{ id: string }, DispatchSoulActionResponse>,
+  res: Response<DispatchSoulActionResponse>,
+): Promise<void> {
   try {
     const result = await dispatchApprovedSoulAction(req.params.id);
     if (!result.soulActionId) {
@@ -611,7 +640,8 @@ export async function dispatchSoulActionHandler(req: Request, res: Response): Pr
     const soulAction = getSoulAction(result.soulActionId);
     const task = result.workerTaskId ? getWorkerTask(result.workerTaskId) : null;
     broadcastSoulActionUpdate(soulAction);
-    res.status(202).json({ result, soulAction, task });
+    const response: DispatchSoulActionResponse = { result, soulAction, task };
+    res.status(202).json(response);
   } catch (error) {
     console.error('Dispatch soul action error:', error);
     res.status(500).json({ error: String(error) });

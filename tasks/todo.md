@@ -1,3 +1,37 @@
+# soul action shared governance contract 闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的 `server/web/shared contract gap` 主线推进。
+- [x] 复核 soul action 主路径，确认 list/detail/approve/defer/discard/dispatch 是否虽已存在 shared response contract，但 handler 层仍未显式 typed、缺少 API 回归锁定。
+- [x] 让 server handlers 显式接回 shared soul action governance contracts，并补最小 web + server 回归覆盖返回 shape。
+- [x] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `listSoulActionsHandler()` 显式接回 shared `ListSoulActionsResponse`。
+    - `getSoulActionHandler()` / `approveSoulActionHandler()` / `deferSoulActionHandler()` / `discardSoulActionHandler()` 显式接回 shared `SoulActionResponse`。
+    - `dispatchSoulActionHandler()` 显式接回 shared `DispatchSoulActionResponse`。
+  - `LifeOS/packages/web/src/api/client.test.ts` 新增 soul action shared contract 回归与错误分支回归。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts` 新增 `soul-action APIs respond with shared governance contracts`，并用直接 seed soul action 的方式锁定 defer/discard 路径，避免依赖异步派生时序。
+- 这次修的不是继续堆 SettingsView 同类稳定性测试，而是 soul action governance 主路径虽然 shared 已定义 contract，但 API handler 仍未显式接回，server 端最容易在治理返回 shape 上再次漂移。
+
+## 本轮选择依据
+- 用户要求继续优先处理新的高价值 `server/web/shared contract gap`。
+- reintegration 收口后，下一条直接服务 PR3/PR6 治理主路径、且 shared 已存在单一事实源的就是 soul action list/detail/governance/dispatch contracts。
+- 这条线可以继续减少治理控制面在 server/web 两端的 contract 漂移风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 134 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-name-pattern "soul-action APIs respond with shared governance contracts|soul-actions API approve then dispatch runs governance happy path" test/configLifecycle.test.ts` 通过，2/2。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- soul action 主路径收口后，下一步可继续检查 event node / continuity / AI suggestions 等 shared 已存在但 API handler/client 未完全显式 typed 的残留点。
+
+
 # reintegration shared contract 闭环
 
 ## 计划

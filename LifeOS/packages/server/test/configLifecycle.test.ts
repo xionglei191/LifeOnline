@@ -9,6 +9,7 @@ import { createTestEnv } from './helpers/testEnv.js';
 import { startServer, stopServer, broadcastUpdate } from '../src/index.js';
 import { loadConfig, loadStoredConfig } from '../src/config/configManager.js';
 import { createWorkerTask as seedWorkerTask, cancelWorkerTask as seedCancelWorkerTask } from '../src/workers/workerTasks.js';
+import { createOrReuseSoulAction } from '../src/soul/soulActions.js';
 import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
@@ -734,6 +735,116 @@ test('updating config restores original watcher state when restart fails', async
     });
   } finally {
     configUpdateDeps.restartWatcher = originalRestartWatcher;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('soul-action APIs respond with shared governance contracts', async () => {
+  const env = await createTestEnv('lifeos-soul-action-contract-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const growthFilePath = path.join(env.vaultPath, '成长', '2026-03-20-soul-contract.md');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    await fs.mkdir(path.dirname(growthFilePath), { recursive: true });
+    await fs.writeFile(growthFilePath, `---\ntype: "note"\ndimension: "growth"\nstatus: "done"\npriority: "medium"\nprivacy: "private"\ndate: "2026-03-20"\nsource: "desktop"\ncreated: "2026-03-20T09:00:00.000Z"\nupdated: "2026-03-20T09:00:00.000Z"\n---\n\n我想继续以长期主义和系统化推进。\n`);
+
+    await waitFor(async () => {
+      try {
+        const queued = await api<import('../../shared/src/types.js').ListSoulActionsResponse>(
+          baseUrl,
+          '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+        );
+        return queued.soulActions.length === 1;
+      } catch {
+        return false;
+      }
+    });
+
+    const listed = await api<import('../../shared/src/types.js').ListSoulActionsResponse>(
+      baseUrl,
+      '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+    );
+    assert.equal(listed.soulActions.length, 1);
+    assert.equal(listed.filters.governanceStatus, 'pending_review');
+    const queued = listed.soulActions[0]!;
+
+    const detail = await api<import('../../shared/src/types.js').SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}`,
+    );
+    assert.equal(detail.soulAction.id, queued.id);
+    assert.equal(detail.soulAction.governanceStatus, 'pending_review');
+
+    const approved = await api<import('../../shared/src/types.js').SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}/approve`,
+      { method: 'POST', body: JSON.stringify({ reason: 'approved in contract test' } satisfies import('../../shared/src/types.js').ReintegrationReviewRequest) },
+    );
+    assert.equal(approved.soulAction.governanceStatus, 'approved');
+
+    const dispatched = await api<import('../../shared/src/types.js').DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${queued.id}/dispatch`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+    assert.equal(dispatched.result.dispatched, true);
+    assert.equal(dispatched.soulAction?.governanceStatus, 'approved');
+    assert.equal(dispatched.task?.status, 'succeeded');
+
+    const deferredSeed = createOrReuseSoulAction({
+      sourceNoteId: 'note-defer-contract',
+      actionKind: 'update_persona_snapshot',
+      governanceReason: 'defer seed',
+    });
+
+    const pendingAfterDispatch = await api<import('../../shared/src/types.js').ListSoulActionsResponse>(
+      baseUrl,
+      '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+    );
+    const deferredCandidate = pendingAfterDispatch.soulActions.find((action) => action.id === deferredSeed.id)!;
+
+    const deferred = await api<import('../../shared/src/types.js').SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${deferredCandidate.id}/defer`,
+      { method: 'POST', body: JSON.stringify({ reason: 'deferred in contract test' } satisfies import('../../shared/src/types.js').ReintegrationReviewRequest) },
+    );
+    assert.equal(deferred.soulAction.governanceStatus, 'deferred');
+
+    const discardSeed = createOrReuseSoulAction({
+      sourceNoteId: 'note-discard-contract',
+      actionKind: 'update_persona_snapshot',
+      governanceReason: 'discard seed',
+    });
+
+    const pendingForDiscard = await api<import('../../shared/src/types.js').ListSoulActionsResponse>(
+      baseUrl,
+      '/api/soul-actions?governanceStatus=pending_review&actionKind=update_persona_snapshot',
+    );
+    const discardCandidate = pendingForDiscard.soulActions.find((action) => action.id === discardSeed.id)!;
+
+    const discarded = await api<import('../../shared/src/types.js').SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${discardCandidate.id}/discard`,
+      { method: 'POST', body: JSON.stringify({ reason: 'discarded in contract test' } satisfies import('../../shared/src/types.js').ReintegrationReviewRequest) },
+    );
+    assert.equal(discarded.soulAction.governanceStatus, 'discarded');
+  } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();

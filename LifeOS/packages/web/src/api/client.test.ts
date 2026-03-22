@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction } from '@lifeos/shared';
-import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse } from '@lifeos/shared';
+import { fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -75,6 +75,81 @@ describe('api client promotion projections', () => {
 
     await expect(fetchSoulActions({ sourceNoteId: 'reint:test-legacy-filter' })).resolves.toEqual([]);
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
+  });
+
+  it('fetches typed soul-action contracts from shared response shapes', async () => {
+    const soulAction: SoulAction = {
+      id: 'soul-action-1',
+      sourceNoteId: 'note-1',
+      sourceReintegrationId: 'reint:worker-task-1',
+      actionKind: 'update_persona_snapshot',
+      governanceStatus: 'pending_review',
+      executionStatus: 'not_dispatched',
+      governanceReason: 'queued for review',
+      workerTaskId: null,
+      payload: { source: 'client-test' },
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      approvedAt: null,
+      startedAt: null,
+      finishedAt: null,
+      error: null,
+      resultSummary: null,
+    };
+    const dispatchResponse: DispatchSoulActionResponse = {
+      result: {
+        dispatched: true,
+        reason: 'queued',
+        soulActionId: soulAction.id,
+        workerTaskId: 'worker-task-1',
+      },
+      soulAction: { ...soulAction, governanceStatus: 'approved', executionStatus: 'succeeded', workerTaskId: 'worker-task-1' },
+      task: {
+        id: 'worker-task-1',
+        taskType: 'update_persona_snapshot',
+        worker: 'claude_code',
+        status: 'succeeded',
+        input: { profile: 'Long-term thinker' },
+        output: { applied: true },
+        createdAt: '2026-03-22T10:01:00.000Z',
+        updatedAt: '2026-03-22T10:01:00.000Z',
+        startedAt: '2026-03-22T10:01:00.000Z',
+        finishedAt: '2026-03-22T10:02:00.000Z',
+        error: null,
+        sourceNoteId: 'note-1',
+      },
+    };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulActions: [soulAction], filters: { governanceStatus: 'pending_review' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulAction }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulAction: { ...soulAction, governanceStatus: 'approved' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulAction: { ...soulAction, governanceStatus: 'deferred' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulAction: { ...soulAction, governanceStatus: 'discarded' } }) })
+      .mockResolvedValueOnce({ ok: true, status: 202, json: async () => dispatchResponse }));
+
+    await expect(fetchSoulActions({ governanceStatus: 'pending_review' })).resolves.toEqual([soulAction]);
+    await expect(fetchSoulAction('soul-action-1')).resolves.toEqual(soulAction);
+    await expect(approveSoulAction('soul-action-1', { reason: 'approve it' })).resolves.toEqual({ ...soulAction, governanceStatus: 'approved' });
+    await expect(deferSoulAction('soul-action-1', { reason: 'wait a bit' })).resolves.toEqual({ ...soulAction, governanceStatus: 'deferred' });
+    await expect(discardSoulAction('soul-action-1', { reason: 'drop it' })).resolves.toEqual({ ...soulAction, governanceStatus: 'discarded' });
+    await expect(dispatchSoulAction('soul-action-1')).resolves.toEqual(dispatchResponse);
+  });
+
+  it('surfaces API errors for soul-action contract actions', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action list failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action fetch failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action approve failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action defer failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action discard failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'soul action dispatch failed' }) }));
+
+    await expect(fetchSoulActions()).rejects.toThrow('soul action list failed');
+    await expect(fetchSoulAction('soul-action-1')).rejects.toThrow('soul action fetch failed');
+    await expect(approveSoulAction('soul-action-1')).rejects.toThrow('soul action approve failed');
+    await expect(deferSoulAction('soul-action-1')).rejects.toThrow('soul action defer failed');
+    await expect(discardSoulAction('soul-action-1')).rejects.toThrow('soul action discard failed');
+    await expect(dispatchSoulAction('soul-action-1')).rejects.toThrow('soul action dispatch failed');
   });
 
   it('fetches typed reintegration contracts from shared response shapes', async () => {
