@@ -21,8 +21,6 @@ import { initDatabase } from '../src/db/client.js';
 import { upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
 import { createOrReuseSoulAction } from '../src/soul/soulActions.js';
 
-const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
-
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -129,7 +127,7 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
 
 test('soul-action defer and discard APIs keep governance detail and list views aligned', async () => {
   const env = await createTestEnv('lifeos-soul-action-defer-discard-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -262,7 +260,7 @@ test('soul-action defer and discard APIs keep governance detail and list views a
 
 test('soul-action defer and discard websocket events stay aligned with detail and list views', async () => {
   const env = await createTestEnv('lifeos-soul-action-defer-discard-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -405,7 +403,7 @@ test('soul-action defer and discard websocket events stay aligned with detail an
 
 test('soul-action list API supports sourceReintegrationId filtering independently from sourceNoteId', async () => {
   const env = await createTestEnv('lifeos-soul-action-source-reintegration-filter-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -468,7 +466,7 @@ test('soul-action list API supports sourceReintegrationId filtering independentl
 
 test('soul-action list API normalizes legacy reintegration note filters to sourceReintegrationId', async () => {
   const env = await createTestEnv('lifeos-soul-action-legacy-reint-note-filter-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -519,7 +517,7 @@ test('soul-action list API normalizes legacy reintegration note filters to sourc
 
 test('reintegration accept API returns reviewed record and planned soul actions', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -622,7 +620,7 @@ test('reintegration accept API returns reviewed record and planned soul actions'
 
 test('reintegration reject API returns reviewed record and filtered follow-up lists stay aligned', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-reject-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -700,7 +698,7 @@ test('reintegration reject API returns reviewed record and filtered follow-up li
 
 test('reintegration reject emits reintegration-record-updated websocket event aligned with follow-up lists', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-reject-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -793,7 +791,7 @@ test('reintegration reject emits reintegration-record-updated websocket event al
 
 test('soul-action list API keeps filters stable with multiple promotion actions and mixed governance states', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-filters-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -918,7 +916,7 @@ test('soul-action list API keeps filters stable with multiple promotion actions 
 
 test('soul-action sourceNoteId stays aligned with reintegration ids for grouped settings view', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-grouping-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1026,7 +1024,7 @@ test('soul-action sourceNoteId stays aligned with reintegration ids for grouped 
 
 test('soul-action API preserves group-level pending and dispatch-ready semantics for settings view', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-group-semantics-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1205,7 +1203,7 @@ test('soul-action API preserves group-level pending and dispatch-ready semantics
 
 test('reintegration accept websocket updates stay aligned with follow-up pending filters for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-ws-filter-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -1320,7 +1318,7 @@ test('reintegration accept websocket updates stay aligned with follow-up pending
 
 test('reintegration accept emits reintegration-record-updated websocket event aligned with follow-up lists', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-record-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -1443,7 +1441,7 @@ test('reintegration accept emits reintegration-record-updated websocket event al
 
 test('reintegration manual planning emits reintegration-record-updated websocket event aligned with follow-up lists', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-plan-record-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -1559,7 +1557,7 @@ test('reintegration manual planning emits reintegration-record-updated websocket
 
 test('reintegration accept emits soul-action-updated websocket events for planned settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-accept-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -1660,7 +1658,7 @@ test('reintegration accept emits soul-action-updated websocket events for planne
 
 test('dispatch response worker task stays aligned with websocket and follow-up worker task list for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-dispatch-task-ws-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -1974,7 +1972,7 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
 
 test('mixed worker-host dispatch response tasks stay aligned with follow-up worker-task filters', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-mixed-dispatch-task-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2087,7 +2085,7 @@ test('mixed worker-host dispatch response tasks stay aligned with follow-up work
 
 test('mixed worker-host dispatch response tasks stay aligned with websocket events and filtered follow-up worker-task lists', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-mixed-dispatch-task-ws-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -2245,7 +2243,7 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
 
 test('event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-event-node-list-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2356,7 +2354,7 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
 
 test('continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-continuity-list-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2466,7 +2464,7 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
 
 test('dispatch API response and follow-up list stay aligned for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-dispatch-list-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2557,7 +2555,7 @@ test('dispatch API response and follow-up list stay aligned for grouped settings
 
 test('promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-promotion-dispatch-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2660,7 +2658,7 @@ test('promotion dispatch response stays aligned with local-only execution result
 
 test('event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-event-node-dispatch-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2763,7 +2761,7 @@ test('event-node promotion dispatch response stays aligned with local-only execu
 
 test('grouped settings list converges after full accept-approve-dispatch chain', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-group-convergence-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2865,7 +2863,7 @@ test('grouped settings list converges after full accept-approve-dispatch chain',
 
 test('grouped settings list stays coherent across staggered approve and dispatch updates', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-staggered-group-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -2986,7 +2984,7 @@ test('grouped settings list stays coherent across staggered approve and dispatch
 
 test('grouped settings list drops dispatch-ready count from one to zero across sequential dispatches', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-sequential-dispatch-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -3099,7 +3097,7 @@ test('grouped settings list drops dispatch-ready count from one to zero across s
 
 test('grouped status filters stay aligned with full-list semantics after sequential dispatch refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-filter-convergence-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -3228,7 +3226,7 @@ test('grouped status filters stay aligned with full-list semantics after sequent
 
 test('soul-action filters converge when governance and execution subsets are queried after mixed group progress', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-filter-subsets-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -3347,7 +3345,7 @@ test('soul-action filters converge when governance and execution subsets are que
 
 test('soul-action filters converge when governance and execution subsets are queried after same-status dispatches', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-same-status-filter-subsets-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -3458,7 +3456,7 @@ test('soul-action filters converge when governance and execution subsets are que
 
 test('approve websocket updates stay aligned with follow-up filtered lists for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-filter-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -3572,7 +3570,7 @@ test('approve websocket updates stay aligned with follow-up filtered lists for g
 
 test('sequential approve websocket updates stay aligned with grouped follow-up filtered lists for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-approve-ws-sequential-filter-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -3739,7 +3737,7 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
 
 test('dispatch websocket updates stay aligned with follow-up filtered lists for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-filter-followup-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -3875,7 +3873,7 @@ test('dispatch websocket updates stay aligned with follow-up filtered lists for 
 });
 test('soul-action dispatch emits soul-action-updated websocket event for settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   let socket: WebSocket | null = null;
 
@@ -3986,7 +3984,7 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
 
 test('execution-status filter stays aligned when grouped actions converge to the same dispatched state', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-same-status-filter-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {

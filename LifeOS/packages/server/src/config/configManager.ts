@@ -6,7 +6,11 @@ import type { Config } from '@lifeos/shared';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SERVER_ROOT = path.resolve(__dirname, '../..');
-const CONFIG_FILE = path.join(SERVER_ROOT, 'config.json');
+
+export function getConfigFilePath(): string {
+  const envPath = process.env.LIFEOS_CONFIG_PATH?.trim();
+  return envPath ? path.resolve(envPath) : path.join(SERVER_ROOT, 'config.json');
+}
 
 function resolvePort(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
@@ -33,8 +37,9 @@ export function normalizeVaultPath(vaultPath: string): string {
 }
 
 export async function loadStoredConfig(): Promise<Config> {
+  const configFilePath = getConfigFilePath();
   try {
-    const content = await fs.readFile(CONFIG_FILE, 'utf-8');
+    const content = await fs.readFile(configFilePath, 'utf-8');
     const config = JSON.parse(content) as Partial<Config>;
 
     return {
@@ -61,7 +66,7 @@ export async function loadConfig(): Promise<Config> {
 }
 
 export async function saveConfig(config: Config): Promise<void> {
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+  await fs.writeFile(getConfigFilePath(), JSON.stringify(config, null, 2));
 }
 
 export async function validateVaultPath(vaultPath: string): Promise<boolean> {

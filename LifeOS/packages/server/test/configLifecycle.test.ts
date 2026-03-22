@@ -15,8 +15,6 @@ import { upsertEventNode } from '../src/soul/eventNodes.js';
 import { upsertContinuityRecord } from '../src/soul/continuityRecords.js';
 import { configUpdateDeps } from '../src/config/configUpdateService.js';
 
-const CONFIG_FILE = fileURLToPath(new URL('../config.json', import.meta.url));
-
 async function waitFor(condition: () => Promise<boolean>, timeoutMs = 10000): Promise<void> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -117,7 +115,7 @@ async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: 
 
 test('AI provider APIs respond with shared provider contracts', async () => {
   const env = await createTestEnv('lifeos-ai-provider-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -163,7 +161,7 @@ test('AI provider APIs respond with shared provider contracts', async () => {
 
 test('AI provider settings fall back to env key after clearing the stored key', async () => {
   const env = await createTestEnv('lifeos-ai-provider-clear-key-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const originalFetch = globalThis.fetch;
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
@@ -249,7 +247,7 @@ test('AI provider settings fall back to env key after clearing the stored key', 
 
 test('AI prompt APIs respond with shared prompt contracts', async () => {
   const env = await createTestEnv('lifeos-ai-prompt-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -293,7 +291,7 @@ test('AI prompt APIs respond with shared prompt contracts', async () => {
 
 test('worker task APIs respond with shared worker task contracts', async () => {
   const env = await createTestEnv('lifeos-worker-task-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -360,7 +358,7 @@ test('worker task APIs respond with shared worker task contracts', async () => {
 
 test('dashboard, timeline, and calendar APIs respond with shared view contracts', async () => {
   const env = await createTestEnv('lifeos-view-contracts-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -401,7 +399,7 @@ test('dashboard, timeline, and calendar APIs respond with shared view contracts'
 
 test('schedule APIs respond with shared schedule contracts', async () => {
   const env = await createTestEnv('lifeos-schedule-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -459,7 +457,7 @@ test('schedule APIs respond with shared schedule contracts', async () => {
 
 test('stats APIs respond with shared stats contracts', async () => {
   const env = await createTestEnv('lifeos-stats-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -494,7 +492,7 @@ test('stats APIs respond with shared stats contracts', async () => {
 
 test('schedule health API responds with shared schedule health contract', async () => {
   const env = await createTestEnv('lifeos-schedule-health-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -525,7 +523,7 @@ test('schedule health API responds with shared schedule health contract', async 
 
 test('config API responds with shared config contracts', async () => {
   const env = await createTestEnv('lifeos-config-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -569,7 +567,7 @@ test('config API responds with shared config contracts', async () => {
 
 test('configManager reuses shared Config contract internally', async () => {
   const env = await createTestEnv('lifeos-config-manager-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -593,7 +591,7 @@ test('configManager reuses shared Config contract internally', async () => {
 
 test('loadStoredConfig keeps persisted values separate from env overrides', async () => {
   const env = await createTestEnv('lifeos-config-persist-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const persistedVaultPath = path.join(env.rootDir, 'persisted-vault');
 
@@ -620,7 +618,7 @@ test('loadStoredConfig keeps persisted values separate from env overrides', asyn
 
 test('updating config persists vault path, emits index-complete, and rebinds watcher to the new vault', async () => {
   const env = await createTestEnv('lifeos-config-update-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'replacement-vault');
   const replacementNotePath = path.join(replacementVaultPath, '切换后.md');
@@ -686,7 +684,7 @@ test('updating config persists vault path, emits index-complete, and rebinds wat
 
 test('updating config treats equivalent vault paths as unchanged after normalization', async () => {
   const env = await createTestEnv('lifeos-config-normalize-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const serverRoot = path.dirname(configFile);
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const relativeVaultPath = path.relative(serverRoot, env.vaultPath);
@@ -723,7 +721,7 @@ test('updating config treats equivalent vault paths as unchanged after normaliza
 
 test('updating config rolls back persisted vault path when reindex fails', async () => {
   const env = await createTestEnv('lifeos-config-rollback-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'rollback-vault');
   const originalIndexVault = configUpdateDeps.indexVault;
@@ -769,7 +767,7 @@ test('updating config rolls back persisted vault path when reindex fails', async
 
 test('updating config restores original watcher state when restart fails', async () => {
   const env = await createTestEnv('lifeos-config-restart-rollback-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const replacementVaultPath = path.join(env.rootDir, 'restart-rollback-vault');
   const replacementNotePath = path.join(replacementVaultPath, '新库.md');
@@ -831,7 +829,7 @@ test('updating config restores original watcher state when restart fails', async
 
 test('event node and continuity APIs respond with shared projection contracts', async () => {
   const env = await createTestEnv('lifeos-event-continuity-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -896,7 +894,7 @@ test('event node and continuity APIs respond with shared projection contracts', 
 
 test('soul-action APIs respond with shared governance contracts', async () => {
   const env = await createTestEnv('lifeos-soul-action-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const growthFilePath = path.join(env.vaultPath, '成长', '2026-03-20-soul-contract.md');
 
@@ -1006,7 +1004,7 @@ test('soul-action APIs respond with shared governance contracts', async () => {
 
 test('reintegration APIs respond with shared reintegration contracts', async () => {
   const env = await createTestEnv('lifeos-reintegration-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1087,7 +1085,7 @@ test('reintegration APIs respond with shared reintegration contracts', async () 
 
 test('soul-actions API approve then dispatch runs governance happy path', async () => {
   const env = await createTestEnv('lifeos-soul-actions-api-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const growthFilePath = path.join(env.vaultPath, '成长', '2026-03-20-api-review.md');
 
@@ -1164,7 +1162,7 @@ test('soul-actions API approve then dispatch runs governance happy path', async 
 
 test('AI suggestions prompt override accepts suggest prompt and reset restores default content', async () => {
   const env = await createTestEnv('lifeos-ai-suggest-prompt-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const overrideContent = `Analyze the following productivity data and generate actionable suggestions. Return only valid JSON.\n\nDashboard data:\n{dashboardData}\n\nRecent notes summary:\n{recentNotes}\n\nReturn exactly 1 suggestion as JSON only.`;
 
@@ -1232,7 +1230,7 @@ test('AI suggestions prompt override accepts suggest prompt and reset restores d
 
 test('AI suggestions prompt override rejects missing required placeholders', async () => {
   const env = await createTestEnv('lifeos-ai-suggest-prompt-invalid-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1274,7 +1272,7 @@ test('AI suggestions prompt override rejects missing required placeholders', asy
 
 test('AI suggestions API uses suggest prompt override when generating AI output', async () => {
   const env = await createTestEnv('lifeos-ai-suggestions-main-path-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const originalFetch = globalThis.fetch;
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
@@ -1366,7 +1364,7 @@ test('AI suggestions API uses suggest prompt override when generating AI output'
 
 test('AI suggestions API returns fallback suggestions without provider credentials', async () => {
   const env = await createTestEnv('lifeos-ai-suggestions-api-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1409,7 +1407,7 @@ test('AI suggestions API returns fallback suggestions without provider credentia
 
 test('AI suggestions API responds with shared list contract', async () => {
   const env = await createTestEnv('lifeos-ai-suggestions-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1440,7 +1438,7 @@ test('AI suggestions API responds with shared list contract', async () => {
 
 test('search API matches dimension terms used by search view copy', async () => {
   const env = await createTestEnv('lifeos-search-dimension-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1469,7 +1467,7 @@ test('search API matches dimension terms used by search view copy', async () => 
 
 test('search API matches tag terms used by search view copy', async () => {
   const env = await createTestEnv('lifeos-search-tag-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const taggedNotePath = path.join(env.vaultPath, '成长', '2026-03-22-search-tag-contract.md');
 
@@ -1514,7 +1512,7 @@ Tag-only search body.
 
 test('notes API returns shared note title field when indexer extracts one', async () => {
   const env = await createTestEnv('lifeos-notes-title-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const titledNotePath = path.join(env.vaultPath, '成长', '2026-03-22-title-contract.md');
 
@@ -1564,7 +1562,7 @@ Body for title contract coverage.
 
 test('notes update API responds with shared success contract', async () => {
   const env = await createTestEnv('lifeos-notes-update-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1605,7 +1603,7 @@ test('notes update API responds with shared success contract', async () => {
 
 test('notes create API responds with shared success contract', async () => {
   const env = await createTestEnv('lifeos-notes-create-contract-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1650,7 +1648,7 @@ test('notes create API responds with shared success contract', async () => {
 
 test('notes create API records web source in created note frontmatter', async () => {
   const env = await createTestEnv('lifeos-notes-create-source-web-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
 
   try {
@@ -1697,7 +1695,7 @@ test('notes create API records web source in created note frontmatter', async ()
 
 test('notes create API keeps longer file names aligned with shared note naming semantics', async () => {
   const env = await createTestEnv('lifeos-notes-create-long-name-');
-  const configFile = CONFIG_FILE;
+  const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
   const longTitle = 'Server Contract Web Source Note With A Much Longer Title For Stable Naming';
 

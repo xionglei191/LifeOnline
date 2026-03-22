@@ -15,6 +15,7 @@ export interface TestEnv {
   rootDir: string;
   vaultPath: string;
   dbPath: string;
+  configPath: string;
   port: number;
   cleanup: () => Promise<void>;
 }
@@ -43,18 +44,22 @@ export async function createTestEnv(prefix = 'lifeos-test-'): Promise<TestEnv> {
   const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
   const vaultPath = path.join(rootDir, 'vault');
   const dbPath = path.join(rootDir, 'lifeos.db');
+  const configPath = path.join(rootDir, 'config.json');
   const port = nextPort() + Math.floor(Math.random() * 100);
 
   await copyDirectory(MOCK_VAULT_PATH, vaultPath);
+  await fs.writeFile(configPath, JSON.stringify({ vaultPath, port }, null, 2));
 
   process.env.VAULT_PATH = vaultPath;
   process.env.DB_PATH = dbPath;
   process.env.PORT = String(port);
+  process.env.LIFEOS_CONFIG_PATH = configPath;
 
   return {
     rootDir,
     vaultPath,
     dbPath,
+    configPath,
     port,
     cleanup: async () => {
       await stopServer().catch(() => {});
@@ -62,6 +67,7 @@ export async function createTestEnv(prefix = 'lifeos-test-'): Promise<TestEnv> {
       delete process.env.VAULT_PATH;
       delete process.env.DB_PATH;
       delete process.env.PORT;
+      delete process.env.LIFEOS_CONFIG_PATH;
       await fs.rm(rootDir, { recursive: true, force: true });
     },
   };
