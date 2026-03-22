@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot } from '@lifeos/shared';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot, DeleteTaskScheduleResponse, TaskScheduleResponse } from '@lifeos/shared';
 import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
 
 describe('api client promotion projections', () => {
@@ -690,12 +690,14 @@ describe('api client promotion projections', () => {
       consecutiveFailures: 0,
       lastError: null,
     };
+    const deleteResponse: DeleteTaskScheduleResponse = { success: true };
+    const runResponse: TaskScheduleResponse = { schedule };
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ schedules: [schedule] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule: { ...schedule, label: 'Updated reflection' } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ schedule }) }));
+      .mockResolvedValueOnce({ ok: true, json: async () => deleteResponse })
+      .mockResolvedValueOnce({ ok: true, json: async () => runResponse }));
 
     await expect(createTaskSchedule({
       taskType: 'openclaw_task',
@@ -705,8 +707,8 @@ describe('api client promotion projections', () => {
     })).resolves.toEqual(schedule);
     await expect(fetchTaskSchedules()).resolves.toEqual([schedule]);
     await expect(updateTaskSchedule('schedule-1', { label: 'Updated reflection' })).resolves.toEqual({ ...schedule, label: 'Updated reflection' });
-    await expect(deleteTaskSchedule('schedule-1')).resolves.toBeUndefined();
-    await expect(runTaskScheduleNow('schedule-1')).resolves.toBeUndefined();
+    await expect(deleteTaskSchedule('schedule-1')).resolves.toEqual(deleteResponse);
+    await expect(runTaskScheduleNow('schedule-1')).resolves.toEqual(schedule);
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/schedules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

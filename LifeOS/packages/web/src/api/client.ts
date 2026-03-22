@@ -577,17 +577,18 @@ export async function updateTaskSchedule(id: string, updates: UpdateTaskSchedule
   return data.schedule as TaskSchedule;
 }
 
-export async function deleteTaskSchedule(id: string): Promise<void> {
+export async function deleteTaskSchedule(id: string): Promise<DeleteTaskScheduleResponse> {
   const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+  const data = await res.json().catch(() => ({} as Partial<DeleteTaskScheduleResponse> & { error?: string }));
   if (!res.ok) {
-    const data = await res.json().catch(() => ({} as Partial<DeleteTaskScheduleResponse> & { error?: string }));
     throw new Error(data.error || 'Failed to delete schedule');
   }
+  return data as DeleteTaskScheduleResponse;
 }
 
-export async function runTaskScheduleNow(id: string): Promise<void> {
+export async function runTaskScheduleNow(id: string): Promise<TaskSchedule> {
   const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}/run`, {
     method: 'POST',
   });
@@ -595,6 +596,7 @@ export async function runTaskScheduleNow(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(data.error || 'Failed to run schedule');
   }
+  return data.schedule as TaskSchedule;
 }
 
 export async function fetchScheduleHealth(): Promise<ScheduleHealth> {
