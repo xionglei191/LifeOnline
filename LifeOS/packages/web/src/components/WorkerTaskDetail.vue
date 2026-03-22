@@ -111,7 +111,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
-import type { WorkerTask } from '@lifeos/shared';
+import type { WorkerTask, WsEvent } from '@lifeos/shared';
 import { fetchWorkerTask, retryWorkerTask, cancelWorkerTask } from '../api/client';
 import NoteDetail from './NoteDetail.vue';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -204,10 +204,14 @@ function openSourceNote(noteId: string) {
 }
 
 function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent<import('@lifeos/shared').WsEvent>).detail;
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
   if (!props.taskId) return;
   if (wsEvent.type === 'worker-task-updated' && wsEvent.data.id === props.taskId) {
-    loadTask();
+    void loadTask();
+    return;
+  }
+  if (wsEvent.type === 'note-worker-tasks-updated' && wsEvent.data.task.id === props.taskId) {
+    void loadTask();
   }
 }
 

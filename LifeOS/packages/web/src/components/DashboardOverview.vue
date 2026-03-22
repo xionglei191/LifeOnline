@@ -79,7 +79,7 @@
 
       <section class="mission-grid">
         <div class="mission-column">
-          <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" @refresh="handleRefresh" />
+          <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" />
           <WeeklyHighlights :highlights="data.weeklyHighlights" @selectNote="selectedNoteId = $event" />
         </div>
 

@@ -211,6 +211,80 @@ describe('WorkerTaskDetail', () => {
     wrapper.unmount();
   });
 
+  it('reloads task detail when note-worker websocket events arrive for the current task', async () => {
+    apiMocks.fetchWorkerTask
+      .mockResolvedValueOnce(createTask({ id: 'worker-task-1', resultSummary: null, outputNotes: [] }))
+      .mockResolvedValueOnce(createTask({
+        id: 'worker-task-1',
+        resultSummary: '输出笔记已就绪',
+        outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md' }],
+      }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    expect(document.body.textContent).toContain('该任务还没有输出笔记');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: 'note-1',
+          task: createTask({ id: 'worker-task-1', status: 'succeeded' }),
+        },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTask).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('输出笔记已就绪');
+    expect(document.body.textContent).toContain('Output Note');
+
+    wrapper.unmount();
+  });
+
+  it('ignores note-worker websocket events for other tasks', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask({ id: 'worker-task-1', resultSummary: 'current task summary' }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: 'note-1',
+          task: createTask({ id: 'worker-task-2', status: 'succeeded' }),
+        },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchWorkerTask).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).toContain('current task summary');
+
+    wrapper.unmount();
+  });
+
   it('opens source note from the source pill', async () => {
     apiMocks.fetchWorkerTask.mockResolvedValue(createTask({ sourceNoteId: 'source-note.md' }));
 
@@ -236,6 +310,7 @@ describe('WorkerTaskDetail', () => {
 
     wrapper.unmount();
   });
+
 
   it('opens output note from the output list', async () => {
     apiMocks.fetchWorkerTask.mockResolvedValue(createTask({

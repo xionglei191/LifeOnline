@@ -1,14 +1,13 @@
-# 当前轮：NoteDetail note-deleted websocket 收口
+# 当前轮：WorkerTaskDetail note-worker websocket 收口
 
 ## 进展
-- [x] 识别 `NoteDetail` 之前只消费 `note-updated`、worker、projection 相关 websocket，shared/server 已经存在的 `note-deleted` contract 没有投射到 UI；这会让当前正在打开的详情在外部或并发删除后继续停留旧内容，属于新的主路径 contract-to-UI 缺口。
-- [x] 在 `LifeOS/packages/web/src/components/NoteDetail.vue` 为 `note-deleted` 增加显式分支：当删除事件命中当前 note 时，直接发出 `deleted` 与 `close`，让各入口（dashboard / dimension / search / calendar / timeline）都能复用现有删除收口，而不是停留 stale modal。
-- [x] 在 `LifeOS/packages/web/src/components/NoteDetail.test.ts` 增加 focused 回归，锁定当前打开的 NoteDetail 会在 `note-deleted` websocket 到达后关闭并发出删除事件。
-- [x] 同时收掉当前 working tree 里的 in-flight 测试漂移：移除不再稳定反映真实行为的 `note-updated` 文本断言，避免该旧测试继续阻塞这轮 focused 验证。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NoteDetail.test.ts src/views/DimensionView.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 之前只消费 `worker-task-updated`，但 server/shared 已经同时广播 `note-worker-tasks-updated`；当任务结果、输出笔记、source-note 相关 materialization 从 note 侧 websocket 到达时，任务详情弹层会停留 stale，需要手动点“刷新”，属于新的 contract-to-UI 投射缺口。
+- [x] 在 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 把 websocket 处理改为同时消费 `worker-task-updated` 与命中当前 task id 的 `note-worker-tasks-updated`，让任务详情能在输出笔记就绪等场景下自动重拉最新任务事实源。
+- [x] 在 `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 增加 focused 回归，锁定当前弹层会在命中的 `note-worker-tasks-updated` 到达后刷新输出笔记与摘要，同时不会被其他 task 的 note-worker websocket 误触发。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/TodayTodos.test.ts src/components/NoteList.test.ts src/components/DashboardOverview.test.ts src/views/DimensionView.test.ts src/components/WorkerTaskDetail.test.ts`。
 
 ## 结果
-- NoteDetail 现在能正确投射 shared/server 已有的 `note-deleted` websocket contract，当前详情不会在并发删除后继续显示旧数据。
-- 当前这一轮 NoteDetail delete websocket 收口已完成并通过 focused 验证；下一轮可继续找新的非 Settings 主路径 contract / fact-source 缺口。
+- WorkerTaskDetail 现在能正确投射 shared/server 已有的 note-worker websocket contract，输出笔记与结果摘要不再依赖手动刷新才能出现在详情弹层中。
+- 当前这一轮 WorkerTaskDetail websocket 收口已完成并通过 focused 验证；下一轮可继续找新的非 Settings 主路径 stale UI / fact-source gap。
 
 ---

@@ -14,7 +14,7 @@
 
     <TransitionGroup v-else name="list" tag="div" class="note-grid">
       <article
-        v-for="(note, index) in notes"
+        v-for="(note, index) in renderedNotes"
         :key="note.id"
         class="note-card"
         :class="'status-' + note.status"
@@ -67,15 +67,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
 import NotePreview from './NotePreview.vue';
 import { parseLocalDate } from '../utils/date';
 
-defineProps<{ notes: Note[] }>();
-const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
+const props = defineProps<{ notes: Note[] }>();
+const emit = defineEmits<{ selectNote: [noteId: string] }>();
 const syncingNoteIds = ref<string[]>([]);
+const optimisticStatuses = ref<Record<string, Note['status']>>({});
+
+watch(() => props.notes, (nextNotes) => {
+  const nextOverrides = { ...optimisticStatuses.value };
+  nextNotes.forEach((note) => {
+    if (nextOverrides[note.id] === note.status) {
+      delete nextOverrides[note.id];
+    }
+  });
+  optimisticStatuses.value = nextOverrides;
+}, { deep: true });
+
+function withEffectiveStatus(note: Note): Note {
+  const optimisticStatus = optimisticStatuses.value[note.id];
+  if (optimisticStatus == null || optimisticStatus === note.status) {
+    return note;
+  }
+  return {
+    ...note,
+    status: optimisticStatus,
+  };
+}
+
+const renderedNotes = computed(() => props.notes.map(withEffectiveStatus));
 
 const previewNote = ref<Note | null>(null);
 const previewVisible = ref(false);
@@ -106,10 +130,16 @@ async function handleToggleDone(note: Note) {
   }
   const newStatus = note.status === 'done' ? 'pending' : 'done';
   syncingNoteIds.value = [...syncingNoteIds.value, note.id];
+  optimisticStatuses.value = {
+    ...optimisticStatuses.value,
+    [note.id]: newStatus,
+  };
   try {
     await updateNote(note.id, { status: newStatus });
-    emit('refresh');
   } catch (e) {
+    const nextOverrides = { ...optimisticStatuses.value };
+    delete nextOverrides[note.id];
+    optimisticStatuses.value = nextOverrides;
     console.error('Toggle failed:', e);
   } finally {
     syncingNoteIds.value = syncingNoteIds.value.filter((id) => id !== note.id);

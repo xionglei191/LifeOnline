@@ -22,7 +22,6 @@
       <NoteList
         :notes="filteredNotes"
         @select-note="handleSelectNote"
-        @refresh="load"
       />
     </div>
 

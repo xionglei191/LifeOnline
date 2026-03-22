@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import type { Note } from '@lifeos/shared';
@@ -60,6 +60,10 @@ function deferred<T>() {
 }
 
 describe('NoteList', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('prefers shared note titles over file names on the main list path', () => {
     const wrapper = mount(NoteList, {
       props: {
@@ -86,9 +90,9 @@ describe('NoteList', () => {
     await nextTick();
 
     expect(apiMocks.updateNote).toHaveBeenCalledTimes(1);
-    expect(actionButton.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.btn-quick').attributes('disabled')).toBeDefined();
 
-    await actionButton.trigger('click');
+    await wrapper.get('.btn-quick').trigger('click');
     await nextTick();
 
     expect(apiMocks.updateNote).toHaveBeenCalledTimes(1);
@@ -98,6 +102,43 @@ describe('NoteList', () => {
     await flushPromises();
 
     expect(wrapper.get('.btn-quick').attributes('disabled')).toBeUndefined();
-    expect(wrapper.emitted('refresh')).toHaveLength(1);
+    expect(wrapper.emitted('refresh')).toBeUndefined();
+  });
+
+  it('updates the quick-toggle label and badge immediately after a successful toggle without emitting refresh', async () => {
+    apiMocks.updateNote.mockResolvedValue(undefined);
+
+    const wrapper = mount(NoteList, {
+      props: {
+        notes: [createNote({ id: 'note-1', status: 'pending' })],
+      },
+    });
+
+    expect(wrapper.text()).toContain('待办');
+    expect(wrapper.get('.btn-quick').text()).toBe('标记完成');
+
+    await wrapper.get('.btn-quick').trigger('click');
+    await flushPromises();
+
+    expect(apiMocks.updateNote).toHaveBeenCalledWith('note-1', { status: 'done' });
+    expect(wrapper.text()).toContain('完成');
+    expect(wrapper.get('.btn-quick').text()).toBe('恢复待办');
+    expect(wrapper.emitted('refresh')).toBeUndefined();
+  });
+
+  it('reverts the quick-toggle label and badge when the update request fails', async () => {
+    apiMocks.updateNote.mockRejectedValueOnce(new Error('toggle failed'));
+
+    const wrapper = mount(NoteList, {
+      props: {
+        notes: [createNote({ id: 'note-1', status: 'pending' })],
+      },
+    });
+
+    await wrapper.get('.btn-quick').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('待办');
+    expect(wrapper.get('.btn-quick').text()).toBe('标记完成');
   });
 });

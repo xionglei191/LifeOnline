@@ -45,17 +45,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
 import { getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{ todos: Note[] }>();
-const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
+const emit = defineEmits<{ selectNote: [noteId: string] }>();
 const syncingTodoIds = ref<string[]>([]);
+const optimisticStatuses = ref<Record<string, Note['status']>>({});
+
+watch(() => props.todos, (nextTodos) => {
+  const nextOverrides = { ...optimisticStatuses.value };
+  nextTodos.forEach((todo) => {
+    if (nextOverrides[todo.id] === todo.status) {
+      delete nextOverrides[todo.id];
+    }
+  });
+  optimisticStatuses.value = nextOverrides;
+}, { deep: true });
+
+function withEffectiveStatus(todo: Note): Note {
+  const optimisticStatus = optimisticStatuses.value[todo.id];
+  if (optimisticStatus == null || optimisticStatus === todo.status) {
+    return todo;
+  }
+  return {
+    ...todo,
+    status: optimisticStatus,
+  };
+}
 
 const orderedTodos = computed(() => {
-  return [...props.todos].sort((left, right) => {
+  return props.todos.map(withEffectiveStatus).sort((left, right) => {
     const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
     const priorityDelta = (priorityOrder[left.priority || 'medium'] ?? 99) - (priorityOrder[right.priority || 'medium'] ?? 99);
     if (priorityDelta !== 0) return priorityDelta;
@@ -102,10 +124,16 @@ async function handleToggle(todo: Note) {
   }
   const newStatus = todo.status === 'done' ? 'pending' : 'done';
   syncingTodoIds.value = [...syncingTodoIds.value, todo.id];
+  optimisticStatuses.value = {
+    ...optimisticStatuses.value,
+    [todo.id]: newStatus,
+  };
   try {
     await updateNote(todo.id, { status: newStatus });
-    emit('refresh');
   } catch (e) {
+    const nextOverrides = { ...optimisticStatuses.value };
+    delete nextOverrides[todo.id];
+    optimisticStatuses.value = nextOverrides;
     console.error('Toggle failed:', e);
   } finally {
     syncingTodoIds.value = syncingTodoIds.value.filter((id) => id !== todo.id);

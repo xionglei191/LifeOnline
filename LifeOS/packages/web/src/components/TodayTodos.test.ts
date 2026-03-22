@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import type { Note } from '@lifeos/shared';
@@ -53,6 +53,10 @@ function deferred<T>() {
 }
 
 describe('TodayTodos', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('prefers shared note titles over file names on the dashboard todo path', () => {
     const wrapper = mount(TodayTodos, {
       props: {
@@ -105,7 +109,46 @@ describe('TodayTodos', () => {
     await flushPromises();
 
     expect((checkbox.element as HTMLInputElement).disabled).toBe(false);
-    expect(wrapper.emitted('refresh')).toHaveLength(1);
+    expect(wrapper.emitted('refresh')).toBeUndefined();
+  });
+
+  it('updates the visible todo status immediately after a successful toggle without emitting refresh', async () => {
+    apiMocks.updateNote.mockResolvedValue(undefined);
+
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [createTodo({ id: 'todo-1', status: 'pending' })],
+      },
+    });
+
+    const checkbox = wrapper.get('input[type="checkbox"]');
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(wrapper.text()).toContain('待办');
+
+    checkbox.element.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushPromises();
+
+    expect(apiMocks.updateNote).toHaveBeenCalledWith('todo-1', { status: 'done' });
+    expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+    expect(wrapper.text()).toContain('已完成');
+    expect(wrapper.emitted('refresh')).toBeUndefined();
+  });
+
+  it('reverts the visible todo status when the toggle request fails', async () => {
+    apiMocks.updateNote.mockRejectedValueOnce(new Error('toggle failed'));
+
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [createTodo({ id: 'todo-1', status: 'pending' })],
+      },
+    });
+
+    const checkbox = wrapper.get('input[type="checkbox"]');
+    checkbox.element.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushPromises();
+
+    expect((checkbox.element as HTMLInputElement).checked).toBe(false);
+    expect(wrapper.text()).toContain('待办');
   });
 
   it('renders dimension labels from the shared dimension helper', () => {

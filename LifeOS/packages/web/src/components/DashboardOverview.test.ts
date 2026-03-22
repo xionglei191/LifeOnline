@@ -60,7 +60,7 @@ describe('DashboardOverview', () => {
     apiMocks.fetchScheduleHealth.mockReset();
   });
 
-  it('refreshes schedule health together with dashboard refresh events', async () => {
+  it('refreshes schedule health together with dashboard websocket refresh events', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
@@ -84,11 +84,7 @@ describe('DashboardOverview', () => {
           DimensionHealth: true,
           AISuggestions: true,
           NoteDetail: true,
-          TodayTodos: {
-            props: ['todos'],
-            emits: ['selectNote', 'refresh'],
-            template: '<button class="today-todos-refresh" @click="$emit(\'refresh\')">refresh</button>',
-          },
+          TodayTodos: true,
           StateDisplay: {
             props: ['type', 'message'],
             template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
@@ -102,16 +98,22 @@ describe('DashboardOverview', () => {
     });
 
     await flushPromises();
-    await wrapper.get('.today-todos-refresh').trigger('click');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-updated',
+        data: { noteId: 'note-1' },
+      },
+    }));
     await flushPromises();
 
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(load).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain('1 个异常');
     expect(wrapper.text()).toContain('周报同步');
   });
 
-  it('ignores stale schedule health responses after a newer refresh succeeds', async () => {
+  it('ignores stale schedule health responses after a newer websocket refresh succeeds', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
@@ -132,11 +134,7 @@ describe('DashboardOverview', () => {
           DimensionHealth: true,
           AISuggestions: true,
           NoteDetail: true,
-          TodayTodos: {
-            props: ['todos'],
-            emits: ['selectNote', 'refresh'],
-            template: '<button class="today-todos-refresh" @click="$emit(\'refresh\')">refresh</button>',
-          },
+          TodayTodos: true,
           StateDisplay: {
             props: ['type', 'message'],
             template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
@@ -150,7 +148,13 @@ describe('DashboardOverview', () => {
     });
 
     await nextTick();
-    await wrapper.get('.today-todos-refresh').trigger('click');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-updated',
+        data: { noteId: 'note-1' },
+      },
+    }));
     await nextTick();
 
     refresh.resolve({
