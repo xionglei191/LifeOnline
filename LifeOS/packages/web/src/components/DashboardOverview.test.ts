@@ -173,7 +173,7 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('0 个异常');
   });
 
-  it('reloads schedule health when schedule websocket updates arrive', async () => {
+  it('reloads schedule health when schedule websocket updates arrive without reloading dashboard data', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
@@ -216,10 +216,51 @@ describe('DashboardOverview', () => {
     document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'schedule-updated' } }));
     await flushPromises();
 
-    expect(load).toHaveBeenCalledTimes(2);
+    expect(load).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain('1 个异常');
     expect(wrapper.text()).toContain('周报同步');
+  });
+
+  it('ignores non-dashboard websocket events', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    apiMocks.fetchScheduleHealth.mockResolvedValue(scheduleHealth);
+
+    mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'soul-action-updated' } }));
+    await flushPromises();
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
   });
 
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {

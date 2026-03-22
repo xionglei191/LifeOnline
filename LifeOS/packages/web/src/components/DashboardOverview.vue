@@ -161,9 +161,10 @@ async function handleDeleted() {
 
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
-  load();
   if (isIndexRefreshEvent(wsEvent)) {
+    load();
     loadScheduleHealth();
+    return;
   }
   if (wsEvent.type === 'schedule-updated') {
     loadScheduleHealth();
