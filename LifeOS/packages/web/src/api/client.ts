@@ -1,80 +1,81 @@
-import { normalizeSoulActionSourceFilters, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse } from '@lifeos/shared';
+import { normalizeSoulActionSourceFilters, type ApiErrorResponse, type ApiResponse, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
 
+type ApiErrorLike = Partial<ApiErrorResponse>;
+
+async function readApiResponse<T>(res: Response): Promise<ApiResponse<T> & ApiErrorLike> {
+  return res.json().catch(() => ({} as ApiResponse<T> & ApiErrorLike));
+}
+
+async function expectApiSuccess<T>(res: Response, fallbackMessage: string): Promise<T> {
+  const data = await readApiResponse<T>(res);
+  if (!res.ok) {
+    throw new Error(data.error || fallbackMessage);
+  }
+  return data as T;
+}
+
 export async function fetchDashboard(): Promise<DashboardData> {
   const res = await fetch(`${API_BASE}/dashboard`);
-  if (!res.ok) throw new Error('Failed to fetch dashboard');
-  return res.json();
+  return expectApiSuccess<DashboardData>(res, 'Failed to fetch dashboard');
 }
 
 export async function fetchNotes(filters?: { dimension?: string; status?: string; type?: string }): Promise<Note[]> {
   const params = new URLSearchParams(filters as any);
   const res = await fetch(`${API_BASE}/notes?${params}`);
-  if (!res.ok) throw new Error('Failed to fetch notes');
-  return res.json();
+  return expectApiSuccess<Note[]>(res, 'Failed to fetch notes');
 }
 
 export async function triggerIndex(): Promise<IndexResult> {
   const res = await fetch(`${API_BASE}/index`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to trigger index');
-  return res.json();
+  return expectApiSuccess<IndexResult>(res, 'Failed to trigger index');
 }
 
 export async function fetchIndexStatus(): Promise<IndexStatus> {
   const res = await fetch(`${API_BASE}/index/status`);
-  if (!res.ok) throw new Error('Failed to fetch index status');
-  return res.json();
+  return expectApiSuccess<IndexStatus>(res, 'Failed to fetch index status');
 }
 
 export async function fetchIndexErrors(): Promise<IndexError[]> {
   const res = await fetch(`${API_BASE}/index/errors`);
-  if (!res.ok) throw new Error('Failed to fetch index errors');
-  return res.json();
+  return expectApiSuccess<IndexError[]>(res, 'Failed to fetch index errors');
 }
 
 export async function fetchTimeline(start: string, end: string): Promise<TimelineData> {
   const params = new URLSearchParams({ start, end });
   const res = await fetch(`${API_BASE}/timeline?${params}`);
-  if (!res.ok) throw new Error('Failed to fetch timeline');
-  return res.json();
+  return expectApiSuccess<TimelineData>(res, 'Failed to fetch timeline');
 }
 
 export async function fetchCalendar(year: number, month: number): Promise<CalendarData> {
   const params = new URLSearchParams({ year: String(year), month: String(month) });
   const res = await fetch(`${API_BASE}/calendar?${params}`);
-  if (!res.ok) throw new Error('Failed to fetch calendar');
-  return res.json();
+  return expectApiSuccess<CalendarData>(res, 'Failed to fetch calendar');
 }
 
 export async function fetchNoteById(id: string): Promise<Note> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error('Failed to fetch note');
-  return res.json();
+  return expectApiSuccess<Note>(res, 'Failed to fetch note');
 }
 
 export async function fetchPersonaSnapshot(sourceNoteId: string): Promise<PersonaSnapshot | null> {
   const res = await fetch(`${API_BASE}/persona-snapshots/${encodeURIComponent(sourceNoteId)}`);
-  const data = await res.json().catch(() => ({} as Partial<PersonaSnapshotResponse> & { error?: string }));
-  if (!res.ok) {
-    throw new Error(data.error || 'Failed to fetch persona snapshot');
-  }
+  const data = await expectApiSuccess<PersonaSnapshotResponse>(res, 'Failed to fetch persona snapshot');
   return data.snapshot ?? null;
 }
 
 export async function searchNotes(query: string): Promise<SearchResult> {
   const params = new URLSearchParams({ q: query });
   const res = await fetch(`${API_BASE}/search?${params}`);
-  if (!res.ok) throw new Error('Failed to search notes');
-  return res.json();
+  return expectApiSuccess<SearchResult>(res, 'Failed to search notes');
 }
 
 export async function fetchConfig(): Promise<Config> {
   const res = await fetch(`${API_BASE}/config`);
-  if (!res.ok) throw new Error('Failed to fetch config');
-  return res.json();
+  return expectApiSuccess<Config>(res, 'Failed to fetch config');
 }
 
 export async function updateConfig(vaultPath: string): Promise<UpdateConfigResponse> {
@@ -83,11 +84,7 @@ export async function updateConfig(vaultPath: string): Promise<UpdateConfigRespo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vaultPath } satisfies UpdateConfigRequest),
   });
-  const data = await res.json().catch(() => ({} as Partial<UpdateConfigResponse> & { error?: string }));
-  if (!res.ok) {
-    throw new Error(data.error || 'Failed to update config');
-  }
-  return data as UpdateConfigResponse;
+  return expectApiSuccess<UpdateConfigResponse>(res, 'Failed to update config');
 }
 
 // AI API types
@@ -499,26 +496,22 @@ export async function createNote(data: CreateNoteRequest): Promise<CreateNoteRes
 // Stats API
 export async function fetchStatsTrend(days = 30): Promise<StatsTrendPoint[]> {
   const res = await fetch(`${API_BASE}/stats/trend?days=${days}`);
-  if (!res.ok) return [];
-  return res.json();
+  return expectApiSuccess<StatsTrendPoint[]>(res, 'Failed to fetch stats trend');
 }
 
 export async function fetchStatsRadar(): Promise<StatsRadarPoint[]> {
   const res = await fetch(`${API_BASE}/stats/radar`);
-  if (!res.ok) return [];
-  return res.json();
+  return expectApiSuccess<StatsRadarPoint[]>(res, 'Failed to fetch stats radar');
 }
 
 export async function fetchStatsMonthly(): Promise<StatsMonthlyPoint[]> {
   const res = await fetch(`${API_BASE}/stats/monthly`);
-  if (!res.ok) return [];
-  return res.json();
+  return expectApiSuccess<StatsMonthlyPoint[]>(res, 'Failed to fetch stats monthly');
 }
 
 export async function fetchStatsTags(): Promise<StatsTagPoint[]> {
   const res = await fetch(`${API_BASE}/stats/tags`);
-  if (!res.ok) return [];
-  return res.json();
+  return expectApiSuccess<StatsTagPoint[]>(res, 'Failed to fetch stats tags');
 }
 
 // Task Schedules API
@@ -573,6 +566,5 @@ export async function runTaskScheduleNow(id: string): Promise<void> {
 
 export async function fetchScheduleHealth(): Promise<ScheduleHealth> {
   const res = await fetch(`${API_BASE}/schedules/health`);
-  if (!res.ok) return { total: 0, active: 0, failing: 0, failingSchedules: [] };
-  return res.json();
+  return expectApiSuccess<ScheduleHealth>(res, 'Failed to fetch schedule health');
 }

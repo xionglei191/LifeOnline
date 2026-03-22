@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot } from '@lifeos/shared';
-import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot } from './client';
+import { fetchAISuggestions, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -461,6 +461,25 @@ describe('api client promotion projections', () => {
     await expect(fetchPersonaSnapshot('note-1')).rejects.toThrow('snapshot failed');
   });
 
+  it('surfaces API errors for dashboard, note, index, timeline, calendar, and config fetches', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'dashboard unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'notes unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'index trigger failed' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'timeline unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'calendar unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'note unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'config unavailable' }) }));
+
+    await expect(fetchDashboard()).rejects.toThrow('dashboard unavailable');
+    await expect(fetchNotes({ dimension: 'growth' })).rejects.toThrow('notes unavailable');
+    await expect(triggerIndex()).rejects.toThrow('index trigger failed');
+    await expect(fetchTimeline('2026-03-01', '2026-03-31')).rejects.toThrow('timeline unavailable');
+    await expect(fetchCalendar(2026, 3)).rejects.toThrow('calendar unavailable');
+    await expect(fetchNoteById('note-1')).rejects.toThrow('note unavailable');
+    await expect(fetchConfig()).rejects.toThrow('config unavailable');
+  });
+
   it('fetches typed config and index contracts from shared response shapes', async () => {
     const config: Config = {
       vaultPath: '/vault',
@@ -643,6 +662,21 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/stats/radar');
     expect(fetch).toHaveBeenNthCalledWith(3, '/api/stats/monthly');
     expect(fetch).toHaveBeenNthCalledWith(4, '/api/stats/tags');
+  });
+
+  it('surfaces API errors for stats and schedule health fetches', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'schedule health unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'trend unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'radar unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'monthly unavailable' }) })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'tags unavailable' }) }));
+
+    await expect(fetchScheduleHealth()).rejects.toThrow('schedule health unavailable');
+    await expect(fetchStatsTrend()).rejects.toThrow('trend unavailable');
+    await expect(fetchStatsRadar()).rejects.toThrow('radar unavailable');
+    await expect(fetchStatsMonthly()).rejects.toThrow('monthly unavailable');
+    await expect(fetchStatsTags()).rejects.toThrow('tags unavailable');
   });
 
   it('sends typed search requests and returns the shared response shape', async () => {

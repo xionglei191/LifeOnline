@@ -1,3 +1,39 @@
+# web client ApiResponse error-handling contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 server/web/shared contract gap 推进 web client 对 `ApiResponse<T>` 的消费收口。
+- [x] 把 `client.ts` 中仍直接依赖 `res.ok` + 固定 fallback 文案或静默返回空数组/默认对象的主路径读接口改为显式消费 shared `ApiResponse<T>` 错误分支。
+- [x] 补最小 client 回归，锁定 dashboard / notes / timeline / calendar / config / stats / schedule health 等接口会透传服务端错误，而不是吞掉契约中的 `error`。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/api/client.ts`
+    - 引入 shared `ApiErrorResponse` / `ApiResponse<T>`，新增统一 `readApiResponse()` / `expectApiSuccess()` helper。
+    - 将 `fetchDashboard()`、`fetchNotes()`、`triggerIndex()`、`fetchIndexStatus()`、`fetchIndexErrors()`、`fetchTimeline()`、`fetchCalendar()`、`fetchNoteById()`、`fetchPersonaSnapshot()`、`searchNotes()`、`fetchConfig()`、`updateConfig()` 改为显式按 shared error shape 读取并透传服务端 `error`。
+    - 将 `fetchStatsTrend()`、`fetchStatsRadar()`、`fetchStatsMonthly()`、`fetchStatsTags()`、`fetchScheduleHealth()` 从静默 fallback 空数组/默认对象改为显式抛出服务端错误，避免主路径把真实 API 失败伪装成“暂无数据”。
+  - `LifeOS/packages/web/src/api/client.test.ts`
+    - 新增 dashboard / notes / index / timeline / calendar / note / config 错误透传回归。
+    - 新增 stats / schedule health 错误透传回归，锁定这些接口不再吞掉 shared `ApiResponse<T>` 的错误分支。
+- 这次修的不是再补一个同类稳定性测试，而是把上一轮 shared/server 已统一的 `ApiResponse<T>` 真正接到 web client 主路径读取层，修复“服务端已返回 typed error，前端仍把失败吞成空数据或固定文案”的 contract gap。
+
+## 本轮选择依据
+- 这是直接承接上一轮的 server/web/shared contract gap：server handlers 已统一为 `ApiResponse<T>`，但 web client 仍有多条主路径接口没有消费 `error` 字段，甚至把失败静默降级为空数组或默认对象。
+- 这种分叉会把真实后端错误伪装成“没有数据”，直接影响 dashboard、stats、timeline、calendar 等用户可见主路径判断，不是低边际的对称补强。
+- 复用 shared contract helper 可以减少后续继续在 client 各接口手写 `res.ok` / `data.error` 分叉逻辑。
+
+## 本轮验证
+- 待运行：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/api/client.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- `client.ts` 里其余已显式处理 `data.error` 的接口目前仍是逐个内联逻辑；若继续沿同一主线推进，可进一步统一到同一 helper，但这还未开始。
+
+## 下一步建议
+- 跑 focused client 测试；若通过，提交本轮 focused commit，只包含 web client `ApiResponse<T>` error-handling 收口。
+
+
 # shared/server API error-response contract gap 收口
 
 ## 计划
