@@ -133,8 +133,8 @@ const eventNodes: EventNode[] = [
   {
     id: 'event:record-ready',
     sourceReintegrationId: 'record-ready',
-    sourceNoteId: null,
-    sourceSoulActionId: null,
+    sourceNoteId: 'note-ready-1',
+    sourceSoulActionId: 'ready-1',
     promotionSoulActionId: 'ready-1',
     eventKind: 'weekly_reflection',
     title: 'Ready event node',
@@ -153,8 +153,8 @@ const continuityRecords: ContinuityRecord[] = [
   {
     id: 'continuity:record-ready',
     sourceReintegrationId: 'record-ready',
-    sourceNoteId: null,
-    sourceSoulActionId: null,
+    sourceNoteId: 'note-ready-2',
+    sourceSoulActionId: 'ready-2',
     promotionSoulActionId: 'ready-2',
     continuityKind: 'daily_rhythm',
     target: 'derived_outputs',
@@ -576,6 +576,18 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('Reintegration record-ready');
     expect(wrapper.text()).toContain('Promotion: ready-1');
     expect(wrapper.text()).toContain('Promotion: ready-2');
+    expect(wrapper.text()).toContain('Threshold: high');
+    expect(wrapper.text()).toContain('Status: active');
+    expect(wrapper.text()).toContain('Strength: medium');
+    expect(wrapper.text()).toContain('Source Note');
+    expect(wrapper.text()).toContain('note-ready-1');
+    expect(wrapper.text()).toContain('note-ready-2');
+    expect(wrapper.text()).toContain('Source Action');
+    expect(wrapper.text()).toContain('Explanation');
+    expect(wrapper.text()).toContain('Evidence');
+    expect(wrapper.text()).toContain('"reason": "projection"');
+    expect(wrapper.text()).toContain('"source": "settings-test"');
+    expect(wrapper.text()).toContain('"trend": "stable"');
     expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
 

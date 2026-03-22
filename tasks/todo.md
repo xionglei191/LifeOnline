@@ -1,3 +1,35 @@
+# promotion projection richer contract-to-UI 投射闭环
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI 投射缺口推进 promotion projections 展示。
+- [x] 把 `event_nodes` / `continuity_records` 已有的关键 contract 字段（threshold / status / strength / source ids / explanation / evidence / continuity）投射到现有 UI，而不是只显示标题和少量元信息。
+- [x] 补最小 SettingsView 回归，锁定 PR6 projection 关键信息真正可见。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/PromotionProjectionPanel.vue`
+    - 为 `EventNode` 补充展示 `threshold`、`status`、`sourceNoteId`、`sourceSoulActionId`。
+    - 为 `ContinuityRecord` 补充展示 `strength`、`sourceNoteId`、`sourceSoulActionId`。
+    - 新增 Explanation / Evidence / Continuity JSON 区块，让 PR6 promotion 的解释与证据不再被隐藏。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts`
+    - 扩展 projection 回归，锁定上述字段和 JSON 载荷在 SettingsView 中真实可见。
+- 这次修的不是再补一条 grouped governance/filter 稳定性测试，而是把 shared/server 已返回的 promotion contract 真正投射到 UI，解决“promotion 已存在但用户看不到理由和证据”的真实可见性缺口。
+
+## 本轮选择依据
+- 这条线符合当前优先级第 4 项：真实的 contract-to-UI 投射缺口。
+- `event_nodes` / `continuity_records` 在 shared contract 中已经包含 explanation/evidence/source ids/threshold/strength，但现有 projection panel 只显示了很薄的一层壳。
+- 相比继续做同类 retention/filter/websocket 补强，这条线直接提高 PR6 promotion 结果的可审计性与可理解性。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 142 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿 promotion projection 主线推进，可再考虑把 explanation/evidence 从 JSON 细化成更语义化展示；但本轮最小 contract-to-UI 投射增强已完成。
+
+
 # persona snapshot first-class read path 闭环
 
 ## 计划

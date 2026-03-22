@@ -40,7 +40,27 @@
             <div class="reintegration-summary-text">{{ eventNode.summary }}</div>
             <div class="reintegration-meta-grid">
               <span>Promotion: {{ eventNode.promotionSoulActionId }}</span>
+              <span>Threshold: {{ eventNode.threshold }}</span>
+              <span>Status: {{ eventNode.status }}</span>
               <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
+            </div>
+            <div class="projection-detail-grid">
+              <div v-if="eventNode.sourceNoteId" class="projection-detail-block">
+                <span class="projection-detail-label">Source Note</span>
+                <code>{{ eventNode.sourceNoteId }}</code>
+              </div>
+              <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
+                <span class="projection-detail-label">Source Action</span>
+                <code>{{ eventNode.sourceSoulActionId }}</code>
+              </div>
+            </div>
+            <div class="projection-detail-block">
+              <span class="projection-detail-label">Explanation</span>
+              <pre class="projection-json">{{ formatJson(eventNode.explanation) }}</pre>
+            </div>
+            <div class="projection-detail-block">
+              <span class="projection-detail-label">Evidence</span>
+              <pre class="projection-json">{{ formatJson(eventNode.evidence) }}</pre>
             </div>
           </article>
         </div>
@@ -58,8 +78,31 @@
             </div>
             <div class="reintegration-meta-grid">
               <span>Target: {{ continuity.target }}</span>
+              <span>Strength: {{ continuity.strength }}</span>
               <span>Promotion: {{ continuity.promotionSoulActionId }}</span>
               <span>记录于 {{ formatTime(continuity.recordedAt) }}</span>
+            </div>
+            <div class="projection-detail-grid">
+              <div v-if="continuity.sourceNoteId" class="projection-detail-block">
+                <span class="projection-detail-label">Source Note</span>
+                <code>{{ continuity.sourceNoteId }}</code>
+              </div>
+              <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
+                <span class="projection-detail-label">Source Action</span>
+                <code>{{ continuity.sourceSoulActionId }}</code>
+              </div>
+            </div>
+            <div class="projection-detail-block">
+              <span class="projection-detail-label">Continuity</span>
+              <pre class="projection-json">{{ formatJson(continuity.continuity) }}</pre>
+            </div>
+            <div class="projection-detail-block">
+              <span class="projection-detail-label">Explanation</span>
+              <pre class="projection-json">{{ formatJson(continuity.explanation) }}</pre>
+            </div>
+            <div class="projection-detail-block">
+              <span class="projection-detail-label">Evidence</span>
+              <pre class="projection-json">{{ formatJson(continuity.evidence) }}</pre>
             </div>
           </article>
         </div>
@@ -84,6 +127,10 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'refresh'): void;
 }>();
+
+function formatJson(value: Record<string, unknown>) {
+  return JSON.stringify(value, null, 2);
+}
 </script>
 
 <style scoped>
@@ -116,6 +163,40 @@ const emit = defineEmits<{
 
 .projection-item {
   min-width: 0;
+}
+
+.projection-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.projection-detail-block {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.projection-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.projection-json {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 960px) {
