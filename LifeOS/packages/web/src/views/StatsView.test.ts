@@ -84,6 +84,27 @@ describe('StatsView', () => {
     });
   });
 
+  it('labels total-count stats as record totals instead of newly created notes', async () => {
+    apiMocks.fetchStatsTrend.mockResolvedValue([{ day: '2026-03-01', total: 2, done: 1 }]);
+    apiMocks.fetchStatsRadar.mockResolvedValue([{ dimension: 'life', rate: 80 }]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    const trendChart = chartMocks.instances[0];
+    const monthlyChart = chartMocks.instances[2];
+
+    expect(trendChart.setOption.mock.calls.at(-1)?.[0]?.legend?.data).toEqual(['记录总量', '完成']);
+    expect(trendChart.setOption.mock.calls.at(-1)?.[0]?.series?.[0]?.name).toBe('记录总量');
+    expect(monthlyChart.setOption.mock.calls.at(-1)?.[0]?.legend?.data).toEqual(['记录总量', '完成']);
+    expect(monthlyChart.setOption.mock.calls.at(-1)?.[0]?.series?.[0]?.name).toBe('记录总量');
+
+    wrapper.unmount();
+  });
   it('reloads all stats panels when note-created websocket events arrive', async () => {
     apiMocks.fetchStatsTrend
       .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])

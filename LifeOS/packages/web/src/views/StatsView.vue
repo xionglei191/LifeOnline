@@ -140,7 +140,7 @@ async function loadTrend(data: StatsTrendPoint[]) {
   if (!c) return;
   c.setOption({
     tooltip: baseTooltip(),
-    legend: { data: ['新增', '完成'], bottom: 0, textStyle: { color: chartText } },
+    legend: { data: ['记录总量', '完成'], bottom: 0, textStyle: { color: chartText } },
     grid: { left: 24, right: 18, top: 26, bottom: 42, containLabel: true },
     xAxis: {
       type: 'category',
@@ -151,7 +151,7 @@ async function loadTrend(data: StatsTrendPoint[]) {
     yAxis: { type: 'value', minInterval: 1, ...baseAxis() },
     series: [
       {
-        name: '新增',
+        name: '记录总量',
         type: 'line',
         data: data.map((d) => d.total),
         smooth: true,
@@ -213,7 +213,7 @@ async function loadMonthly(data: StatsMonthlyPoint[]) {
   if (!c) return;
   c.setOption({
     tooltip: baseTooltip(),
-    legend: { data: ['新增', '完成'], bottom: 0, textStyle: { color: chartText } },
+    legend: { data: ['记录总量', '完成'], bottom: 0, textStyle: { color: chartText } },
     grid: { left: 24, right: 18, top: 26, bottom: 42, containLabel: true },
     xAxis: {
       type: 'category',
@@ -224,7 +224,7 @@ async function loadMonthly(data: StatsMonthlyPoint[]) {
     yAxis: { type: 'value', minInterval: 1, ...baseAxis() },
     series: [
       {
-        name: '新增',
+        name: '记录总量',
         type: 'bar',
         barMaxWidth: 18,
         data: data.map((d) => d.total),
