@@ -1,9 +1,9 @@
-# 当前轮：TodayTodos 主路径稳定性补面
+# 当前轮：NotePreview 主路径一致性补面
 
 ## 进展
-- [x] 识别 `TodayTodos` 当前队列顺序仍直接依赖后端 `created` 顺序；当同优先级/同状态任务并列时，主路径可见顺序会因隐藏字段漂移。
-- [x] 在 `TodayTodos` 中保留优先级/状态优先级后，再按当前可见标题（`note.title || file_name`）排序，保证主任务队列顺序稳定。
-- [x] 补 focused 回归，锁定同优先级任务按可见标题排序。
+- [x] 识别 `NotePreview` 多笔记 hover 预览仍沿用原始数组顺序，和 `TimelineTrack` 点击后的 picker 排序已不一致，造成同一组记录 hover/click 两条主路径顺序分叉。
+- [x] 在 `NotePreview` 的多笔记预览中按当前可见标题（`note.title || file_name`）排序，保证 hover 预览与 picker 一致。
+- [x] 补 focused 回归，锁定多笔记预览按可见标题排序。
 - [ ] 跑 focused web 验证并视情况直接提交。
 
 ---

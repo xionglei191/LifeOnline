@@ -58,6 +58,30 @@ describe('NotePreview', () => {
     wrapper.unmount();
   });
 
+  it('orders multi-note previews by visible shared titles', () => {
+    const wrapper = mount(NotePreview, {
+      props: {
+        notes: [
+          createNote({ id: 'preview-z', title: 'Zeta title', file_name: 'b-file.md' }),
+          createNote({ id: 'preview-a', title: 'Alpha title', file_name: 'z-file.md' }),
+        ],
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    const previewTitles = Array.from(document.body.querySelectorAll('.multi-title')).map((node) => node.textContent?.trim());
+    expect(previewTitles).toEqual(['Alpha title', 'Zeta title']);
+
+    wrapper.unmount();
+  });
+
   it('renders dimension labels from shared helpers in the single-note preview', () => {
     const wrapper = mount(NotePreview, {
       props: {

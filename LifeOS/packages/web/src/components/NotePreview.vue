@@ -62,7 +62,15 @@ const props = defineProps<{
 }>();
 
 const displayNotes = computed(() => {
-  if (props.notes && props.notes.length > 0) return props.notes.slice(0, 5);
+  if (props.notes && props.notes.length > 0) {
+    return [...props.notes]
+      .sort((left, right) => {
+        const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+        const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+        return leftLabel.localeCompare(rightLabel, 'zh-CN');
+      })
+      .slice(0, 5);
+  }
   if (props.note) return [props.note];
   return [];
 });
