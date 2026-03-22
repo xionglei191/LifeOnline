@@ -716,6 +716,7 @@ describe('api client promotion projections', () => {
       notes: [],
       total: 0,
       query: 'growth',
+      filters: { q: 'growth' },
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
