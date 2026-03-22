@@ -15,6 +15,9 @@
     <div v-if="task.finishedAt" class="wtc-meta">完成于 {{ formatDateTime(task.finishedAt) }}</div>
     <div class="wtc-params">{{ formatWorkerInput(task) }}</div>
     <div class="wtc-summary">{{ taskSummary(task) }}</div>
+    <div v-if="workerTaskResultFacts(task).length" class="wtc-result-facts">
+      <span v-for="fact in workerTaskResultFacts(task)" :key="fact" class="wtc-result-fact">{{ fact }}</span>
+    </div>
     <div v-if="task.error" class="wtc-error">{{ task.error }}</div>
     <div v-if="task.outputNotes?.length" class="wtc-output">
       <button
@@ -57,7 +60,7 @@
 
 <script setup lang="ts">
 import type { WorkerTask } from '@lifeos/shared';
-import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
+import { workerTaskResultFacts, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 
 defineProps<{
   task: WorkerTask;
@@ -185,6 +188,22 @@ function taskSummary(task: WorkerTask) {
   margin-top: 8px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.wtc-result-facts {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wtc-result-fact {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .wtc-error {

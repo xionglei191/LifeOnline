@@ -41,6 +41,56 @@ export function workerTaskWorkerLabel(worker: WorkerName | string) {
     : worker;
 }
 
+export function workerTaskResultFacts(task: WorkerTask) {
+  if (!task.result || task.status !== 'succeeded') return [];
+
+  if (task.taskType === 'extract_tasks') {
+    return [
+      `创建 ${task.result.created} 个行动项`,
+      `来源 ${task.result.sourceNoteTitle}`,
+    ];
+  }
+
+  if (task.taskType === 'update_persona_snapshot') {
+    return [
+      `快照 ${task.result.snapshotId}`,
+      `来源 ${task.result.sourceNoteTitle}`,
+    ];
+  }
+
+  if (task.taskType === 'summarize_note') {
+    return [
+      `来源 ${task.result.sourceNoteTitle}`,
+      `要点 ${task.result.keyPoints.length} 条`,
+    ];
+  }
+
+  if (task.taskType === 'classify_inbox') {
+    return [
+      `归档 ${task.result.classified} 条`,
+      `失败 ${task.result.failed} 条`,
+    ];
+  }
+
+  if (task.taskType === 'daily_report') {
+    return [
+      `日期 ${task.result.date}`,
+      `记录 ${task.result.stats.totalNotes} 条`,
+      `完成 ${task.result.stats.doneTasks} 项`,
+    ];
+  }
+
+  if (task.taskType === 'weekly_report') {
+    return [
+      `${task.result.weekStart} → ${task.result.weekEnd}`,
+      `记录 ${task.result.stats.totalNotes} 条`,
+      `完成 ${task.result.stats.doneTasks} 项`,
+    ];
+  }
+
+  return [];
+}
+
 export function workerTaskActionMessage(action: 'created' | 'retried' | 'cancelled', task: WorkerTask) {
   const prefix = action === 'created' ? '已创建任务' : action === 'retried' ? '已重新入队任务' : '已取消任务';
   return `${prefix} ${task.id} · ${workerTaskTypeLabel(task.taskType)} · ${workerTaskStatusLabel(task.status)} · ${workerTaskWorkerLabel(task.worker)}`;

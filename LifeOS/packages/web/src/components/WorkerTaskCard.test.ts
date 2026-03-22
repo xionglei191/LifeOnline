@@ -11,6 +11,7 @@ function createTask(overrides: Partial<WorkerTask> = {}): WorkerTask {
     status: overrides.status ?? 'pending',
     input: overrides.input ?? { noteId: 'note-1' },
     outputNotes: overrides.outputNotes ?? [],
+    result: overrides.result,
     resultSummary: overrides.resultSummary ?? null,
     error: overrides.error ?? null,
     sourceNoteId: overrides.sourceNoteId ?? '2025-02-01.md',
@@ -62,5 +63,57 @@ describe('WorkerTaskCard', () => {
     expect(pills).toContain('OpenClaw');
     expect(pills).toContain('OpenClaw 任务');
     expect(pills).not.toContain('openclaw');
+  });
+
+  it('renders projection-relevant result facts for succeeded persona snapshot tasks', () => {
+    const wrapper = mount(WorkerTaskCard, {
+      props: {
+        task: createTask({
+          status: 'succeeded',
+          taskType: 'update_persona_snapshot',
+          resultSummary: '人格快照已更新',
+          result: {
+            title: '人格快照',
+            summary: '生成最新人格快照',
+            sourceNoteTitle: '晨间复盘',
+            snapshotId: 'snapshot-42',
+            snapshot: {
+              sourceNoteTitle: '晨间复盘',
+              summary: '更稳定的作息与专注模式',
+              contentPreview: '最近一周的节律逐渐稳定。',
+              updatedAt: '2026-03-23T08:30:00.000Z',
+            },
+          },
+        }),
+      },
+    });
+
+    const facts = wrapper.findAll('.wtc-result-fact').map((fact) => fact.text());
+    expect(facts).toContain('快照 snapshot-42');
+    expect(facts).toContain('来源 晨间复盘');
+    expect(wrapper.text()).toContain('人格快照已更新');
+  });
+
+  it('renders task extraction result facts for succeeded extract tasks', () => {
+    const wrapper = mount(WorkerTaskCard, {
+      props: {
+        task: createTask({
+          status: 'succeeded',
+          taskType: 'extract_tasks',
+          input: { noteId: 'note-1' },
+          result: {
+            title: '行动项提取',
+            summary: '已提取行动项',
+            created: 3,
+            sourceNoteTitle: '周计划',
+            items: [],
+          },
+        }),
+      },
+    });
+
+    const facts = wrapper.findAll('.wtc-result-fact').map((fact) => fact.text());
+    expect(facts).toContain('创建 3 个行动项');
+    expect(facts).toContain('来源 周计划');
   });
 });

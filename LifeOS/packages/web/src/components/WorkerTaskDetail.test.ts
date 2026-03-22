@@ -341,6 +341,51 @@ describe('WorkerTaskDetail', () => {
     wrapper.unmount();
   });
 
+  it('renders key result facts before the raw structured result payload', async () => {
+    apiMocks.fetchWorkerTask.mockResolvedValue(createTask({
+      taskType: 'extract_tasks',
+      result: {
+        title: 'Source Note 行动项提取',
+        summary: '已创建 1 个行动项',
+        created: 1,
+        sourceNoteTitle: 'Source Note',
+        items: [
+          {
+            title: 'First task',
+            dimension: 'learning',
+            priority: 'medium',
+            due: null,
+            filePath: '/vault/学习/2026-03-22-First-task.md',
+          },
+        ],
+      },
+      resultSummary: '已创建 1 个行动项',
+      status: 'succeeded',
+    }));
+
+    const wrapper = mount(WorkerTaskDetail, {
+      props: { taskId: 'worker-task-1' },
+      global: {
+        stubs: {
+          Teleport: false,
+          NoteDetail: true,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    const facts = Array.from(document.body.querySelectorAll('.detail-fact')).map((fact) => fact.textContent?.trim() || '');
+    expect(document.body.textContent).toContain('关键结果');
+    expect(facts).toContain('创建 1 个行动项');
+    expect(facts).toContain('来源 Source Note');
+    expect(document.body.textContent).toContain('结构化结果');
+    expect(document.body.textContent).toContain('First task');
+
+    wrapper.unmount();
+  });
+
   it('renders structured worker task result JSON when present', async () => {
     apiMocks.fetchWorkerTask.mockResolvedValue(createTask({
       taskType: 'extract_tasks',

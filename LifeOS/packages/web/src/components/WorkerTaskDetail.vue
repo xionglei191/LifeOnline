@@ -50,6 +50,16 @@
             <div class="summary-box">{{ task.resultSummary }}</div>
           </div>
 
+          <div v-if="workerTaskResultFacts(task).length" class="detail-block">
+            <div class="block-head">
+              <p class="block-title">关键结果</p>
+              <span class="output-count">{{ workerTaskResultFacts(task).length }} 条</span>
+            </div>
+            <div class="detail-facts">
+              <span v-for="fact in workerTaskResultFacts(task)" :key="fact" class="detail-fact">{{ fact }}</span>
+            </div>
+          </div>
+
           <div v-if="task.result" class="detail-block">
             <p class="block-title">结构化结果</p>
             <pre class="json-box">{{ formatJson(task.result) }}</pre>
@@ -114,7 +124,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import type { WorkerTask, WsEvent } from '@lifeos/shared';
 import { fetchWorkerTask, retryWorkerTask, cancelWorkerTask } from '../api/client';
 import NoteDetail from './NoteDetail.vue';
-import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
+import { workerTaskActionMessage, workerTaskResultFacts, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 
 const props = defineProps<{ taskId: string | null }>();
 const emit = defineEmits<{ close: [] }>();
@@ -420,6 +430,21 @@ onUnmounted(() => {
   color: var(--text-muted);
   font-size: 12px;
   font-family: monospace;
+}
+
+.detail-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-fact {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 42%, var(--card-bg));
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .detail-actions {

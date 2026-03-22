@@ -1,13 +1,13 @@
-# 当前轮：Dimension hero canonical stats 收口
+# 当前轮：Worker task detail result facts 收口
 
 ## 进展
-- [x] 识别 `DimensionView` / `useDimensionNotes` 之前把 hero stats 完全从当前 `fetchNotes({ dimension })` 结果在前端本地重算，而 dashboard 已经有 canonical `dimensionStats` contract；这会让维度主页和 dashboard 对同一维度讲出不同事实源，属于新的事实源一致性缺口。
-- [x] 在 `LifeOS/packages/web/src/composables/useDimensionNotes.ts` 复用现有 `fetchDashboard()` 返回的 `dimensionStats` 作为维度 hero 的 canonical 统计来源，同时继续保留 notes 列表本身走 `fetchNotes({ dimension })`，避免把 hero facts 和当前列表切片绑定在一起。
-- [x] 在 `LifeOS/packages/web/src/composables/useDimensionNotes.test.ts` 与 `LifeOS/packages/web/src/views/DimensionView.test.ts` 增加 focused 回归，锁定维度 hero stats 现在取自 dashboard contract，而不是当前列表切片本地重算。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/composables/useDimensionNotes.test.ts src/views/DimensionView.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 虽然已经能显示结构化 `result` JSON，但详情弹层仍缺少基于 shared contract 的关键结果 facts，用户必须自己读原始 JSON 才知道任务产出重点，属于新的 contract-to-UI 可见性缺口。
+- [x] 将 `workerTaskResultFacts` 从 `WorkerTaskCard` 提升到 `LifeOS/packages/web/src/utils/workerTaskLabels.ts` 复用，并让 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 在结构化 JSON 前补充“关键结果” facts，保持卡片与详情对同一 worker contract 的投射一致。
+- [x] 在 `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 增加 focused 回归，锁定 extract tasks 成功态会先展示关键结果 facts，再保留原始结构化结果 JSON。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskCard.test.ts src/components/WorkerTaskDetail.test.ts src/utils/workerTaskLabels.test.ts`。
 
 ## 结果
-- Dimension hero 现在和 dashboard 共享同一条 canonical 维度统计事实源，不再因为前端局部切片重算而漂移。
-- 当前这一轮 dimension canonical stats 收口完成后，下一轮可继续找新的非 Settings 主路径 contract / stale UI gap。
+- Worker task 的列表卡片与详情弹层现在复用同一套 result facts 投射规则，用户不需要先读 JSON 才能看懂成功任务产出。
+- 当前这一轮 detail result facts 收口完成后，下一轮可继续找新的非 Settings 主路径 contract / fact-source / stale visibility gap。
 
 ---
