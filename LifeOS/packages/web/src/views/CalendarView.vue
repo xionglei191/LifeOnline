@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useCalendar } from '../composables/useCalendar';
 import CalendarGrid from '../components/CalendarGrid.vue';
 import NoteDetail from '../components/NoteDetail.vue';
@@ -69,9 +69,10 @@ const year = ref(now.getFullYear());
 const month = ref(now.getMonth() + 1);
 const selectedNoteId = ref<string | null>(null);
 
-function loadData() {
-  load(year.value, month.value);
-}
+watch([year, month], ([nextYear, nextMonth], [prevYear, prevMonth]) => {
+  if (nextYear === prevYear && nextMonth === prevMonth) return;
+  load(nextYear, nextMonth);
+}, { immediate: true });
 
 function prevMonth() {
   if (month.value === 1) {
@@ -80,7 +81,6 @@ function prevMonth() {
   } else {
     month.value--;
   }
-  loadData();
 }
 
 function nextMonth() {
@@ -90,7 +90,6 @@ function nextMonth() {
   } else {
     month.value++;
   }
-  loadData();
 }
 
 function handleSelectDay(date: string) {
@@ -129,10 +128,6 @@ function getPriorityLabel(priority: string) {
   };
   return labels[priority] || priority;
 }
-
-onMounted(() => {
-  loadData();
-});
 </script>
 
 <style scoped>

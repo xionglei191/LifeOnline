@@ -1,3 +1,38 @@
+# calendar month-reactivity 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 calendar 月份切换收口。
+- [x] 把 `CalendarView.vue` 从“mounted 首次加载 + 按钮内部手动触发”改为由当前 `year/month` 状态自动驱动加载。
+- [x] 补最小 view 回归，锁定月份切换后会按新月份重新请求 calendar 数据，而不是继续停留在初始月份。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/CalendarView.vue`
+    - 用 `watch([year, month], ..., { immediate: true })` 取代仅在 mounted 时加载一次，让当前月份状态回到 calendar 数据加载的真实事实源。
+    - `prevMonth()` / `nextMonth()` 只负责更新月份状态，不再自己决定何时加载，避免月份 UI 与数据请求来源分叉。
+  - `LifeOS/packages/web/src/views/CalendarView.test.ts`
+    - 新增本地月份基线回归，锁定页面会用本地时间月窗作为初始请求。
+    - 新增月份响应性回归，锁定切到下月、再切回本月时会按新的 `year/month` 重新请求数据。
+- 这次修的不是再补一个同类测试，而是修复 calendar 主路径里的事实源一致性缺口：月份控件已变化，但数据加载仍依赖 mounted/按钮手动触发，状态来源没有真正收口到当前月窗。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：`year/month` 才是 CalendarView 当前月窗事实源，但旧实现仍把加载绑定在 mounted 和按钮处理函数里，导致同类逻辑继续散落在事件入口。
+- 这会直接影响 calendar 主路径月份切换，是明确的用户可见行为风险，不是低边际对称补强。
+- 这条线与 search / dimension / timeline 的修复一致，都是把当前 UI 状态重新绑定回数据加载事实源。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/CalendarView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 websocket 驱动的 reload 是否也有依赖旧状态快照的入口，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 calendar month-reactivity 收口相关文件。
+
+
 # timeline window-reactivity 收口
 
 ## 计划
