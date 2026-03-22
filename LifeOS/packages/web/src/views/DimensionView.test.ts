@@ -8,6 +8,7 @@ const routeState = vi.hoisted(() => ({
 
 const apiMocks = vi.hoisted(() => ({
   fetchNotes: vi.fn(),
+  fetchDashboard: vi.fn(),
 }));
 
 vi.mock('vue-router', async () => {
@@ -22,6 +23,7 @@ vi.mock('vue-router', async () => {
 
 vi.mock('../api/client', () => ({
   fetchNotes: apiMocks.fetchNotes,
+  fetchDashboard: apiMocks.fetchDashboard,
 }));
 
 import DimensionView from './DimensionView.vue';
@@ -60,12 +62,37 @@ describe('DimensionView', () => {
 
   beforeEach(() => {
     apiMocks.fetchNotes.mockReset();
+    apiMocks.fetchDashboard.mockReset();
+    apiMocks.fetchDashboard.mockResolvedValue({
+      todayTodos: [],
+      weeklyHighlights: [],
+      inboxCount: 0,
+      dimensionStats: [
+        { dimension: 'life', total: 9, pending: 4, in_progress: 2, done: 3, health_score: 33 },
+        { dimension: 'growth', total: 5, pending: 1, in_progress: 1, done: 3, health_score: 60 },
+        { dimension: '_inbox', total: 1, pending: 1, in_progress: 0, done: 0, health_score: 0 },
+      ],
+    });
     routeState.current!.params.dimension = 'life';
   });
 
   afterEach(() => {
     wrapper?.unmount();
     wrapper = null;
+  });
+
+  it('uses canonical dashboard dimension stats instead of rebuilding hero facts from the current note slice', async () => {
+    routeState.current!.params.dimension = 'life';
+    apiMocks.fetchNotes.mockResolvedValueOnce([
+      { id: 'note-life', dimension: 'life', status: 'pending', type: 'note', date: '2026-03-22', file_name: 'life.md' },
+    ]);
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    expect(apiMocks.fetchDashboard).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:9');
+    expect(wrapper.find('.note-list-stub').text()).toContain('note-life');
   });
 
   it('maps the inbox route to the canonical _inbox dimension', async () => {
@@ -102,7 +129,7 @@ describe('DimensionView', () => {
     wrapper = buildWrapper();
     await flushPromises();
 
-    expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:1');
+    expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:9');
     expect(wrapper.find('.note-list-stub').text()).toContain('note-life');
     expect(apiMocks.fetchNotes).toHaveBeenNthCalledWith(1, { dimension: 'life' });
 
@@ -113,7 +140,7 @@ describe('DimensionView', () => {
     await flushPromises();
 
     expect(apiMocks.fetchNotes).toHaveBeenNthCalledWith(2, { dimension: 'growth' });
-    expect(wrapper.find('.dimension-stats-stub').text()).toContain('growth:1');
+    expect(wrapper.find('.dimension-stats-stub').text()).toContain('growth:5');
     expect(wrapper.find('.note-list-stub').text()).toContain('note-growth');
   });
 

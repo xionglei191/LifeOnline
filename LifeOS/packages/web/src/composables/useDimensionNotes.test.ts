@@ -6,6 +6,7 @@ import { parseLocalDate } from '../utils/date';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNotes: vi.fn(),
+  fetchDashboard: vi.fn(),
 }));
 
 const websocketMocks = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const websocketMocks = vi.hoisted(() => ({
 
 vi.mock('../api/client', () => ({
   fetchNotes: apiMocks.fetchNotes,
+  fetchDashboard: apiMocks.fetchDashboard,
 }));
 
 vi.mock('./useWebSocket', () => websocketMocks);
@@ -75,8 +77,32 @@ function mountUseDimensionNotes(initialDimension: Dimension = 'life') {
 describe('useDimensionNotes', () => {
   beforeEach(() => {
     apiMocks.fetchNotes.mockReset();
+    apiMocks.fetchDashboard.mockReset();
+    apiMocks.fetchDashboard.mockResolvedValue({
+      todayTodos: [],
+      weeklyHighlights: [],
+      inboxCount: 0,
+      dimensionStats: [
+        { dimension: 'life', total: 3, pending: 1, in_progress: 1, done: 1, health_score: 33 },
+        { dimension: 'growth', total: 2, pending: 0, in_progress: 1, done: 1, health_score: 50 },
+        { dimension: '_inbox', total: 1, pending: 1, in_progress: 0, done: 0, health_score: 0 },
+      ],
+    });
     websocketMocks.isIndexRefreshEvent.mockReset();
     websocketMocks.isIndexRefreshEvent.mockReturnValue(false);
+  });
+
+  it('uses dashboard dimension stats as the canonical hero fact source', async () => {
+    apiMocks.fetchNotes.mockResolvedValueOnce([createNote('note-life', 'life')]);
+
+    const { state, wrapper } = mountUseDimensionNotes('life');
+    await nextTick();
+    await nextTick();
+
+    expect(apiMocks.fetchDashboard).toHaveBeenCalledTimes(1);
+    expect(state.stats.value).toEqual({ total: 3, pending: 1, inProgress: 1, done: 1 });
+
+    wrapper.unmount();
   });
 
   it('refreshes on note-created and note-deleted websocket events for main dimension lists', () => {
@@ -230,6 +256,7 @@ describe('useDimensionNotes', () => {
     const beforeRefreshCalls = apiMocks.fetchNotes.mock.calls.length;
 
     document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'index-complete' } }));
+    await nextTick();
     await nextTick();
     await nextTick();
 

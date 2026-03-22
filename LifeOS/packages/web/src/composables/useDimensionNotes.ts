@@ -1,5 +1,5 @@
 import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
-import { fetchNotes } from '../api/client';
+import { fetchDashboard, fetchNotes } from '../api/client';
 import { parseLocalDate } from '../utils/date';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { Note, Dimension, WsEvent } from '@lifeos/shared';
@@ -28,6 +28,9 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
   const loading = ref(false);
   const error = ref<Error | null>(null);
   let activeRequestId = 0;
+  let activeStatsRequestId = 0;
+
+  const dimensionStats = ref({ total: 0, pending: 0, inProgress: 0, done: 0 });
 
   const filters = ref<Filters>({
     types: [],
@@ -101,20 +104,37 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
     return result;
   });
 
-  const stats = computed(() => {
-    const total = notes.value.length;
-    const pending = notes.value.filter(n => n.status === 'pending').length;
-    const inProgress = notes.value.filter(n => n.status === 'in_progress').length;
-    const done = notes.value.filter(n => n.status === 'done').length;
-    return { total, pending, inProgress, done };
-  });
+  const stats = computed(() => dimensionStats.value);
+
+  async function loadStats() {
+    const requestId = ++activeStatsRequestId;
+    try {
+      const dashboard = await fetchDashboard();
+      if (requestId !== activeStatsRequestId) return;
+      const stat = dashboard.dimensionStats.find((item) => item.dimension === dimension.value);
+      dimensionStats.value = stat
+        ? {
+            total: stat.total,
+            pending: stat.pending,
+            inProgress: stat.in_progress,
+            done: stat.done,
+          }
+        : { total: 0, pending: 0, inProgress: 0, done: 0 };
+    } catch (e) {
+      if (requestId !== activeStatsRequestId) return;
+      throw e;
+    }
+  }
 
   async function load() {
     const requestId = ++activeRequestId;
     loading.value = true;
     error.value = null;
     try {
-      const nextNotes = await fetchNotes({ dimension: dimension.value });
+      const [nextNotes] = await Promise.all([
+        fetchNotes({ dimension: dimension.value }),
+        loadStats(),
+      ]);
       if (requestId !== activeRequestId) return;
       notes.value = nextNotes;
     } catch (e) {
@@ -153,6 +173,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
       keyword: '',
     };
     notes.value = [];
+    dimensionStats.value = { total: 0, pending: 0, inProgress: 0, done: 0 };
     load();
   }, { immediate: true });
 
