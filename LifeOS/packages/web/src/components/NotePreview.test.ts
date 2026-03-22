@@ -37,6 +37,27 @@ describe('NotePreview', () => {
     document.body.innerHTML = '';
   });
 
+  it('prefers shared note titles in the single-note preview path', () => {
+    const wrapper = mount(NotePreview, {
+      props: {
+        note: createNote({ title: 'Shared preview title', file_name: 'fallback-preview-name.md' }),
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toContain('Shared preview title');
+    expect(document.body.textContent).not.toContain('fallback-preview-name');
+
+    wrapper.unmount();
+  });
+
   it('renders dimension labels from shared helpers in the single-note preview', () => {
     const wrapper = mount(NotePreview, {
       props: {

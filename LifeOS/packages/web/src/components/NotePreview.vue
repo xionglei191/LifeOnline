@@ -15,7 +15,7 @@
             <span class="preview-type">{{ typeLabels[displayNotes[0].type] }}</span>
             <span class="preview-status" :class="'status-' + displayNotes[0].status">{{ statusLabels[displayNotes[0].status] }}</span>
           </div>
-          <h4 class="preview-title">{{ displayNotes[0].file_name.replace('.md', '') }}</h4>
+          <h4 class="preview-title">{{ displayNotes[0].title || displayNotes[0].file_name.replace('.md', '') }}</h4>
           <p v-if="displayNotes[0].content" class="preview-body">{{ truncate(displayNotes[0].content, 160) }}</p>
           <div class="preview-footer">
             <span class="preview-date">{{ displayNotes[0].date?.slice(0, 10) }}</span>

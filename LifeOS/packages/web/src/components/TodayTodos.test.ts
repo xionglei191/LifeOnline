@@ -53,6 +53,17 @@ function deferred<T>() {
 }
 
 describe('TodayTodos', () => {
+  it('prefers shared note titles over file names on the dashboard todo path', () => {
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [createTodo({ title: 'Shared todo title', file_name: 'fallback-todo-name.md' })],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Shared todo title');
+    expect(wrapper.text()).not.toContain('fallback-todo-name');
+  });
+
   it('prevents duplicate toggles while the same todo is still syncing', async () => {
     const pendingUpdate = deferred<void>();
     apiMocks.updateNote.mockReturnValueOnce(pendingUpdate.promise);

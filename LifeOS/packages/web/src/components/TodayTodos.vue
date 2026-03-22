@@ -29,7 +29,7 @@
 
         <div class="content" @click="$emit('selectNote', todo.id)">
           <div class="row-top">
-            <span class="title">{{ todo.file_name.replace('.md', '') }}</span>
+            <span class="title">{{ todo.title || todo.file_name.replace('.md', '') }}</span>
             <span class="priority-pill">{{ priorityLabel(todo.priority || 'medium') }}</span>
           </div>
 
