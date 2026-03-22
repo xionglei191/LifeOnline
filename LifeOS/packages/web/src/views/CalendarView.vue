@@ -106,7 +106,20 @@ async function handleDeleted() {
 }
 
 function getDayNotes(date: string) {
-  return data.value?.days.find((d) => d.date === date)?.notes || [];
+  const notes = data.value?.days.find((d) => d.date === date)?.notes || [];
+  return [...notes].sort((left, right) => {
+    const typeOrder: Record<string, number> = { schedule: 0, task: 1, milestone: 2, note: 3, record: 4, review: 5 };
+    const typeDelta = (typeOrder[left.type] ?? 99) - (typeOrder[right.type] ?? 99);
+    if (typeDelta !== 0) return typeDelta;
+
+    const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, done: 2, cancelled: 3 };
+    const statusDelta = (statusOrder[left.status] ?? 99) - (statusOrder[right.status] ?? 99);
+    if (statusDelta !== 0) return statusDelta;
+
+    const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+    const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+    return leftLabel.localeCompare(rightLabel, 'zh-CN');
+  });
 }
 
 function truncateContent(text: string, len: number) {

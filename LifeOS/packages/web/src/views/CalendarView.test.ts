@@ -65,6 +65,45 @@ describe('CalendarView', () => {
     vi.useRealTimers();
   });
 
+  it('orders selected-day detail items by visible shared titles', async () => {
+    const load = vi.fn();
+    composableMocks.useCalendar.mockReturnValue({
+      data: ref({
+        year: 2026,
+        month: 3,
+        days: [
+          {
+            date: '2026-03-12',
+            count: 2,
+            notes: [
+              { id: 'note-z', file_name: 'b-file.md', type: 'note', status: 'pending', title: 'Zeta title', content: 'z' },
+              { id: 'note-a', file_name: 'z-file.md', type: 'note', status: 'pending', title: 'Alpha title', content: 'a' },
+            ],
+          },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      selectedDay: ref('2026-03-12'),
+      load,
+    });
+
+    const wrapper = mount(CalendarView, {
+      global: {
+        stubs: {
+          CalendarGrid: true,
+          NoteDetail: true,
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const titles = wrapper.findAll('.note-title').map((node) => node.text());
+    expect(titles).toEqual(['Alpha title', 'Zeta title']);
+  });
+
   it('reloads the calendar when the month window changes instead of pinning the initial mount state', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-31T23:30:00'));
