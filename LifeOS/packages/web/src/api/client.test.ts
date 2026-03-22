@@ -409,7 +409,7 @@ describe('api client promotion projections', () => {
     };
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ task }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ tasks: [task] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ tasks: [task], filters: { sourceNoteId: 'note-1', status: 'pending', taskType: 'openclaw_task', worker: 'openclaw' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ task }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ task: { ...task, status: 'running' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ task: { ...task, status: 'cancelled' } }) })
