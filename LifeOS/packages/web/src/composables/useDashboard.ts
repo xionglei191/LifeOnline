@@ -3,6 +3,11 @@ import { fetchDashboard } from '../api/client';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { DashboardData, WsEvent } from '@lifeos/shared';
 
+export function doesDashboardNeedRefresh(wsEvent: WsEvent) {
+  return isIndexRefreshEvent(wsEvent)
+    || wsEvent.type === 'note-worker-tasks-updated';
+}
+
 export function useDashboard() {
   const data = ref<DashboardData | null>(null);
   const loading = ref(false);
@@ -30,7 +35,7 @@ export function useDashboard() {
   function handleWsUpdate(event: Event) {
     const customEvent = event as CustomEvent<WsEvent>;
     const wsEvent = customEvent.detail;
-    if (isIndexRefreshEvent(wsEvent)) {
+    if (doesDashboardNeedRefresh(wsEvent)) {
       load();
     }
   }

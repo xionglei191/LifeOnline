@@ -11,9 +11,13 @@ const apiMocks = vi.hoisted(() => ({
   fetchScheduleHealth: vi.fn(),
 }));
 
-vi.mock('../composables/useDashboard', () => ({
-  useDashboard: composableMocks.useDashboard,
-}));
+vi.mock('../composables/useDashboard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../composables/useDashboard')>();
+  return {
+    ...actual,
+    useDashboard: composableMocks.useDashboard,
+  };
+});
 
 vi.mock('../api/client', () => ({
   fetchScheduleHealth: apiMocks.fetchScheduleHealth,
@@ -261,6 +265,74 @@ describe('DashboardOverview', () => {
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads dashboard-visible task state when note worker websocket updates arrive', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+    apiMocks.fetchScheduleHealth
+      .mockResolvedValueOnce(scheduleHealth)
+      .mockResolvedValueOnce(scheduleHealth);
+
+    mount(DashboardOverview, {
+      global: {
+        stubs: {
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          TodayTodos: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: 'note-1.md',
+          task: {
+            id: 'worker-task-1',
+            taskType: 'extract_tasks',
+            worker: 'lifeos',
+            status: 'pending',
+            input: {},
+            result: null,
+            error: null,
+            createdAt: '2026-03-23T10:00:00.000Z',
+            updatedAt: '2026-03-23T10:00:00.000Z',
+            startedAt: null,
+            finishedAt: null,
+            sourceNoteId: 'note-1.md',
+            scheduleId: null,
+            outputNotePaths: [],
+            outputNotes: [],
+            resultSummary: null,
+          },
+        },
+      },
+    }));
+    await flushPromises();
+
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchScheduleHealth).toHaveBeenCalledTimes(2);
   });
 
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {

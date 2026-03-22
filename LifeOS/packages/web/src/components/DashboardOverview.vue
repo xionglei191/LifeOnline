@@ -96,10 +96,9 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { useDashboard } from '../composables/useDashboard';
+import { useDashboard, doesDashboardNeedRefresh } from '../composables/useDashboard';
 import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
-import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import type { WsEvent } from '@lifeos/shared';
 import TodayTodos from './TodayTodos.vue';
 import WeeklyHighlights from './WeeklyHighlights.vue';
@@ -161,8 +160,7 @@ async function handleDeleted() {
 
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
-  if (isIndexRefreshEvent(wsEvent)) {
-    load();
+  if (doesDashboardNeedRefresh(wsEvent)) {
     loadScheduleHealth();
     return;
   }

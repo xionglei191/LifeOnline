@@ -1,14 +1,14 @@
-# 当前轮：client list-response canonical filter 暴露收口
+# 当前轮：dashboard websocket 主路径刷新收口
 
 ## 进展
-- [x] 识别 `web/src/api/client.ts` 中 `fetchWorkerTasks`、`fetchReintegrationRecords`、`fetchSoulActions` 仍只返回数组，吞掉 server/shared 已返回的 canonical `filters`，导致 client helper 层无法承接统一 list-response contract。
-- [x] 新增 `fetchWorkerTaskList`、`fetchReintegrationRecordList`、`fetchSoulActionList`，在保留原数组 helper 兼容路径的同时，显式暴露 shared list-response 里的 canonical `filters`；并把 projection list helper 也统一成 `items + filters` 形状。
-- [x] 同步更新 `NoteDetail.vue` / `SettingsView.vue` 对 projection list helper 的读取方式，继续按 `response.filters.sourceReintegrationIds` 驱动 UI 过滤；同时补上 NoteDetail 对 canonical-scope artifact websocket 更新的命中判断，避免 `sourceNoteId` 不匹配时漏刷。
-- [x] 补 web focused 回归，锁定 worker/reintegration/soul-action/projection list helpers 都会保留 shared response filters，而不是只返回 items。
-- [x] 跑 web focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/api/client.test.ts src/components/NoteDetail.test.ts`。
+- [x] 识别 dashboard 主路径只在 index refresh 下重载，`note-worker-tasks-updated` 虽然会改变今日待办/周重点等 dashboard 可见状态，但前端没有刷新，属于新的主路径可见行为缺口。
+- [x] 在 `web/src/composables/useDashboard.ts` 抽出 `doesDashboardNeedRefresh`，把 `note-worker-tasks-updated` 纳入 dashboard 数据刷新门禁，避免 dashboard 继续只信旧的 index-only 事实源。
+- [x] 在 `web/src/components/DashboardOverview.vue` 复用同一门禁，同步让 schedule health 在这类 dashboard 主路径刷新事件上也一起更新，保持 hero/任务健康横幅与主数据一致。
+- [x] 补 focused 回归：锁定 dashboard 会对 `note-worker-tasks-updated` 做刷新，而不会把普通无关 websocket 事件误判成刷新触发器；同时修正 `DashboardOverview.test.ts` 中误拼接的测试块，避免后续继续产生假阴性。
+- [x] 跑 web focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/composables/useDashboard.test.ts src/components/DashboardOverview.test.ts`。
 
 ## 结果
-- web client 现在可以在不破坏现有调用方的前提下承接 server/shared canonical list filters，后续 UI 若要信 response filter scope，不必再绕过 client helper 直接重做解析。
-- NoteDetail 的 projection 主路径和 websocket 刷新都已与新的 list-response contract 对齐；下一轮可继续找新的 server/web/shared contract gap，而不是重复补同类 Settings 收敛测试。
+- Dashboard 现在能在 note-scoped worker task 更新后及时反映主路径可见变化，不再要求等 index refresh 才看到今日待办等变化。
+- 当前这一轮 dashboard 主路径刷新收口已完成并通过 focused 验证；下一轮可继续找新的 websocket/server-web contract gap。
 
 ---

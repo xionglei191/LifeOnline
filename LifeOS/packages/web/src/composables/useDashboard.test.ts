@@ -15,7 +15,7 @@ vi.mock('./useWebSocket', () => ({
   isIndexRefreshEvent: vi.fn(() => true),
 }));
 
-import { useDashboard } from './useDashboard';
+import { useDashboard, doesDashboardNeedRefresh } from './useDashboard';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -49,6 +49,33 @@ function mountUseDashboard() {
 }
 
 describe('useDashboard', () => {
+  it('refreshes on note-worker-tasks websocket events for dashboard-visible task changes', () => {
+    expect(doesDashboardNeedRefresh({
+      type: 'note-worker-tasks-updated',
+      data: {
+        sourceNoteId: 'note-1.md',
+        task: {
+          id: 'worker-task-1',
+          taskType: 'extract_tasks',
+          worker: 'lifeos',
+          status: 'pending',
+          input: {},
+          result: null,
+          error: null,
+          createdAt: '2026-03-23T10:00:00.000Z',
+          updatedAt: '2026-03-23T10:00:00.000Z',
+          startedAt: null,
+          finishedAt: null,
+          sourceNoteId: 'note-1.md',
+          scheduleId: null,
+          outputNotePaths: [],
+          outputNotes: [],
+          resultSummary: null,
+        },
+      },
+    })).toBe(true);
+  });
+
   it('keeps the latest dashboard data when an older reload resolves afterwards', async () => {
     const first = deferred<DashboardData>();
     const second = deferred<DashboardData>();
