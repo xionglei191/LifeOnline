@@ -205,6 +205,76 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('reloads persona snapshot when a persona worker update arrives for the current note', async () => {
+    apiMocks.fetchPersonaSnapshot
+      .mockResolvedValueOnce({
+        id: 'persona:note-1.md',
+        sourceNoteId: 'note-1.md',
+        soulActionId: null,
+        workerTaskId: 'worker-task-1',
+        summary: '旧人格快照',
+        snapshot: {
+          sourceNoteTitle: 'Test Note',
+          summary: '旧人格快照',
+          contentPreview: 'old snapshot preview',
+          updatedAt: '2026-03-22T10:00:00.000Z',
+        },
+        createdAt: '2026-03-22T10:00:00.000Z',
+        updatedAt: '2026-03-22T10:00:00.000Z',
+      })
+      .mockResolvedValueOnce({
+        id: 'persona:note-1.md',
+        sourceNoteId: 'note-1.md',
+        soulActionId: null,
+        workerTaskId: 'worker-task-2',
+        summary: '新人格快照',
+        snapshot: {
+          sourceNoteTitle: 'Test Note',
+          summary: '新人格快照',
+          contentPreview: 'new snapshot preview',
+          updatedAt: '2026-03-22T11:00:00.000Z',
+        },
+        createdAt: '2026-03-22T10:00:00.000Z',
+        updatedAt: '2026-03-22T11:00:00.000Z',
+      });
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    expect(document.body.textContent).toContain('旧人格快照');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'worker-task-updated',
+        task: createTask({
+          id: 'worker-task-2',
+          taskType: 'update_persona_snapshot',
+          sourceNoteId: 'note-1.md',
+          status: 'done',
+        }),
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchPersonaSnapshot).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('新人格快照');
+    expect(document.body.textContent).toContain('new snapshot preview');
+    expect(document.body.textContent).not.toContain('old snapshot preview');
+
+    wrapper.unmount();
+  });
+
   it('renders localized worker-task metadata after creating summarize task', async () => {
     apiMocks.createWorkerTask.mockResolvedValue(createTask({ taskType: 'summarize_note', worker: 'lifeos', status: 'pending' }));
 

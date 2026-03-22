@@ -1,3 +1,38 @@
+# note-detail persona-snapshot live-sync 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI / 事实源投射缺口推进 NoteDetail 人格快照面板 live-sync 收口。
+- [x] 让 `NoteDetail.vue` 在当前 note 的 `update_persona_snapshot` worker 更新到达时同步刷新 `personaSnapshot`，避免任务状态已更新但快照面板仍停留旧内容。
+- [x] 补最小组件 focused 回归，锁定 persona worker 更新事件到达后会重新拉取并渲染最新快照。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 在当前 note 收到 `worker-task-updated` websocket 事件时，除刷新 related worker tasks 外，还会在任务类型为 `update_persona_snapshot` 时同步刷新 `personaSnapshot`。
+    - 修复“任务列表已显示人格快照任务完成，但旁边 Persona Snapshot 面板仍显示旧内容”的真实主路径错位。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增 persona snapshot 在当前 note 收到相关 worker 更新事件后会重新拉取并渲染最新内容的回归。
+    - 保留既有 stale note-detail / worker metadata / approval 等回归。
+- 这次修的不是再补一个对称测试，而是修复 NoteDetail 内部相邻两块真实数据面板对同一后台事实响应不一致的问题：worker 任务状态已刷新，但人格快照内容没跟上。
+
+## 本轮选择依据
+- 这是新的 contract-to-UI / 事实源投射缺口：server 已通过 worker-task 更新表达“人格快照任务完成”，但 web 侧只刷新任务列表，没有把同一事实投射到 persona snapshot 面板。
+- 这属于直接可见的主路径行为缺口，用户会在 NoteDetail 同一屏中看到“任务成功 + 快照仍旧”的割裂状态。
+- 这条线优先级高于继续做重复写防抖，因为它更接近新的 server/web/shared contract gap 和真实的 contract-to-UI 投射缺口。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `SearchView.vue` 或 `StatsView.vue` 是否也需要在 index refresh websocket 事件后主动刷新当前事实源，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 note-detail persona-snapshot live-sync 收口相关文件。
+
+
 # note-list toggle dedupe 收口
 
 ## 计划
