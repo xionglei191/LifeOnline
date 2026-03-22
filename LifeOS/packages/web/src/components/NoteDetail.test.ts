@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import type { Note, WorkerTask, ApprovalStatus } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -99,6 +100,16 @@ function clickButtonByText(text: string) {
   const button = Array.from(document.body.querySelectorAll('button')).find((element) => element.textContent?.trim() === text);
   expect(button).toBeTruthy();
   (button as HTMLButtonElement).click();
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 function workerTaskCardStub() {
@@ -388,6 +399,86 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(document.body.innerHTML).toContain('内容已加密，需要解锁后查看');
+
+    wrapper.unmount();
+  });
+
+  it('ignores stale note-detail responses after switching to a newer note', async () => {
+    const first = deferred<Note>();
+    const second = deferred<Note>();
+    apiMocks.fetchNoteById.mockReset();
+    apiMocks.fetchNoteById
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    apiMocks.fetchWorkerTasks.mockResolvedValue([]);
+    apiMocks.fetchPersonaSnapshot.mockResolvedValue(null);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await nextTick();
+    await wrapper.setProps({ noteId: 'note-2.md' });
+    await nextTick();
+
+    second.resolve(createNote({ id: 'note-2.md', file_name: 'note-2.md', title: 'note-2', content: 'new content' }));
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('note-2');
+
+    first.resolve(createNote({ id: 'note-1.md', file_name: 'note-1.md', title: 'note-1', content: 'old content' }));
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('note-2');
+    expect(document.body.textContent).not.toContain('note-1');
+
+    wrapper.unmount();
+  });
+
+  it('ignores stale note-detail errors after switching to a newer note', async () => {
+    const first = deferred<Note>();
+    const second = deferred<Note>();
+    apiMocks.fetchNoteById.mockReset();
+    apiMocks.fetchNoteById
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+    apiMocks.fetchWorkerTasks.mockResolvedValue([]);
+    apiMocks.fetchPersonaSnapshot.mockResolvedValue(null);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await nextTick();
+    await wrapper.setProps({ noteId: 'note-2.md' });
+    await nextTick();
+
+    second.resolve(createNote({ id: 'note-2.md', file_name: 'note-2.md', title: 'note-2', content: 'fresh content' }));
+    await flushPromises();
+
+    first.reject(new Error('stale note failed'));
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('note-2');
+    expect(document.body.textContent).not.toContain('stale note failed');
 
     wrapper.unmount();
   });

@@ -1,3 +1,38 @@
+# note-detail stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 note detail 切换竞态收口。
+- [x] 让 `NoteDetail.vue` 只接受当前 `noteId` 请求的回写结果，避免旧详情请求晚返回或晚报错时覆盖当前详情状态。
+- [x] 补最小组件回归，锁定切到新 note 后旧请求不会把标题/error 拉回过期 note。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/composables/useCalendar.test.ts`、`LifeOS/packages/web/src/composables/useDimensionNotes.test.ts`、`LifeOS/packages/web/src/composables/useTimeline.test.ts`、`LifeOS/packages/web/src/views/CalendarView.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 用递增 request id 保护详情加载主链，只允许当前 `noteId` 对应的 note / related worker tasks / persona snapshot / decrypt 回写到页面。
+    - 修复 note 面板快速切换时，旧详情请求晚返回仍可能把当前详情页拉回旧 note 的真实主路径风险。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增旧 note 晚返回不会覆盖当前详情标题的回归。
+    - 新增旧 note 晚失败不会错误污染当前详情错误态的回归。
+- 这次修的不是补一个对称测试，而是修复 note detail 主路径里的真实竞态：用户已切到新 note，但旧详情请求后返回仍可能把面板回写成过期 note。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：当前 `noteId` 已变化后，旧详情请求结果仍能回写，会让详情面板退回过期 note 状态。
+- 这属于直接可见的主路径行为缺口，而且 NoteDetail 还会联动 worker tasks / persona snapshot / decrypt，多路异步叠加时更容易出现错位。
+- 这条线承接前几轮 stale-request guard，但作用点是新的详情主路径，不是低边际同类平移。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `WorkerTaskDetail` 的 taskId 切换是否也存在旧请求回写污染当前详情的竞态，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 note-detail stale-request guard 收口相关文件。
+
+
 # search stale-request guard 收口
 
 ## 计划

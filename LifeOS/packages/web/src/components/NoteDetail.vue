@@ -284,6 +284,7 @@ const props = defineProps<{ noteId: string | null }>();
 const emit = defineEmits<{ close: []; deleted: [] }>();
 
 const currentNoteId = ref<string | null>(null);
+let activeNoteRequestId = 0;
 const note = ref<Note | null>(null);
 const loading = ref(false);
 const error = ref<Error | null>(null);
@@ -366,21 +367,27 @@ function dimensionColor(dimension: string) {
   return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
 }
 
-async function loadRelatedWorkerTasks(sourceNoteId: string) {
+async function loadRelatedWorkerTasks(sourceNoteId: string, requestId?: number) {
   try {
-    relatedWorkerTasks.value = await fetchWorkerTasks(5, {
+    const tasks = await fetchWorkerTasks(5, {
       sourceNoteId,
       status: (relatedWorkerFilterStatus.value || undefined) as any,
     });
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    relatedWorkerTasks.value = tasks;
   } catch {
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     relatedWorkerTasks.value = [];
   }
 }
 
-async function loadPersonaSnapshot(sourceNoteId: string) {
+async function loadPersonaSnapshot(sourceNoteId: string, requestId?: number) {
   try {
-    personaSnapshot.value = await fetchPersonaSnapshot(sourceNoteId);
+    const snapshot = await fetchPersonaSnapshot(sourceNoteId);
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    personaSnapshot.value = snapshot;
   } catch {
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     personaSnapshot.value = null;
   }
 }
@@ -399,8 +406,11 @@ watch(() => props.noteId, (id) => {
 }, { immediate: true });
 
 watch(currentNoteId, async (id) => {
+  const requestId = ++activeNoteRequestId;
   if (!id) {
     note.value = null;
+    error.value = null;
+    loading.value = false;
     decryptedContent.value = null;
     relatedWorkerTasks.value = [];
     personaSnapshot.value = null;
@@ -418,26 +428,35 @@ watch(currentNoteId, async (id) => {
   decryptedContent.value = null;
   showDeleteConfirm.value = false;
   try {
-    note.value = await fetchNoteById(id) as any;
+    const nextNote = await fetchNoteById(id) as any;
+    if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
+    note.value = nextNote;
     workerInstruction.value = '';
     await Promise.all([
-      loadRelatedWorkerTasks(id),
-      loadPersonaSnapshot(id),
+      loadRelatedWorkerTasks(id, requestId),
+      loadPersonaSnapshot(id, requestId),
     ]);
+
+    if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
 
     // Auto-decrypt if encrypted
     if (note.value?.encrypted && note.value.content) {
       try {
         const key = getEncryptionKey();
-        decryptedContent.value = await decryptContent(note.value.content, key);
+        const decrypted = await decryptContent(note.value.content, key);
+        if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
+        decryptedContent.value = decrypted;
       } catch (e) {
         console.error('Auto-decrypt failed:', e);
       }
     }
   } catch (e) {
+    if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
     error.value = e as Error;
   } finally {
-    loading.value = false;
+    if (requestId === activeNoteRequestId && currentNoteId.value === id) {
+      loading.value = false;
+    }
   }
 }, { immediate: true });
 
