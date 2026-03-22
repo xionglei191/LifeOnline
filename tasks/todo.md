@@ -1,3 +1,35 @@
+# soul action source identity 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿新的事实源一致性问题主线推进。
+- [x] 复核 soul action legacy reintegration source 归一逻辑，确认同一规则同时散落在 `soul/types.ts` 与 API handler 中。
+- [x] 把 source filter 归一规则提升为单点 helper，并补测试锁定 legacy `reint:*` filter 语义。
+- [ ] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`LifeOS/packages/web/src/views/SettingsView.vue`、`LifeOS/packages/web/src/views/SettingsView.test.ts`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/soul/types.ts`
+    - 新增 `normalizeSoulActionSourceFilters()`，把 legacy `sourceNoteId=reint:*` → `sourceReintegrationId` 的归一规则集中到单点。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - `listSoulActionsHandler()` 改为复用 `normalizeSoulActionSourceFilters()`，移除 handler 内联重复规则。
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 新增 source filter helper 回归，锁定 legacy reintegration note filter 的归一语义。
+- 这次修的不是继续做同类 contract 对称补强，而是把已经在 identity 解析层存在的 legacy reintegration 规则，从 handler 重复实现收回到单一事实源，降低后续 PR6 / governance 查询口径再次分叉的风险。
+
+## 本轮选择依据
+- 用户优先级允许在 server/web/shared contract gap 之后继续处理新的事实源一致性问题。
+- event/continuity 收口后，最直接的新风险点是 soul action legacy reintegration identity 规则同时存在于 `resolveSoulActionSourceReintegrationId()` 与 `listSoulActionsHandler()` 的手写分支里。
+- 这条线可以减少 handler 与 domain 规则分叉，属于真实一致性收口，而不是低边际测试平移。
+
+## 本轮验证
+- 待执行。
+
+## 当前未完成项
+- 跑定向验证。
+- 若验证通过，直接提交本轮 source identity 收口。
+
+
 # event/continuity shared projection contract 闭环
 
 ## 计划

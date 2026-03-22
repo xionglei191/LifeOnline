@@ -10,6 +10,7 @@ import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, upda
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../workers/taskScheduler.js';
 import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../soul/soulActions.js';
+import { normalizeSoulActionSourceFilters } from '../soul/types.js';
 import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
 import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
@@ -514,21 +515,13 @@ export async function listSoulActionsHandler(
     };
 
     const soulActions = listSoulActions(filters);
-    const normalizedSourceNoteId = sourceNoteId?.startsWith('reint:') && !sourceReintegrationId
-      && soulActions.some((action) => action.sourceReintegrationId === sourceNoteId)
-      ? undefined
-      : sourceNoteId;
-    const normalizedSourceReintegrationId = sourceReintegrationId
-      ?? (sourceNoteId?.startsWith('reint:') && soulActions.some((action) => action.sourceReintegrationId === sourceNoteId)
-        ? sourceNoteId
-        : undefined);
+    const normalizedSourceFilters = normalizeSoulActionSourceFilters(filters, soulActions);
 
     const response: ListSoulActionsResponse = {
       soulActions,
       filters: {
         ...filters,
-        sourceNoteId: normalizedSourceNoteId,
-        sourceReintegrationId: normalizedSourceReintegrationId,
+        ...normalizedSourceFilters,
       },
     };
     res.json(response);

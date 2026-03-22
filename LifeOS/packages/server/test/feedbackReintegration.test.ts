@@ -26,7 +26,7 @@ import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js'
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
 import { executePromotionSoulAction } from '../src/soul/pr6PromotionExecutor.js';
-import { resolveSoulActionSourceReintegrationId } from '../src/soul/types.js';
+import { resolveSoulActionSourceReintegrationId, normalizeSoulActionSourceFilters } from '../src/soul/types.js';
 import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../src/soul/postIndexPersonaTrigger.js';
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
@@ -53,6 +53,22 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('normalizeSoulActionSourceFilters collapses legacy reintegration note filters into sourceReintegrationId', () => {
+  const normalized = normalizeSoulActionSourceFilters(
+    {
+      sourceNoteId: 'reint:legacy-filter-target',
+      sourceReintegrationId: undefined,
+    },
+    [
+      { sourceReintegrationId: 'reint:legacy-filter-target' },
+      { sourceReintegrationId: 'reint:other-target' },
+    ],
+  );
+
+  assert.equal(normalized.sourceNoteId, undefined);
+  assert.equal(normalized.sourceReintegrationId, 'reint:legacy-filter-target');
+});
 
 test('createOrReuseSoulAction persists explicit sourceReintegrationId independently from sourceNoteId', async (t) => {
   const env = await createTestEnv('lifeos-soul-action-source-reintegration-column-');

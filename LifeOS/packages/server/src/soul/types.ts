@@ -21,6 +21,23 @@ export function resolveSoulActionSourceReintegrationId(action: Pick<SoulAction, 
     ?? (action.sourceNoteId.startsWith('reint:') ? action.sourceNoteId : null);
 }
 
+export function normalizeSoulActionSourceFilters(
+  filters: Pick<ListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'>,
+  soulActions: Array<Pick<SoulAction, 'sourceReintegrationId'>>,
+): Pick<ListSoulActionsResponse['filters'], 'sourceNoteId' | 'sourceReintegrationId'> {
+  const matchesLegacyReintegrationIdentity = Boolean(
+    filters.sourceNoteId?.startsWith('reint:')
+      && !filters.sourceReintegrationId
+      && soulActions.some((action) => action.sourceReintegrationId === filters.sourceNoteId),
+  );
+
+  return {
+    sourceNoteId: matchesLegacyReintegrationIdentity ? undefined : filters.sourceNoteId,
+    sourceReintegrationId: filters.sourceReintegrationId
+      ?? (matchesLegacyReintegrationIdentity ? filters.sourceNoteId : undefined),
+  };
+}
+
 export interface SoulAction {
   id: string;
   sourceNoteId: string;
