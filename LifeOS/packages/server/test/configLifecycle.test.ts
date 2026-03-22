@@ -1186,6 +1186,98 @@ test('AI suggestions prompt override rejects missing required placeholders', asy
   }
 });
 
+test('AI suggestions API uses suggest prompt override when generating AI output', async () => {
+  const env = await createTestEnv('lifeos-ai-suggestions-main-path-');
+  const configFile = CONFIG_FILE;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.ANTHROPIC_API_KEY;
+  const overrideMarker = 'SUGGEST_OVERRIDE_MARKER';
+  const overrideContent = `Analyze the following productivity data and generate actionable suggestions. ${overrideMarker}\n\nDashboard data:\n{dashboardData}\n\nRecent notes summary:\n{recentNotes}\n\nReturn exactly 1 suggestion as JSON only.`;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const promptUpdate = await api<{ prompt: PromptRecord }>(baseUrl, '/api/ai/prompts/suggest', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        content: overrideContent,
+        enabled: true,
+        notes: 'suggest main-path test override',
+      }),
+    });
+    assert.equal(promptUpdate.prompt.effectiveContent, overrideContent);
+
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+      if (url.includes('codeflow.asia/v1/messages')) {
+        const bodyText = init?.body ? await new Response(init.body as BodyInit).text() : '';
+        const payload = bodyText ? JSON.parse(bodyText) as { messages?: Array<{ content?: string }> } : {};
+        const messageContent = payload.messages?.[0]?.content ?? '';
+        assert.equal(typeof messageContent, 'string');
+        assert.ok(messageContent.includes(overrideMarker));
+
+        return new Response(JSON.stringify({
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                suggestions: [
+                  {
+                    dimension: 'career',
+                    title: '覆盖提示已生效',
+                    content: 'suggest 主路径已读取自定义 prompt。',
+                    priority: 'high',
+                  },
+                ],
+              }),
+            },
+          ],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return originalFetch(input as Parameters<typeof originalFetch>[0], init);
+    };
+
+    const response = await api<ListAiSuggestionsResponse>(baseUrl, '/api/ai/suggestions');
+    assert.equal(response.suggestions.length, 1);
+    assert.equal(response.suggestions[0].title, '覆盖提示已生效');
+    assert.equal(response.suggestions[0].content, 'suggest 主路径已读取自定义 prompt。');
+    assert.equal(response.suggestions[0].type, 'overload');
+    assert.equal(response.suggestions[0].dimension, 'career');
+  } finally {
+    globalThis.fetch = originalFetch;
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    if (originalApiKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalApiKey;
+    }
+    await env.cleanup();
+  }
+});
+
 test('AI suggestions API returns fallback suggestions without provider credentials', async () => {
   const env = await createTestEnv('lifeos-ai-suggestions-api-');
   const configFile = CONFIG_FILE;

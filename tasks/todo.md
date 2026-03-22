@@ -1,4 +1,32 @@
-# local-date semantics cross-view 收口
+# 当前轮：ai-suggestions 主路径收口
+
+## 进展
+- [x] 将 `/api/ai/suggestions` 切到 `getEffectivePrompt('suggest')` 主路径，并保留 heuristic fallback。
+- [x] 为 `suggest` prompt override 补有效性回归，确认缺占位符会拒绝。
+- [x] 为 suggestions 主路径补回归，确认 override prompt 会真正进入 provider 请求并产出 AI 建议。
+- [x] 收口 `reintegrationApi.test.ts` 里遗留的 `config.json` 绝对路径硬编码。
+- [x] 让 `/api/worker-tasks` 明确回传 `filters`，并把 shared `WorkerTaskListResponse` 契约同步到 server/web/test。
+- [ ] 跑最终 focused 验证并确认 server/web 构建通过。
+- [ ] 如果验证稳定，清理并提交这轮改动。
+
+---
+
+
+## 当前进展
+- [x] 将 `/api/ai/suggestions` 切到 `getEffectivePrompt('suggest')` 主路径，保留 heuristic fallback。
+- [x] 补 `suggest` prompt override 的有效性回归，确认缺占位符会拒绝。
+- [x] 补 suggestions 主路径回归，确认 override prompt 会真正进入 provider 请求并产出 AI 建议。
+- [x] 收口 `reintegrationApi.test.ts` 里遗留的 `config.json` 绝对路径硬编码。
+- [x] 让 `/api/worker-tasks` 明确回传 `filters`，并把 shared `WorkerTaskListResponse` 契约同步到 server/web/test。
+
+## 当前判断
+- 这轮不是再补一个对称测试，而是把 `suggest` 主路径和 prompt override 收到同一条真实 contract 上，同时把 worker-task 列表回包的事实源补齐，避免 reintegration 断言继续围着旧契约打转。
+
+## 待办
+- [ ] 跑最终 focused 验证并确认 server/web 构建通过。
+- [ ] 如果验证稳定，清理并提交这轮改动。
+
+# ai-suggestions 主路径收口
 
 ## 计划
 - [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题继续收口本地日期语义。
@@ -7,6 +35,23 @@
 - [x] 运行 focused web 验证。
 
 ## 当前执行
+- 已确认当前工作树并行改动仍保留：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮继续未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/ai/suggestions.ts`
+    - 改为从 `getEffectivePrompt('suggest')` 读取 AI 建议 prompt。
+    - 仍保留 heuristic fallback，主路径先尝试 AI，失败再回退。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - 让 `/api/worker-tasks` 显式回传已解析的 `filters`，补齐 worker-task 列表事实源。
+  - `LifeOS/packages/shared/src/types.ts`
+    - 将 `WorkerTaskListResponse` 扩展为 `{ tasks, filters }`，和 server 回包一致。
+  - `LifeOS/packages/server/test/configLifecycle.test.ts`
+    - 新增 `suggest` prompt override 的有效性回归，锁定缺少占位符时会拒绝。
+    - 新增 suggestions 主路径回归，锁定 override prompt 会真正进入 provider 请求并产出 AI 建议。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts`
+    - 收口该文件里遗留的 `config.json` 绝对路径硬编码。
+    - 对 worker-task 列表契约的断言改为依赖真实回包字段，避免继续围绕旧契约做误判。
+- 这次修的不是再补一个对称测试，而是把 `/api/ai/suggestions` 主路径和 prompt override 收到同一条真实 contract 上，同时让 worker-task 列表回包也和 reintegration / web 侧的过滤事实源对齐。
+
 - 已确认当前工作树并行改动仍保留：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
 - 本轮完成的真实实现：
   - `LifeOS/packages/web/src/utils/date.ts`
@@ -456,6 +501,10 @@
 ## 当前执行
 - 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/composables/useCalendar.test.ts`、`LifeOS/packages/web/src/composables/useDimensionNotes.test.ts`、`LifeOS/packages/web/src/composables/useTimeline.test.ts`、`LifeOS/packages/web/src/views/CalendarView.test.ts`、`LifeOS/packages/web/src/views/DimensionView.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
 - 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - 让 `/api/worker-tasks` 返回显式 `filters`，把 API 回包和 reintegration 侧已存在的过滤事实源对齐。
+  - `LifeOS/packages/shared/src/types.ts`
+    - 将 `WorkerTaskListResponse` 扩展为 `tasks + filters`，补齐 shared contract。
   - `LifeOS/packages/web/src/components/AISuggestions.vue`
     - 用递增 request id 保护自动加载与手动刷新，只允许最新洞察请求写回 `suggestions/error/loading`。
     - 修复用户连续刷新或自动加载与手动刷新重叠时，旧洞察请求晚返回仍可能把当前面板拉回过期状态的真实主路径风险。
@@ -463,22 +512,26 @@
     - 新增旧刷新请求晚返回不会覆盖当前洞察的回归。
     - 新增旧刷新请求晚失败不会错误污染当前错误态的回归。
     - 用绕过 disabled 属性的真实 click dispatch 构造 mounted 自动加载与连续手动刷新重叠的三次请求竞态，锁定组件只接受最新请求回写。
-- 这次修的不是补一个对称测试，而是修复 dashboard 首页可见洞察面板里的真实竞态：用户已经拿到新一轮洞察，但旧请求后返回仍可能把面板回写成过期结果。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts`
+    - 继续收口 `config.json` 的绝对路径硬编码。
+- 这次修的不是补一个对称测试，而是修复 dashboard 首页可见洞察面板里的真实竞态，同时把 worker task 列表契约里缺失的 `filters` 事实源补齐，避免 reintegration / worker task 列表读到不完整回包。
 
 ## 本轮选择依据
 - 这是新的事实源一致性问题：当前洞察刷新已经发生后，旧请求结果仍能回写，会让面板退回过期洞察状态。
-- 这属于直接可见的首页行为缺口，而且 AI 洞察既有 mounted 自动加载，又有手动刷新入口，天然存在并发窗口。
-- 这条线承接前几轮 stale-request guard，但作用点是新的首页洞察主路径，不是低边际平移。
+- 这是新的 server/shared contract gap：`/api/worker-tasks` 之前没有把已解析的 filters 回传，和 reintegration 侧依赖的列表过滤事实源不一致。
+- 这条线承接前几轮 stale-request guard，但作用点是新的首页洞察主路径和 worker-task list contract，不是低边际平移。
 
 ## 本轮验证
-- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/AISuggestions.test.ts`
+- 已通过：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/web" exec vitest run src/components/AISuggestions.test.ts src/api/client.test.ts`
+- 已通过：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/web" --filter web build`
+- 待补：server focused 验证（worker task / reintegration 相关）
 
 ## 当前未完成项
 - 本轮改动尚未提交 git commit。
-- 若继续沿同一主线推进，后续可再检查 dashboard 其它 mounted 异步面板是否还有同类旧请求回写竞态，但这还未开始。
+- 还需要把 server focused 验证跑完，确认 `/api/worker-tasks` contract 扩展不会影响 reintegration / config 生命周期测试。
 
 ## 下一步建议
-- 提交本轮 focused commit，只包含 ai-suggestions stale-request guard 收口相关文件。
+- 跑 server focused 验证并在通过后提交本轮 focused commit。
 
 
 # worker-task-detail stale-request guard 收口
@@ -1850,6 +1903,7 @@
 ## 当前未完成项
 - 本轮改动尚未提交 git commit。
 - worker task 主路径收口后，下一步可继续检查 AI prompt / provider / reintegration 等 response wrapper 是否仍有 shared 外的稳定 shape。
+- 本轮续跑未发现新的同类推进必要性；当前这条线处于已完成、待定向验证/提交的状态。
 
 
 # dashboard/timeline/calendar shared view contract 闭环

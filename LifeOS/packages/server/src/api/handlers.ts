@@ -821,6 +821,7 @@ export async function listWorkerTasksHandler(
 
     const response: WorkerTaskListResponse = {
       tasks: listWorkerTasks(limit, filters),
+      filters,
     };
     res.json(response);
   } catch (error) {

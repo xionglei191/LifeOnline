@@ -543,6 +543,7 @@ export interface CreateWorkerTaskRequest {
 
 export interface WorkerTaskListResponse {
   tasks: WorkerTask[];
+  filters: WorkerTaskListFilters;
 }
 
 export interface WorkerTaskResponse {

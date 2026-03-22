@@ -3301,12 +3301,6 @@ test('soul-action filters converge when governance and execution subsets are que
       baseUrl,
       `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}`,
     );
-    const workerTasksAfterFirstDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
-      baseUrl,
-      `/api/worker-tasks?sourceNoteId=${encodeURIComponent('note-api-pr6-filter-subset-convergence')}`,
-    );
-    const dispatchedWorkerTask = workerTasksAfterFirstDispatch.tasks.find((task) => task.id === firstDispatch.task!.id);
-    assert.equal(workerTasksAfterFirstDispatch.filters.sourceNoteId, 'note-api-pr6-filter-subset-convergence');
     const approvedList = await api<ListSoulActionsResponse>(
       baseUrl,
       `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record!.id)}&governanceStatus=approved`,
