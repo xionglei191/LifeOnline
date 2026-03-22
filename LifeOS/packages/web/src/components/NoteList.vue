@@ -45,8 +45,20 @@
         </div>
 
         <div class="note-actions" @click.stop>
-          <button v-if="note.status !== 'done'" @click="handleToggleDone(note)" class="btn-quick" title="标记完成">标记完成</button>
-          <button v-else @click="handleToggleDone(note)" class="btn-quick done" title="取消完成">恢复待办</button>
+          <button
+            v-if="note.status !== 'done'"
+            @click="handleToggleDone(note)"
+            class="btn-quick"
+            :disabled="syncingNoteIds.includes(note.id)"
+            title="标记完成"
+          >标记完成</button>
+          <button
+            v-else
+            @click="handleToggleDone(note)"
+            class="btn-quick done"
+            :disabled="syncingNoteIds.includes(note.id)"
+            title="取消完成"
+          >恢复待办</button>
         </div>
       </article>
     </TransitionGroup>
@@ -62,6 +74,7 @@ import NotePreview from './NotePreview.vue';
 
 defineProps<{ notes: Note[] }>();
 const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
+const syncingNoteIds = ref<string[]>([]);
 
 const previewNote = ref<Note | null>(null);
 const previewVisible = ref(false);
@@ -87,12 +100,18 @@ function updatePreviewPos(e: MouseEvent) {
 }
 
 async function handleToggleDone(note: Note) {
+  if (syncingNoteIds.value.includes(note.id)) {
+    return;
+  }
   const newStatus = note.status === 'done' ? 'pending' : 'done';
+  syncingNoteIds.value = [...syncingNoteIds.value, note.id];
   try {
     await updateNote(note.id, { status: newStatus });
     emit('refresh');
   } catch (e) {
     console.error('Toggle failed:', e);
+  } finally {
+    syncingNoteIds.value = syncingNoteIds.value.filter((id) => id !== note.id);
   }
 }
 

@@ -1,3 +1,38 @@
+# note-list toggle dedupe 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI 投射缺口推进 NoteList 快捷完成切换收口。
+- [x] 让 `NoteList.vue` 在同一 note 的状态更新尚未完成时阻止重复 quick toggle，避免前端连续点击触发重复写入和重复 refresh。
+- [x] 补最小组件 focused 回归，锁定同一 note 请求进行中时快捷按钮会禁用且不会重复调用 `updateNote`。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/NoteList.vue`
+    - 为同一 note 引入 `syncingNoteIds`，在请求进行中禁用对应 quick toggle 按钮，并阻止重复点击。
+    - 修复用户快速连续点击同一记录的“标记完成/恢复待办”时，前端会并发发出多次 `updateNote`、触发多次 refresh，导致列表交互状态与真实后端事实源错位的主路径风险。
+  - `LifeOS/packages/web/src/components/NoteList.test.ts`
+    - 新增同一 note 请求未完成时不会重复调用 `updateNote` 的回归。
+    - 断言请求进行中快捷按钮会禁用，请求结束后恢复，并且只触发一次 `refresh`。
+- 这次修的不是再补一个对称测试，而是修复维度记录列表主路径里的真实 contract-to-UI 缺口：UI 允许同一操作被短时间重复发出，造成重复写入与重复刷新噪音。
+
+## 本轮选择依据
+- 这是新的 contract-to-UI 投射缺口：前端 quick toggle 没有把“同一 note 正在同步”这个真实状态投射到交互层，导致用户可以连续触发重复写请求。
+- 这属于直接可见的主路径行为缺口，而且 NoteList 是维度页核心记录列表，用户很容易连续点击快捷按钮。
+- 这条线和 TodayTodos 类似但不是低边际平移：它作用在另一个真实主路径入口，当前代码仍保留重复写入口。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteList.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `NoteDetail.vue` 内部状态切换入口是否也还存在请求进行中可重复触发的问题，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 note-list toggle dedupe 收口相关文件。
+
+
 # today-todos toggle dedupe 收口
 
 ## 计划
