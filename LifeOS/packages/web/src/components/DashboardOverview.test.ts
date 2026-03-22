@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import type { DashboardData, ScheduleHealth } from '../api/client';
 
 const composableMocks = vi.hoisted(() => ({
@@ -56,7 +56,10 @@ describe('DashboardOverview', () => {
           DimensionHealth: true,
           AISuggestions: true,
           NoteDetail: true,
-          StateDisplay: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
           RouterLink: true,
         },
         mocks: {
@@ -65,11 +68,46 @@ describe('DashboardOverview', () => {
       },
     });
 
-    await Promise.resolve();
+    await flushPromises();
 
     expect(wrapper.text()).toContain('生活');
     expect(wrapper.text()).toContain('成长');
     expect(wrapper.text()).toContain('正在占据最高关注度');
     expect(wrapper.find('.signal-chip').attributes('style')).toContain('var(--dim-life)');
+  });
+
+  it('renders the schedule health error state when the typed health fetch fails', async () => {
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref(dashboardData),
+      loading: ref(false),
+      error: ref(null),
+      load: vi.fn(),
+    });
+    apiMocks.fetchScheduleHealth.mockRejectedValue(new Error('schedule health unavailable'));
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          TodayTodos: true,
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('定时任务健康状态加载失败：schedule health unavailable');
+    expect(wrapper.find('.state-display-stub').attributes('data-type')).toBe('error');
   });
 });

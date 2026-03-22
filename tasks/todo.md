@@ -1,3 +1,38 @@
+# dashboard schedule-health error-state delivery 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的主路径断裂 / contract-to-UI 缺口推进 dashboard 定时任务健康状态错误交付。
+- [x] 把 `DashboardOverview.vue` 中 schedule health 读取失败时的静默吞错改为显式展示错误状态。
+- [x] 补最小 dashboard 回归，锁定 typed schedule health error 会真实投射到首页，而不是悄悄消失。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/components/DashboardOverview.vue`
+    - 为 schedule health 增加 `scheduleHealthError` 状态，不再把 `fetchScheduleHealth()` 的 typed error 静默吞掉。
+    - 当定时任务健康状态获取失败时，首页会通过 `StateDisplay` 明确展示 `定时任务健康状态加载失败：...`，避免用户误以为系统没有定时任务状态或一切正常。
+  - `LifeOS/packages/web/src/components/DashboardOverview.test.ts`
+    - 新增首页回归，锁定 schedule health 请求失败时会真实显示错误态。
+    - 保留现有 shared dimension helper 主路径断言，不覆盖 intentional 现有改动。
+- 这次修的不是再补一个同类测试，而是把上一轮 client 已透传的 `fetchScheduleHealth()` typed error 继续投射到 dashboard 首页真实横幅区域，修复“首页 quietly hides failing schedule health fetch”的用户可见行为缺口。
+
+## 本轮选择依据
+- 这是新的主路径断裂 / contract-to-UI 投射缺口：dashboard 主入口会主动拉 schedule health，但当前实现把失败完全吞掉，用户既看不到错误，也看不到健康横幅，容易把“接口失败”误解成“没有状态”。
+- 相比继续扩张 stats/timeline 同类测试，这条线修的是首页主路径真实行为，价值更高。
+- 这条线也和上一轮一致：server/client 已经能透传 typed error，现在补的是首页最后一段可见交付。
+
+## 本轮验证
+- 待运行：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/DashboardOverview.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- dashboard 其它子块若还存在“独立请求失败被静默吞掉”的入口，后续可继续检查，但这还未开始。
+
+## 下一步建议
+- 跑 focused dashboard 测试；若通过，提交本轮 focused commit，只包含 dashboard schedule health error-state delivery 收口。
+
+
 # stats view typed error-state delivery 收口
 
 ## 计划

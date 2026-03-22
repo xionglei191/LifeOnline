@@ -71,6 +71,11 @@
         </span>
         <span class="sh-action" @click="$router.push('/settings')">前往设置 →</span>
       </section>
+      <StateDisplay
+        v-else-if="scheduleHealthError"
+        type="error"
+        :message="`定时任务健康状态加载失败：${scheduleHealthError.message}`"
+      />
 
       <section class="mission-grid">
         <div class="mission-column">
@@ -104,6 +109,7 @@ import StateDisplay from './StateDisplay.vue';
 const { data, loading, error, load } = useDashboard();
 const selectedNoteId = ref<string | null>(null);
 const scheduleHealth = ref<ScheduleHealth | null>(null);
+const scheduleHealthError = ref<Error | null>(null);
 
 const rankedStats = computed(() => {
   return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
@@ -145,7 +151,15 @@ async function handleDeleted() {
 
 onMounted(() => {
   load();
-  fetchScheduleHealth().then(h => { scheduleHealth.value = h; }).catch(() => {});
+  scheduleHealthError.value = null;
+  fetchScheduleHealth()
+    .then((health) => {
+      scheduleHealth.value = health;
+    })
+    .catch((e) => {
+      scheduleHealth.value = null;
+      scheduleHealthError.value = e as Error;
+    });
 });
 </script>
 
