@@ -69,3 +69,11 @@ export function getContinuityKindForReintegrationSignal(signalKind: Reintegratio
   }
   return continuityKind;
 }
+
+export function getContinuityScopeForKind(continuityKind: ContinuityRecordKind): 'persona' | 'daily' | 'weekly' {
+  return continuityKind === 'persona_direction'
+    ? 'persona'
+    : continuityKind === 'daily_rhythm'
+      ? 'daily'
+      : 'weekly';
+}

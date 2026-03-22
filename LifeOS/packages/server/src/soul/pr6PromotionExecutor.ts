@@ -1,7 +1,7 @@
 import { getReintegrationRecord } from './reintegrationReview.js';
 import { getEventNodeBySourceReintegrationId, upsertEventNode } from './eventNodes.js';
 import { getContinuityRecordBySourceReintegrationId, upsertContinuityRecord } from './continuityRecords.js';
-import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
+import { assertAcceptedPromotionReintegration, getContinuityKindForReintegrationSignal, getContinuityScopeForKind, getEventKindForReintegrationSignal, getEventTitleForReintegrationSignal } from './pr6PromotionRules.js';
 import { resolveSoulActionSourceReintegrationId, type SoulAction } from './types.js';
 
 export interface PromotionExecutionResult {
@@ -58,11 +58,7 @@ export function executePromotionSoulAction(action: SoulAction): PromotionExecuti
         anchor: record.summary,
         observationWindow: 'single_reviewed_signal',
         claim: record.summary,
-        scope: continuityKind === 'persona_direction'
-          ? 'persona'
-          : continuityKind === 'daily_rhythm'
-            ? 'daily'
-            : 'weekly',
+        scope: getContinuityScopeForKind(continuityKind),
       },
       evidence: record.evidence,
       explanation: { whyNotOrdinaryArtifact: 'PR6 continuity promotion', whyReviewBacked: record.reviewReason ?? 'accepted reintegration record', reviewBacked: true },

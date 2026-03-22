@@ -21,7 +21,7 @@ import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions }
 import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
-import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration } from '../src/soul/pr6PromotionRules.js';
+import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind } from '../src/soul/pr6PromotionRules.js';
 import { generateSoulActionCandidate } from '../src/soul/soulActionGenerator.js';
 import { evaluateInterventionGate } from '../src/soul/interventionGate.js';
 import { dispatchSoulActionCandidate, dispatchApprovedSoulAction } from '../src/soul/soulActionDispatcher.js';
@@ -78,6 +78,12 @@ test('getPromotionSourceForReintegration falls back to reintegration id when sou
     sourceNoteId: 'reint:promotion-source',
     sourceReintegrationId: 'reint:promotion-source',
   });
+});
+
+test('getContinuityScopeForKind maps PR6 continuity kinds to stable scopes', () => {
+  assert.equal(getContinuityScopeForKind('persona_direction'), 'persona');
+  assert.equal(getContinuityScopeForKind('daily_rhythm'), 'daily');
+  assert.equal(getContinuityScopeForKind('weekly_theme'), 'weekly');
 });
 
 test('normalizeSoulActionSourceFilters collapses legacy reintegration note filters into sourceReintegrationId', () => {
