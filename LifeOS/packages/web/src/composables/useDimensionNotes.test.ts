@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick, ref, type Ref } from 'vue';
 import type { Dimension, Note } from '@lifeos/shared';
+import { parseLocalDate } from '../utils/date';
 
 const apiMocks = vi.hoisted(() => ({
   fetchNotes: vi.fn(),
@@ -27,7 +28,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function createNote(id: string, dimension: string): Note {
+function createNote(id: string, dimension: string, date = '2026-03-22'): Note {
   return {
     id,
     file_name: `${id}.md`,
@@ -39,7 +40,7 @@ function createNote(id: string, dimension: string): Note {
     status: 'pending',
     priority: 'medium',
     tags: [],
-    date: '2026-03-22',
+    date,
     due: undefined,
     source: 'web',
     created: '2026-03-22T10:00:00.000Z',
@@ -70,6 +71,10 @@ function mountUseDimensionNotes(initialDimension: Dimension = 'life') {
 }
 
 describe('useDimensionNotes', () => {
+  beforeEach(() => {
+    apiMocks.fetchNotes.mockReset();
+  });
+
   it('keeps the latest dimension notes when an older request resolves afterwards', async () => {
     const first = deferred<Note[]>();
     const second = deferred<Note[]>();
@@ -127,6 +132,51 @@ describe('useDimensionNotes', () => {
     expect(state.notes.value.map((note) => note.id)).toEqual(['note-growth']);
     expect(state.error.value).toBe(null);
     expect(state.loading.value).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it('sorts notes by local calendar date rather than UTC parsing', async () => {
+    apiMocks.fetchNotes.mockResolvedValueOnce([
+      createNote('late-march', 'life', '2026-03-31'),
+      createNote('early-april', 'life', '2026-04-01'),
+    ]);
+
+    const { state, wrapper } = mountUseDimensionNotes('life');
+    await nextTick();
+    await nextTick();
+
+    state.filters.value.sortOrder = 'asc';
+    state.filters.value.sortBy = 'date';
+    await nextTick();
+
+    expect(state.filteredNotes.value.map((note) => note.id)).toEqual(['late-march', 'early-april']);
+    const parsed = parseLocalDate(state.filteredNotes.value[0].date);
+    expect(parsed.getFullYear()).toBe(2026);
+    expect(parsed.getMonth()).toBe(2);
+    expect(parsed.getDate()).toBe(31);
+
+    wrapper.unmount();
+  });
+
+  it('reloads notes when websocket index refresh events arrive', async () => {
+    apiMocks.fetchNotes
+      .mockResolvedValueOnce([createNote('note-life-1', 'life')])
+      .mockResolvedValueOnce([{ ...createNote('note-life-2', 'life'), status: 'done' }]);
+
+    const { state, wrapper } = mountUseDimensionNotes('life');
+    await nextTick();
+    await nextTick();
+
+    expect(state.notes.value.map((note) => note.id)).toEqual(['note-life-1']);
+    const beforeRefreshCalls = apiMocks.fetchNotes.mock.calls.length;
+
+    document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'index-complete' } }));
+    await nextTick();
+    await nextTick();
+
+    expect(apiMocks.fetchNotes.mock.calls.length).toBe(beforeRefreshCalls + 1);
+    expect(state.notes.value.map((note) => note.id)).toEqual(['note-life-2']);
 
     wrapper.unmount();
   });

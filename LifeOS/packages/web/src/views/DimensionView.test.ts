@@ -102,4 +102,23 @@ describe('DimensionView', () => {
     expect(wrapper.find('.dimension-stats-stub').text()).toContain('growth:1');
     expect(wrapper.find('.note-list-stub').text()).toContain('note-growth');
   });
+
+  it('reloads notes when websocket index refresh events arrive', async () => {
+    routeState.current!.params.dimension = 'life';
+    apiMocks.fetchNotes
+      .mockResolvedValueOnce([{ id: 'note-life-1', dimension: 'life', status: 'pending', type: 'note', date: '2026-03-22', file_name: 'life-1.md' }])
+      .mockResolvedValueOnce([{ id: 'note-life-2', dimension: 'life', status: 'done', type: 'note', date: '2026-03-23', file_name: 'life-2.md' }]);
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    expect(wrapper.find('.note-list-stub').text()).toContain('note-life-1');
+    expect(apiMocks.fetchNotes).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'index-complete' } }));
+    await flushPromises();
+
+    expect(apiMocks.fetchNotes).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('.note-list-stub').text()).toContain('note-life-2');
+  });
 });

@@ -1,4 +1,15 @@
-# 当前轮：ai-suggestions 主路径收口
+# 当前轮：DimensionView websocket 收口
+
+## 进展
+- [x] 补 `useDimensionNotes` 的 websocket 刷新监听，让维度分析页在索引刷新后主动重拉数据。
+- [x] 为 `useDimensionNotes` 补回归，锁定 websocket `index-complete` 事件会触发维度列表刷新。
+- [x] 为 DimensionView 补回归，锁定维度主路径在路由切换后仍能重新拉取最新 notes。
+- [ ] 跑 focused web 验证并确认 build 通过。
+- [ ] 如果验证稳定，清理并提交这轮改动。
+
+---
+
+# ai-suggestions 主路径收口
 
 ## 进展
 - [x] 将 `/api/ai/suggestions` 切到 `getEffectivePrompt('suggest')` 主路径，并保留 heuristic fallback。

@@ -1,5 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
 import { fetchNotes } from '../api/client';
+import { parseLocalDate } from '../utils/date';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { Note, Dimension, WsEvent } from '@lifeos/shared';
 
@@ -72,7 +73,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
     result.sort((a, b) => {
       let compareValue = 0;
       if (filters.value.sortBy === 'date') {
-        compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
+        compareValue = parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime();
       } else if (filters.value.sortBy === 'priority') {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const aPriority = a.priority ? priorityOrder[a.priority as keyof typeof priorityOrder] : 0;
@@ -115,6 +116,14 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
     const wsEvent = (event as CustomEvent<WsEvent>).detail;
     if (isIndexRefreshEvent(wsEvent)) load();
   }
+
+  onMounted(() => {
+    document.addEventListener('ws-update', handleWsUpdate);
+  });
+
+  onUnmounted(() => {
+    document.removeEventListener('ws-update', handleWsUpdate);
+  });
 
   watch(dimension, () => {
     filters.value = {
