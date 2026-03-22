@@ -7,16 +7,23 @@ export function useDashboard() {
   const data = ref<DashboardData | null>(null);
   const loading = ref(false);
   const error = ref<Error | null>(null);
+  let activeRequestId = 0;
 
   async function load() {
+    const requestId = ++activeRequestId;
     loading.value = true;
     error.value = null;
     try {
-      data.value = await fetchDashboard();
+      const nextData = await fetchDashboard();
+      if (requestId !== activeRequestId) return;
+      data.value = nextData;
     } catch (e) {
+      if (requestId !== activeRequestId) return;
       error.value = e as Error;
     } finally {
-      loading.value = false;
+      if (requestId === activeRequestId) {
+        loading.value = false;
+      }
     }
   }
 

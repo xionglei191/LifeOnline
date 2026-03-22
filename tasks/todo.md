@@ -1,3 +1,38 @@
+# dashboard stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 dashboard 主路径刷新竞态收口。
+- [x] 让 `useDashboard.ts` 只接受最新 dashboard 请求的回写结果，避免旧刷新请求晚返回或晚报错时覆盖当前首页事实源。
+- [x] 补最小 composable focused 回归，锁定旧 dashboard 请求晚返回/晚失败时不会把首页数据和错误态拉回过期状态。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/composables/useDashboard.ts`
+    - 用递增 request id 保护 dashboard 加载，只允许最新请求写回 `data/error/loading`。
+    - 修复首页 mounted 加载、子组件 refresh、note 删除后的 reload、websocket 刷新重叠时，旧 dashboard 请求晚返回仍可能把首页事实源拉回过期状态的真实主路径风险。
+  - `LifeOS/packages/web/src/composables/useDashboard.test.ts`
+    - 新增旧 dashboard 请求晚返回不会覆盖当前首页数据的回归。
+    - 新增旧 dashboard 请求晚失败不会错误污染当前错误态的回归。
+- 这次修的不是再补一个对称测试，而是修复 dashboard 首页主路径里的真实竞态：用户已经拿到更新后的今天待办/本周重点/维度信号，但旧刷新请求后返回仍可能把首页回写成过期状态。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：首页 dashboard 数据会被 mounted、手动 refresh、删除回调、websocket 更新多路触发，但旧实现没有任何并发回写保护。
+- 这属于直接可见的主路径行为缺口，而且 dashboard 是首页主入口，影响范围覆盖 today todos、weekly highlights、inbox count、dimension stats。
+- 这条线承接前几轮 stale-request guard，但作用点是新的首页主路径，不是 grouped governance / SettingsView 一类低边际对称补强。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/composables/useDashboard.test.ts src/components/DashboardOverview.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `StatsView.vue` 的 trend window 切换是否仍存在 mounted 初次加载与快速切换重叠导致的旧请求回写问题，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 dashboard stale-request guard 收口相关文件。
+
+
 # ai-suggestions stale-request guard 收口
 
 ## 计划
