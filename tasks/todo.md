@@ -1,9 +1,10 @@
-# 当前轮：NoteDetail PR6 promotion 主路径治理可见性补面
+# 当前轮：Search/List 事实源一致性补面
 
 ## 进展
-- [x] 识别主路径 `NoteDetail` 虽然已能看到 promotion outputs，但仍看不到 source note 上对应的 promotion soul action 治理状态，用户无法在主路径判断“待治理 / 待派发 / 已执行”卡在何处。
-- [x] 在 `NoteDetail` 补上当前 note 的 promotion soul actions 摘要与列表，并与 reintegration/projection 同 scope 收敛。
-- [x] 补 focused 回归，锁定当前 note action 可见性与 websocket 刷新后的状态更新。
-- [ ] 跑 focused web 验证并视情况直接提交。
+- [x] 识别搜索主路径 hero copy 仍从松散字段 `result.query` 渲染，未显式绑定服务端返回的 `filters.q` 合同；同时 `NoteList` 主列表仍回退展示 `file_name`，没有优先使用共享 `note.title`。
+- [x] 在 shared/server/web 对齐 `SearchResult.filters.q` 合同，让 `SearchView` 主路径文案直接渲染服务端显式 filters。
+- [x] 在 `NoteList` 主列表优先展示共享 `note.title`，仅在缺失时回退 `file_name`。
+- [x] 补 web focused 回归，锁定 search view 新合同与 main list 标题事实源。
+- [ ] 跑 focused server/web 验证并视情况直接提交。
 
 ---

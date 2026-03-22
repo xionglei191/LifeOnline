@@ -1503,6 +1503,8 @@ test('search API matches dimension terms used by search view copy', async () => 
     });
 
     const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=growth');
+    assert.equal(result.query, 'growth');
+    assert.deepEqual(result.filters, { q: 'growth' });
     assert.ok(result.notes.length > 0);
     assert.ok(result.notes.some((note) => note.dimension === 'growth'));
   } finally {
@@ -1549,6 +1551,8 @@ Tag-only search body.
     });
 
     const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=rare-search-tag-contract');
+    assert.equal(result.query, 'rare-search-tag-contract');
+    assert.deepEqual(result.filters, { q: 'rare-search-tag-contract' });
     assert.ok(result.notes.some((note) => note.file_path === taggedNotePath));
   } finally {
     await stopServer();

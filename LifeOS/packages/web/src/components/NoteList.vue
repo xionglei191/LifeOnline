@@ -25,7 +25,7 @@
       >
         <div class="card-main" @click="$emit('selectNote', note.id)">
           <div class="note-header">
-            <h3 class="note-title">{{ note.file_name.replace('.md', '') }}</h3>
+            <h3 class="note-title">{{ note.title || note.file_name.replace('.md', '') }}</h3>
             <span class="note-type">{{ typeLabels[note.type] }}</span>
           </div>
 

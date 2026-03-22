@@ -321,7 +321,14 @@ export async function searchNotes(req: Request<Record<string, never>, ApiRespons
       ORDER BY date DESC LIMIT 50
     `).all(keyword, keyword, keyword, keyword).map(parseNote);
 
-    const result: SearchResult = { notes, total: notes.length, query: q };
+    const result: SearchResult = {
+      notes,
+      total: notes.length,
+      query: q,
+      filters: {
+        q,
+      },
+    };
     res.json(result);
   } catch (error) {
     console.error('Search error:', error);

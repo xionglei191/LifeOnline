@@ -5,7 +5,7 @@
         <p class="eyebrow">Search Console</p>
         <h2>把分散记录重新聚拢到<span>一条语义线索</span>上。</h2>
         <p v-if="!loading && result" class="hero-summary">
-          找到 <strong>{{ result.total }}</strong> 条关于 “<strong>{{ result.query }}</strong>” 的结果。
+          找到 <strong>{{ result.total }}</strong> 条关于 “<strong>{{ result.filters.q }}</strong>” 的结果。
         </p>
       </div>
     </section>

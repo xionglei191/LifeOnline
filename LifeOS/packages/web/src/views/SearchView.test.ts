@@ -72,11 +72,13 @@ describe('SearchView', () => {
       .mockResolvedValueOnce({
         query: 'growth',
         total: 1,
+        filters: { q: 'growth' },
         notes: [{ id: 'note-growth' }],
       })
       .mockResolvedValueOnce({
         query: 'growth',
         total: 2,
+        filters: { q: 'growth' },
         notes: [{ id: 'note-growth' }, { id: 'note-health' }],
       });
 
@@ -109,6 +111,7 @@ describe('SearchView', () => {
     apiMocks.searchNotes.mockResolvedValue({
       query: 'growth',
       total: 1,
+      filters: { q: 'growth' },
       notes: [{ id: 'note-1' }],
     });
 
@@ -125,8 +128,8 @@ describe('SearchView', () => {
   });
 
   it('keeps the latest query result when an older search resolves afterwards', async () => {
-    const first = deferred<{ query: string; total: number; notes: Array<{ id: string }> }>();
-    const second = deferred<{ query: string; total: number; notes: Array<{ id: string }> }>();
+    const first = deferred<{ query: string; total: number; filters: { q: string }; notes: Array<{ id: string }> }>();
+    const second = deferred<{ query: string; total: number; filters: { q: string }; notes: Array<{ id: string }> }>();
     apiMocks.searchNotes
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
@@ -140,6 +143,7 @@ describe('SearchView', () => {
     second.resolve({
       query: 'health',
       total: 1,
+      filters: { q: 'health' },
       notes: [{ id: 'note-health' }],
     });
     await second.promise;
@@ -151,6 +155,7 @@ describe('SearchView', () => {
     first.resolve({
       query: 'growth',
       total: 1,
+      filters: { q: 'growth' },
       notes: [{ id: 'note-growth' }],
     });
     await first.promise;
@@ -161,8 +166,8 @@ describe('SearchView', () => {
   });
 
   it('ignores stale query errors after a newer search succeeds', async () => {
-    const first = deferred<{ query: string; total: number; notes: Array<{ id: string }> }>();
-    const second = deferred<{ query: string; total: number; notes: Array<{ id: string }> }>();
+    const first = deferred<{ query: string; total: number; filters: { q: string }; notes: Array<{ id: string }> }>();
+    const second = deferred<{ query: string; total: number; filters: { q: string }; notes: Array<{ id: string }> }>();
     routeState.current!.query.q = 'growth';
     apiMocks.searchNotes
       .mockReturnValueOnce(first.promise)
@@ -177,6 +182,7 @@ describe('SearchView', () => {
     second.resolve({
       query: 'health',
       total: 1,
+      filters: { q: 'health' },
       notes: [{ id: 'note-health' }],
     });
     await second.promise;

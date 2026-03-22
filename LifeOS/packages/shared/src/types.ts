@@ -294,6 +294,9 @@ export interface SearchResult {
   notes: Note[];
   total: number;
   query: string;
+  filters: {
+    q: string;
+  };
 }
 
 export interface Config {

@@ -60,6 +60,17 @@ function deferred<T>() {
 }
 
 describe('NoteList', () => {
+  it('prefers shared note titles over file names on the main list path', () => {
+    const wrapper = mount(NoteList, {
+      props: {
+        notes: [createNote({ title: 'Shared contract title', file_name: 'fallback-file-name.md' })],
+      },
+    });
+
+    expect(wrapper.text()).toContain('Shared contract title');
+    expect(wrapper.text()).not.toContain('fallback-file-name');
+  });
+
   it('prevents duplicate quick-toggle updates while the same note is still syncing', async () => {
     const pendingUpdate = deferred<void>();
     apiMocks.updateNote.mockReturnValueOnce(pendingUpdate.promise);
