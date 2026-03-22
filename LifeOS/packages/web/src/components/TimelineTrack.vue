@@ -94,7 +94,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { TimelineTrack, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
-import { formatLocalDate } from '../utils/date';
+import { formatLocalDate, parseLocalDate } from '../utils/date';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{
@@ -126,8 +126,8 @@ onUnmounted(() => {
 
 // Total days in range
 const totalDays = computed(() => {
-  const start = new Date(props.startDate);
-  const end = new Date(props.endDate);
+  const start = parseLocalDate(props.startDate);
+  const end = parseLocalDate(props.endDate);
   return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
 });
 
@@ -137,7 +137,7 @@ const tickInterval = computed(() => {
   const days = totalDays.value;
   const w = containerWidth.value;
   const minTickPx = 64;
-  const maxTicks = Math.floor(w / minTickPx);
+  const maxTicks = Math.max(1, Math.floor(w / minTickPx));
 
   if (days <= maxTicks) return 1;           // every day
   if (days / 2 <= maxTicks) return 2;       // every 2 days
@@ -146,14 +146,14 @@ const tickInterval = computed(() => {
   if (days / 7 <= maxTicks) return 7;       // weekly
   if (days / 10 <= maxTicks) return 10;     // every 10 days
   if (days / 14 <= maxTicks) return 14;     // bi-weekly
-  return Math.ceil(days / maxTicks);        // auto
+  return Math.max(1, Math.ceil(days / maxTicks));        // auto
 });
 
 // All dates in range
 const allDates = computed(() => {
   const dates: string[] = [];
-  const d = new Date(props.startDate);
-  const end = new Date(props.endDate);
+  const d = parseLocalDate(props.startDate);
+  const end = parseLocalDate(props.endDate);
   while (d <= end) {
     dates.push(formatLocalDate(d));
     d.setDate(d.getDate() + 1);
@@ -185,7 +185,7 @@ const ticks = computed((): Tick[] => {
 
   for (let i = 0; i < allDates.value.length; i += interval) {
     const date = allDates.value[i];
-    const d = new Date(date);
+    const d = parseLocalDate(date);
     const pct = dateToPct(date);
     const nextIdx = Math.min(i + interval, allDates.value.length - 1);
     const nextPct = dateToPct(allDates.value[nextIdx]);

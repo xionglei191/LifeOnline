@@ -45,7 +45,7 @@
 import { computed, ref } from 'vue';
 import type { CalendarData, CalendarDay, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
-import { formatLocalDate } from '../utils/date';
+import { formatLocalDate, parseLocalDate } from '../utils/date';
 
 const props = defineProps<{
   calendarData: CalendarData;
@@ -117,7 +117,7 @@ const calendarDays = computed(() => {
 });
 
 function getDayNumber(date: string) {
-  return new Date(date).getDate();
+  return parseLocalDate(date).getDate();
 }
 
 function isToday(date: string) {

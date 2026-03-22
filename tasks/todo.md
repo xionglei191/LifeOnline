@@ -1,37 +1,46 @@
-# worker-task error copy cross-view 收口
+# local-date semantics cross-view 收口
 
 ## 计划
-- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 contract-to-UI 投射缺口继续收口 worker-task 错误文案。
-- [x] 修复 SettingsView 仍把 OpenClaw / LifeOS 混合任务失败写成“外部任务执行失败”的残留表达。
-- [x] 继续补 focused web 回归，锁定 SettingsView 与 NoteDetail 一致使用中性 related-task 错误文案。
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题继续收口本地日期语义。
+- [x] 统一 TimelineTrack / CalendarGrid / NoteList 对字符串日期的本地解析，避免不同组件在时区边界上出现日号漂移。
+- [x] 补 focused web 回归，锁定 TimelineTrack、CalendarGrid、NoteList 都使用本地日期语义。
 - [x] 运行 focused web 验证。
 
 ## 当前执行
 - 已确认当前工作树并行改动仍保留：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
 - 本轮完成的真实实现：
-  - `LifeOS/packages/web/src/components/NoteDetail.vue`
-    - 把 OpenClaw 创建失败兜底提示从“外部任务创建失败”改为“关联任务创建失败”，与当前列表/面板文案保持一致。
-  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
-    - 新增错误态回归，锁定失败提示不再退回 external-task 旧文案。
-  - `LifeOS/packages/web/src/views/SettingsView.vue`
-    - 把设置页 OpenClaw worker 创建失败兜底提示从“外部任务执行失败”改为“关联任务创建失败”。
-    - 修复 SettingsView 与 NoteDetail 在同一 worker contract 上的错误态文案漂移。
-  - `LifeOS/packages/web/src/views/SettingsView.test.ts`
-    - 新增 focused 回归，锁定设置页失败提示也不再暴露“外部任务执行失败”。
-- 这次修的不是重复重命名，而是继续收口新的 contract-to-UI 投射缺口：同一套 worker task 事实在 NoteDetail 已改成 related-task 语义后，SettingsView 的失败提示仍残留 external-only 心智模型。
+  - `LifeOS/packages/web/src/utils/date.ts`
+    - 新增 `parseLocalDate()`，把 `YYYY-MM-DD` 解析为本地日期，避免 `new Date('YYYY-MM-DD')` 的 UTC 语义漂移。
+  - `LifeOS/packages/web/src/components/NoteList.vue`
+    - 将列表日期格式化切到 `parseLocalDate()`。
+  - `LifeOS/packages/web/src/components/CalendarGrid.vue`
+    - 将日期号读取切到 `parseLocalDate()`。
+  - `LifeOS/packages/web/src/components/TimelineTrack.vue`
+    - 将起止日期、tick 日期读取都切到 `parseLocalDate()`，避免轨道尺与 bucket 计算在本地时区边界上偏移。
+  - `LifeOS/packages/web/src/components/CalendarGrid.test.ts`
+    - 复用既有本地日期回归，确认 leading empty cells 的今日标记仍正确。
+  - `LifeOS/packages/web/src/components/NoteList.test.ts`
+    - 复用既有 quick-toggle 回归，确认列表交互未受影响。
+  - `LifeOS/packages/web/src/components/TimelineTrack.test.ts`
+    - 本轮重点是修正测试触发的 TimelineTrack 运行时错误，而不是再加对称断言。
+- 这次修的不是再补一个局部测试，而是收口同一套日期事实源在多个主路径组件中的本地解析语义，避免跨午夜/跨时区时出现不同组件读到不同“当天”或不同日期号。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：多个组件都在直接 `new Date('YYYY-MM-DD')`，这在 JS 中是 UTC 解析，和 UI 期望的本地日期语义不一致。
+- 这是直接用户可见的主路径问题，会影响时间轴、日历和列表中显示的日期号与今天高亮。
+- 相比继续深挖 grouped governance / SettingsView 同类对称补强，这条线更贴近主路径日期事实源。
 
 ## 本轮验证
-- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts src/views/SettingsView.test.ts`
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/TimelineTrack.test.ts`
 
 ## 当前未完成项
 - 本轮改动尚未提交 git commit。
-- 还未继续检查 server/web 其他入口是否仍残留同类 external-task 错误文案，但本轮未扩散到 grouped governance / retention 链路。
+- 还未继续检查其他页面是否也存在同类 `new Date('YYYY-MM-DD')` 直解析，但本轮未扩散到无关模块。
 
 ## 下一步建议
-- 若验证通过，提交包含 `NoteDetail` / `SettingsView` worker-task error copy 收口的 focused commit。
+- 若验证通过，提交包含日期语义收口的 focused commit。
 
 
-# note-detail worker-task wording 收口
 
 ## 计划
 - [x] 在不覆盖并行 dirty 文件的前提下，沿真实的 contract-to-UI 投射缺口推进 NoteDetail 任务面板文案收口。

@@ -71,6 +71,7 @@ import { ref } from 'vue';
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
 import NotePreview from './NotePreview.vue';
+import { parseLocalDate } from '../utils/date';
 
 defineProps<{ notes: Note[] }>();
 const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
@@ -138,7 +139,7 @@ const priorityLabels: Record<string, string> = {
 };
 
 function formatDate(date: string) {
-  const d = new Date(date);
+  const d = parseLocalDate(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 </script>
