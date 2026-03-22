@@ -489,6 +489,16 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenCalledWith('/api/persona-snapshots/note-1');
   });
 
+  it('returns null when the shared persona snapshot response has no snapshot', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ snapshot: null }),
+    }));
+
+    await expect(fetchPersonaSnapshot('note-without-snapshot')).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledWith('/api/persona-snapshots/note-without-snapshot');
+  });
+
   it('surfaces API errors for worker-task contract actions', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'create failed' }) })
