@@ -779,7 +779,7 @@ import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
 import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodes, fetchContinuityRecords, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
 import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -996,14 +996,12 @@ const reintegrationStatusSummary = computed(() => {
     rejected: 0,
   } as Record<ReintegrationRecord['reviewStatus'], number>);
 });
+const acceptedProjectionSourceReintegrationIds = ref<string[]>([]);
 const activeProjectionSourceReintegrationIds = computed(() => {
-  const acceptedIds = reintegrationRecords.value
-    .filter((record) => record.reviewStatus === 'accepted')
-    .map((record) => record.id);
   const plannedIds = Object.entries(reintegrationPlannedActions.value)
     .filter(([, actions]) => actions.some((action) => action.actionKind === 'promote_event_node' || action.actionKind === 'promote_continuity_record'))
     .map(([recordId]) => recordId);
-  return [...new Set([...acceptedIds, ...plannedIds])];
+  return [...new Set([...acceptedProjectionSourceReintegrationIds.value, ...plannedIds])];
 });
 const soulActionSummary = computed(() => {
   return soulActions.value.reduce((acc, action) => {
@@ -1059,7 +1057,12 @@ async function loadReintegrationRecords(options?: { preserveMessage?: boolean })
     reintegrationMessage.value = '';
   }
   try {
-    reintegrationRecords.value = await fetchReintegrationRecords({ reviewStatus: reintegrationFilterStatus.value || undefined });
+    const [filteredRecords, acceptedProjectionRecords] = await Promise.all([
+      fetchReintegrationRecords({ reviewStatus: reintegrationFilterStatus.value || undefined }),
+      fetchReintegrationRecords({ reviewStatus: 'accepted' }),
+    ]);
+    reintegrationRecords.value = filteredRecords;
+    acceptedProjectionSourceReintegrationIds.value = acceptedProjectionRecords.map((record) => record.id);
   } catch (e: any) {
     reintegrationMessage.value = e.message || '加载 reintegration records 失败';
     reintegrationMessageType.value = 'error';
@@ -1094,21 +1097,27 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
   try {
     const sourceReintegrationIds = activeProjectionSourceReintegrationIds.value;
     const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodes(sourceReintegrationIds),
-      fetchContinuityRecords(sourceReintegrationIds),
+      fetchEventNodeProjectionList(sourceReintegrationIds),
+      fetchContinuityProjectionList(sourceReintegrationIds),
     ]);
 
     const projectionErrors: string[] = [];
 
     if (eventNodeResult.status === 'fulfilled') {
-      eventNodes.value = eventNodeResult.value;
+      const serverScopedIds = new Set(eventNodeResult.value.sourceReintegrationIds);
+      eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
+        serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId)
+      ));
     } else {
       eventNodes.value = [];
       projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
     }
 
     if (continuityResult.status === 'fulfilled') {
-      continuityRecords.value = continuityResult.value;
+      const serverScopedIds = new Set(continuityResult.value.sourceReintegrationIds);
+      continuityRecords.value = continuityResult.value.items.filter((continuity) => (
+        serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId)
+      ));
     } else {
       continuityRecords.value = [];
       projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');

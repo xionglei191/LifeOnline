@@ -2518,6 +2518,16 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
     assert.equal(filteredSoulActions.filters.sourceReintegrationId, record!.id);
     assert.deepEqual(listedContinuity.filters.sourceReintegrationIds, [record!.id]);
     assert.equal(filteredSoulActions.filters.governanceStatus, 'approved');
+
+    const dedupedContinuity = await api<{ continuityRecords: Array<{
+      id: string;
+      sourceReintegrationId: string;
+    }>; filters: { sourceReintegrationIds?: string[] } }>(
+      baseUrl,
+      `/api/continuity-records?sourceReintegrationIds=${encodeURIComponent(`${record!.id}, ${record!.id}, `)}`,
+    );
+    assert.deepEqual(dedupedContinuity.filters.sourceReintegrationIds, [record!.id]);
+    assert.ok(dedupedContinuity.continuityRecords.some((item) => item.sourceReintegrationId === record!.id));
     assert.equal(filteredSoulActions.filters.executionStatus, dispatched.soulAction!.executionStatus);
     assert.equal(filteredAction?.id, dispatched.soulAction?.id);
     assert.equal(filteredAction?.sourceNoteId, dispatched.soulAction?.sourceNoteId);

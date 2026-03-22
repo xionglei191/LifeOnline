@@ -757,10 +757,10 @@ export async function planPromotionsHandler(
 function getSourceReintegrationIds(query: unknown): string[] | undefined {
   const raw = (query as { sourceReintegrationIds?: unknown })?.sourceReintegrationIds;
   if (typeof raw !== 'string') return undefined;
-  const ids = raw
+  const ids = [...new Set(raw
     .split(',')
     .map((value) => value.trim())
-    .filter(Boolean);
+    .filter(Boolean))];
   return ids.length ? ids : undefined;
 }
 

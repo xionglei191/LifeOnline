@@ -11,8 +11,8 @@ const apiMocks = vi.hoisted(() => ({
   fetchTaskSchedules: vi.fn(),
   fetchReintegrationRecords: vi.fn(),
   fetchSoulActions: vi.fn(),
-  fetchEventNodes: vi.fn(),
-  fetchContinuityRecords: vi.fn(),
+  fetchEventNodeProjectionList: vi.fn(),
+  fetchContinuityProjectionList: vi.fn(),
   fetchAiPrompts: vi.fn(),
   fetchAiProviderSettings: vi.fn(),
   approveSoulAction: vi.fn(),
@@ -49,8 +49,8 @@ vi.mock('../api/client', () => ({
   rejectReintegrationRecord: vi.fn(),
   planReintegrationPromotions: vi.fn(),
   fetchSoulActions: apiMocks.fetchSoulActions,
-  fetchEventNodes: apiMocks.fetchEventNodes,
-  fetchContinuityRecords: apiMocks.fetchContinuityRecords,
+  fetchEventNodeProjectionList: apiMocks.fetchEventNodeProjectionList,
+  fetchContinuityProjectionList: apiMocks.fetchContinuityProjectionList,
   approveSoulAction: apiMocks.approveSoulAction,
   deferSoulAction: apiMocks.deferSoulAction,
   discardSoulAction: apiMocks.discardSoulAction,
@@ -116,6 +116,13 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> & Pic
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     reviewedAt: overrides.reviewedAt ?? null,
     reviewedBy: overrides.reviewedBy ?? null,
+  };
+}
+
+function createProjectionListResult<T>(items: T[], sourceReintegrationIds: string[]) {
+  return {
+    items,
+    sourceReintegrationIds,
   };
 }
 
@@ -299,8 +306,8 @@ it('clears the saved ai provider key and reflects env fallback in the settings s
   apiMocks.fetchTaskSchedules.mockResolvedValue([]);
   apiMocks.fetchReintegrationRecords.mockResolvedValue([]);
   apiMocks.fetchSoulActions.mockResolvedValue([]);
-  apiMocks.fetchEventNodes.mockResolvedValue([]);
-  apiMocks.fetchContinuityRecords.mockResolvedValue([]);
+  apiMocks.fetchEventNodeProjectionList.mockResolvedValue(createProjectionListResult([], []));
+  apiMocks.fetchContinuityProjectionList.mockResolvedValue(createProjectionListResult([], []));
   apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
 
   const clientMocks = vi.mocked(client);
@@ -375,17 +382,23 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchTaskSchedules.mockResolvedValue([]);
     apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
     apiMocks.fetchSoulActions.mockResolvedValue(soulActions);
-    apiMocks.fetchEventNodes.mockImplementation(async (sourceReintegrationIds?: string[]) => {
+    apiMocks.fetchEventNodeProjectionList.mockImplementation(async (sourceReintegrationIds?: string[]) => {
       if (!sourceReintegrationIds?.length) {
-        return eventNodes;
+        return createProjectionListResult(eventNodes, []);
       }
-      return eventNodes.filter((eventNode) => sourceReintegrationIds.includes(eventNode.sourceReintegrationId));
+      return createProjectionListResult(
+        eventNodes.filter((eventNode) => sourceReintegrationIds.includes(eventNode.sourceReintegrationId)),
+        sourceReintegrationIds,
+      );
     });
-    apiMocks.fetchContinuityRecords.mockImplementation(async (sourceReintegrationIds?: string[]) => {
+    apiMocks.fetchContinuityProjectionList.mockImplementation(async (sourceReintegrationIds?: string[]) => {
       if (!sourceReintegrationIds?.length) {
-        return continuityRecords;
+        return createProjectionListResult(continuityRecords, []);
       }
-      return continuityRecords.filter((continuity) => sourceReintegrationIds.includes(continuity.sourceReintegrationId));
+      return createProjectionListResult(
+        continuityRecords.filter((continuity) => sourceReintegrationIds.includes(continuity.sourceReintegrationId)),
+        sourceReintegrationIds,
+      );
     });
     apiMocks.fetchAiPrompts.mockResolvedValue(promptRecords);
     apiMocks.fetchAiProviderSettings.mockResolvedValue({
@@ -684,13 +697,48 @@ describe('SettingsView soul action governance wiring', () => {
   });
 
   it('keeps accepted and planned projection sources visible even when reintegration review defaults to pending records', async () => {
-    apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
+    apiMocks.fetchReintegrationRecords
+      .mockResolvedValueOnce(reintegrationRecords.filter((record) => record.reviewStatus === 'pending_review'))
+      .mockResolvedValueOnce(reintegrationRecords.filter((record) => record.reviewStatus === 'accepted'));
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      eventNodes[0],
+      eventNodes[1],
+    ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      continuityRecords[0],
+      continuityRecords[1],
+    ], ['record-ready']));
 
     const wrapper = mountSettingsView();
     await flushPromises();
 
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenNthCalledWith(1, { reviewStatus: 'pending_review' });
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenNthCalledWith(2, { reviewStatus: 'accepted' });
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(wrapper.text()).toContain('Ready event node');
+    expect(wrapper.text()).toContain('ready continuity');
+    expect(wrapper.text()).not.toContain('External event node');
+    expect(wrapper.text()).not.toContain('external continuity');
+
+    wrapper.unmount();
+  });
+
+  it('uses canonical projection filter scope returned by shared projection responses', async () => {
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      eventNodes[0],
+      eventNodes[1],
+    ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      continuityRecords[0],
+      continuityRecords[1],
+    ], ['record-ready']));
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready', 'record-mixed']);
     expect(wrapper.text()).toContain('Ready event node');
     expect(wrapper.text()).toContain('ready continuity');
     expect(wrapper.text()).not.toContain('External event node');
@@ -727,11 +775,11 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('"reason": "projection"');
     expect(wrapper.text()).toContain('"source": "settings-test"');
     expect(wrapper.text()).toContain('"trend": "stable"');
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
 
-    apiMocks.fetchEventNodes.mockClear();
-    apiMocks.fetchContinuityRecords.mockClear();
+    apiMocks.fetchEventNodeProjectionList.mockClear();
+    apiMocks.fetchContinuityProjectionList.mockClear();
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
@@ -741,11 +789,11 @@ describe('SettingsView soul action governance wiring', () => {
     }));
     await flushPromises();
 
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
 
-    apiMocks.fetchEventNodes.mockClear();
-    apiMocks.fetchContinuityRecords.mockClear();
+    apiMocks.fetchEventNodeProjectionList.mockClear();
+    apiMocks.fetchContinuityProjectionList.mockClear();
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
@@ -755,14 +803,14 @@ describe('SettingsView soul action governance wiring', () => {
     }));
     await flushPromises();
 
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
 
     wrapper.unmount();
   });
 
   it('shows projection errors without breaking the rest of settings load', async () => {
-    apiMocks.fetchContinuityRecords.mockRejectedValueOnce(new Error('continuity fetch failed'));
+    apiMocks.fetchContinuityProjectionList.mockRejectedValueOnce(new Error('continuity fetch failed'));
 
     const wrapper = mountSettingsView();
 
@@ -777,7 +825,7 @@ describe('SettingsView soul action governance wiring', () => {
   });
 
   it('keeps partial promotion projections when only event-node fetch fails', async () => {
-    apiMocks.fetchEventNodes.mockRejectedValueOnce(new Error('event nodes fetch failed'));
+    apiMocks.fetchEventNodeProjectionList.mockRejectedValueOnce(new Error('event nodes fetch failed'));
 
     const wrapper = mountSettingsView();
 
@@ -794,16 +842,16 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
 
     await flushPromises();
-    apiMocks.fetchEventNodes.mockClear();
-    apiMocks.fetchContinuityRecords.mockClear();
+    apiMocks.fetchEventNodeProjectionList.mockClear();
+    apiMocks.fetchContinuityProjectionList.mockClear();
 
     const refreshButton = wrapper.findAll('button').find((button) => button.text() === '刷新' && button.element.closest('.projection-card'));
     expect(refreshButton).toBeTruthy();
     await refreshButton!.trigger('click');
     await flushPromises();
 
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalledTimes(1);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });
@@ -1149,7 +1197,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.dispatchSoulAction).toHaveBeenCalledTimes(2);
     expect(apiMocks.dispatchSoulAction.mock.calls.map(([id]) => id)).toEqual(['ready-1', 'ready-2']);
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
 
     wrapper.unmount();
   });
@@ -1376,8 +1424,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1411,8 +1459,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
@@ -1426,8 +1474,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
@@ -1464,8 +1512,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1499,8 +1547,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
@@ -1514,8 +1562,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
@@ -1554,8 +1602,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1576,8 +1624,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
@@ -1616,8 +1664,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1638,8 +1686,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
@@ -1653,8 +1701,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
@@ -1693,8 +1741,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1715,8 +1763,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
@@ -1730,8 +1778,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
@@ -2052,8 +2100,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2074,8 +2122,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
@@ -2119,8 +2167,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(apiMocks.fetchEventNodes).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2141,8 +2189,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     apiMocks.fetchSoulActions.mockClear();
@@ -2156,8 +2204,8 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(apiMocks.fetchEventNodes).toHaveBeenCalled();
-    expect(apiMocks.fetchContinuityRecords).toHaveBeenCalled();
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
     expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
@@ -2206,7 +2254,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.dispatchSoulAction.mock.calls.map(([id]) => id)).toEqual(['ready-1', 'ready-2']);
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe(null);
@@ -2578,7 +2626,7 @@ describe('SettingsView soul action governance wiring', () => {
 
     expect(apiMocks.dispatchSoulAction).toHaveBeenCalledWith('ready-1');
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(1);
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
     expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
