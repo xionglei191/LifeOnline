@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { nextTick } from 'vue';
 
 const apiMocks = vi.hoisted(() => ({
   fetchStatsTrend: vi.fn(),
@@ -54,6 +55,16 @@ function buildWrapper() {
   });
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('StatsView', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -61,7 +72,11 @@ describe('StatsView', () => {
     apiMocks.fetchStatsRadar.mockReset();
     apiMocks.fetchStatsMonthly.mockReset();
     apiMocks.fetchStatsTags.mockReset();
-    chartMocks.init.mockClear();
+    chartMocks.init.mockReset()
+      .mockImplementationOnce(() => chartMocks.instances[0])
+      .mockImplementationOnce(() => chartMocks.instances[1])
+      .mockImplementationOnce(() => chartMocks.instances[2])
+      .mockImplementationOnce(() => chartMocks.instances[3]);
     chartMocks.instances.forEach((instance) => {
       instance.setOption.mockClear();
       instance.resize.mockClear();
@@ -112,5 +127,94 @@ describe('StatsView', () => {
     expect(apiMocks.fetchStatsRadar).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchStatsMonthly).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchStatsTags).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores stale trend responses after switching to a newer window', async () => {
+    const firstRefresh = deferred<Array<{ day: string; total: number; done: number }>>();
+    const secondRefresh = deferred<Array<{ day: string; total: number; done: number }>>();
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([
+        { day: '2026-03-01', total: 2, done: 1 },
+      ])
+      .mockReturnValueOnce(firstRefresh.promise)
+      .mockReturnValueOnce(secondRefresh.promise);
+    apiMocks.fetchStatsRadar.mockResolvedValue([{ dimension: 'life', rate: 80 }]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    const buttons = wrapper.findAll('.day-btn');
+    await buttons[0].trigger('click');
+    await nextTick();
+    await buttons[2].trigger('click');
+    await nextTick();
+
+    secondRefresh.resolve([
+      { day: '2026-01-01', total: 9, done: 7 },
+      { day: '2026-01-02', total: 6, done: 5 },
+    ]);
+    await secondRefresh.promise;
+    await flushPromises();
+
+    const trendChart = chartMocks.instances[0];
+    const latestTrend = trendChart.setOption.mock.calls.at(-1)?.[0];
+    expect(latestTrend?.xAxis?.data).toEqual(['01-01', '01-02']);
+    expect(latestTrend?.series?.[0]?.data).toEqual([9, 6]);
+
+    firstRefresh.resolve([
+      { day: '2026-03-21', total: 1, done: 1 },
+    ]);
+    await firstRefresh.promise;
+    await flushPromises();
+
+    const finalTrend = trendChart.setOption.mock.calls.at(-1)?.[0];
+    expect(finalTrend?.xAxis?.data).toEqual(['01-01', '01-02']);
+    expect(finalTrend?.series?.[0]?.data).toEqual([9, 6]);
+  });
+
+  it('ignores stale trend errors after switching to a newer window', async () => {
+    const firstRefresh = deferred<Array<{ day: string; total: number; done: number }>>();
+    const secondRefresh = deferred<Array<{ day: string; total: number; done: number }>>();
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([
+        { day: '2026-03-01', total: 2, done: 1 },
+      ])
+      .mockReturnValueOnce(firstRefresh.promise)
+      .mockReturnValueOnce(secondRefresh.promise);
+    apiMocks.fetchStatsRadar.mockResolvedValue([{ dimension: 'life', rate: 80 }]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    const buttons = wrapper.findAll('.day-btn');
+    await buttons[0].trigger('click');
+    await nextTick();
+    await buttons[2].trigger('click');
+    await nextTick();
+
+    secondRefresh.resolve([
+      { day: '2026-01-01', total: 11, done: 10 },
+    ]);
+    await secondRefresh.promise;
+    await flushPromises();
+
+    firstRefresh.reject(new Error('stale trend failure'));
+    await firstRefresh.promise.catch(() => undefined);
+    await flushPromises();
+
+    const trendChart = chartMocks.instances[0];
+    const finalTrend = trendChart.setOption.mock.calls.at(-1)?.[0];
+    expect(finalTrend?.xAxis?.data).toEqual(['01-01']);
+    expect(finalTrend?.series?.[0]?.data).toEqual([11]);
+    expect(wrapper.text()).not.toContain('stale trend failure');
+    expect(wrapper.find('.state-display-stub').exists()).toBe(false);
   });
 });

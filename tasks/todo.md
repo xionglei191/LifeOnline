@@ -1,3 +1,40 @@
+# stats trend stale-request guard 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 stats trend window 切换竞态收口。
+- [x] 让 `StatsView.vue` 只接受最新 trend 请求的回写结果，避免 mounted 初次加载或旧窗口请求晚返回/晚报错时覆盖当前趋势图状态。
+- [x] 补最小 view focused 回归，锁定旧 trend 请求晚返回/晚失败时不会把当前图表和错误态拉回过期窗口。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/StatsView.vue`
+    - 用递增 request id 保护 trend 请求，只允许最新窗口对应的请求写回趋势图与错误态。
+    - 修复 mounted 初次加载与快速切换 7/30/90 天窗口重叠时，旧趋势请求晚返回仍可能把当前趋势图拉回过期窗口的真实主路径风险。
+  - `LifeOS/packages/web/src/views/StatsView.test.ts`
+    - 保留原有窗口切换 reload 回归。
+    - 新增旧 trend 请求晚返回不会覆盖当前趋势图的回归。
+    - 新增旧 trend 请求晚失败不会错误污染当前错误态的回归。
+    - 修正 chart mock 在多用例下的初始化复用问题，确保每个用例都重新拿到完整图表实例。
+- 这次修的不是再补一个对称测试，而是修复 stats 主路径里“当前选中的时间窗口”和“实际渲染的趋势图数据”可能不一致的真实事实源错位。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：StatsView 的趋势图既会在 mounted 时初次加载，也会在用户点击窗口切换时重新请求，但旧实现没有任何并发回写保护。
+- 这属于直接可见的主路径行为缺口，用户可能看到 UI 已选中近 90 天，但图表实际被近 7 天或旧请求数据回写。
+- 这条线是新的 stats 主路径收口，不是 grouped governance / SettingsView 一类低边际对称补强。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/StatsView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 dashboard 顶部的 `scheduleHealth` 是否仍存在 mount-only 事实源与其它 live dashboard 数据不同步的问题，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 stats trend stale-request guard 收口相关文件。
+
+
 # dashboard stale-request guard 收口
 
 ## 计划

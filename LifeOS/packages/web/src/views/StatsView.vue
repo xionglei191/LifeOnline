@@ -106,6 +106,7 @@ const error = ref<Error | null>(null);
 
 let charts: echarts.ECharts[] = [];
 let resizeHandler: (() => void) | null = null;
+let activeTrendRequestId = 0;
 
 const chartText = '#6e7f92';
 const axisLine = 'rgba(123, 145, 170, 0.22)';
@@ -266,11 +267,14 @@ async function loadTags(data: StatsTagPoint[]) {
 }
 
 async function refreshTrend() {
+  const requestId = ++activeTrendRequestId;
   error.value = null;
   try {
     const data = await fetchStatsTrend(trendDays.value);
+    if (requestId !== activeTrendRequestId) return;
     await loadTrend(data);
   } catch (e) {
+    if (requestId !== activeTrendRequestId) return;
     error.value = e as Error;
   }
 }
@@ -278,6 +282,7 @@ async function refreshTrend() {
 async function loadAllCharts() {
   loading.value = true;
   error.value = null;
+  const trendRequestId = ++activeTrendRequestId;
   try {
     const [trendData, radarData, monthlyData, tagData] = await Promise.all([
       fetchStatsTrend(trendDays.value),
@@ -286,12 +291,13 @@ async function loadAllCharts() {
       fetchStatsTags(),
     ]);
     await Promise.all([
-      loadTrend(trendData),
+      trendRequestId === activeTrendRequestId ? loadTrend(trendData) : Promise.resolve(),
       loadRadar(radarData),
       loadMonthly(monthlyData),
       loadTags(tagData),
     ]);
   } catch (e) {
+    if (trendRequestId !== activeTrendRequestId) return;
     error.value = e as Error;
   } finally {
     loading.value = false;
