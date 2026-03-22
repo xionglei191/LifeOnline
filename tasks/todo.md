@@ -1,3 +1,38 @@
+# search live-refresh fact-source 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 SearchView live-refresh 收口。
+- [x] 让 `SearchView.vue` 在当前 query 保持不变但索引刷新事件到达时主动重跑搜索，避免结果集停留旧状态。
+- [x] 补最小 view focused 回归，锁定 index refresh websocket 事件到达后会重新拉取并渲染最新搜索结果。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/SearchView.vue`
+    - 增加对 `ws-update` 的订阅，并在 `index-complete` / `index-queue-complete` / `file-changed` 事件到达时，对当前 query 主动重跑 `performSearch()`。
+    - 修复“query 没变但索引已刷新，SearchView 结果仍停留旧事实源”的真实主路径错位。
+  - `LifeOS/packages/web/src/views/SearchView.test.ts`
+    - 新增 index refresh 事件会触发当前 query 重新搜索并渲染新结果的回归。
+    - 保留既有 stale query / error / clear results 回归。
+- 这次修的不是再补一个对称测试，而是修复搜索主路径中的真实事实源缺口：内容索引已经更新，但当前搜索页仍显示旧结果，用户需要手动改 query 才能看到最新事实源。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：SearchView 当前只跟随 route query 变化，完全不响应索引刷新事件。
+- 这属于直接可见的主路径行为缺口，用户删除/修改内容后，搜索页会与 dashboard / note detail 等已 live-refresh 的页面出现认知割裂。
+- 这条线优先级高于继续做重复写防抖，因为它更接近“当前 query 固定但事实源已变”的核心主路径错位。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/SearchView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 `StatsView.vue` 是否也需要在 index refresh websocket 事件后主动刷新当前图表事实源，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 search live-refresh fact-source 收口相关文件。
+
+
 # note-detail persona-snapshot live-sync 收口
 
 ## 计划

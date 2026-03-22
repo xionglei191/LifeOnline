@@ -67,6 +67,33 @@ describe('SearchView', () => {
     wrapper = null;
   });
 
+  it('reloads the current query when index refresh events arrive', async () => {
+    apiMocks.searchNotes
+      .mockResolvedValueOnce({
+        query: 'growth',
+        total: 1,
+        notes: [{ id: 'note-growth' }],
+      })
+      .mockResolvedValueOnce({
+        query: 'growth',
+        total: 2,
+        notes: [{ id: 'note-growth' }, { id: 'note-health' }],
+      });
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'index-complete' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.searchNotes).toHaveBeenNthCalledWith(1, 'growth');
+    expect(apiMocks.searchNotes).toHaveBeenNthCalledWith(2, 'growth');
+    expect(wrapper.text()).toContain('找到 2 条关于 “growth” 的结果。');
+    expect(wrapper.find('.note-list-stub').text()).toBe('2');
+  });
+
   it('surfaces typed search errors on the main search path', async () => {
     routeState.current!.query.q = 'growth';
     apiMocks.searchNotes.mockRejectedValue(new Error('search unavailable'));

@@ -26,10 +26,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
-import type { SearchResult } from '@lifeos/shared';
+import type { SearchResult, WsEvent } from '@lifeos/shared';
 import { searchNotes } from '../api/client';
+import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import NoteList from '../components/NoteList.vue';
 import NoteDetail from '../components/NoteDetail.vue';
 import StateDisplay from '../components/StateDisplay.vue';
@@ -79,9 +80,26 @@ async function handleDeleted() {
   }
 }
 
+function handleWsUpdate(event: Event) {
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  const query = route.query.q;
+  if (!isIndexRefreshEvent(wsEvent) || typeof query !== 'string' || !query) {
+    return;
+  }
+  void performSearch(query);
+}
+
 watch(() => route.query.q, (newQuery) => {
   performSearch(typeof newQuery === 'string' ? newQuery : '');
 }, { immediate: true });
+
+onMounted(() => {
+  document.addEventListener('ws-update', handleWsUpdate);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('ws-update', handleWsUpdate);
+});
 </script>
 
 <style scoped>
