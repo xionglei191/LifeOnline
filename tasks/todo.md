@@ -1,3 +1,34 @@
+# parser file-date boundary 单一事实源收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，继续沿日期边界主线推进剩余真实风险点。
+- [x] 复核 server 代码中残留的 UTC `toISOString().split('T')[0]` 使用，确认 indexer parser 仍会把文件 mtime 直接投影为 UTC 日期，可能导致晚间修改文件在缺省 frontmatter date 时被错误归到次日。
+- [x] 让 parser 默认文件日期复用 `formatLocalDate()`，并补最小回归锁定缺省 date 口径。
+- [x] 跑定向验证并视结果决定是否直接提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些文件，也没有回到 grouped governance / SettingsView 的同类补强。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/server/src/indexer/parser.ts`
+    - 缺省 frontmatter `date` 改为复用 `formatLocalDate(stat.mtime)`，移除 UTC 日期投影。
+  - `LifeOS/packages/server/test/parserDate.test.ts`
+    - 新增 parser 回归，锁定缺省 `date` 必须采用本地文件修改日，而不是 UTC rollover 后的日期。
+- 这次修的不是同类测试平移，而是把索引主路径里仍残留的 UTC 日期口径收回到与 dashboard / weekly_report / calendar 相同的本地日期事实源，避免新建/修改笔记在夜间被错误落到第二天。
+
+## 本轮选择依据
+- 上轮已收口 dashboard / calendar / weekly_report 的日期边界，当前 grep 显示剩余最直接的业务口径分叉点就在 `indexer/parser.ts`。
+- parser 缺省 `date` 会直接影响索引后的 note 归档、统计和后续 timeline/calendar 展示，属于真实主路径，而不是低边际对称补强。
+- 这条线继续减少“同一个本地修改时间在不同链路被解释成不同日期”的用户可见风险。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/parserDate.test.ts test/dateUtils.test.ts` 通过，4/4。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- parser file-date 收口完成后，可继续检查 web 侧是否仍有直接依赖浏览器/UTC 日期推导而未复用 server 返回 contract 的位置。
+
+
 # date/week boundary 单一事实源收口
 
 ## 计划

@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import type { Frontmatter } from '@lifeos/shared';
 import crypto from 'crypto';
 import { getDimensionKeyForDirectory } from '../utils/dimensions.js';
+import { formatLocalDate } from '../utils/date.js';
 
 export interface ParseResult {
   success: boolean;
@@ -42,7 +43,7 @@ export async function parseMarkdownFile(filePath: string): Promise<ParseResult> 
     const { data, content } = matter(fileContent);
     const stat = await fs.stat(filePath);
     const now = new Date().toISOString();
-    const fileDate = stat.mtime.toISOString().split('T')[0];
+    const fileDate = formatLocalDate(stat.mtime);
 
     // Auto-fill missing fields with sensible defaults
     if (!data.type || !VALID_VALUES.type.includes(data.type)) data.type = 'note';
