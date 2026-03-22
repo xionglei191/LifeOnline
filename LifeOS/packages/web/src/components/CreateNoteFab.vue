@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { createNote } from '../api/client';
+import { SELECTABLE_DIMENSIONS, DIMENSION_LABELS, type SelectableDimension } from '@lifeos/shared';
 
 const emit = defineEmits<{ created: [] }>();
 
@@ -58,7 +59,13 @@ const showModal = ref(false);
 const saving = ref(false);
 const error = ref('');
 
-const form = ref({
+const form = ref<{
+  title: string;
+  dimension: SelectableDimension | '';
+  type: string;
+  priority: string;
+  content: string;
+}>({
   title: '',
   dimension: '',
   type: 'note',
@@ -66,16 +73,10 @@ const form = ref({
   content: '',
 });
 
-const dimensions = [
-  { value: 'health', label: '健康' },
-  { value: 'career', label: '事业' },
-  { value: 'finance', label: '财务' },
-  { value: 'learning', label: '学习' },
-  { value: 'relationship', label: '关系' },
-  { value: 'life', label: '生活' },
-  { value: 'hobby', label: '兴趣' },
-  { value: 'growth', label: '成长' },
-];
+const dimensions = SELECTABLE_DIMENSIONS.map((value) => ({
+  value,
+  label: DIMENSION_LABELS[value],
+}));
 
 const types = [
   { value: 'note', label: '笔记' },

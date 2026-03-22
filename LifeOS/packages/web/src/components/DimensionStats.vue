@@ -48,28 +48,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Dimension } from '@lifeos/shared';
+import type { SelectableDimension } from '@lifeos/shared';
+import { getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{
-  dimension: Dimension;
+  dimension: SelectableDimension;
   total: number;
   pending: number;
   inProgress: number;
   done: number;
 }>();
 
-const dimensionLabels: Record<Dimension, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
-
-const dimensionColors: Record<Dimension, string> = {
+const dimensionColors: Record<SelectableDimension, string> = {
   health: 'var(--dim-health)',
   career: 'var(--dim-career)',
   finance: 'var(--dim-finance)',
@@ -80,7 +70,7 @@ const dimensionColors: Record<Dimension, string> = {
   growth: 'var(--dim-growth)',
 };
 
-const dimensionLabel = computed(() => dimensionLabels[props.dimension]);
+const dimensionLabel = computed(() => getDimensionLabel(props.dimension));
 const dimensionColor = computed(() => dimensionColors[props.dimension]);
 const healthScore = computed(() => props.total > 0 ? Math.round((props.done / props.total) * 100) : 0);
 const pendingPercent = computed(() => props.total > 0 ? (props.pending / props.total) * 100 : 0);
