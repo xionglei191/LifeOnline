@@ -1560,7 +1560,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.rejectReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1573,7 +1573,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1596,7 +1596,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1609,8 +1609,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
 
     wrapper.unmount();
   });
@@ -1650,7 +1650,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.rejectReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1673,8 +1673,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
 
     wrapper.unmount();
   });
@@ -1714,7 +1714,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.rejectReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1737,8 +1737,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
 
     wrapper.unmount();
   });
@@ -1778,7 +1778,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.rejectReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1801,7 +1801,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1814,8 +1814,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该 reintegration record');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该 reintegration record');
+    expect(wrapper.text()).toContain('已拒绝该回流记录');
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
 
     wrapper.unmount();
   });

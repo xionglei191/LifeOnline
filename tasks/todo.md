@@ -1,3 +1,34 @@
+# SettingsView reintegration reject 文案中文化收口
+
+## 计划
+- [x] 先判断仓库中现有未提交改动是否属于正在进行中的同类推进，避免重复劳动。
+- [x] 复核 SettingsView 在 reject reintegration 成功态上的用户文案与测试断言，确认当前改动是统一把夹杂英文的 success message 收口为中文表述。
+- [x] 跑定向 web 验证，确认现有改动在不触碰其它并行 dirty 文件的前提下可稳定通过。
+- [x] 在项目记录中补记本轮判断与验证结果，并只提交本轮相关文件。
+
+## 当前执行
+- 已确认当前工作树除本轮相关改动外，还存在并行脏文件：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。这些文件未纳入本轮提交。
+- 本轮承接的在途实现为：
+  - `LifeOS/packages/web/src/views/SettingsView.vue`
+    - 将 reject reintegration 成功提示从 `已拒绝该 reintegration record` 统一为更自然的中文文案 `已拒绝该回流记录`。
+  - `LifeOS/packages/web/src/views/SettingsView.test.ts`
+    - 同步更新所有相关断言，锁定 reject success message 在多类 websocket refresh / reload 场景下都保持上述中文文案。
+- 这次没有回到 grouped governance / websocket/filter/retention 的深挖补强，而是优先把当前工作树里已经做到一半、且确实影响 UI 一致性的在途改动收尾并验证，避免形成“仓库长期悬挂的小脏改”。
+
+## 本轮选择依据
+- 当前仓库存在明确在途改动，且直接落在近期一直推进的 SettingsView governance 主路径上；继续另开新题会增加重复劳动和上下文分叉。
+- 改动虽小，但属于真实的 UI 词汇一致性修正：成功态提示不应把英文数据模型名直接暴露给用户。
+- 相关测试已随改动成组存在，因此最合理的下一步是验证并收尾，而不是跳过这组改动去新开一轮 server/shared 收口。
+
+## 本轮验证
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/SettingsView.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，9 files / 136 tests 全通过。
+- 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
+
+## 当前未完成项
+- 若后续继续沿“面向用户文案一致性”推进，可再系统检查 SettingsView / governance panel 中是否仍有类似把 internal term 直接暴露到 success/error message 的位置。
+- 并行脏文件 `CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh` 仍待各自独立判断，不应在本轮顺手混提。
+
+
 # PR6 promotion message helper 单一事实源收口
 
 ## 计划

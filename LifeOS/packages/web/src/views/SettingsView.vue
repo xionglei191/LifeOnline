@@ -1473,7 +1473,7 @@ async function handleRejectReintegration(record: ReintegrationRecord) {
     await rejectReintegrationRecord(record.id, {
       reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
     });
-    reintegrationMessage.value = '已拒绝该 reintegration record';
+    reintegrationMessage.value = '已拒绝该回流记录';
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
   } catch (e: any) {
