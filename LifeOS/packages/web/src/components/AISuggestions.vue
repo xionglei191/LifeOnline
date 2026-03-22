@@ -19,7 +19,7 @@
         <div class="insight-body">
           <div class="insight-top">
             <span class="insight-type">{{ typeLabels[s.type] }}</span>
-            <span v-if="s.dimension" class="insight-dimension">{{ dimensionLabels[s.dimension] }}</span>
+            <span v-if="s.dimension" class="insight-dimension">{{ getDimensionLabel(s.dimension) }}</span>
           </div>
           <h4>{{ s.title }}</h4>
           <p>{{ s.content }}</p>
@@ -34,6 +34,7 @@
 import { onMounted, ref } from 'vue';
 import type { AISuggestion } from '@lifeos/shared';
 import { fetchAISuggestions } from '../api/client';
+import { getDimensionLabel } from '../utils/dimensions';
 
 const suggestions = ref<AISuggestion[]>([]);
 const loading = ref(false);
@@ -45,17 +46,6 @@ const typeLabels: Record<string, string> = {
   overload: '负载告警',
   goal: '目标推进',
   reminder: '提醒',
-};
-
-const dimensionLabels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
 };
 
 async function handleRefresh() {

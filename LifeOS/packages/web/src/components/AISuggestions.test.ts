@@ -51,7 +51,7 @@ describe('AISuggestions', () => {
     expect(wrapper.findAll('.insight-card')).toHaveLength(0);
   });
 
-  it('renders fetched AI suggestions with localized type and dimension labels', async () => {
+  it('renders fetched AI suggestions with localized type and dimension labels from the shared helper', async () => {
     apiMocks.fetchAISuggestions.mockResolvedValue([
       createSuggestion(),
       createSuggestion({

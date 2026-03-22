@@ -42,20 +42,10 @@
 <script setup lang="ts">
 import type { Note } from '@lifeos/shared';
 import { updateNote } from '../api/client';
+import { getDimensionLabel } from '../utils/dimensions';
 
 defineProps<{ todos: Note[] }>();
 const emit = defineEmits<{ selectNote: [noteId: string]; refresh: [] }>();
-
-const labels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
 
 const priorities: Record<string, string> = {
   high: '高压',
@@ -76,7 +66,7 @@ const statuses: Record<string, string> = {
   cancelled: '已取消',
 };
 
-const dimensionLabel = (dim: string) => labels[dim] || dim;
+const dimensionLabel = (dim: Note['dimension']) => getDimensionLabel(dim);
 const priorityLabel = (priority: string) => priorities[priority] || priority;
 const priorityColor = (priority: string) => priorityColors[priority] || 'var(--signal)';
 const statusLabel = (status: string) => statuses[status] || status;

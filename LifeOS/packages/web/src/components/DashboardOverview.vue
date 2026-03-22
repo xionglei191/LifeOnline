@@ -41,9 +41,9 @@
             v-for="stat in rankedStats.slice(0, 4)"
             :key="stat.dimension"
             class="signal-chip"
-            :style="{ '--dimension-color': dimensionColor(stat.dimension) }"
+            :style="{ '--dimension-color': getDimensionColor(stat.dimension) }"
           >
-            <span class="signal-name">{{ dimensionLabel(stat.dimension) }}</span>
+            <span class="signal-name">{{ getDimensionLabel(stat.dimension) }}</span>
             <span class="signal-track">
               <span class="signal-fill" :style="{ width: `${stat.health_score}%` }"></span>
             </span>
@@ -93,6 +93,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { useDashboard } from '../composables/useDashboard';
 import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 import TodayTodos from './TodayTodos.vue';
 import WeeklyHighlights from './WeeklyHighlights.vue';
 import DimensionHealth from './DimensionHealth.vue';
@@ -103,28 +104,6 @@ import StateDisplay from './StateDisplay.vue';
 const { data, loading, error, load } = useDashboard();
 const selectedNoteId = ref<string | null>(null);
 const scheduleHealth = ref<ScheduleHealth | null>(null);
-
-const labels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
-
-const colors: Record<string, string> = {
-  health: 'var(--dim-health)',
-  career: 'var(--dim-career)',
-  finance: 'var(--dim-finance)',
-  learning: 'var(--dim-learning)',
-  relationship: 'var(--dim-relationship)',
-  life: 'var(--dim-life)',
-  hobby: 'var(--dim-hobby)',
-  growth: 'var(--dim-growth)',
-};
 
 const rankedStats = computed(() => {
   return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
@@ -150,22 +129,14 @@ const completionRate = computed(() => {
 
 const topDimensionLabel = computed(() => {
   if (!rankedStats.value.length) return '系统整体';
-  return dimensionLabel(rankedStats.value[0].dimension);
+  return getDimensionLabel(rankedStats.value[0].dimension);
 });
 
 const lowestDimensionLabel = computed(() => {
   if (!rankedStats.value.length) return '无';
   const lowest = rankedStats.value[rankedStats.value.length - 1];
-  return dimensionLabel(lowest.dimension);
+  return getDimensionLabel(lowest.dimension);
 });
-
-function dimensionLabel(dim: string) {
-  return labels[dim] || dim;
-}
-
-function dimensionColor(dim: string) {
-  return colors[dim] || 'var(--signal)';
-}
 
 async function handleDeleted() {
   selectedNoteId.value = null;
