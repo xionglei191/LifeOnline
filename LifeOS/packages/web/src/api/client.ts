@@ -155,7 +155,7 @@ export async function updateAiPrompt(key: PromptKey, payload: UpdatePromptReques
   return data.prompt as PromptRecord;
 }
 
-export async function resetAiPrompt(key: PromptKey): Promise<void> {
+export async function resetAiPrompt(key: PromptKey): Promise<ResetAiPromptResponse> {
   const res = await fetch(`${API_BASE}/ai/prompts/${encodeURIComponent(key)}`, {
     method: 'DELETE',
   });
@@ -163,6 +163,7 @@ export async function resetAiPrompt(key: PromptKey): Promise<void> {
   if (!res.ok) {
     throw new Error(data.error || 'Failed to reset AI prompt');
   }
+  return data as ResetAiPromptResponse;
 }
 
 export async function fetchAiProviderSettings(): Promise<AiProviderSettings> {

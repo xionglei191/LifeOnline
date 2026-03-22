@@ -449,8 +449,9 @@ const relevantNoteSoulActions = computed(() => {
   if (!currentNoteId.value) return [];
   const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
   return noteSoulActions.value.filter((action) => {
-    if (action.sourceNoteId !== currentNoteId.value) return false;
-    return !action.sourceReintegrationId || sourceIds.has(action.sourceReintegrationId);
+    const matchesCurrentNote = action.sourceNoteId === currentNoteId.value;
+    const matchesProjectionSource = action.sourceReintegrationId != null && sourceIds.has(action.sourceReintegrationId);
+    return matchesCurrentNote || matchesProjectionSource;
   });
 });
 
@@ -536,7 +537,11 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
     ]);
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     projectionSourceRecords.value = reintegrationRecords.filter((record) => record.sourceNoteId === sourceNoteId);
-    noteSoulActions.value = soulActions.filter((action) => action.sourceNoteId === sourceNoteId);
+    const projectionSourceRecordIds = new Set(projectionSourceRecords.value.map((record) => record.id));
+    noteSoulActions.value = soulActions.filter((action) => (
+      action.sourceNoteId === sourceNoteId
+      || (action.sourceReintegrationId != null && projectionSourceRecordIds.has(action.sourceReintegrationId))
+    ));
     const sourceReintegrationIds = [...new Set(noteSoulActions.value
       .map((action) => action.sourceReintegrationId)
       .filter((value): value is string => Boolean(value)))];

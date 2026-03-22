@@ -560,6 +560,47 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('keeps projection soul actions when they match the current note via reintegration source ids', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchSoulActions.mockResolvedValueOnce([
+      createSoulAction({ id: 'action-via-reint', sourceNoteId: 'reint:record-ready', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+      createSoulAction({ id: 'action-other', sourceNoteId: 'note-2.md', sourceReintegrationId: 'record-other', actionKind: 'promote_continuity_record', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+    ]);
+    apiMocks.fetchEventNodes.mockResolvedValueOnce([
+      createEventNode({ id: 'event-ready', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Ready event node' }),
+    ]);
+    apiMocks.fetchContinuityRecords.mockResolvedValueOnce([]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
+    expect(apiMocks.fetchEventNodes).toHaveBeenCalledWith(['record-ready']);
+    expect(document.body.textContent).toContain('Actions 1');
+    expect(document.body.textContent).toContain('待派发 1');
+    expect(document.body.textContent).toContain('提升 Event Node');
+    expect(document.body.textContent).toContain('Ready event node');
+    expect(document.body.textContent).not.toContain('提升 Continuity Record');
+
+    wrapper.unmount();
+  });
+
+
   it('surfaces pending and approved promotion soul actions on the current note path', async () => {
     apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
       createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),

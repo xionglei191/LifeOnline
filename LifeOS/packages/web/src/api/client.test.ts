@@ -377,14 +377,15 @@ describe('api client promotion projections', () => {
       notes: 'test note',
       isOverridden: true,
     };
+    const resetResponse = { success: true };
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ prompts: [prompt] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ prompt }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) }));
+      .mockResolvedValueOnce({ ok: true, json: async () => resetResponse }));
 
     await expect(fetchAiPrompts()).resolves.toEqual([prompt]);
     await expect(updateAiPrompt('classify', { content: 'override prompt', enabled: true, notes: 'test note' })).resolves.toEqual(prompt);
-    await expect(resetAiPrompt('classify')).resolves.toBeUndefined();
+    await expect(resetAiPrompt('classify')).resolves.toEqual(resetResponse);
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/ai/prompts');
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/ai/prompts/classify', {
       method: 'PATCH',
