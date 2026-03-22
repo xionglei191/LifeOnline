@@ -1,13 +1,13 @@
-# 当前轮：Worker task detail result facts 收口
+# 当前轮：Dashboard hero attention fact-source 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 虽然已经能显示结构化 `result` JSON，但详情弹层仍缺少基于 shared contract 的关键结果 facts，用户必须自己读原始 JSON 才知道任务产出重点，属于新的 contract-to-UI 可见性缺口。
-- [x] 将 `workerTaskResultFacts` 从 `WorkerTaskCard` 提升到 `LifeOS/packages/web/src/utils/workerTaskLabels.ts` 复用，并让 `LifeOS/packages/web/src/components/WorkerTaskDetail.vue` 在结构化 JSON 前补充“关键结果” facts，保持卡片与详情对同一 worker contract 的投射一致。
-- [x] 在 `LifeOS/packages/web/src/components/WorkerTaskDetail.test.ts` 增加 focused 回归，锁定 extract tasks 成功态会先展示关键结果 facts，再保留原始结构化结果 JSON。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/WorkerTaskCard.test.ts src/components/WorkerTaskDetail.test.ts src/utils/workerTaskLabels.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/DashboardOverview.vue` 的 hero summary 之前把“最高关注度”直接绑定到 `health_score` 最高维度，但文案表达的是“当前最需要投入”，真实语义应来自 open work（`pending + in_progress`）而不是健康分；这是新的事实源一致性缺口。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.vue` 新增基于 open work 的 `attentionRankedStats` / `topAttentionDimensionLabel`，让 hero summary 的“最需要投入维度”与当前活跃事项负载一致，同时保留 signal band 继续按 `health_score` 展示生命信号。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.test.ts` 增加 focused 回归，锁定高健康分但低 open work 的维度不会再被误说成当前最该投入的维度。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DashboardOverview.test.ts`。
 
 ## 结果
-- Worker task 的列表卡片与详情弹层现在复用同一套 result facts 投射规则，用户不需要先读 JSON 才能看懂成功任务产出。
-- 当前这一轮 detail result facts 收口完成后，下一轮可继续找新的非 Settings 主路径 contract / fact-source / stale visibility gap。
+- Dashboard hero summary 现在不再把“健康高”误说成“最需要投入”，主页事实表述与实际负载来源分离且一致。
+- 当前这一轮 dashboard attention fact-source 收口完成后，下一轮可继续找新的非 Settings 主路径 contract / fact-source / stale visibility gap。
 
 ---

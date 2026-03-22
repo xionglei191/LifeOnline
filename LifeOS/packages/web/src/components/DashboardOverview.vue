@@ -9,7 +9,7 @@
           <h2>今天的重点不是做更多，而是把生命资源投向<span>正确的轨道</span>。</h2>
           <p class="hero-summary">
             当前共有 {{ totalOpenItems }} 项活跃事项，已完成率 {{ completionRate }}%，
-            {{ topDimensionLabel }} 正在占据最高关注度。
+            {{ topAttentionDimensionLabel }} 是当前最需要投入的维度。
           </p>
         </div>
 
@@ -113,6 +113,11 @@ const scheduleHealth = ref<ScheduleHealth | null>(null);
 const scheduleHealthError = ref<Error | null>(null);
 let activeScheduleHealthRequestId = 0;
 
+const attentionRankedStats = computed(() => {
+  return [...(data.value?.dimensionStats ?? [])]
+    .sort((left, right) => (right.pending + right.in_progress) - (left.pending + left.in_progress));
+});
+
 const rankedStats = computed(() => {
   return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
 });
@@ -135,9 +140,9 @@ const completionRate = computed(() => {
   return total ? Math.round((done / total) * 100) : 0;
 });
 
-const topDimensionLabel = computed(() => {
-  if (!rankedStats.value.length) return '系统整体';
-  return getDimensionLabel(rankedStats.value[0].dimension);
+const topAttentionDimensionLabel = computed(() => {
+  if (!attentionRankedStats.value.length) return '系统整体';
+  return getDimensionLabel(attentionRankedStats.value[0].dimension);
 });
 
 const lowestDimensionLabel = computed(() => {
