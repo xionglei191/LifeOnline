@@ -256,13 +256,16 @@ describe('NoteDetail', () => {
 
     document.dispatchEvent(new CustomEvent('ws-update', {
       detail: {
-        type: 'worker-task-updated',
-        task: createTask({
-          id: 'worker-task-2',
-          taskType: 'update_persona_snapshot',
+        type: 'note-worker-tasks-updated',
+        data: {
           sourceNoteId: 'note-1.md',
-          status: 'done',
-        }),
+          task: createTask({
+            id: 'worker-task-2',
+            taskType: 'update_persona_snapshot',
+            sourceNoteId: 'note-1.md',
+            status: 'done',
+          }),
+        },
       },
     }));
     await flushPromises();

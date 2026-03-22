@@ -682,9 +682,10 @@ function openRelatedWorkerTaskDetail(taskId: string) {
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
   if (!currentNoteId.value) return;
-  if (wsEvent.type === 'worker-task-updated') {
+  if (wsEvent.type === 'note-worker-tasks-updated') {
+    if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
     void loadRelatedWorkerTasks(currentNoteId.value);
-    if (wsEvent.task?.sourceNoteId === currentNoteId.value && wsEvent.task.taskType === 'update_persona_snapshot') {
+    if (wsEvent.data.task.taskType === 'update_persona_snapshot') {
       void loadPersonaSnapshot(currentNoteId.value);
     }
     return;

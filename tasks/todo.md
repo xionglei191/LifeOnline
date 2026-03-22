@@ -1,3 +1,49 @@
+# note-worker-tasks websocket contract 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的 server/web/shared contract gap 推进 note-scoped worker websocket 收口。
+- [x] 在 `shared` 中新增显式 `note-worker-tasks-updated` contract，消除 note detail 继续从泛化 `worker-task-updated` 推断 note 作用域更新的漂移。
+- [x] 让 `server` 在 worker task create/update 时同步广播 note-scoped 事件，让当前 note 的任务列表与 persona snapshot 面板依赖显式事实源刷新。
+- [x] 补 web/server focused 回归，锁定 `NoteDetail` 与 websocket API 路径都消费新 contract。
+- [x] 运行 focused 验证。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/shared/src/types.ts`
+    - 新增 `NoteWorkerTasksUpdatedEventData`，并把 `WsEvent` 扩展为显式 `note-worker-tasks-updated` union 成员。
+    - 修复 note-scoped worker 更新此前没有 shared contract、只能由 web 自行推断的契约缺口。
+  - `LifeOS/packages/server/src/api/handlers.ts`
+    - 在创建带 `sourceNoteId` 的 worker task 后，除泛化 `worker-task-updated` 外，额外广播 `note-worker-tasks-updated`。
+  - `LifeOS/packages/server/src/workers/workerTasks.ts`
+    - 在任务状态流转后，对带 `sourceNoteId` 的任务同步广播 `note-worker-tasks-updated`，让 note 详情页能订阅显式 note 作用域事件。
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - websocket 监听改为消费 `note-worker-tasks-updated`，并在当前 note 收到人格快照任务更新时同步刷新 `relatedWorkerTasks` 与 `personaSnapshot`。
+    - 移除对 ad-hoc `wsEvent.task` 结构的依赖，回到 shared `data` contract。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 将 persona snapshot live-sync 回归改为通过 `note-worker-tasks-updated` + `detail.data.task` 触发，锁定 web 侧契约对齐。
+  - `LifeOS/packages/server/test/reintegrationApi.test.ts`
+    - 为既有 dispatch websocket 对齐用例补充 `note-worker-tasks-updated` 断言，锁定 server 广播出的 note-scoped 事件与返回 task/filter 查询保持一致。
+- 这次修的不是再补一个局部 refresh，而是收口新的 shared/server/web websocket contract gap：同一 note 的 worker 变化现在有了显式事实源，而不是继续依赖泛化事件和 payload 漂移。
+
+## 本轮选择依据
+- 这是新的 server/web/shared contract gap：`NoteDetail.vue` 之前消费的是泛化 `worker-task-updated`，而且读取了 shared contract 之外的 `wsEvent.task` 形状。
+- 这属于真实的 contract-to-UI 投射缺口：当前 note 的 worker 任务与 persona snapshot 都是 note-scoped 数据，但 websocket 层没有显式 note-scoped 事件表达。
+- 这条线优先级高于继续深挖 grouped governance / SettingsView，因为它更直接命中用户要求的“新的 contract gap + 主路径事实源收口”。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/components/NoteDetail.test.ts`
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/server" && pnpm exec node --import tsx --test --test-name-pattern "dispatch response worker task stays aligned with websocket and follow-up worker task queries|mixed worker-host dispatch response tasks stay aligned with websocket even when statuses differ" test/reintegrationApi.test.ts`
+- 额外发现：`pnpm test -- reintegrationApi.test.ts` 会跑到该文件内原本就存在的无关失败用例，不能作为本轮 focused 验证口径。
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- `reintegrationApi.test.ts` 文件内仍有与本轮无关的既有 failing case：`soul-action filters converge when governance and execution subsets are queried after mixed group progress`；本轮未触碰该逻辑。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 note-worker-tasks websocket contract 收口相关文件。
+
+
 # stats live-refresh fact-source 收口
 
 ## 计划

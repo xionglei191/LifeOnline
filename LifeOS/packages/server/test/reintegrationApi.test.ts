@@ -82,6 +82,7 @@ async function openWebSocket(url: string, timeoutMs = 10000): Promise<WebSocket>
 type SoulActionWsEvent = Extract<WsEvent, { type: 'soul-action-updated' }>;
 type ReintegrationRecordWsEvent = Extract<WsEvent, { type: 'reintegration-record-updated' }>;
 type WorkerTaskWsEvent = Extract<WsEvent, { type: 'worker-task-updated' }>;
+type NoteWorkerTasksUpdatedWsEvent = Extract<WsEvent, { type: 'note-worker-tasks-updated' }>;
 
 async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -1702,6 +1703,10 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
       socket,
       (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'extract_tasks',
     );
+    const firstNoteTaskEventPromise = waitForWebSocketEvent<NoteWorkerTasksUpdatedWsEvent>(
+      socket,
+      (event) => event.type === 'note-worker-tasks-updated' && event.data.sourceNoteId === sourceNoteId && event.data.task.taskType === 'extract_tasks',
+    );
 
     const firstDispatched = await api<DispatchSoulActionResponse>(
       baseUrl,
@@ -1723,16 +1728,26 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
 
     const firstTaskEvent = await firstTaskEventPromise;
+    const firstNoteTaskEvent = await firstNoteTaskEventPromise;
     assert.equal(firstTaskEvent.data.id, firstDispatched.task?.id);
     assert.equal(firstTaskEvent.data.sourceNoteId, firstDispatched.task?.sourceNoteId);
     assert.equal(firstTaskEvent.data.taskType, firstDispatched.task?.taskType);
     assert.equal(firstTaskEvent.data.worker, firstDispatched.task?.worker);
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstTaskEvent.data.status));
+    assert.equal(firstNoteTaskEvent.data.sourceNoteId, firstDispatched.task?.sourceNoteId);
+    assert.equal(firstNoteTaskEvent.data.task.id, firstDispatched.task?.id);
+    assert.equal(firstNoteTaskEvent.data.task.taskType, firstDispatched.task?.taskType);
+    assert.equal(firstNoteTaskEvent.data.task.worker, firstDispatched.task?.worker);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstNoteTaskEvent.data.task.status));
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
 
     const secondTaskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
       socket,
       (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'update_persona_snapshot',
+    );
+    const secondNoteTaskEventPromise = waitForWebSocketEvent<NoteWorkerTasksUpdatedWsEvent>(
+      socket,
+      (event) => event.type === 'note-worker-tasks-updated' && event.data.sourceNoteId === sourceNoteId && event.data.task.taskType === 'update_persona_snapshot',
     );
 
     const secondDispatched = await api<DispatchSoulActionResponse>(
@@ -1755,11 +1770,17 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
 
     const secondTaskEvent = await secondTaskEventPromise;
+    const secondNoteTaskEvent = await secondNoteTaskEventPromise;
     assert.equal(secondTaskEvent.data.id, secondDispatched.task?.id);
     assert.equal(secondTaskEvent.data.sourceNoteId, secondDispatched.task?.sourceNoteId);
     assert.equal(secondTaskEvent.data.taskType, secondDispatched.task?.taskType);
     assert.equal(secondTaskEvent.data.worker, secondDispatched.task?.worker);
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondTaskEvent.data.status));
+    assert.equal(secondNoteTaskEvent.data.sourceNoteId, secondDispatched.task?.sourceNoteId);
+    assert.equal(secondNoteTaskEvent.data.task.id, secondDispatched.task?.id);
+    assert.equal(secondNoteTaskEvent.data.task.taskType, secondDispatched.task?.taskType);
+    assert.equal(secondNoteTaskEvent.data.task.worker, secondDispatched.task?.worker);
+    assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondNoteTaskEvent.data.task.status));
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
 
     const workerTasksAfterDispatch = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
@@ -2109,6 +2130,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
       socket,
       (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'extract_tasks',
     );
+    const firstNoteTaskEventPromise = waitForWebSocketEvent<NoteWorkerTasksUpdatedWsEvent>(
+      socket,
+      (event) => event.type === 'note-worker-tasks-updated' && event.data.sourceNoteId === sourceNoteId && event.data.task.taskType === 'extract_tasks',
+    );
 
     const firstDispatch = await api<DispatchSoulActionResponse>(
       baseUrl,
@@ -2119,6 +2144,7 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
       },
     );
     const firstTaskEvent = await firstTaskEventPromise;
+    const firstNoteTaskEvent = await firstNoteTaskEventPromise;
 
     const firstWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
@@ -2133,6 +2159,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
     assert.equal(firstDispatch.task.sourceNoteId, firstTaskEvent.data.sourceNoteId);
     assert.equal(firstDispatch.task.taskType, firstTaskEvent.data.taskType);
     assert.equal(firstDispatch.task.worker, firstTaskEvent.data.worker);
+    assert.equal(firstDispatch.task.id, firstNoteTaskEvent.data.task.id);
+    assert.equal(firstDispatch.task.sourceNoteId, firstNoteTaskEvent.data.sourceNoteId);
+    assert.equal(firstDispatch.task.taskType, firstNoteTaskEvent.data.task.taskType);
+    assert.equal(firstDispatch.task.worker, firstNoteTaskEvent.data.task.worker);
     assert.equal(firstDispatch.task.id, firstFilteredTask?.id);
     assert.equal(firstDispatch.task.sourceNoteId, firstFilteredTask?.sourceNoteId);
     assert.equal(firstDispatch.task.taskType, firstFilteredTask?.taskType);
@@ -2158,6 +2188,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
       socket,
       (event) => event.type === 'worker-task-updated' && event.data.sourceNoteId === sourceNoteId && event.data.taskType === 'update_persona_snapshot',
     );
+    const secondNoteTaskEventPromise = waitForWebSocketEvent<NoteWorkerTasksUpdatedWsEvent>(
+      socket,
+      (event) => event.type === 'note-worker-tasks-updated' && event.data.sourceNoteId === sourceNoteId && event.data.task.taskType === 'update_persona_snapshot',
+    );
 
     const secondDispatch = await api<DispatchSoulActionResponse>(
       baseUrl,
@@ -2168,6 +2202,7 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
       },
     );
     const secondTaskEvent = await secondTaskEventPromise;
+    const secondNoteTaskEvent = await secondNoteTaskEventPromise;
 
     const secondWorkerTasks = await api<{ tasks: WorkerTask[]; filters: { sourceNoteId?: string; status?: string; taskType?: string; worker?: string } }>(
       baseUrl,
@@ -2182,6 +2217,10 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
     assert.equal(secondDispatch.task.sourceNoteId, secondTaskEvent.data.sourceNoteId);
     assert.equal(secondDispatch.task.taskType, secondTaskEvent.data.taskType);
     assert.equal(secondDispatch.task.worker, secondTaskEvent.data.worker);
+    assert.equal(secondDispatch.task.id, secondNoteTaskEvent.data.task.id);
+    assert.equal(secondDispatch.task.sourceNoteId, secondNoteTaskEvent.data.sourceNoteId);
+    assert.equal(secondDispatch.task.taskType, secondNoteTaskEvent.data.task.taskType);
+    assert.equal(secondDispatch.task.worker, secondNoteTaskEvent.data.task.worker);
     assert.equal(secondDispatch.task.id, secondFilteredTask?.id);
     assert.equal(secondDispatch.task.sourceNoteId, secondFilteredTask?.sourceNoteId);
     assert.equal(secondDispatch.task.taskType, secondFilteredTask?.taskType);

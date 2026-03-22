@@ -899,6 +899,15 @@ function updateTaskStatus(taskId: string, updates: Partial<WorkerTask>) {
   if (updated) {
     syncSoulActionFromWorkerTask(updated);
     broadcastUpdate({ type: 'worker-task-updated', data: updated });
+    if (updated.sourceNoteId) {
+      broadcastUpdate({
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: updated.sourceNoteId,
+          task: updated,
+        },
+      });
+    }
   }
   return updated;
 }

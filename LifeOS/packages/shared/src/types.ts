@@ -590,12 +590,18 @@ export interface IndexErrorEventData {
   timestamp: string;
 }
 
+export interface NoteWorkerTasksUpdatedEventData {
+  sourceNoteId: string;
+  task: WorkerTask;
+}
+
 export type WsEvent =
   | { type: 'file-changed'; data: { filePath: string; operation: IndexOperation } }
   | { type: 'index-complete'; data: IndexResult }
   | { type: 'index-queue-complete' }
   | { type: 'index-error'; data: IndexErrorEventData }
   | { type: 'worker-task-updated'; data: WorkerTask }
+  | { type: 'note-worker-tasks-updated'; data: NoteWorkerTasksUpdatedEventData }
   | { type: 'soul-action-updated'; data: SoulAction }
   | { type: 'reintegration-record-updated'; data: ReintegrationRecord }
   | { type: 'schedule-updated' };

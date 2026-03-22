@@ -778,6 +778,15 @@ export async function createWorkerTaskHandler(
       taskType: body.taskType,
     });
     broadcastUpdate({ type: 'worker-task-updated', data: task });
+    if (task.sourceNoteId) {
+      broadcastUpdate({
+        type: 'note-worker-tasks-updated',
+        data: {
+          sourceNoteId: task.sourceNoteId,
+          task,
+        },
+      });
+    }
     startWorkerTaskExecution(task.id);
 
     const response: CreateWorkerTaskResponse = { task };
