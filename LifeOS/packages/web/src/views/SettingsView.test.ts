@@ -122,7 +122,7 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> & Pic
 function createProjectionListResult<T>(items: T[], sourceReintegrationIds: string[]) {
   return {
     items,
-    sourceReintegrationIds,
+    filters: { sourceReintegrationIds },
   };
 }
 

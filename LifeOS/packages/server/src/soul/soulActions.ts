@@ -387,6 +387,17 @@ export function listSoulActions(filters?: ListSoulActionsFilters): SoulAction[] 
         )
       )`);
       params.push(filters.sourceNoteId, ...getReintegrationIdentityActionKinds(), filters.sourceNoteId);
+    } else if (!filters.sourceReintegrationId) {
+      clauses.push(`(
+        source_note_id = ?
+        OR (
+          action_kind IN (${getReintegrationIdentityActionKinds().map(() => '?').join(', ')})
+          AND source_reintegration_id IN (
+            SELECT id FROM reintegration_records WHERE source_note_id = ?
+          )
+        )
+      )`);
+      params.push(filters.sourceNoteId, ...getReintegrationIdentityActionKinds(), filters.sourceNoteId);
     } else {
       clauses.push('source_note_id = ?');
       params.push(filters.sourceNoteId);

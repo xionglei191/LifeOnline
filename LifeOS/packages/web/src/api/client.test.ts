@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot, DeleteTaskScheduleResponse, TaskScheduleResponse } from '@lifeos/shared';
-import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
+import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot, DeleteTaskScheduleResponse, TaskScheduleResponse, WorkerTaskListFilters, ListReintegrationRecordsResponse, ListSoulActionsResponse } from '@lifeos/shared';
+import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActionList, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTaskList, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecordList, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -141,6 +141,41 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Atest-legacy-filter');
   });
 
+  it('keeps reintegration-linked promotion actions in note-scoped soul-action fetches', async () => {
+    const soulAction: SoulAction = {
+      id: 'soul-action-note-scope',
+      sourceNoteId: 'reint:worker-task-note-scope',
+      sourceReintegrationId: 'reint:worker-task-note-scope',
+      actionKind: 'promote_event_node',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      governanceReason: null,
+      workerTaskId: null,
+      payload: { source: 'client-test' },
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      approvedAt: null,
+      startedAt: null,
+      finishedAt: null,
+      error: null,
+      resultSummary: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        soulActions: [soulAction],
+        filters: {
+          sourceNoteId: 'note-1.md',
+          actionKind: 'promote_event_node',
+        },
+      }),
+    }));
+
+    await expect(fetchSoulActions({ sourceNoteId: 'note-1.md', actionKind: 'promote_event_node' })).resolves.toEqual([soulAction]);
+    expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceNoteId=note-1.md&actionKind=promote_event_node');
+  });
+
   it('preserves canonical event-node projection filter scope from shared responses', async () => {
     const eventNodes: EventNode[] = [
       {
@@ -169,7 +204,7 @@ describe('api client promotion projections', () => {
 
     await expect(fetchEventNodeProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
       items: eventNodes,
-      sourceReintegrationIds: ['reint:test', 'reint:second'],
+      filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] },
     });
     expect(fetch).toHaveBeenCalledWith('/api/event-nodes?sourceReintegrationIds=reint%3Atest');
   });
@@ -202,9 +237,140 @@ describe('api client promotion projections', () => {
 
     await expect(fetchContinuityProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
       items: continuityRecords,
-      sourceReintegrationIds: ['reint:test', 'reint:second'],
+      filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] },
     });
     expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
+  });
+
+  it('preserves canonical soul-action filters from shared list responses', async () => {
+    const soulAction: SoulAction = {
+      id: 'soul-action-canonical',
+      sourceNoteId: 'reint:record-ready',
+      sourceReintegrationId: 'record-ready',
+      actionKind: 'promote_event_node',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      governanceReason: null,
+      workerTaskId: null,
+      payload: { source: 'client-test' },
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      approvedAt: null,
+      startedAt: null,
+      finishedAt: null,
+      error: null,
+      resultSummary: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        soulActions: [soulAction],
+        filters: {
+          sourceReintegrationId: ' record-ready ',
+          actionKind: 'promote_event_node',
+          governanceStatus: 'approved',
+        } satisfies ListSoulActionsResponse['filters'],
+      }),
+    }));
+
+    await expect(fetchSoulActionList({ sourceNoteId: 'reint:record-ready', actionKind: 'promote_event_node' })).resolves.toEqual({
+      items: [soulAction],
+      filters: {
+        sourceNoteId: undefined,
+        sourceReintegrationId: 'record-ready',
+        governanceStatus: 'approved',
+        executionStatus: undefined,
+        actionKind: 'promote_event_node',
+      },
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/soul-actions?sourceReintegrationId=reint%3Arecord-ready&actionKind=promote_event_node');
+  });
+
+  it('preserves canonical worker-task filters from shared list responses', async () => {
+    const task: WorkerTask = {
+      id: 'worker-task-canonical',
+      taskType: 'extract_tasks',
+      worker: 'lifeos',
+      status: 'pending',
+      input: { noteId: 'note-1.md' },
+      result: null,
+      error: null,
+      createdAt: '2026-03-22T10:00:00.000Z',
+      updatedAt: '2026-03-22T10:00:00.000Z',
+      startedAt: null,
+      finishedAt: null,
+      sourceNoteId: 'note-1.md',
+      scheduleId: null,
+      outputNotePaths: [],
+      outputNotes: [],
+      resultSummary: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        tasks: [task],
+        filters: {
+          sourceNoteId: ' note-1.md ',
+          status: 'pending',
+          taskType: 'extract_tasks',
+          worker: 'lifeos',
+        } satisfies WorkerTaskListFilters,
+      }),
+    }));
+
+    await expect(fetchWorkerTaskList(5, { sourceNoteId: 'note-1.md' })).resolves.toEqual({
+      items: [task],
+      filters: {
+        sourceNoteId: 'note-1.md',
+        status: 'pending',
+        taskType: 'extract_tasks',
+        worker: 'lifeos',
+      },
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/worker-tasks?limit=5&sourceNoteId=note-1.md');
+  });
+
+  it('preserves canonical reintegration filters from shared list responses', async () => {
+    const reintegrationRecord: ReintegrationRecord = {
+      id: 'reint:worker-task-canonical',
+      workerTaskId: 'worker-task-canonical',
+      sourceNoteId: 'note-1.md',
+      soulActionId: null,
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'task_extraction_reintegration',
+      reviewStatus: 'accepted',
+      target: 'task_record',
+      strength: 'medium',
+      summary: 'canonical reintegration record',
+      evidence: { source: 'client-test' },
+      reviewReason: null,
+      createdAt: '2026-03-22T10:08:00.000Z',
+      updatedAt: '2026-03-22T10:08:00.000Z',
+      reviewedAt: null,
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        reintegrationRecords: [reintegrationRecord],
+        filters: {
+          reviewStatus: 'accepted',
+          sourceNoteId: ' note-1.md ',
+        } satisfies ListReintegrationRecordsResponse['filters'],
+      }),
+    }));
+
+    await expect(fetchReintegrationRecordList({ sourceNoteId: 'note-1.md' })).resolves.toEqual({
+      items: [reintegrationRecord],
+      filters: {
+        reviewStatus: 'accepted',
+        sourceNoteId: 'note-1.md',
+      },
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/reintegration-records?sourceNoteId=note-1.md');
   });
 
   it('fetches typed soul-action contracts from shared response shapes', async () => {

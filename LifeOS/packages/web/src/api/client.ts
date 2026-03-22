@@ -4,10 +4,20 @@ export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
 
-type ProjectionListResponse<T> = {
-  items: T[];
-  sourceReintegrationIds: string[];
+type ScopedListResponse<TItem, TFilters> = {
+  items: TItem[];
+  filters: TFilters;
 };
+
+export type ProjectionListResponse<T> = ScopedListResponse<T, {
+  sourceReintegrationIds: string[];
+}>;
+
+export type WorkerTaskListResult = ScopedListResponse<WorkerTask, WorkerTaskListFilters>;
+
+export type ReintegrationRecordListResult = ScopedListResponse<ReintegrationRecord, ListReintegrationRecordsResponse['filters']>;
+
+export type SoulActionListResult = ScopedListResponse<SoulAction, ListSoulActionsResponse['filters']>;
 
 function normalizeSourceReintegrationIds(sourceReintegrationIds?: string[]): string[] {
   if (!sourceReintegrationIds?.length) return [];
@@ -15,6 +25,44 @@ function normalizeSourceReintegrationIds(sourceReintegrationIds?: string[]): str
   return [...new Set(sourceReintegrationIds
     .map((value) => value.trim())
     .filter(Boolean))];
+}
+
+function normalizeWorkerTaskFilters(filters?: WorkerTaskListResponse['filters']): WorkerTaskListFilters {
+  return {
+    sourceNoteId: filters?.sourceNoteId?.trim() || undefined,
+    status: filters?.status,
+    taskType: filters?.taskType,
+    worker: filters?.worker,
+  };
+}
+
+function normalizeProjectionFilters(
+  filters?: Pick<ListEventNodesResponse['filters'], 'sourceReintegrationIds'>,
+): { sourceReintegrationIds: string[] } {
+  return {
+    sourceReintegrationIds: normalizeSourceReintegrationIds(filters?.sourceReintegrationIds),
+  };
+}
+
+function normalizeReintegrationFilters(
+  filters?: ListReintegrationRecordsResponse['filters'],
+): ListReintegrationRecordsResponse['filters'] {
+  return {
+    reviewStatus: filters?.reviewStatus,
+    sourceNoteId: filters?.sourceNoteId?.trim() || undefined,
+  };
+}
+
+function normalizeSoulActionFilters(
+  filters?: ListSoulActionsResponse['filters'],
+): ListSoulActionsResponse['filters'] {
+  return {
+    sourceNoteId: filters?.sourceNoteId?.trim() || undefined,
+    sourceReintegrationId: filters?.sourceReintegrationId?.trim() || undefined,
+    governanceStatus: filters?.governanceStatus,
+    executionStatus: filters?.executionStatus,
+    actionKind: filters?.actionKind,
+  };
 }
 
 async function readApiResponse<T>(res: Response): Promise<ApiResponse<T> & ApiErrorLike> {
@@ -217,10 +265,10 @@ export async function createWorkerTask(request: CreateWorkerTaskRequest): Promis
   return data.task as WorkerTask;
 }
 
-export async function fetchWorkerTasks(
+export async function fetchWorkerTaskList(
   limit = 10,
-  options?: WorkerTaskListFilters
-): Promise<WorkerTask[]> {
+  options?: WorkerTaskListFilters,
+): Promise<WorkerTaskListResult> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (options?.sourceNoteId) {
     params.set('sourceNoteId', options.sourceNoteId);
@@ -239,13 +287,24 @@ export async function fetchWorkerTasks(
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch worker tasks');
   }
-  return data.tasks || [];
+  return {
+    items: data.tasks || [],
+    filters: normalizeWorkerTaskFilters(data.filters),
+  };
 }
 
-export async function fetchReintegrationRecords(filters?: {
+export async function fetchWorkerTasks(
+  limit = 10,
+  options?: WorkerTaskListFilters,
+): Promise<WorkerTask[]> {
+  const data = await fetchWorkerTaskList(limit, options);
+  return data.items;
+}
+
+export async function fetchReintegrationRecordList(filters?: {
   reviewStatus?: ReintegrationRecord['reviewStatus'];
   sourceNoteId?: string;
-}): Promise<ReintegrationRecord[]> {
+}): Promise<ReintegrationRecordListResult> {
   const params = new URLSearchParams();
   if (filters?.reviewStatus) {
     params.set('reviewStatus', filters.reviewStatus);
@@ -259,7 +318,18 @@ export async function fetchReintegrationRecords(filters?: {
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch reintegration records');
   }
-  return data.reintegrationRecords || [];
+  return {
+    items: data.reintegrationRecords || [],
+    filters: normalizeReintegrationFilters(data.filters),
+  };
+}
+
+export async function fetchReintegrationRecords(filters?: {
+  reviewStatus?: ReintegrationRecord['reviewStatus'];
+  sourceNoteId?: string;
+}): Promise<ReintegrationRecord[]> {
+  const data = await fetchReintegrationRecordList(filters);
+  return data.items;
 }
 
 export async function acceptReintegrationRecord(id: string, payload: ReintegrationReviewRequest = {}): Promise<AcceptReintegrationRecordResponse> {
@@ -299,13 +369,13 @@ export async function planReintegrationPromotions(id: string): Promise<SoulActio
   return data.soulActions || [];
 }
 
-export async function fetchSoulActions(filters?: {
+export async function fetchSoulActionList(filters?: {
   sourceNoteId?: string;
   sourceReintegrationId?: string;
   governanceStatus?: SoulActionGovernanceStatus;
   executionStatus?: SoulActionExecutionStatus;
   actionKind?: SoulActionKind;
-}): Promise<SoulAction[]> {
+}): Promise<SoulActionListResult> {
   const params = new URLSearchParams();
   const normalizedSourceFilters = normalizeSoulActionSourceFilters(
     {
@@ -327,7 +397,21 @@ export async function fetchSoulActions(filters?: {
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch soul actions');
   }
-  return data.soulActions || [];
+  return {
+    items: data.soulActions || [],
+    filters: normalizeSoulActionFilters(data.filters),
+  };
+}
+
+export async function fetchSoulActions(filters?: {
+  sourceNoteId?: string;
+  sourceReintegrationId?: string;
+  governanceStatus?: SoulActionGovernanceStatus;
+  executionStatus?: SoulActionExecutionStatus;
+  actionKind?: SoulActionKind;
+}): Promise<SoulAction[]> {
+  const data = await fetchSoulActionList(filters);
+  return data.items;
 }
 
 export async function fetchSoulAction(id: string): Promise<SoulAction> {
@@ -467,7 +551,7 @@ export async function fetchEventNodeProjectionList(sourceReintegrationIds?: stri
   }
   return {
     items: data.eventNodes || [],
-    sourceReintegrationIds: normalizeSourceReintegrationIds(data.filters?.sourceReintegrationIds),
+    filters: normalizeProjectionFilters(data.filters),
   };
 }
 
@@ -488,7 +572,7 @@ export async function fetchContinuityProjectionList(sourceReintegrationIds?: str
   }
   return {
     items: data.continuityRecords || [],
-    sourceReintegrationIds: normalizeSourceReintegrationIds(data.filters?.sourceReintegrationIds),
+    filters: normalizeProjectionFilters(data.filters),
   };
 }
 

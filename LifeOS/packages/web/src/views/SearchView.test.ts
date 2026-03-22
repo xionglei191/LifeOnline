@@ -84,6 +84,23 @@ describe('SearchView', () => {
     expect(wrapper.text()).not.toContain('找到 1 条关于 “ growth ” 的结果。');
   });
 
+  it('renders results returned for a query that matches a shared note title', async () => {
+    routeState.current!.query.q = 'unique phrase';
+    apiMocks.searchNotes.mockResolvedValue({
+      query: 'unique phrase',
+      total: 1,
+      filters: { q: 'unique phrase' },
+      notes: [{ id: 'note-title', title: 'Search title contract unique phrase' }],
+    });
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    expect(apiMocks.searchNotes).toHaveBeenCalledWith('unique phrase');
+    expect(wrapper.text()).toContain('找到 1 条关于 “unique phrase” 的结果。');
+    expect(wrapper.find('.note-list-stub').text()).toBe('1');
+  });
+
   it('reloads the current query when index refresh events arrive', async () => {
     apiMocks.searchNotes
       .mockResolvedValueOnce({

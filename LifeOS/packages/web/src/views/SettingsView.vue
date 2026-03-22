@@ -1104,7 +1104,7 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
     const projectionErrors: string[] = [];
 
     if (eventNodeResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(eventNodeResult.value.sourceReintegrationIds);
+      const serverScopedIds = new Set(eventNodeResult.value.filters.sourceReintegrationIds);
       eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
         serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId)
       ));
@@ -1114,7 +1114,7 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
     }
 
     if (continuityResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(continuityResult.value.sourceReintegrationIds);
+      const serverScopedIds = new Set(continuityResult.value.filters.sourceReintegrationIds);
       continuityRecords.value = continuityResult.value.items.filter((continuity) => (
         serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId)
       ));

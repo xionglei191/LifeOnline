@@ -168,7 +168,7 @@ function createContinuityRecord(overrides: Partial<ContinuityRecord> = {}): Cont
 function createProjectionListResult<T>(items: T[], sourceReintegrationIds: string[]) {
   return {
     items,
-    sourceReintegrationIds,
+    filters: { sourceReintegrationIds },
   };
 }
 
@@ -515,6 +515,47 @@ describe('NoteDetail', () => {
     wrapper.unmount();
   });
 
+  it('surfaces projection artifacts when canonical reintegration scope matches even without matching sourceNoteId', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' }),
+    ]);
+    apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      createEventNode({ id: 'event-ready', sourceReintegrationId: 'record-ready', sourceNoteId: null, title: 'Canonical event node' }),
+      createEventNode({ id: 'event-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', title: 'External event node' }),
+    ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([
+      createContinuityRecord({ id: 'continuity-ready', sourceReintegrationId: 'record-ready', sourceNoteId: null, summary: 'canonical continuity' }),
+      createContinuityRecord({ id: 'continuity-other', sourceReintegrationId: 'record-other', sourceNoteId: 'note-2.md', summary: 'external continuity' }),
+    ], ['record-ready']));
+    apiMocks.fetchSoulActions.mockResolvedValueOnce([
+      createSoulAction({ id: 'action-ready', sourceNoteId: 'reint:record-ready', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+    ]);
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(document.body.textContent).toContain('Canonical event node');
+    expect(document.body.textContent).toContain('canonical continuity');
+    expect(document.body.textContent).not.toContain('External event node');
+    expect(document.body.textContent).not.toContain('external continuity');
+
+    wrapper.unmount();
+  });
+
   it('reloads promotion projections when a projection websocket update arrives for the current note', async () => {
     apiMocks.fetchReintegrationRecords
       .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
@@ -557,6 +598,70 @@ describe('NoteDetail', () => {
         data: {
           eventNode: createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' }),
         },
+      },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('New event node');
+    expect(document.body.textContent).toContain('待派发 1');
+    expect(document.body.textContent).not.toContain('Old event node');
+
+    wrapper.unmount();
+  });
+
+  it('reloads promotion projections when a projection-linked soul action update arrives via reintegration identity', async () => {
+    apiMocks.fetchReintegrationRecords
+      .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })])
+      .mockResolvedValueOnce([createReintegrationRecord({ id: 'record-ready', sourceNoteId: 'note-1.md', reviewStatus: 'accepted' })]);
+    apiMocks.fetchSoulActions
+      .mockResolvedValueOnce([
+        createSoulAction({ id: 'action-via-reint', sourceNoteId: 'reint:record-ready', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
+      ])
+      .mockResolvedValueOnce([
+        createSoulAction({ id: 'action-via-reint', sourceNoteId: 'reint:record-ready', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
+      ]);
+    apiMocks.fetchEventNodeProjectionList
+      .mockResolvedValueOnce(createProjectionListResult([
+        createEventNode({ id: 'event-old', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'Old event node' }),
+      ], ['record-ready']))
+      .mockResolvedValueOnce(createProjectionListResult([
+        createEventNode({ id: 'event-new', sourceReintegrationId: 'record-ready', sourceNoteId: 'note-1.md', title: 'New event node' }),
+      ], ['record-ready']));
+    apiMocks.fetchContinuityProjectionList
+      .mockResolvedValueOnce(createProjectionListResult([], ['record-ready']))
+      .mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
+
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    expect(document.body.textContent).toContain('Old event node');
+    expect(document.body.textContent).toContain('待治理 1');
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: {
+        type: 'soul-action-updated',
+        data: createSoulAction({
+          id: 'action-via-reint',
+          sourceNoteId: 'reint:record-ready',
+          sourceReintegrationId: 'record-ready',
+          actionKind: 'promote_event_node',
+          governanceStatus: 'approved',
+          executionStatus: 'not_dispatched',
+        }),
       },
     }));
     await flushPromises();

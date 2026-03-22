@@ -1049,6 +1049,61 @@ test('soul-action APIs respond with shared governance contracts', async () => {
   }
 });
 
+test('soul-action list broadens note filters to reintegration-linked promotion actions for the same note', async () => {
+  const env = await createTestEnv('lifeos-soul-action-note-scope-contract-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const reintegrationRecord = upsertReintegrationRecord({
+      workerTaskId: 'worker-task-note-scope-contract',
+      sourceNoteId: 'note-scope-contract',
+      soulActionId: 'seed-soul-action-note-scope',
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'daily report reintegration summary',
+      evidence: { source: 'configLifecycle.test.ts' },
+      reviewStatus: 'accepted',
+    });
+
+    createOrReuseSoulAction({
+      sourceNoteId: reintegrationRecord.id,
+      sourceReintegrationId: reintegrationRecord.id,
+      actionKind: 'promote_event_node',
+    });
+
+    const result = await api<import('../../shared/src/types.js').ListSoulActionsResponse>(
+      baseUrl,
+      '/api/soul-actions?sourceNoteId=note-scope-contract&actionKind=promote_event_node',
+    );
+
+    assert.equal(result.filters.sourceNoteId, 'note-scope-contract');
+    assert.equal(result.filters.sourceReintegrationId, undefined);
+    assert.ok(result.soulActions.some((action) => action.sourceReintegrationId === reintegrationRecord.id));
+    assert.ok(result.soulActions.some((action) => action.sourceNoteId === reintegrationRecord.id));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('reintegration APIs respond with shared reintegration contracts', async () => {
   const env = await createTestEnv('lifeos-reintegration-contract-');
   const configFile = env.configPath;
@@ -1585,6 +1640,55 @@ Tag-only search body.
     assert.equal(result.query, 'rare-search-tag-contract');
     assert.deepEqual(result.filters, { q: 'rare-search-tag-contract' });
     assert.ok(result.notes.some((note) => note.file_path === taggedNotePath));
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('search API matches shared note titles shown on the main search path', async () => {
+  const env = await createTestEnv('lifeos-search-title-contract-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const titledNotePath = path.join(env.vaultPath, '成长', '2026-03-22-search-title-contract.md');
+
+  try {
+    await fs.writeFile(
+      titledNotePath,
+      `---
+type: note
+dimension: growth
+status: pending
+privacy: private
+date: 2026-03-22
+source: web
+created: 2026-03-22T10:00:00
+---
+
+## Search title contract unique phrase
+
+Body intentionally does not include the searchable title token.
+`,
+    );
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const result = await api<import('../../shared/src/types.js').SearchResult>(baseUrl, '/api/search?q=unique%20phrase');
+    assert.equal(result.query, 'unique phrase');
+    assert.deepEqual(result.filters, { q: 'unique phrase' });
+    assert.ok(result.notes.some((note) => note.file_path === titledNotePath));
+    assert.ok(result.notes.some((note) => note.title === 'Search title contract unique phrase'));
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);

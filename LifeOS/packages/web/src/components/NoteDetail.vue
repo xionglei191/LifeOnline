@@ -426,23 +426,27 @@ const noteProjectionSourceReintegrationIds = computed(() => {
   const actionIds = noteSoulActions.value
     .map((action) => action.sourceReintegrationId)
     .filter((value): value is string => Boolean(value));
-  const eventNodeIds = eventNodes.value
-    .filter((eventNode) => eventNode.sourceNoteId === sourceNoteId)
-    .map((eventNode) => eventNode.sourceReintegrationId);
-  const continuityIds = continuityRecords.value
-    .filter((continuity) => continuity.sourceNoteId === sourceNoteId)
-    .map((continuity) => continuity.sourceReintegrationId);
+  const eventNodeIds = eventNodes.value.map((eventNode) => eventNode.sourceReintegrationId);
+  const continuityIds = continuityRecords.value.map((continuity) => continuity.sourceReintegrationId);
   return [...new Set([...acceptedIds, ...actionIds, ...eventNodeIds, ...continuityIds])];
 });
 
 const noteEventNodes = computed(() => {
   if (!currentNoteId.value) return [];
-  return eventNodes.value.filter((eventNode) => eventNode.sourceNoteId === currentNoteId.value);
+  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
+  return eventNodes.value.filter((eventNode) => (
+    eventNode.sourceNoteId === currentNoteId.value
+    || sourceIds.has(eventNode.sourceReintegrationId)
+  ));
 });
 
 const noteContinuityRecords = computed(() => {
   if (!currentNoteId.value) return [];
-  return continuityRecords.value.filter((continuity) => continuity.sourceNoteId === currentNoteId.value);
+  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
+  return continuityRecords.value.filter((continuity) => (
+    continuity.sourceNoteId === currentNoteId.value
+    || sourceIds.has(continuity.sourceReintegrationId)
+  ));
 });
 
 const relevantNoteSoulActions = computed(() => {
@@ -496,6 +500,28 @@ function soulActionStatusText(action: SoulAction) {
   if (action.governanceStatus === 'deferred') return '已延后';
   if (action.governanceStatus === 'discarded') return '已丢弃';
   return '待治理';
+}
+
+function doesProjectionArtifactAffectCurrentNote(sourceNoteId: string | null, sourceReintegrationId: string) {
+  if (!currentNoteId.value) return false;
+  if (sourceNoteId === currentNoteId.value) return true;
+
+  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
+  return sourceIds.has(sourceReintegrationId);
+}
+
+function doesSoulActionAffectCurrentNote(action: SoulAction) {
+  if (!currentNoteId.value) return false;
+  if (action.sourceNoteId === currentNoteId.value) return true;
+
+  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
+  if (action.sourceReintegrationId != null && sourceIds.has(action.sourceReintegrationId)) {
+    return true;
+  }
+
+  return action.sourceNoteId?.startsWith('reint:')
+    ? sourceIds.has(action.sourceNoteId.slice('reint:'.length))
+    : false;
 }
 
 function dimensionColor(dimension: string) {
@@ -561,10 +587,9 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
     const projectionErrors: string[] = [];
 
     if (eventNodeResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(eventNodeResult.value.sourceReintegrationIds);
+      const serverScopedIds = new Set(eventNodeResult.value.filters.sourceReintegrationIds);
       eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
-        eventNode.sourceNoteId === sourceNoteId
-        && (serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId))
+        serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId)
       ));
     } else {
       eventNodes.value = [];
@@ -572,10 +597,9 @@ async function loadPromotionProjections(sourceNoteId: string, requestId?: number
     }
 
     if (continuityResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(continuityResult.value.sourceReintegrationIds);
+      const serverScopedIds = new Set(continuityResult.value.filters.sourceReintegrationIds);
       continuityRecords.value = continuityResult.value.items.filter((continuity) => (
-        continuity.sourceNoteId === sourceNoteId
-        && (serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId))
+        serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId)
       ));
     } else {
       continuityRecords.value = [];
@@ -907,12 +931,18 @@ function handleWsUpdate(event: Event) {
     return;
   }
   if (wsEvent.type === 'event-node-updated') {
-    if (wsEvent.data.eventNode.sourceNoteId !== currentNoteId.value) return;
+    if (!doesProjectionArtifactAffectCurrentNote(
+      wsEvent.data.eventNode.sourceNoteId,
+      wsEvent.data.eventNode.sourceReintegrationId,
+    )) return;
     void loadPromotionProjections(currentNoteId.value);
     return;
   }
   if (wsEvent.type === 'continuity-record-updated') {
-    if (wsEvent.data.continuityRecord.sourceNoteId !== currentNoteId.value) return;
+    if (!doesProjectionArtifactAffectCurrentNote(
+      wsEvent.data.continuityRecord.sourceNoteId,
+      wsEvent.data.continuityRecord.sourceReintegrationId,
+    )) return;
     void loadPromotionProjections(currentNoteId.value);
     return;
   }
@@ -922,7 +952,7 @@ function handleWsUpdate(event: Event) {
     return;
   }
   if (wsEvent.type === 'soul-action-updated') {
-    if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
+    if (!doesSoulActionAffectCurrentNote(wsEvent.data)) return;
     void loadPromotionProjections(currentNoteId.value);
     return;
   }

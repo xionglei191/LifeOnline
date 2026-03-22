@@ -315,11 +315,12 @@ export async function searchNotes(req: Request<Record<string, never>, ApiRespons
     const notes = db.prepare(`
       SELECT * FROM notes
       WHERE file_name LIKE ?
+        OR title LIKE ?
         OR content LIKE ?
         OR dimension LIKE ?
         OR tags LIKE ?
       ORDER BY date DESC LIMIT 50
-    `).all(keyword, keyword, keyword, keyword).map(parseNote);
+    `).all(keyword, keyword, keyword, keyword, keyword).map(parseNote);
 
     const result: SearchResult = {
       notes,
