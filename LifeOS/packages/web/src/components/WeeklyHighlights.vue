@@ -8,10 +8,10 @@
       <span class="panel-badge">Week Pulse</span>
     </div>
 
-    <div v-if="highlights.length === 0" class="empty">本周没有特别需要盯住的重点事项。</div>
+    <div v-if="orderedHighlights.length === 0" class="empty">本周没有特别需要盯住的重点事项。</div>
 
     <ul v-else class="highlight-list">
-      <li v-for="item in highlights" :key="item.id" class="highlight-item" @click="$emit('selectNote', item.id)">
+      <li v-for="item in orderedHighlights" :key="item.id" class="highlight-item" @click="$emit('selectNote', item.id)">
         <div class="date-block">
           <span class="date-day">{{ formatDay(item.date) }}</span>
           <span class="date-month">{{ formatMonth(item.date) }}</span>
@@ -34,10 +34,22 @@
 
 <script setup lang="ts">
 import type { Note } from '@lifeos/shared';
+import { computed } from 'vue';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
-defineProps<{ highlights: Note[] }>();
+const props = defineProps<{ highlights: Note[] }>();
 defineEmits<{ selectNote: [noteId: string] }>();
+
+const orderedHighlights = computed(() => {
+  return [...props.highlights].sort((left, right) => {
+    const dateDelta = left.date.localeCompare(right.date);
+    if (dateDelta !== 0) return dateDelta;
+
+    const leftLabel = (left.title || left.file_name.replace('.md', '')).toLocaleLowerCase();
+    const rightLabel = (right.title || right.file_name.replace('.md', '')).toLocaleLowerCase();
+    return leftLabel.localeCompare(rightLabel, 'zh-CN');
+  });
+});
 
 const statuses: Record<string, string> = {
   pending: '待办',

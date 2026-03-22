@@ -1,9 +1,9 @@
-# 当前轮：Calendar day item 主路径稳定性补面
+# 当前轮：WeeklyHighlights 主路径稳定性补面
 
 ## 进展
-- [x] 识别 `CalendarGrid` 同日条目在类型/状态相同的情况下仍沿用后端顺序，导致主路径日历格内可见顺序不稳定。
-- [x] 在 `CalendarGrid` 的同日展示排序中保留类型/状态优先级后，再按可见标题（`note.title || file_name`）排序，保证主路径日历条目顺序稳定。
-- [x] 补 focused 回归，锁定同日同优先级条目按可见标题排序。
+- [x] 识别 `WeeklyHighlights` 当前列表顺序仍依赖后端 `created` 顺序；当同一天重点事项并列时，用户看到的主路径顺序会因不可见字段漂移。
+- [x] 在 `WeeklyHighlights` 中保留日期优先后，再按当前可见标题（`note.title || file_name`）排序，保证主路径重点事项列表顺序稳定。
+- [x] 补 focused 回归，锁定同日重点事项按可见标题排序。
 - [ ] 跑 focused web 验证并视情况直接提交。
 
 ---

@@ -47,4 +47,18 @@ describe('WeeklyHighlights', () => {
     expect(wrapper.text()).toContain('Inbox');
     expect(wrapper.find('.dimension').attributes('style')).toContain('var(--dim-life)');
   });
+
+  it('orders same-day highlights by visible shared titles', () => {
+    const wrapper = mount(WeeklyHighlights, {
+      props: {
+        highlights: [
+          createNote({ id: 'highlight-z', date: '2026-03-22', title: 'Zeta title', file_name: 'b-file.md' }),
+          createNote({ id: 'highlight-a', date: '2026-03-22', title: 'Alpha title', file_name: 'z-file.md' }),
+        ],
+      },
+    });
+
+    const titles = wrapper.findAll('.title').map((node) => node.text());
+    expect(titles).toEqual(['Alpha title', 'Zeta title']);
+  });
 });
