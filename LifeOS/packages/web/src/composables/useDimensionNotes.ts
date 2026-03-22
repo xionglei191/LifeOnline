@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
 import { fetchNotes } from '../api/client';
 import { isIndexRefreshEvent } from './useWebSocket';
 import type { Note, Dimension, WsEvent } from '@lifeos/shared';
@@ -15,7 +15,7 @@ interface Filters {
   keyword: string;
 }
 
-export function useDimensionNotes(dimension: Dimension) {
+export function useDimensionNotes(dimension: Ref<Dimension>) {
   const notes = ref<Note[]>([]);
   const loading = ref(false);
   const error = ref<Error | null>(null);
@@ -96,7 +96,7 @@ export function useDimensionNotes(dimension: Dimension) {
     loading.value = true;
     error.value = null;
     try {
-      notes.value = await fetchNotes({ dimension });
+      notes.value = await fetchNotes({ dimension: dimension.value });
     } catch (e) {
       error.value = e as Error;
     } finally {
@@ -109,8 +109,21 @@ export function useDimensionNotes(dimension: Dimension) {
     if (isIndexRefreshEvent(wsEvent)) load();
   }
 
-  onMounted(() => document.addEventListener('ws-update', handleWsUpdate));
-  onUnmounted(() => document.removeEventListener('ws-update', handleWsUpdate));
+  watch(dimension, () => {
+    filters.value = {
+      types: [],
+      statuses: [],
+      priorities: [],
+      sortBy: 'date',
+      sortOrder: 'desc',
+      dateFrom: '',
+      dateTo: '',
+      tags: [],
+      keyword: '',
+    };
+    notes.value = [];
+    load();
+  }, { immediate: true });
 
   return { notes, loading, error, filters, filteredNotes, availableTags, stats, load };
 }

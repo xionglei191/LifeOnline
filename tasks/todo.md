@@ -1,3 +1,40 @@
+# dimension route-reactivity + typed error delivery 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 dimension 页路由响应性收口。
+- [x] 把 `DimensionView` / `useDimensionNotes` 从“只在首次挂载时读取 route.params.dimension”改为随路由维度变化重载数据。
+- [x] 补最小 view 回归，锁定 typed note-fetch error 会显示，且维度切换后不会继续显示旧维度笔记。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`、`LifeOS/packages/web/src/views/SearchView.test.ts`、`LifeOS/packages/web/src/views/StatsView.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/composables/useDimensionNotes.ts`
+    - 改为接收 `Ref<Dimension>`，内部读取 `dimension.value` 作为真实事实源。
+    - 新增对路由维度变化的 watch：维度变化时会重置筛选状态、清空旧 notes 并重新加载对应维度数据。
+  - `LifeOS/packages/web/src/views/DimensionView.vue`
+    - 将 computed `dimension` 直接传给 composable，避免只在首次进入页面时取一次快照。
+  - `LifeOS/packages/web/src/views/DimensionView.test.ts`
+    - 新增主路径错误投射回归，锁定 typed note-fetch error 会显示到维度页。
+    - 新增 route-reactivity 回归，锁定从 `life` 切到 `growth` 后会重新请求并显示新维度笔记，而不是残留旧维度结果。
+- 这次修的不是再补一个同类测试，而是修复维度页一个真实事实源一致性缺口：URL 维度已经变化，但 composable 仍持有首次快照，导致页面展示和路由脱节。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：`route.params.dimension` 才是 DimensionView 当前事实源，但旧实现只把初始值传进 composable，后续路由变化不会同步到数据加载。
+- 这会直接造成用户从一个维度切到另一个维度时，页面继续显示旧维度数据，是明确的主路径断裂。
+- 这条线和前两轮 search / dashboard / stats 一致，都是把 typed error 与 route/state 真正落到用户可见行为，而不是继续做低边际对称测试。
+
+## 本轮验证
+- 待运行：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/DimensionView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续还可检查 calendar / timeline 等视图是否也有 route/composable 只取初值的问题，但这还未开始。
+
+## 下一步建议
+- 跑 focused dimension view 测试；若通过，提交本轮 focused commit，只包含 dimension route-reactivity 收口。
+
+
 # search view stale-result + typed error delivery 收口
 
 ## 计划

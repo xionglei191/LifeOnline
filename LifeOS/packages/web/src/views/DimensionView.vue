@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDimensionNotes } from '../composables/useDimensionNotes';
 import DimensionStats from '../components/DimensionStats.vue';
@@ -45,7 +45,7 @@ import StateDisplay from '../components/StateDisplay.vue';
 const route = useRoute();
 const dimension = computed(() => route.params.dimension as Dimension);
 
-const { notes, loading, error, filters, filteredNotes, availableTags, stats, load } = useDimensionNotes(dimension.value);
+const { notes, loading, error, filters, filteredNotes, availableTags, stats, load } = useDimensionNotes(dimension);
 
 const selectedNoteId = ref<string | null>(null);
 
@@ -57,10 +57,6 @@ async function handleDeleted() {
   selectedNoteId.value = null;
   await load();
 }
-
-onMounted(() => {
-  load();
-});
 </script>
 
 <style scoped>
