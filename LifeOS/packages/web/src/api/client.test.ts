@@ -493,6 +493,19 @@ describe('api client promotion projections', () => {
     await expect(fetchPersonaSnapshot('note-1')).rejects.toThrow('snapshot failed');
   });
 
+  it('omits undefined note filters from notes query strings', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([]),
+    }));
+
+    await expect(fetchNotes({ dimension: 'growth', status: undefined, type: undefined })).resolves.toEqual([]);
+    expect(fetch).toHaveBeenCalledWith('/api/notes?dimension=growth');
+
+    await expect(fetchNotes()).resolves.toEqual([]);
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/notes');
+  });
+
   it('surfaces API errors for dashboard, note, index, timeline, calendar, and config fetches', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'dashboard unavailable' }) })

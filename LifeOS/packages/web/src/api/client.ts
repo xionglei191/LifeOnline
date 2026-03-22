@@ -24,8 +24,19 @@ export async function fetchDashboard(): Promise<DashboardData> {
 }
 
 export async function fetchNotes(filters?: { dimension?: string; status?: string; type?: string }): Promise<Note[]> {
-  const params = new URLSearchParams(filters as any);
-  const res = await fetch(`${API_BASE}/notes?${params}`);
+  const params = new URLSearchParams();
+  if (filters?.dimension) {
+    params.set('dimension', filters.dimension);
+  }
+  if (filters?.status) {
+    params.set('status', filters.status);
+  }
+  if (filters?.type) {
+    params.set('type', filters.type);
+  }
+
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/notes${query ? `?${query}` : ''}`);
   return expectApiSuccess<Note[]>(res, 'Failed to fetch notes');
 }
 
