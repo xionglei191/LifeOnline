@@ -5,6 +5,7 @@
 - [x] 把共享维度标签/可选集合/目录映射提升为 shared 单一事实源，并让 server/web 复用，而不是各自内联一份中文标签表。
 - [x] 先改 server `dimensions.ts` 与 web 的高频消费点 `CreateNoteFab` / `DimensionStats`，并补最小 server/web 回归。
 - [x] 继续把 dashboard 主路径中的 `AISuggestions` / `TodayTodos` / `DashboardOverview` 迁移到 shared dimension helper，并补最小 web 回归。
+- [x] 继续把 `DimensionHealth` / `NoteDetail` 迁移到 shared/web dimension helper，并补最小 web 回归。
 
 ## 当前执行
 - 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`。本轮未覆盖这些无关文件。
@@ -25,6 +26,10 @@
     - 今日任务队列的维度标签改为复用 shared/web dimension helper。
   - `LifeOS/packages/web/src/components/DashboardOverview.vue`
     - hero 区维度名称与颜色改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/components/DimensionHealth.vue`
+    - 八维度生命矩阵的维度标签与颜色改为复用 shared/web dimension helper。
+  - `LifeOS/packages/web/src/components/NoteDetail.vue`
+    - 笔记详情页头和 OpenClaw 结果归档维度下拉改为复用 shared/web dimension helper。
   - `LifeOS/packages/server/test/dimensions.test.ts`
     - 新增 server 回归，锁定 server helper 与 shared dimension contract 保持一致。
   - `LifeOS/packages/web/src/components/CreateNoteFab.test.ts`
@@ -33,6 +38,10 @@
     - 新增今日任务队列回归，锁定主路径维度标签来源于 shared helper。
   - `LifeOS/packages/web/src/components/DashboardOverview.test.ts`
     - 新增 dashboard hero 回归，锁定主路径维度标签和颜色来源于 shared helper。
+  - `LifeOS/packages/web/src/components/DimensionHealth.test.ts`
+    - 新增八维度矩阵回归，锁定卡片维度标签和颜色来源于 shared helper。
+  - `LifeOS/packages/web/src/components/NoteDetail.test.ts`
+    - 新增笔记详情维度展示/下拉回归，锁定 note header 与 worker 维度选项来源于 shared helper。
   - `LifeOS/packages/web/src/components/AISuggestions.test.ts`
     - 更新测试描述，锁定系统洞察流也继续走 shared dimension helper 语义。
 - 这次修的不是再补一条同类稳定性测试，而是把 dimension 这组真实跨端基础枚举从“shared 只定义 union，server/web 各自补语义”收口到单一事实源，降低后续新增维度或目录映射变更时的 drift 风险。
@@ -45,11 +54,12 @@
 ## 本轮验证
 - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/dimensions.test.ts` 通过，1/1。
 - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/CreateNoteFab.test.ts src/components/AISuggestions.test.ts src/components/TodayTodos.test.ts src/components/DashboardOverview.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，12 files / 145 tests 全通过。
+- `pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DimensionHealth.test.ts src/components/NoteDetail.test.ts` 通过；受 vitest 配置影响，同时跑过现有 web 测试集，13 files / 147 tests 全通过。
 - 当前环境仍有既有 Node engine warning（声明 `>=20 <21`，实际 `v25.8.1`），但未影响本轮验证。
 
 ## 当前未完成项
 - 本轮改动尚未提交 git commit。
-- 仓库中其它维度标签重复点后续仍可继续迁移到 shared helper，优先 `NoteDetail.vue`、`DimensionHealth.vue`、`TimelineTrack.vue` 等主路径组件。
+- 仓库中其它维度标签重复点后续仍可继续迁移到 shared helper，优先 `TimelineTrack.vue`、`StatsView.vue`、`WeeklyHighlights.vue`、`NotePreview.vue`、`TimelineView.vue` 等仍残留重复维度语义的主路径组件。
 
 
 # promotion projection richer contract-to-UI 投射闭环

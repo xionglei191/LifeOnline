@@ -62,7 +62,7 @@
               <p class="hero-kicker">Record Detail</p>
               <h2>{{ note.file_name.replace('.md', '') }}</h2>
               <div class="hero-meta">
-                <span class="meta-pill dimension">{{ dimensionLabels[note.dimension] }}</span>
+                <span class="meta-pill dimension">{{ getDimensionLabel(note.dimension) }}</span>
                 <span class="meta-pill">{{ typeLabels[note.type] || note.type }}</span>
                 <span class="meta-pill status" :class="'status-' + note.status">{{ statusLabels[note.status] }}</span>
                 <span v-if="note.priority" class="meta-pill priority" :class="'priority-' + note.priority">{{ priorityLabels[note.priority] }}</span>
@@ -180,14 +180,7 @@
               <div class="worker-field">
                 <label>结果归档维度</label>
                 <select v-model="workerDimension" :disabled="workerSubmitting">
-                  <option value="learning">学习</option>
-                  <option value="career">事业</option>
-                  <option value="finance">财务</option>
-                  <option value="health">健康</option>
-                  <option value="relationship">关系</option>
-                  <option value="life">生活</option>
-                  <option value="hobby">兴趣</option>
-                  <option value="growth">成长</option>
+                  <option v-for="dimension in selectableDimensions" :key="dimension.value" :value="dimension.value">{{ dimension.label }}</option>
                 </select>
               </div>
             </div>
@@ -278,13 +271,14 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot } from '@lifeos/shared';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
 import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
+import { getDimensionColor, getDimensionLabel, SELECTABLE_DIMENSIONS } from '../utils/dimensions';
 
 const props = defineProps<{ noteId: string | null }>();
 const emit = defineEmits<{ close: []; deleted: [] }>();
@@ -298,7 +292,7 @@ const workerSubmitting = ref(false);
 const workerMessage = ref('');
 const workerMessageType = ref<'success' | 'error'>('success');
 const workerInstruction = ref('');
-const workerDimension = ref('learning');
+const workerDimension = ref<SelectableDimension>('learning');
 const relatedWorkerTasks = ref<WorkerTask[]>([]);
 const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
@@ -344,27 +338,7 @@ const priorities = [
   { value: 'low', label: '低' },
 ];
 
-const dimensionLabels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
-
-const dimensionColors: Record<string, string> = {
-  health: 'var(--dim-health)',
-  career: 'var(--dim-career)',
-  finance: 'var(--dim-finance)',
-  learning: 'var(--dim-learning)',
-  relationship: 'var(--dim-relationship)',
-  life: 'var(--dim-life)',
-  hobby: 'var(--dim-hobby)',
-  growth: 'var(--dim-growth)',
-};
+const selectableDimensions = SELECTABLE_DIMENSIONS;
 
 const statusLabels: Record<string, string> = {
   pending: '待办',
@@ -389,7 +363,7 @@ const typeLabels: Record<string, string> = {
 };
 
 function dimensionColor(dimension: string) {
-  return dimensionColors[dimension] || 'var(--signal)';
+  return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
 }
 
 async function loadRelatedWorkerTasks(sourceNoteId: string) {

@@ -34,6 +34,7 @@ vi.mock('../utils/crypto', () => ({
 }));
 
 import NoteDetail from './NoteDetail.vue';
+import { SELECTABLE_DIMENSIONS, getDimensionLabel } from '../utils/dimensions';
 
 function createNote(overrides: Partial<Note> = {}): Note {
   return {
@@ -125,6 +126,32 @@ describe('NoteDetail', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('renders note dimension labels and worker dimension options from the shared helper', async () => {
+    const wrapper = mount(NoteDetail, {
+      props: { noteId: 'note-1.md' },
+      global: {
+        stubs: {
+          Teleport: false,
+          PrivacyMask: { template: '<div><slot /></div>' },
+          WorkerTaskDetail: true,
+          WorkerTaskCard: workerTaskCardStub(),
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('学习');
+    const dimensionSelect = document.body.querySelector('.worker-field select');
+    expect(dimensionSelect).toBeTruthy();
+    const dimensionOptions = dimensionSelect?.querySelectorAll('option');
+    const dimensionTexts = Array.from(dimensionOptions ?? []).map((option) => option.textContent?.trim() ?? '');
+    expect(dimensionTexts).toEqual(SELECTABLE_DIMENSIONS.map((dimension) => getDimensionLabel(dimension.value)));
+
+    wrapper.unmount();
   });
 
   it('renders latest persona snapshot for the current note', async () => {

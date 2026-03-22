@@ -52,34 +52,13 @@
 </template>
 
 <script setup lang="ts">
-import type { DimensionStat } from '@lifeos/shared';
+import type { DimensionStat, SelectableDimension } from '@lifeos/shared';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 defineProps<{ stats: DimensionStat[] }>();
 
-const labels: Record<string, string> = {
-  health: '健康',
-  career: '事业',
-  finance: '财务',
-  learning: '学习',
-  relationship: '关系',
-  life: '生活',
-  hobby: '兴趣',
-  growth: '成长',
-};
-
-const colors: Record<string, string> = {
-  health: 'var(--dim-health)',
-  career: 'var(--dim-career)',
-  finance: 'var(--dim-finance)',
-  learning: 'var(--dim-learning)',
-  relationship: 'var(--dim-relationship)',
-  life: 'var(--dim-life)',
-  hobby: 'var(--dim-hobby)',
-  growth: 'var(--dim-growth)',
-};
-
-const dimensionLabel = (dim: string) => labels[dim] || dim;
-const dimensionColor = (dim: string) => colors[dim] || 'var(--signal)';
+const dimensionLabel = (dim: SelectableDimension) => getDimensionLabel(dim);
+const dimensionColor = (dim: SelectableDimension) => getDimensionColor(dim);
 </script>
 
 <style scoped>
