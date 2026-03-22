@@ -1,3 +1,39 @@
+# stats live-refresh fact-source 收口
+
+## 计划
+- [x] 在不覆盖并行 dirty 文件的前提下，沿新的事实源一致性问题推进 StatsView live-refresh 收口。
+- [x] 让 `StatsView.vue` 在索引刷新事件到达时主动重跑当前统计图层，避免图表页停留旧统计结果。
+- [x] 补最小 view focused 回归，锁定 index refresh websocket 事件到达后会重新拉取并渲染四个统计面板。
+- [x] 运行 focused web 验证并在通过后提交。
+
+## 当前执行
+- 已确认当前工作树并行改动仍为：`CLAUDE.md`、`LifeOS/packages/server/config.json`、`lifeonline-claude-worker-v2.sh`、`LifeOS/packages/web/src/components/TimelineTrack.test.ts`。本轮未覆盖这些无关文件。
+- 本轮完成的真实实现：
+  - `LifeOS/packages/web/src/views/StatsView.vue`
+    - 增加对 `ws-update` 的订阅，并在 index refresh 事件到达时主动重跑 `loadAllCharts()`。
+    - 收紧 `loadAllCharts()` 的 batch guard，只有最新一轮统计加载可以回写四个图表和 loading/error 状态。
+    - 修复“StatsView 已打开但索引已刷新，趋势/雷达/月度/标签四块图仍停留旧事实源”的真实主路径错位。
+  - `LifeOS/packages/web/src/views/StatsView.test.ts`
+    - 新增 index refresh 事件会触发四个统计接口重新拉取并渲染新图表内容的回归。
+    - 保留既有 trend stale-request 和 typed error 回归。
+- 这次修的不是再补一个对称测试，而是修复统计主路径中的真实事实源缺口：内容索引已经变化，但图表页不会主动对齐新的统计事实源。
+
+## 本轮选择依据
+- 这是新的事实源一致性问题：StatsView 旧实现只在 mounted 和手动切换趋势窗口时刷新，不响应索引刷新事件。
+- 这属于直接可见的主路径行为缺口，用户修改内容后，dashboard / search 已 live-refresh，但 stats 仍停留旧统计结果，会削弱对分析页的信任。
+- 这条线不是 grouped governance / SettingsView 一类低边际补强，而是统计主路径的事实源收口。
+
+## 本轮验证
+- 已通过：`cd "/home/xionglei/LifeOnline/LifeOS/packages/web" && NODE_OPTIONS="--max-old-space-size=4096" npx vitest run --pool vmThreads src/views/StatsView.test.ts`
+
+## 当前未完成项
+- 本轮改动尚未提交 git commit。
+- 若继续沿同一主线推进，后续可再检查 server/web/shared 是否需要显式区分更细粒度的 stats-refresh contract，而不是统一复用 index refresh 事件，但这还未开始。
+
+## 下一步建议
+- 提交本轮 focused commit，只包含 stats live-refresh fact-source 收口相关文件。
+
+
 # search live-refresh fact-source 收口
 
 ## 计划

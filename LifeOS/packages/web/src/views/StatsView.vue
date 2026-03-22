@@ -89,10 +89,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint } from '@lifeos/shared';
+import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, WsEvent } from '@lifeos/shared';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
 import StateDisplay from '../components/StateDisplay.vue';
+import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import { getDimensionLabel } from '../utils/dimensions';
 
 const trendEl = ref<HTMLElement | null>(null);
@@ -290,8 +291,9 @@ async function loadAllCharts() {
       fetchStatsMonthly(),
       fetchStatsTags(),
     ]);
+    if (trendRequestId !== activeTrendRequestId) return;
     await Promise.all([
-      trendRequestId === activeTrendRequestId ? loadTrend(trendData) : Promise.resolve(),
+      loadTrend(trendData),
       loadRadar(radarData),
       loadMonthly(monthlyData),
       loadTags(tagData),
@@ -300,8 +302,16 @@ async function loadAllCharts() {
     if (trendRequestId !== activeTrendRequestId) return;
     error.value = e as Error;
   } finally {
-    loading.value = false;
+    if (trendRequestId === activeTrendRequestId) {
+      loading.value = false;
+    }
   }
+}
+
+function handleWsUpdate(event: Event) {
+  const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  if (!isIndexRefreshEvent(wsEvent)) return;
+  void loadAllCharts();
 }
 
 onMounted(async () => {
@@ -317,12 +327,14 @@ onMounted(async () => {
     charts.forEach((chart) => chart?.resize());
   };
   window.addEventListener('resize', resizeHandler);
+  document.addEventListener('ws-update', handleWsUpdate);
 });
 
 onUnmounted(() => {
   if (resizeHandler) {
     window.removeEventListener('resize', resizeHandler);
   }
+  document.removeEventListener('ws-update', handleWsUpdate);
   charts.forEach((chart) => chart?.dispose());
   charts = [];
 });

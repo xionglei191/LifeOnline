@@ -84,6 +84,48 @@ describe('StatsView', () => {
     });
   });
 
+  it('reloads all stats panels when index refresh events arrive', async () => {
+    apiMocks.fetchStatsTrend
+      .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
+      .mockResolvedValueOnce([{ day: '2026-03-02', total: 4, done: 3 }]);
+    apiMocks.fetchStatsRadar
+      .mockResolvedValueOnce([{ dimension: 'life', rate: 80 }])
+      .mockResolvedValueOnce([{ dimension: 'growth', rate: 65 }]);
+    apiMocks.fetchStatsMonthly
+      .mockResolvedValueOnce([{ month: '2026-03', total: 8, done: 5 }])
+      .mockResolvedValueOnce([{ month: '2026-04', total: 10, done: 7 }]);
+    apiMocks.fetchStatsTags
+      .mockResolvedValueOnce([{ tag: 'focus', count: 3 }])
+      .mockResolvedValueOnce([{ tag: 'health', count: 5 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    document.dispatchEvent(new CustomEvent('ws-update', {
+      detail: { type: 'index-complete' },
+    }));
+    await flushPromises();
+
+    expect(apiMocks.fetchStatsTrend).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsRadar).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsMonthly).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchStatsTags).toHaveBeenCalledTimes(2);
+
+    const trendChart = chartMocks.instances[0];
+    const radarChart = chartMocks.instances[1];
+    const monthlyChart = chartMocks.instances[2];
+    const tagsChart = chartMocks.instances[3];
+
+    expect(trendChart.setOption.mock.calls.at(-1)?.[0]?.xAxis?.data).toEqual(['03-02']);
+    expect(radarChart.setOption.mock.calls.at(-1)?.[0]?.radar?.indicator).toEqual([{ name: '成长', max: 100 }]);
+    expect(monthlyChart.setOption.mock.calls.at(-1)?.[0]?.xAxis?.data).toEqual(['2026-04']);
+    expect(tagsChart.setOption.mock.calls.at(-1)?.[0]?.yAxis?.data).toEqual(['health']);
+
+    wrapper.unmount();
+  });
+
   it('surfaces typed API errors instead of rendering empty charts', async () => {
     apiMocks.fetchStatsTrend.mockRejectedValue(new Error('trend unavailable'));
     apiMocks.fetchStatsRadar.mockResolvedValue([]);
