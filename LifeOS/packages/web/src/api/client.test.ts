@@ -524,6 +524,34 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/notes');
   });
 
+  it('sends typed note write-back contracts from shared response shapes', async () => {
+    const createResponse: CreateNoteResponse = {
+      success: true,
+      filePath: '/vault/growth/new-note.md',
+    };
+    const updateResponse: UpdateNoteResponse = {
+      success: true,
+    };
+
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => createResponse })
+      .mockResolvedValueOnce({ ok: true, json: async () => updateResponse }));
+
+    await expect(createNote({ title: 'New note', dimension: 'growth' })).resolves.toEqual(createResponse);
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New note', dimension: 'growth' }),
+    });
+
+    await expect(updateNote('note-1', { title: 'Updated note' })).resolves.toEqual(updateResponse);
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/notes/note-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated note' }),
+    });
+  });
+
   it('surfaces API errors for dashboard, note, index, timeline, calendar, and config fetches', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'dashboard unavailable' }) })
