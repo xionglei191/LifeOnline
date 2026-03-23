@@ -7,7 +7,7 @@
           <h2>把分散的人生事件拉回<span>同一条时间坐标</span>。</h2>
           <p class="hero-summary">
             当前窗口覆盖 {{ spanDays }} 天，共检索到 {{ totalNotes }} 条事件记录，
-            {{ busiestLabel }} 是这段时间最活跃的轨道。
+            {{ busiestLabel }} 有 {{ busiestCount }} 条记录，是这段时间记录最密集的维度。
           </p>
         </div>
 
@@ -15,17 +15,17 @@
           <article class="metric">
             <span class="metric-label">窗口跨度</span>
             <strong>{{ spanDays }}</strong>
-            <span class="metric-meta">days in view</span>
+            <span class="metric-meta">当前视图覆盖天数</span>
           </article>
           <article class="metric">
             <span class="metric-label">总事件数</span>
             <strong>{{ totalNotes }}</strong>
-            <span class="metric-meta">tracked notes</span>
+            <span class="metric-meta">窗口内检索到的记录</span>
           </article>
           <article class="metric accent">
-            <span class="metric-label">最繁忙维度</span>
+            <span class="metric-label">记录最密集维度</span>
             <strong>{{ busiestLabel }}</strong>
-            <span class="metric-meta">{{ busiestCount }} items</span>
+            <span class="metric-meta">{{ busiestCount }} 条记录</span>
           </article>
         </div>
       </section>

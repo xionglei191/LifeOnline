@@ -57,6 +57,42 @@ describe('TimelineView', () => {
     vi.useRealTimers();
   });
 
+  it('projects timeline density facts instead of generic track activity copy on the hero path', async () => {
+    const load = vi.fn();
+    composableMocks.useTimeline.mockReturnValue({
+      data: ref({
+        ...timelineData,
+        tracks: [
+          { dimension: 'life', notes: [{ id: 'n1' }, { id: 'n2' }] as any[] },
+          { dimension: 'growth', notes: [{ id: 'n3' }] as any[] },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+
+    const wrapper = mount(TimelineView, {
+      global: {
+        stubs: {
+          TimelineTrack: true,
+          NoteDetail: true,
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('记录最密集维度');
+    expect(wrapper.text()).toContain('生活 有 2 条记录，是这段时间记录最密集的维度');
+    expect(wrapper.text()).toContain('当前视图覆盖天数');
+    expect(wrapper.text()).toContain('窗口内检索到的记录');
+    expect(wrapper.text()).not.toContain('days in view');
+    expect(wrapper.text()).not.toContain('tracked notes');
+    expect(wrapper.text()).not.toContain('items');
+  });
+
   it('reloads the timeline when the window changes instead of pinning the initial mount state', async () => {
     const load = vi.fn();
     composableMocks.useTimeline.mockReturnValue({

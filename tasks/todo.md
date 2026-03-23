@@ -1,13 +1,13 @@
-# 当前轮：Stats hero fact-source naming 收口
+# 当前轮：Timeline hero density fact projection 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/views/StatsView.vue` 顶部 hero copy 仍用 `生命信号` / `Balance` / `panels` 这类泛化表达，但底层真实数据其实是完成趋势、完成率雷达、月度完成对比和标签频率，属于事实源命名漂移。
-- [x] 在 `LifeOS/packages/web/src/views/StatsView.vue` 把 hero summary 和 metric 文案改成直接指向完成节律、分析图层和当前焦点完成率，让 Stats 主路径对当前图表实际含义表达更准确。
-- [x] 在 `LifeOS/packages/web/src/views/StatsView.test.ts` 增加 focused 回归，锁定 hero 会渲染新的完成率语义文案，并防止 `panels` 这类旧文案回归。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/StatsView.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/views/TimelineView.vue` hero 区仍把 busiest dimension 写成“最活跃的轨道”，同时 metric meta 还残留 `days in view` / `tracked notes` / `items` 这类泛化英文文案，无法直接表达当前窗口里真实的记录密度事实。
+- [x] 在 `LifeOS/packages/web/src/views/TimelineView.vue` 把 hero summary 改成直接暴露 `{{ busiestCount }} 条记录` 和“记录最密集维度”，并把 metric meta 改成中文事实描述，让 timeline 主路径更准确表达当前窗口统计。
+- [x] 在 `LifeOS/packages/web/src/views/TimelineView.test.ts` 增加 focused 回归，锁定 hero 会渲染记录密度事实，并防止旧英文泛化文案回归。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/TimelineView.test.ts`。
 
 ## 结果
-- Stats 页顶部文案现在与实际图表数据类型更一致，不再用抽象“生命信号”掩盖真实完成率/对比事实。
-- stats、dashboard、dimension 三条主路径对“完成率”这一共享语义继续收口。
+- Timeline 页主路径现在直接说明哪个维度记录最密集以及具体记录数，不再让“活跃轨道”这种泛化说法承载统计事实。
+- timeline / stats / dashboard / dimension 四条主路径对统计语义的表达继续向直接事实收口。
 
 ---
