@@ -1,38 +1,27 @@
-import path from 'path';
-import fs from 'fs/promises';
-import matter from 'gray-matter';
-
-// WorkerTasks 是当前任务执行内核的集中实现：
-// - 统一持久化 worker task 记录与状态流转
-// - 按 taskType 路由到本地 LifeOS 或外部 OpenClaw 执行
-// - 将最终业务结果尽量写回 Vault，再通过索引同步到 SQLite
-// 这里是刻意集中而非通用插件框架；后续 taskType 明显增多时再拆分 repository / executor / persistence。
+/**
+ * WorkerTasks — core framework for task creation, CRUD, execution, and lifecycle management.
+ *
+ * Task-type-specific execution logic lives in ./executors/*.ts.
+ * This file handles:
+ * - Task type definitions & input validation
+ * - Task CRUD (create, get, list, update, cancel, retry, clear)
+ * - Execution framework (start, execute, finalize)
+ * - Soul action binding & reintegration
+ */
 import {
   SUPPORTED_WORKER_TASK_TYPES,
   type CreateWorkerTaskRequest,
   type WorkerTask,
   type WorkerTaskInputMap,
   type WorkerTaskListFilters,
-  type WorkerTaskOutputNote,
   type WorkerTaskResultMap,
   type WorkerTaskStatus,
   type WorkerTaskType,
   type WorkerName,
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
-import { loadConfig } from '../config/configManager.js';
-import { createFile, sanitizeNoteFileStem } from '../vault/fileManager.js';
-import { buildWorkerResultFrontmatter, buildClassifiedFrontmatter, buildTaskFrontmatter } from '../vault/frontmatterBuilder.js';
-import { getIndexQueue, broadcastUpdate } from '../index.js';
-import { runOpenClawTask } from '../integrations/openclawClient.js';
-import { classifyNote } from '../ai/classifier.js';
-import { extractTasks } from '../ai/taskExtractor.js';
-import { buildNoteId } from '../indexer/parser.js';
-import { callClaude } from '../ai/aiClient.js';
-import { getEffectivePrompt } from '../ai/promptService.js';
-import { moveFile, readFileContent, buildTargetPath, buildTaskFilePath } from '../vault/fileManager.js';
-import { formatLocalDate, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
-import { getDimensionDirectoryName, getDimensionDisplayLabel, REPORT_DIMENSION_KEYS } from '../utils/dimensions.js';
+import { broadcastUpdate } from '../index.js';
+import { getTodayDateString, getWeekStartDateString } from '../utils/date.js';
 import { createReintegrationRecordInput } from './feedbackReintegration.js';
 import {
   attachWorkerTaskToSoulAction,
@@ -43,7 +32,18 @@ import {
   syncSoulActionFromWorkerTask,
 } from '../soul/soulActions.js';
 import { upsertReintegrationRecord } from '../soul/reintegrationRecords.js';
-import { getPersonaSnapshotBySourceNoteId, upsertPersonaSnapshot } from '../soul/personaSnapshots.js';
+import { getPersonaSnapshotBySourceNoteId } from '../soul/personaSnapshots.js';
+import { buildOutputNote } from './executors/shared.js';
+
+// ── Executor imports ──
+import { runOpenClawTaskExecutor, persistOpenClawResult, summarizeOpenClawResult } from './executors/openclawExecutor.js';
+import { runSummarizeNoteDirect, persistSummarizeNoteResult, summarizeSummarizeNoteResult } from './executors/summarizeNoteExecutor.js';
+import { runClassifyInbox, persistClassifyInboxResult, summarizeClassifyInboxResult } from './executors/classifyInboxExecutor.js';
+import { runExtractTasks, summarizeExtractTasksResult } from './executors/extractTasksExecutor.js';
+import { runUpdatePersonaSnapshot, summarizeUpdatePersonaSnapshotResult } from './executors/personaSnapshotExecutor.js';
+import { runDailyReport, persistDailyReportResult, summarizeDailyReportResult, runWeeklyReport, persistWeeklyReportResult, summarizeWeeklyReportResult } from './executors/reportExecutors.js';
+
+// ── Types ──
 
 interface WorkerTaskRow {
   id: string;
@@ -66,6 +66,8 @@ interface WorkerTaskRow {
 
 const runningTaskControllers = new Map<string, AbortController>();
 
+// ── Validation ──
+
 export class WorkerTaskValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -80,6 +82,8 @@ export function isSupportedWorkerTaskType(value: unknown): value is WorkerTaskTy
 function throwWorkerTaskValidationError(message: string): never {
   throw new WorkerTaskValidationError(message);
 }
+
+// ── Task Type Definitions (input normalization + worker assignment) ──
 
 type WorkerTaskDefinition<T extends WorkerTaskType> = {
   worker: WorkerName;
@@ -148,14 +152,7 @@ function getWorkerTaskDefinition<T extends WorkerTaskType>(taskType: T): WorkerT
   return definition;
 }
 
-function buildOutputNote(filePath: string): WorkerTaskOutputNote {
-  return {
-    id: buildNoteId(filePath),
-    title: path.basename(filePath, path.extname(filePath)),
-    filePath,
-    fileName: path.basename(filePath),
-  };
-}
+// ── Row / ID helpers ──
 
 function rowToWorkerTask(row: WorkerTaskRow): WorkerTask {
   const outputNotePaths = row.output_note_paths ? JSON.parse(row.output_note_paths) : [];
@@ -184,43 +181,7 @@ function buildWorkerTaskId(): string {
   return crypto.randomUUID();
 }
 
-function sanitizeFileName(title: string): string {
-  return sanitizeNoteFileStem(title);
-}
-
-function buildOpenClawMarkdown(result: WorkerTaskResultMap['openclaw_task']): string {
-  const lines = [`# ${result.title}`, '', result.summary, ''];
-  if (result.content) {
-    lines.push(result.content, '');
-  }
-  return `${lines.join('\n').trim()}\n`;
-}
-
-async function persistGeneratedNote(filePath: string, markdown: string): Promise<string[]> {
-  await createFile(filePath, markdown);
-  getIndexQueue()?.enqueue(filePath, 'upsert');
-  return [filePath];
-}
-
-async function persistWorkerGeneratedMarkdownNote(
-  filePath: string,
-  markdownContent: string,
-  frontmatterInput: Parameters<typeof buildWorkerResultFrontmatter>[0],
-): Promise<string[]> {
-  const markdown = matter.stringify(markdownContent, buildWorkerResultFrontmatter(frontmatterInput));
-  return persistGeneratedNote(filePath, markdown);
-}
-
-function getRequiredWorkerNote(noteId: string): any {
-  const db = getDb();
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any;
-  if (!note) throw new Error(`笔记不存在: ${noteId}`);
-  return note;
-}
-
-function getWorkerNoteTitle(note: any): string {
-  return note.title || note.file_name || '未命名笔记';
-}
+// ── Soul Action / Reintegration helpers ──
 
 function ensureTaskCanFinalize(taskId: string): WorkerTask | null {
   const latest = getWorkerTask(taskId);
@@ -246,7 +207,7 @@ function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
 
     upsertReintegrationRecord(reintegrationInput);
   } catch {
-    // Reintegration remains best-effort; PR5 may persist lightweight records but must never break terminal task completion.
+    // Reintegration remains best-effort
   }
 }
 
@@ -272,522 +233,7 @@ function bindSoulActionToWorkerTask(task: WorkerTask): void {
   attachWorkerTaskToSoulAction(soulAction.id, task.id, task.updatedAt);
 }
 
-async function persistOpenClawResult(
-  task: WorkerTask<'openclaw_task'>,
-  result: WorkerTaskResultMap['openclaw_task']
-): Promise<string[]> {
-  const config = await loadConfig();
-  const input = task.input as WorkerTaskInputMap['openclaw_task'];
-  const dimensionKey = input.outputDimension || 'learning';
-  const dirName = getDimensionDirectoryName(dimensionKey) || '学习';
-  const date = getTodayDateString();
-  const dir = path.join(config.vaultPath, dirName);
-  const fileName = `${date}-${sanitizeFileName(result.title)}.md`;
-  const filePath = path.join(dir, fileName);
-  const frontmatterInput = {
-    title: result.title,
-    dimension: (dimensionKey as any) || 'learning',
-    type: 'note',
-    date,
-    tags: ['openclaw'],
-    taskId: task.id,
-    sourceNoteId: task.sourceNoteId,
-  };
-
-  return persistWorkerGeneratedMarkdownNote(filePath, buildOpenClawMarkdown(result), frontmatterInput);
-}
-
-function buildSummarizeNoteMarkdown(result: WorkerTaskResultMap['summarize_note']): string {
-  const lines = [`# ${result.title}`, '', `> 原笔记：${result.sourceNoteTitle}`, '', result.summary, ''];
-
-  if (result.keyPoints.length) {
-    lines.push('## 要点', '');
-    result.keyPoints.forEach((point) => {
-      lines.push(`- ${point}`);
-    });
-    lines.push('');
-  }
-
-  return `${lines.join('\n').trim()}\n`;
-}
-
-async function persistSummarizeNoteResult(
-  task: WorkerTask<'summarize_note'>,
-  result: WorkerTaskResultMap['summarize_note']
-): Promise<string[]> {
-  const config = await loadConfig();
-  const date = getTodayDateString();
-  const dir = path.join(config.vaultPath, '学习');
-  const fileName = `${date}-${sanitizeFileName(result.title)}.md`;
-  const filePath = path.join(dir, fileName);
-  return persistWorkerGeneratedMarkdownNote(filePath, buildSummarizeNoteMarkdown(result), {
-    title: result.title,
-    dimension: 'learning',
-    type: 'note',
-    date,
-    tags: ['lifeos', 'summary'],
-    taskId: task.id,
-    sourceNoteId: task.sourceNoteId,
-    source: 'auto',
-    worker: 'lifeos',
-    workerTaskType: 'summarize_note',
-  });
-}
-
-function summarizeOpenClawResult(result: WorkerTaskResultMap['openclaw_task']): string {
-  return `OpenClaw 任务完成：${result.title}`;
-}
-
-function summarizeSummarizeNoteResult(result: WorkerTaskResultMap['summarize_note']): string {
-  return `已生成摘要：${result.title}`;
-}
-
-// ── summarize_note (direct Claude) ──
-
-async function runSummarizeNoteDirect(
-  task: WorkerTask<'summarize_note'>
-): Promise<WorkerTaskResultMap['summarize_note']> {
-  const input = task.input as WorkerTaskInputMap['summarize_note'];
-  const note = getRequiredWorkerNote(input.noteId);
-
-  const content = note.content || '';
-  const noteTitle = getWorkerNoteTitle(note);
-
-  const prompt = getEffectivePrompt('summarize_note')
-    .replace('{title}', noteTitle)
-    .replace('{content}', content.slice(0, 4000))
-    .replace('{language}', input.language || 'zh')
-    .replace(/\{maxLength\}/g, String(input.maxLength || 500));
-
-  const response = await callClaude(prompt, 1024);
-
-  // Parse JSON response
-  const cleaned = response.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim();
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    // If JSON parse fails, use the raw response as summary
-    return {
-      title: `${noteTitle} 摘要`,
-      summary: response.trim(),
-      keyPoints: [],
-      sourceNoteTitle: noteTitle,
-    };
-  }
-
-  return {
-    title: parsed.title || `${noteTitle} 摘要`,
-    summary: parsed.summary || response.trim(),
-    keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-    sourceNoteTitle: noteTitle,
-  };
-}
-
-// ── classify_inbox ──
-
-async function runClassifyInbox(
-  task: WorkerTask<'classify_inbox'>
-): Promise<WorkerTaskResultMap['classify_inbox']> {
-  const config = await loadConfig();
-  const inboxPath = path.join(config.vaultPath, '_Inbox');
-  const queue = getIndexQueue();
-
-  let entries: string[];
-  try {
-    const dirEntries = await fs.readdir(inboxPath);
-    entries = dirEntries.filter(f => f.endsWith('.md'));
-  } catch {
-    return { title: 'Inbox 分类报告', summary: '_Inbox 目录为空或不存在', classified: 0, failed: 0, items: [] };
-  }
-
-  if (!entries.length) {
-    return { title: 'Inbox 分类报告', summary: '_Inbox 中没有待分类文件', classified: 0, failed: 0, items: [] };
-  }
-
-  const items: WorkerTaskResultMap['classify_inbox']['items'] = [];
-  let classified = 0;
-  let failed = 0;
-  const date = getTodayDateString();
-  const db = getDb();
-
-  for (const fileName of entries) {
-    const filePath = path.join(inboxPath, fileName);
-    try {
-      const raw = await readFileContent(filePath);
-      const parsed = matter(raw);
-      const content = parsed.content || raw;
-
-      // Check if this file was previously classified (re-synced from mobile after edit)
-      const existing = db.prepare(
-        "SELECT file_path FROM notes WHERE inbox_origin = ? AND dimension != '_inbox'"
-      ).get(fileName) as { file_path: string } | undefined;
-
-      if (!existing) {
-        // Fresh file — classify normally
-        const classification = await classifyNote(content);
-        const newData = buildClassifiedFrontmatter(parsed.data, classification, 'auto');
-        newData.inbox_origin = fileName;
-        const newFileContent = matter.stringify(parsed.content, newData);
-
-        const targetPath = buildTargetPath(config.vaultPath, classification.dimension, classification.title || fileName.replace('.md', ''), date);
-        await fs.writeFile(filePath, newFileContent, 'utf-8');
-        if (targetPath !== filePath) {
-          await moveFile(filePath, targetPath);
-        }
-        queue?.enqueue(targetPath, 'upsert');
-
-        // Extract tasks from the note
-        try {
-          const tasks = await extractTasks(content);
-          for (const t of tasks) {
-            const taskPath = buildTaskFilePath(config.vaultPath, t.dimension, t.title, date);
-            const taskContent = buildTaskFrontmatter(t, date);
-            await createFile(taskPath, taskContent);
-            queue?.enqueue(taskPath, 'upsert');
-          }
-        } catch { /* task extraction is best-effort */ }
-
-        items.push({ file: fileName, dimension: classification.dimension, type: classification.type, success: true });
-        classified++;
-      } else {
-        // File was previously classified — update the classified version with new content, then remove from _Inbox
-        const classifiedPath = existing.file_path;
-        try {
-          const classifiedRaw = await readFileContent(classifiedPath);
-          const classifiedParsed = matter(classifiedRaw);
-          // Keep the classified frontmatter, update content and timestamp
-          const mergedData = { ...classifiedParsed.data, updated: new Date().toISOString() };
-          const mergedContent = matter.stringify(parsed.content, mergedData);
-          await fs.writeFile(classifiedPath, mergedContent, 'utf-8');
-          queue?.enqueue(classifiedPath, 'upsert');
-        } catch {
-          // Classified file gone — re-classify as fresh
-          const classification = await classifyNote(content);
-          const newData = buildClassifiedFrontmatter(parsed.data, classification, 'auto');
-          newData.inbox_origin = fileName;
-          const newFileContent = matter.stringify(parsed.content, newData);
-          const targetPath = buildTargetPath(config.vaultPath, classification.dimension, classification.title || fileName.replace('.md', ''), date);
-          await fs.writeFile(filePath, newFileContent, 'utf-8');
-          if (targetPath !== filePath) {
-            await moveFile(filePath, targetPath);
-          }
-          queue?.enqueue(targetPath, 'upsert');
-          items.push({ file: fileName, dimension: classification.dimension, type: classification.type, success: true });
-          classified++;
-          continue;
-        }
-
-        // Delete the _Inbox copy
-        await fs.unlink(filePath);
-        queue?.enqueue(filePath, 'delete');
-        items.push({ file: fileName, dimension: 'merged', type: 'update', success: true });
-        classified++;
-      }
-    } catch (err: any) {
-      items.push({ file: fileName, dimension: '', type: '', success: false, error: err?.message || String(err) });
-      failed++;
-    }
-  }
-
-  const summary = `已分类 ${classified} 个文件${failed > 0 ? `，${failed} 个失败` : ''}`;
-  return { title: `Inbox 分类报告 ${date}`, summary, classified, failed, items };
-}
-
-async function persistClassifyInboxResult(
-  task: WorkerTask<'classify_inbox'>,
-  result: WorkerTaskResultMap['classify_inbox']
-): Promise<string[]> {
-  const config = await loadConfig();
-  const date = getTodayDateString();
-  const dir = path.join(config.vaultPath, '_Daily');
-  const fileName = `${date}-inbox-分类报告.md`;
-  const filePath = path.join(dir, fileName);
-
-  const lines = [`# ${result.title}`, '', result.summary, ''];
-  if (result.items.length) {
-    lines.push('## 分类详情', '');
-    for (const item of result.items) {
-      if (item.success) {
-        lines.push(`- ✅ ${item.file} → ${item.dimension}/${item.type}`);
-      } else {
-        lines.push(`- ❌ ${item.file}: ${item.error}`);
-      }
-    }
-    lines.push('');
-  }
-
-  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
-    title: result.title,
-    dimension: 'growth',
-    type: 'review',
-    date,
-    tags: ['lifeos', 'classify_inbox'],
-    taskId: task.id,
-    source: 'auto',
-    worker: 'lifeos',
-    workerTaskType: 'classify_inbox',
-  });
-}
-
-function summarizeClassifyInboxResult(result: WorkerTaskResultMap['classify_inbox']): string {
-  return result.summary;
-}
-
-// ── extract_tasks ──
-
-async function runExtractTasks(
-  task: WorkerTask<'extract_tasks'>
-): Promise<WorkerTaskResultMap['extract_tasks']> {
-  const input = task.input as WorkerTaskInputMap['extract_tasks'];
-  const note = getRequiredWorkerNote(input.noteId);
-
-  const tasks = await extractTasks(note.content || '');
-  const sourceNoteTitle = getWorkerNoteTitle(note);
-  if (!tasks.length) {
-    return {
-      title: `${sourceNoteTitle} 行动项提取`,
-      summary: '未发现可创建的行动项',
-      created: 0,
-      sourceNoteTitle,
-      items: [],
-    };
-  }
-
-  const config = await loadConfig();
-  const queue = getIndexQueue();
-  const date = getTodayDateString();
-  const items: WorkerTaskResultMap['extract_tasks']['items'] = [];
-
-  for (const extractedTask of tasks) {
-    const filePath = buildTaskFilePath(config.vaultPath, extractedTask.dimension, extractedTask.title, date);
-    const fileContent = buildTaskFrontmatter(extractedTask, date);
-    await createFile(filePath, fileContent);
-    queue?.enqueue(filePath, 'upsert');
-    items.push({
-      title: extractedTask.title,
-      dimension: extractedTask.dimension,
-      priority: extractedTask.priority,
-      due: extractedTask.due,
-      filePath,
-    });
-  }
-
-  return {
-    title: `${sourceNoteTitle} 行动项提取`,
-    summary: `已创建 ${items.length} 个行动项`,
-    created: items.length,
-    sourceNoteTitle,
-    items,
-  };
-}
-
-function summarizeExtractTasksResult(result: WorkerTaskResultMap['extract_tasks']): string {
-  return result.summary;
-}
-
-function buildPersonaContentPreview(content: string): string {
-  return content.replace(/\s+/g, ' ').trim().slice(0, 280);
-}
-
-async function runUpdatePersonaSnapshot(
-  task: WorkerTask<'update_persona_snapshot'>
-): Promise<WorkerTaskResultMap['update_persona_snapshot']> {
-  const input = task.input as WorkerTaskInputMap['update_persona_snapshot'];
-  const note = getRequiredWorkerNote(input.noteId);
-  const sourceNoteTitle = getWorkerNoteTitle(note);
-  const contentPreview = buildPersonaContentPreview(note.content || '');
-  const summary = contentPreview
-    ? `已更新人格快照：${sourceNoteTitle}`
-    : `已更新人格快照：${sourceNoteTitle}（原笔记内容为空）`;
-  const action = task.sourceNoteId
-    ? getSoulActionByIdentityAndKind({
-      sourceNoteId: task.sourceNoteId,
-      sourceReintegrationId: task.sourceReintegrationId ?? null,
-      actionKind: 'update_persona_snapshot',
-    })
-    : null;
-
-  const snapshot = upsertPersonaSnapshot({
-    sourceNoteId: task.sourceNoteId ?? input.noteId,
-    soulActionId: action?.id ?? null,
-    workerTaskId: task.id,
-    summary,
-    snapshot: {
-      sourceNoteTitle,
-      summary,
-      contentPreview,
-      updatedAt: new Date().toISOString(),
-    },
-  });
-
-  return {
-    title: `${sourceNoteTitle} 人格快照更新`,
-    summary,
-    sourceNoteTitle,
-    snapshotId: snapshot.id,
-    snapshot: snapshot.snapshot,
-  };
-}
-
-function summarizeUpdatePersonaSnapshotResult(result: WorkerTaskResultMap['update_persona_snapshot']): string {
-  return result.summary;
-}
-
-// ── daily_report ──
-
-function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dateEnd?: string): string {
-  const lines: string[] = [];
-  for (const dim of REPORT_DIMENSION_KEYS) {
-    const where = dateEnd ? `dimension = ? AND date BETWEEN ? AND ?` : `dimension = ? AND date = ?`;
-    const params = dateEnd ? [dim, dateFilter, dateEnd] : [dim, dateFilter];
-    const row = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE ${where}`).get(...params) as any;
-    if (row?.total > 0) {
-      lines.push(`- ${getDimensionDisplayLabel(dim)}: ${row.total} 条`);
-    }
-  }
-  return lines.length ? lines.join('\n') : '- 今日暂无记录';
-}
-
-async function runDailyReport(
-  task: WorkerTask<'daily_report'>
-): Promise<WorkerTaskResultMap['daily_report']> {
-  const input = task.input as WorkerTaskInputMap['daily_report'];
-  const date = input.date || getTodayDateString();
-  const db = getDb();
-
-  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date = ?').get(date) as any;
-  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'task' AND status = 'done'").get(date) as any;
-  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'milestone'").get(date) as any;
-
-  const totalNotes = totalRow?.total || 0;
-  const doneTasks = doneRow?.total || 0;
-  const milestones = milestoneRow?.total || 0;
-  const dimensionStats = getDimensionStats(db, date);
-
-  const prompt = getEffectivePrompt('daily_report')
-    .replace('{date}', date)
-    .replace('{dimensionStats}', dimensionStats)
-    .replace('{doneTasks}', String(doneTasks))
-    .replace('{totalNotes}', String(totalNotes))
-    .replace('{milestones}', String(milestones));
-
-  const summary = await callClaude(prompt, 512);
-  const title = `每日回顾 ${date}`;
-
-  return { title, summary: summary.trim(), date, stats: { totalNotes, doneTasks, milestones } };
-}
-
-async function persistDailyReportResult(
-  task: WorkerTask<'daily_report'>,
-  result: WorkerTaskResultMap['daily_report']
-): Promise<string[]> {
-  const config = await loadConfig();
-  const dir = path.join(config.vaultPath, '_Daily');
-  const fileName = `${result.date}-每日回顾.md`;
-  const filePath = path.join(dir, fileName);
-
-  const lines = [
-    `# ${result.title}`,
-    '',
-    result.summary,
-    '',
-    '## 统计',
-    '',
-    `- 新增笔记: ${result.stats.totalNotes}`,
-    `- 完成任务: ${result.stats.doneTasks}`,
-    `- 里程碑: ${result.stats.milestones}`,
-    '',
-  ];
-
-  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
-    title: result.title,
-    dimension: 'growth',
-    type: 'review',
-    date: result.date,
-    tags: ['lifeos', 'daily_report'],
-    taskId: task.id,
-    source: 'auto',
-    worker: 'lifeos',
-    workerTaskType: 'daily_report',
-  });
-}
-
-function summarizeDailyReportResult(result: WorkerTaskResultMap['daily_report']): string {
-  return `${result.date} 日报已生成（${result.stats.totalNotes} 条笔记，${result.stats.doneTasks} 个任务完成）`;
-}
-
-// ── weekly_report ──
-
-async function runWeeklyReport(
-  task: WorkerTask<'weekly_report'>
-): Promise<WorkerTaskResultMap['weekly_report']> {
-  const input = task.input as WorkerTaskInputMap['weekly_report'];
-  const weekStart = input.weekStart || getWeekStartDateString();
-  const weekEnd = getWeekEndDateString(weekStart);
-
-  const db = getDb();
-  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ?').get(weekStart, weekEnd) as any;
-  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'task' AND status = 'done'").get(weekStart, weekEnd) as any;
-  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'milestone'").get(weekStart, weekEnd) as any;
-
-  const totalNotes = totalRow?.total || 0;
-  const doneTasks = doneRow?.total || 0;
-  const milestones = milestoneRow?.total || 0;
-  const dimensionStats = getDimensionStats(db, weekStart, weekEnd);
-
-  const prompt = getEffectivePrompt('weekly_report')
-    .replace('{weekStart}', weekStart)
-    .replace('{weekEnd}', weekEnd)
-    .replace('{dimensionStats}', dimensionStats)
-    .replace('{doneTasks}', String(doneTasks))
-    .replace('{totalNotes}', String(totalNotes))
-    .replace('{milestones}', String(milestones));
-
-  const summary = await callClaude(prompt, 512);
-  const title = `每周回顾 ${weekStart} ~ ${weekEnd}`;
-
-  return { title, summary: summary.trim(), weekStart, weekEnd, stats: { totalNotes, doneTasks, milestones } };
-}
-
-async function persistWeeklyReportResult(
-  task: WorkerTask<'weekly_report'>,
-  result: WorkerTaskResultMap['weekly_report']
-): Promise<string[]> {
-  const config = await loadConfig();
-  const dir = path.join(config.vaultPath, '_Weekly');
-  const fileName = `${result.weekStart}-每周回顾.md`;
-  const filePath = path.join(dir, fileName);
-
-  const lines = [
-    `# ${result.title}`,
-    '',
-    result.summary,
-    '',
-    '## 统计',
-    '',
-    `- 新增笔记: ${result.stats.totalNotes}`,
-    `- 完成任务: ${result.stats.doneTasks}`,
-    `- 里程碑: ${result.stats.milestones}`,
-    '',
-  ];
-
-  return persistWorkerGeneratedMarkdownNote(filePath, `${lines.join('\n').trim()}\n`, {
-    title: result.title,
-    dimension: 'growth',
-    type: 'review',
-    date: result.weekStart,
-    tags: ['lifeos', 'weekly_report'],
-    taskId: task.id,
-    source: 'auto',
-    worker: 'lifeos',
-    workerTaskType: 'weekly_report',
-  });
-}
-
-function summarizeWeeklyReportResult(result: WorkerTaskResultMap['weekly_report']): string {
-  return `${result.weekStart}~${result.weekEnd} 周报已生成（${result.stats.totalNotes} 条笔记，${result.stats.doneTasks} 个任务完成）`;
-}
+// ── CRUD ──
 
 export function normalizeTaskInput(request: CreateWorkerTaskRequest): WorkerTaskInputMap[WorkerTaskType] {
   return getWorkerTaskDefinition(request.taskType).normalizeInput(request.input);
@@ -994,6 +440,8 @@ export function clearFinishedWorkerTasks(): number {
   return result.changes;
 }
 
+// ── Execution Framework ──
+
 export function startWorkerTaskExecution(taskId: string): void {
   queueMicrotask(() => {
     executeWorkerTask(taskId).catch((error) => {
@@ -1014,7 +462,7 @@ type WorkerTaskExecutionRegistry = {
 
 const workerTaskExecutionRegistry: WorkerTaskExecutionRegistry = {
   openclaw_task: {
-    run: (task, signal) => runOpenClawTask(task.input, { signal }),
+    run: (task, signal) => runOpenClawTaskExecutor(task, signal),
     summarize: summarizeOpenClawResult,
     getOutputNotePaths: (task, result) => persistOpenClawResult(task, result),
   },
