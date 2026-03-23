@@ -433,6 +433,48 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('生活 是当前最需要投入的维度');
   });
 
+  it('projects completion-rate and progress facts onto the hero signal band', async () => {
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref({
+        ...dashboardData,
+        dimensionStats: [
+          { dimension: 'life', total: 6, pending: 0, in_progress: 0, done: 6, health_score: 88 },
+          { dimension: 'growth', total: 5, pending: 2, in_progress: 2, done: 1, health_score: 20 },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      load: vi.fn(),
+    });
+    apiMocks.fetchScheduleHealth.mockResolvedValue(scheduleHealth);
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          TodayTodos: true,
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('完成率 88%');
+    expect(wrapper.text()).toContain('完成率 20%');
+    expect(wrapper.text()).toContain('活跃 4 项 · 完成 1/5');
+  });
+
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),

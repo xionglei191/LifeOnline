@@ -1,13 +1,13 @@
-# 当前轮：Today todos recency visibility 收口
+# 当前轮：Dashboard signal band fact projection 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/components/TodayTodos.vue` 虽然 shared `Note` contract 已提供 `updated`，但 dashboard 主路径的今日任务卡片仍看不到最近更新时间，导致用户无法分辨当前队列里哪些任务刚被更新过，属于真实的 contract-to-UI 可见性缺口。
-- [x] 在 `LifeOS/packages/web/src/components/TodayTodos.vue` 补充 `updated` 的本地化时间展示，让今日任务卡片直接暴露 recency，同时保留现有 priority / due / status 投射不变。
-- [x] 在 `LifeOS/packages/web/src/components/TodayTodos.test.ts` 增加 focused 回归，锁定 dashboard todo 会渲染最近更新时间。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/TodayTodos.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/DashboardOverview.vue` 的 hero signal band 仍只展示维度名和裸 `health_score` 数字，和刚收口的 `DimensionHealth` 一样，主路径无法直接判断分数语义，也看不到该维度的 open-work / 完成进度，属于新的 contract-to-UI 投射缺口。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.vue` 把 signal chip 改成明确展示 `完成率 xx%`，并补上 `活跃 x 项 · 完成 done/total`，让 hero summary、signal band、dimension matrix 三处对同一维度事实表达保持一致。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.test.ts` 增加 focused 回归，锁定 signal band 会渲染 completion-rate 标签和 progress facts。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DashboardOverview.test.ts src/components/DimensionHealth.test.ts`。
 
 ## 结果
-- Dashboard 的 today todos 现在能直接显示最近更新时间，主路径更容易判断哪些任务是最新回流或刚刚被处理过。
-- 当前这一轮 todo recency 收口完成后，下一轮可继续找新的非 Settings 主路径 contract / fact-source / stale visibility gap。
+- Dashboard 顶部 signal band 现在不再只暴露语义不明的分数，而是直接解释为完成率并附带 open-work / completion facts。
+- hero、signal band、dimension matrix 对 `DimensionStat` 的主路径表达进一步对齐，降低了用户对同一指标的误读风险。
 
 ---

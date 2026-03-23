@@ -19,9 +19,12 @@
         <div class="card-head">
           <div>
             <div class="name">{{ dimensionLabel(stat.dimension) }}</div>
-            <div class="subline">活跃 {{ stat.pending + stat.in_progress }} 项</div>
+            <div class="subline">活跃 {{ stat.pending + stat.in_progress }} 项 · 完成 {{ stat.done }}/{{ stat.total }}</div>
           </div>
-          <div class="score">{{ stat.health_score }}</div>
+          <div class="score-block">
+            <div class="score-label">完成率</div>
+            <div class="score">{{ stat.health_score }}%</div>
+          </div>
         </div>
 
         <div class="progress-track">
@@ -145,6 +148,19 @@ const dimensionColor = (dim: SelectableDimension) => getDimensionColor(dim);
   margin-top: 4px;
   color: var(--text-muted);
   font-size: 0.82rem;
+}
+
+.score-block {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.score-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .score {

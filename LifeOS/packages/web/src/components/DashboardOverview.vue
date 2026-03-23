@@ -43,11 +43,14 @@
             class="signal-chip"
             :style="{ '--dimension-color': getDimensionColor(stat.dimension) }"
           >
-            <span class="signal-name">{{ getDimensionLabel(stat.dimension) }}</span>
+            <div class="signal-chip-head">
+              <span class="signal-name">{{ getDimensionLabel(stat.dimension) }}</span>
+              <span class="signal-score">完成率 {{ stat.health_score }}%</span>
+            </div>
             <span class="signal-track">
               <span class="signal-fill" :style="{ width: `${stat.health_score}%` }"></span>
             </span>
-            <span class="signal-score">{{ stat.health_score }}</span>
+            <span class="signal-meta">活跃 {{ stat.pending + stat.in_progress }} 项 · 完成 {{ stat.done }}/{{ stat.total }}</span>
           </div>
         </div>
       </section>
@@ -311,17 +314,21 @@ onUnmounted(() => {
 
 .signal-chip {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
-.signal-name,
-.signal-score {
+.signal-chip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.signal-name {
   font-weight: 600;
 }
 
@@ -337,6 +344,18 @@ onUnmounted(() => {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, color-mix(in srgb, var(--dimension-color) 72%, white), var(--dimension-color));
+}
+
+.signal-score {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.signal-meta {
+  color: var(--text-muted);
+  font-size: 0.78rem;
 }
 
 .inbox-banner {
