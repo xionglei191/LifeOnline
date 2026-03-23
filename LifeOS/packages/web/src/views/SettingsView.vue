@@ -233,446 +233,6 @@
     </div>
 
     <div class="settings-card">
-      <h3>外部执行任务</h3>
-      <p class="hint" style="margin-bottom:16px">LifeOS 负责发起任务与落地结果，按需调用 AI 或外部执行器完成。</p>
-
-      <div class="worker-form">
-        <div class="form-group">
-          <label>任务指令</label>
-          <textarea v-model="workerInstruction" rows="3" placeholder="输入自然语言指令，例如：搜索最近一周 AI Agent 领域的重要进展并整理" :disabled="workerSubmitting"></textarea>
-        </div>
-        <div class="form-group">
-          <label>结果归档维度（可选）</label>
-          <select v-model="workerDimension" :disabled="workerSubmitting">
-            <option value="learning">学习</option>
-            <option value="career">事业</option>
-            <option value="finance">财务</option>
-            <option value="health">健康</option>
-            <option value="relationship">关系</option>
-            <option value="life">生活</option>
-            <option value="hobby">兴趣</option>
-            <option value="growth">成长</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="action-row">
-        <button @click="handleCreateWorkerTask" :disabled="workerSubmitting || !workerInstruction.trim()" class="btn-worker">
-          {{ workerSubmitting ? '执行中...' : '执行任务' }}
-        </button>
-        <span v-if="workerSubmitting" class="queue-info">正在执行任务...</span>
-      </div>
-
-      <div v-if="workerMessage" :class="['message', workerMessageType]">{{ workerMessage }}</div>
-
-      <div class="worker-list">
-        <div class="worker-header-row">
-          <h4>最近任务</h4>
-          <div class="worker-header-actions">
-            <select v-model="workerFilterStatus" class="worker-filter" @change="loadWorkerTasks">
-              <option value="">全部状态</option>
-              <option value="pending">等待执行</option>
-              <option value="running">执行中</option>
-              <option value="succeeded">已完成</option>
-              <option value="failed">失败</option>
-              <option value="cancelled">已取消</option>
-            </select>
-            <select v-model="workerFilterTaskType" class="worker-filter" @change="loadWorkerTasks">
-              <option value="">全部任务</option>
-              <option value="openclaw_task">OpenClaw 任务</option>
-              <option value="summarize_note">笔记摘要</option>
-              <option value="classify_inbox">Inbox 自动整理</option>
-              <option value="extract_tasks">提取行动项</option>
-              <option value="update_persona_snapshot">人格快照更新</option>
-              <option value="daily_report">每日回顾</option>
-              <option value="weekly_report">每周回顾</option>
-            </select>
-            <button class="btn-link" @click="loadWorkerTasks">刷新</button>
-            <button class="btn-link btn-clear" @click="handleClearFinishedTasks">清除已结束</button>
-          </div>
-        </div>
-        <div v-if="workerTasks.length">
-          <WorkerTaskCard
-            v-for="task in workerTasks"
-            :key="task.id"
-            :task="task"
-            :busy="workerActionTaskId === task.id"
-            :show-source-note="true"
-            @open-detail="openWorkerTaskDetail"
-            @open-output="openWorkerOutput"
-            @cancel="handleCancelWorkerTask"
-            @retry="handleRetryWorkerTask"
-          >
-            <template #extra-actions>
-              <button
-                v-if="task.outputNotes?.length"
-                type="button"
-                class="wtc-action jump"
-                @click="jumpToSearch(task.outputNotes[0])"
-              >
-                去搜索页查看
-              </button>
-            </template>
-          </WorkerTaskCard>
-        </div>
-        <div v-else class="worker-empty-state">
-          当前筛选下没有任务
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-card reintegration-card">
-      <div class="reintegration-head">
-        <div>
-          <h3>Reintegration Review</h3>
-          <p class="hint reintegration-subtitle">在 settings 中直接复核终态 worker 回流记录，accept 时显示自动规划出的 PR6 promotion actions。</p>
-        </div>
-        <div class="reintegration-head-actions">
-          <select v-model="reintegrationFilterStatus" class="worker-filter" @change="loadReintegrationRecords">
-            <option value="">全部状态</option>
-            <option value="pending_review">待复核</option>
-            <option value="accepted">已接受</option>
-            <option value="rejected">已拒绝</option>
-          </select>
-          <button class="btn-link" @click="loadReintegrationRecords">刷新</button>
-        </div>
-      </div>
-
-      <div class="reintegration-summary-strip">
-        <div class="reintegration-summary-item">
-          <span>待复核</span>
-          <strong>{{ reintegrationStatusSummary.pending_review }}</strong>
-        </div>
-        <div class="reintegration-summary-item">
-          <span>已接受</span>
-          <strong>{{ reintegrationStatusSummary.accepted }}</strong>
-        </div>
-        <div class="reintegration-summary-item">
-          <span>已拒绝</span>
-          <strong>{{ reintegrationStatusSummary.rejected }}</strong>
-        </div>
-      </div>
-
-      <div v-if="reintegrationMessage" :class="['message', reintegrationMessageType]">{{ reintegrationMessage }}</div>
-
-      <div v-if="reintegrationLoading" class="worker-empty-state">加载中...</div>
-      <div v-else-if="reintegrationRecords.length" class="reintegration-list">
-        <article v-for="record in reintegrationRecords" :key="record.id" class="reintegration-item">
-          <div class="reintegration-item-top">
-            <div class="reintegration-item-title-row">
-              <strong>{{ taskTypeLabel(record.taskType) }}</strong>
-              <span class="prompt-status" :class="reintegrationStatusClass(record.reviewStatus)">{{ reintegrationStatusText(record.reviewStatus) }}</span>
-              <span class="worker-pill">{{ formatReintegrationSignalKindLabel(record) }}</span>
-              <span class="worker-pill">强度 {{ formatReintegrationStrengthLabel(record) }}</span>
-            </div>
-            <button class="btn-link" @click="toggleReintegrationExpanded(record.id)">
-              {{ reintegrationExpandedIds.includes(record.id) ? '收起详情' : '展开详情' }}
-            </button>
-          </div>
-
-          <p class="reintegration-summary-text">{{ record.summary }}</p>
-
-          <div class="reintegration-meta-grid">
-            <span>Worker: {{ record.workerTaskId }}</span>
-            <span>Target: {{ formatReintegrationTargetLabel(record) }}</span>
-            <span>创建于 {{ formatTime(record.createdAt) }}</span>
-            <span v-if="record.reviewedAt">复核于 {{ formatTime(record.reviewedAt) }}</span>
-          </div>
-
-          <div v-if="record.taskType === 'extract_tasks' && recordStripRows(record).length" class="reintegration-next-action-strip">
-            <template v-for="row in recordStripRows(record)" :key="`${record.id}-${row.label}`">
-              <span v-if="row.label === '产出行动项'" class="worker-pill">{{ row.label }} {{ row.value }}</span>
-              <span v-else>{{ row.label }}：{{ row.value }}</span>
-            </template>
-          </div>
-
-          <div v-if="recordNoPlanReasonText(record)" class="reintegration-no-plan-reason">
-            {{ recordNoPlanReasonText(record) }}
-          </div>
-
-          <div class="reintegration-reason-row">
-            <input
-              v-model="reintegrationReasonDrafts[record.id]"
-              type="text"
-              class="reintegration-reason-input"
-              placeholder="可选：输入 accept/reject 理由"
-              :disabled="reintegrationActionId === record.id"
-            />
-            <button
-              class="btn-worker"
-              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'pending_review'"
-              @click="handleAcceptReintegration(record)"
-            >
-              {{ reintegrationActionId === record.id ? '处理中...' : '接受并自动规划' }}
-            </button>
-            <button
-              class="btn-cancel"
-              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'pending_review'"
-              @click="handleRejectReintegration(record)"
-            >
-              拒绝
-            </button>
-            <button
-              class="btn-link"
-              :disabled="reintegrationActionId === record.id || record.reviewStatus !== 'accepted'"
-              @click="handlePlanReintegration(record)"
-            >
-              手动补规划
-            </button>
-          </div>
-
-          <div v-if="record.reviewReason" class="reintegration-review-reason">
-            复核理由：{{ record.reviewReason }}
-          </div>
-
-          <div v-if="reintegrationExpandedIds.includes(record.id)" class="reintegration-expanded">
-            <div v-if="record.taskType === 'extract_tasks' && getReintegrationExtractTaskItems(record).length" class="reintegration-evidence-block">
-              <div class="reintegration-section-label">Next-action evidence</div>
-              <div class="reintegration-task-list">
-                <div v-for="item in getReintegrationExtractTaskItems(record)" :key="item.filePath" class="reintegration-task-item">
-                  <div>
-                    <strong>{{ item.title }}</strong>
-                    <div class="reintegration-action-meta">{{ item.dimension }} · {{ item.priority }}<span v-if="item.due"> · due {{ item.due }}</span></div>
-                  </div>
-                  <div class="reintegration-action-meta">{{ item.outputNoteId || item.filePath }}</div>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="record.displaySummary" class="reintegration-evidence-block">
-              <div class="reintegration-section-label">Display summary</div>
-              <div class="reintegration-display-summary">
-                <div v-for="row in recordDisplaySummaryRows(record)" :key="`${row.label}-${row.value}`">{{ row.label }}：{{ row.value }}</div>
-              </div>
-            </div>
-
-            <div class="reintegration-evidence-block">
-              <div class="reintegration-section-label">Evidence</div>
-              <pre>{{ JSON.stringify(record.evidence, null, 2) }}</pre>
-            </div>
-
-            <div v-if="reintegrationPlannedActions[record.id]?.length" class="reintegration-actions-block">
-              <div class="reintegration-section-label">Planned promotion actions</div>
-              <div class="reintegration-actions-list">
-                <div v-for="action in reintegrationPlannedActions[record.id]" :key="action.id" class="reintegration-action-item">
-                  <div>
-                    <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
-                    <div class="reintegration-action-meta">{{ action.id }}</div>
-                    <div v-if="formatSoulActionPromotionSummary(action)" class="reintegration-action-meta">
-                      {{ formatSoulActionPromotionSummary(action) }}
-                    </div>
-                  </div>
-                  <span class="prompt-status default">{{ action.governanceStatus }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div v-else class="worker-empty-state">
-        当前筛选下没有 reintegration records
-      </div>
-    </div>
-
-    <SoulActionGovernancePanel
-      :filter-status="soulActionFilterStatus"
-      :execution-filter="soulActionExecutionFilter"
-      :quick-filter="soulActionGroupQuickFilter"
-      :quick-filter-label="soulActionGroupQuickFilterLabel"
-      :quick-filter-stats="soulActionGroupQuickFilterStats"
-      :group-count="soulActionGroupCount"
-      :groups="soulActionGroups"
-      :summary="soulActionSummary"
-      :loading="soulActionLoading"
-      :message="soulActionMessage"
-      :message-type="soulActionMessageType"
-      :action-id="soulActionActionId"
-      :group-action-id="soulActionGroupActionId"
-      :group-dispatch-id="soulActionGroupDispatchId"
-      :collapsed-group-ids="soulActionCollapsedGroupIds"
-      :task-type-label="taskTypeLabel"
-      :reintegration-status-text="reintegrationStatusText"
-      :promotion-action-label="promotionActionLabel"
-      :soul-action-status-class="soulActionStatusClass"
-      :soul-action-status-text="soulActionStatusText"
-      :format-time="formatTime"
-      @update:filterStatus="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
-      @update:executionFilter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
-      @update:quickFilter="soulActionGroupQuickFilter = $event"
-      @refresh="loadSoulActions"
-      @approve-group="handleApproveSoulActionGroup"
-      @dispatch-group="handleDispatchSoulActionGroup"
-      @toggle-collapsed="toggleSoulActionGroupCollapsed"
-      @approve-action="handleApproveSoulAction"
-      @defer-action="handleDeferSoulAction"
-      @discard-action="handleDiscardSoulAction"
-      @dispatch-action="handleDispatchSoulAction"
-    />
-
-    <PromotionProjectionPanel
-      :event-nodes="eventNodes"
-      :continuity-records="continuityRecords"
-      :loading="projectionLoading"
-      :message="projectionMessage"
-      :message-type="projectionMessageType"
-      :format-time="formatTime"
-      @refresh="loadPromotionProjections"
-    />
-
-    <div class="settings-card">
-      <h3>定时任务</h3>
-      <p class="hint" style="margin-bottom:16px">配置周期性自动执行的任务，如每天定时采集热门新闻。</p>
-
-      <div class="schedule-form">
-        <div class="form-group">
-          <label>名称</label>
-          <input v-model="scheduleLabel" type="text" placeholder="例如：每日新闻采集" :disabled="scheduleSubmitting" />
-        </div>
-        <div class="form-group">
-          <label>任务类型</label>
-          <select v-model="scheduleTaskType" :disabled="scheduleSubmitting">
-            <option value="openclaw_task">OpenClaw 通用任务</option>
-            <option value="summarize_note">笔记摘要</option>
-            <option value="update_persona_snapshot">人格快照更新</option>
-            <option value="classify_inbox">Inbox 自动整理</option>
-            <option value="daily_report">每日回顾</option>
-            <option value="weekly_report">每周回顾</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>执行频率</label>
-          <select v-model="schedulePreset" :disabled="scheduleSubmitting">
-            <option value="0 9 * * *">每天 9:00</option>
-            <option value="0 */12 * * *">每 12 小时</option>
-            <option value="0 9 * * 1-5">工作日 9:00</option>
-            <option value="0 9 * * 1">每周一 9:00</option>
-            <option value="custom">自定义</option>
-          </select>
-        </div>
-        <div v-if="schedulePreset === 'custom'" class="form-group">
-          <label>Cron 表达式</label>
-          <input v-model="scheduleCronCustom" type="text" placeholder="例如：*/5 * * * *" :disabled="scheduleSubmitting" />
-        </div>
-      </div>
-
-      <div v-if="scheduleTaskType === 'openclaw_task'" class="schedule-form" style="margin-top:8px">
-        <div class="form-group">
-          <label>任务指令</label>
-          <textarea v-model="scheduleInstruction" rows="3" placeholder="输入自然语言指令" :disabled="scheduleSubmitting"></textarea>
-        </div>
-        <div class="form-group">
-          <label>结果归档维度（可选）</label>
-          <select v-model="scheduleDimension" :disabled="scheduleSubmitting">
-            <option value="learning">学习</option>
-            <option value="career">事业</option>
-            <option value="finance">财务</option>
-            <option value="health">健康</option>
-            <option value="relationship">关系</option>
-            <option value="life">生活</option>
-            <option value="hobby">兴趣</option>
-            <option value="growth">成长</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="action-row" style="margin-top:12px">
-        <button @click="handleCreateSchedule" :disabled="scheduleSubmitting || !scheduleLabel.trim()" class="btn-worker">
-          {{ scheduleSubmitting ? '创建中...' : '创建定时任务' }}
-        </button>
-      </div>
-
-      <div v-if="scheduleMessage" :class="['message', scheduleMessageType]">{{ scheduleMessage }}</div>
-
-      <div class="worker-list">
-        <h4>定时任务列表</h4>
-        <div v-if="schedules.length">
-          <div v-for="s in schedules" :key="s.id" class="schedule-item">
-            <!-- Edit mode -->
-            <div v-if="editingScheduleId === s.id" class="schedule-edit-form">
-              <div class="schedule-form">
-                <div class="form-group">
-                  <label>名称</label>
-                  <input v-model="editLabel" type="text" />
-                </div>
-                <div class="form-group">
-                  <label>执行频率</label>
-                  <select v-model="editCronPreset">
-                    <option value="0 9 * * *">每天 9:00</option>
-                    <option value="0 */12 * * *">每 12 小时</option>
-                    <option value="0 9 * * 1-5">工作日 9:00</option>
-                    <option value="0 9 * * 1">每周一 9:00</option>
-                    <option value="0 22 * * *">每天 22:00</option>
-                    <option value="custom">自定义</option>
-                  </select>
-                </div>
-                <div v-if="editCronPreset === 'custom'" class="form-group">
-                  <label>Cron 表达式</label>
-                  <input v-model="editCronCustom" type="text" placeholder="例如：*/5 * * * *" />
-                </div>
-              </div>
-              <div class="action-row" style="margin-top:8px">
-                <button class="btn-worker" @click="handleSaveScheduleEdit(s.id)" :disabled="!editLabel.trim()">保存</button>
-                <button class="btn-cancel" @click="editingScheduleId = null">取消</button>
-              </div>
-            </div>
-            <!-- Display mode -->
-            <template v-else>
-            <div class="schedule-item-top">
-              <div class="schedule-info">
-                <span class="schedule-label">{{ s.label }}</span>
-                <span class="worker-pill">{{ taskTypeLabel(s.taskType) }}</span>
-                <span class="worker-pill">{{ s.cronExpression }}</span>
-              </div>
-              <div class="schedule-actions">
-                <button
-                  class="btn-run-now"
-                  :disabled="scheduleRunningId === s.id"
-                  @click="handleRunScheduleNow(s.id)"
-                >
-                  {{ scheduleRunningId === s.id ? '执行中...' : '立即执行' }}
-                </button>
-                <button class="btn-edit-sm" @click="startEditSchedule(s)">编辑</button>
-                <button
-                  class="toggle-btn"
-                  :class="{ active: s.enabled }"
-                  @click="handleToggleSchedule(s)"
-                >
-                  {{ s.enabled ? '已启用' : '已禁用' }}
-                </button>
-                <button class="btn-danger-sm" @click="handleDeleteSchedule(s.id)">删除</button>
-              </div>
-            </div>
-            <div class="schedule-meta">
-              <span v-if="s.lastRunAt">上次执行: {{ formatTime(s.lastRunAt) }}</span>
-              <span v-else>尚未执行</span>
-              <span v-if="s.consecutiveFailures" class="schedule-failures">
-                · 连续失败 {{ s.consecutiveFailures }} 次
-              </span>
-            </div>
-            <div v-if="s.lastError" class="schedule-error">{{ s.lastError }}</div>
-            </template>
-          </div>
-        </div>
-        <div v-else class="worker-empty-state">暂无定时任务</div>
-      </div>
-    </div>
-
-    <details class="settings-card manual-task-collapse">
-      <summary class="manual-task-summary">
-        <h3>手动任务入口</h3>
-        <span class="manual-task-badge">补充入口</span>
-      </summary>
-      <p class="hint" style="margin-top:12px;margin-bottom:16px">主入口已统一走 worker task；这里保留一个手动创建 Inbox 整理任务的快捷入口。</p>
-      <div class="action-row">
-        <button @click="handleClassifyInbox" :disabled="classifying" class="btn-ai">
-          {{ classifying ? '创建中...' : '手动整理 Inbox（创建任务）' }}
-        </button>
-        <span v-if="classifying" class="queue-info">正在创建 worker task...</span>
-      </div>
-      <div v-if="aiMessage" :class="['message', aiMessageType]">{{ aiMessage }}</div>
-    </details>
-
-    <div class="settings-card">
       <h3>隐私与安全</h3>
 
       <!-- Privacy mode -->
@@ -776,14 +336,6 @@
       </div>
     </Teleport>
 
-    <Teleport to="body">
-      <NoteDetail v-if="selectedNoteId" :note-id="selectedNoteId" @close="selectedNoteId = null" />
-    </Teleport>
-
-    <Teleport to="body">
-      <WorkerTaskDetail v-if="selectedWorkerTaskId" :task-id="selectedWorkerTaskId" @close="selectedWorkerTaskId = null" />
-    </Teleport>
-
     <div class="settings-card">
       <h3>系统信息</h3>
       <div class="info-row">
@@ -806,27 +358,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import NoteDetail from '../components/NoteDetail.vue';
-import WorkerTaskDetail from '../components/WorkerTaskDetail.vue';
-import WorkerTaskCard from '../components/WorkerTaskCard.vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
-import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
-import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
-
-import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
-import { formatReintegrationSignalKindLabel, formatReintegrationStrengthLabel, formatReintegrationTargetLabel, formatSoulActionKindLabel, formatSoulActionPromotionSummary, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationExtractTaskItems, getReintegrationOutcomeDetailRows, getReintegrationOutcomeNoPlanReason, getReintegrationOutcomeStripRows, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
-import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
-import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import type { PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
+import { useWebSocket } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
-import { buildSoulActionGroups, getSoulActionGroupCount, getSoulActionGroupQuickFilterLabel, getSoulActionGroupQuickFilterStats, type SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
 
-const router = useRouter();
 const { isConnected } = useWebSocket();
 const { privacyMode, pinEnabled, togglePrivacyMode, setupPin, clearPin } = usePrivacy();
 
-// PIN setup
+// ── PIN State ──────────────────────────────────────────
 const showPinSetup = ref(false);
 const newPin = ref('');
 const confirmPin = ref('');
@@ -842,48 +383,20 @@ const securityAnswer = ref('');
 async function handleSetPin() {
   if (newPin.value.length < 4) { pinSetupError.value = 'PIN 至少 4 位'; return; }
   if (newPin.value !== confirmPin.value) { pinSetupError.value = '两次输入不一致'; return; }
-
   const finalQuestion = securityQuestion.value === 'custom' ? customQuestion.value : securityQuestion.value;
   const finalAnswer = securityAnswer.value;
-
-  if (finalQuestion && !finalAnswer) {
-    pinSetupError.value = '请输入密保问题的答案';
-    return;
-  }
-
+  if (finalQuestion && !finalAnswer) { pinSetupError.value = '请输入密保问题的答案'; return; }
   await setupPin(newPin.value, finalQuestion || undefined, finalAnswer || undefined);
-  newPin.value = '';
-  confirmPin.value = '';
-  securityQuestion.value = '';
-  customQuestion.value = '';
-  securityAnswer.value = '';
-  pinSetupError.value = '';
-  showPinSetup.value = false;
+  newPin.value = ''; confirmPin.value = ''; securityQuestion.value = ''; customQuestion.value = ''; securityAnswer.value = ''; pinSetupError.value = ''; showPinSetup.value = false;
   showPinMessage('PIN 已设置' + (finalQuestion ? '（含密保问题）' : ''), 'success');
 }
 
-function confirmClearPin() {
-  showClearConfirm.value = true;
-}
+function confirmClearPin() { showClearConfirm.value = true; }
+function handleClearPin() { clearPin(); showPinSetup.value = false; showClearConfirm.value = false; showPinMessage('PIN 已取消', 'success'); }
+function saveLockTimeout() { localStorage.setItem('pin_timeout', lockTimeout.value); showPinMessage('自动锁定设置已保存', 'success'); }
+function showPinMessage(msg: string, type: 'success' | 'error') { pinMessage.value = msg; pinMessageType.value = type; setTimeout(() => { pinMessage.value = ''; }, 3000); }
 
-function handleClearPin() {
-  clearPin();
-  showPinSetup.value = false;
-  showClearConfirm.value = false;
-  showPinMessage('PIN 已取消', 'success');
-}
-
-function saveLockTimeout() {
-  localStorage.setItem('pin_timeout', lockTimeout.value);
-  showPinMessage('自动锁定设置已保存', 'success');
-}
-
-function showPinMessage(msg: string, type: 'success' | 'error') {
-  pinMessage.value = msg;
-  pinMessageType.value = type;
-  setTimeout(() => { pinMessage.value = ''; }, 3000);
-}
-
+// ── Config / Index State ───────────────────────────────
 const config = ref<Config | null>(null);
 const vaultPath = ref('');
 const saving = ref(false);
@@ -893,6 +406,8 @@ const messageType = ref<'success' | 'error'>('success');
 const indexResult = ref<IndexResult | null>(null);
 const indexStatus = ref<IndexStatus | null>(null);
 const indexErrors = ref<IndexError[]>([]);
+
+// ── AI Provider State ──────────────────────────────────
 const aiProviderSettings = ref<AiProviderSettings | null>(null);
 const aiProviderBaseUrl = ref('');
 const aiProviderModel = ref('');
@@ -904,20 +419,8 @@ const aiProviderMessage = ref('');
 const aiProviderMessageType = ref<'success' | 'error'>('success');
 const aiProviderTestResult = ref<TestAiProviderConnectionResponse | null>(null);
 const aiProviderClearKeyPending = ref(false);
-const classifying = ref(false);
-const aiMessage = ref('');
-const aiMessageType = ref<'success' | 'error'>('success');
-const workerSubmitting = ref(false);
-const workerTasks = ref<WorkerTask[]>([]);
-const workerMessage = ref('');
-const workerMessageType = ref<'success' | 'error'>('success');
-const workerActionTaskId = ref<string | null>(null);
-const selectedNoteId = ref<string | null>(null);
-const selectedWorkerTaskId = ref<string | null>(null);
-const workerInstruction = ref('');
-const workerDimension = ref('learning');
-const workerFilterStatus = ref('');
-const workerFilterTaskType = ref('');
+
+// ── Prompt State ───────────────────────────────────────
 const promptRecords = ref<PromptRecord[]>([]);
 const selectedPromptKey = ref<PromptKey | null>(null);
 const promptDraft = ref('');
@@ -925,59 +428,16 @@ const promptSaving = ref(false);
 const promptMessage = ref('');
 const promptMessageType = ref<'success' | 'error'>('success');
 
-// Schedule state
-const schedules = ref<TaskSchedule[]>([]);
-const reintegrationRecords = ref<ReintegrationRecord[]>([]);
-const reintegrationFilterStatus = ref<'' | ReintegrationRecord['reviewStatus']>('pending_review');
-const reintegrationLoading = ref(false);
-const reintegrationMessage = ref('');
-const reintegrationMessageType = ref<'success' | 'error'>('success');
-const reintegrationActionId = ref<string | null>(null);
-const reintegrationReasonDrafts = ref<Record<string, string>>({});
-const reintegrationPlannedActions = ref<Record<string, SoulAction[]>>({});
-const reintegrationExpandedIds = ref<string[]>([]);
-const soulActions = ref<SoulAction[]>([]);
-const soulActionLoading = ref(false);
-const soulActionMessage = ref('');
-const soulActionMessageType = ref<'success' | 'error'>('success');
-const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending_review');
-const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
-const soulActionActionId = ref<string | null>(null);
-const soulActionGroupActionId = ref<string | null>(null);
-const soulActionGroupDispatchId = ref<string | null>(null);
-const soulActionCollapsedGroupIds = ref<string[]>([]);
-const eventNodes = ref<EventNode[]>([]);
-const continuityRecords = ref<ContinuityRecord[]>([]);
-const projectionLoading = ref(false);
-const projectionMessage = ref('');
-const projectionMessageType = ref<'success' | 'error'>('success');
-const scheduleLabel = ref('');
-const scheduleTaskType = ref<'openclaw_task' | 'summarize_note' | 'classify_inbox' | 'daily_report' | 'weekly_report'>('openclaw_task');
-const schedulePreset = ref('0 9 * * *');
-const scheduleCronCustom = ref('');
-const scheduleInstruction = ref('');
-const scheduleDimension = ref('learning');
-const scheduleSubmitting = ref(false);
-const scheduleMessage = ref('');
-const scheduleMessageType = ref<'success' | 'error'>('success');
-const scheduleRunningId = ref<string | null>(null);
-const editingScheduleId = ref<string | null>(null);
-const editLabel = ref('');
-const editCronPreset = ref('');
-const editCronCustom = ref('');
-
+// ── Computed ───────────────────────────────────────────
 const selectedPrompt = computed(() => promptRecords.value.find(prompt => prompt.key === selectedPromptKey.value) || null);
 const promptValidationError = computed(() => {
-  const prompt = selectedPrompt.value;
-  const content = promptDraft.value.trim();
-  if (!prompt) return '';
-  if (!content) return 'Prompt 内容不能为空';
+  const prompt = selectedPrompt.value; const content = promptDraft.value.trim();
+  if (!prompt) return ''; if (!content) return 'Prompt 内容不能为空';
   const missing = prompt.requiredPlaceholders.filter(placeholder => !content.includes(placeholder));
   return missing.length ? `缺少占位符：${missing.join(', ')}` : '';
 });
 const promptDirty = computed(() => {
-  const prompt = selectedPrompt.value;
-  if (!prompt) return false;
+  const prompt = selectedPrompt.value; if (!prompt) return false;
   return promptDraft.value !== (prompt.overrideContent ?? prompt.defaultContent);
 });
 const canSavePrompt = computed(() => !!selectedPrompt.value && !promptValidationError.value);
@@ -995,2260 +455,220 @@ const aiProviderStatusClass = computed(() => {
 });
 const aiProviderSourceText = computed(() => {
   const source = aiProviderSettings.value?.apiKeySource;
-  if (source === 'database') return '数据库';
-  if (source === 'env') return '环境变量';
-  return '未配置';
+  if (source === 'database') return '数据库'; if (source === 'env') return '环境变量'; return '未配置';
 });
 const aiProviderValidationError = computed(() => {
   if (!aiProviderBaseUrl.value.trim()) return 'Base URL 不能为空';
-  try {
-    const parsed = new URL(aiProviderBaseUrl.value.trim());
-    if (!parsed.protocol.startsWith('http')) {
-      return 'Base URL 必须是 http/https';
-    }
-  } catch {
-    return 'Base URL 必须是合法 URL';
-  }
+  try { const parsed = new URL(aiProviderBaseUrl.value.trim()); if (!parsed.protocol.startsWith('http')) return 'Base URL 必须是 http/https'; } catch { return 'Base URL 必须是合法 URL'; }
   if (!aiProviderModel.value.trim()) return 'Model 不能为空';
   return '';
 });
 const aiProviderDirty = computed(() => {
-  const current = aiProviderSettings.value;
-  if (!current) return false;
-  return aiProviderBaseUrl.value !== current.baseUrl
-    || aiProviderModel.value !== current.model
-    || aiProviderEnabled.value !== current.enabled
-    || !!aiProviderApiKey.value.trim()
-    || aiProviderClearKeyPending.value;
+  const current = aiProviderSettings.value; if (!current) return false;
+  return aiProviderBaseUrl.value !== current.baseUrl || aiProviderModel.value !== current.model || aiProviderEnabled.value !== current.enabled || !!aiProviderApiKey.value.trim() || aiProviderClearKeyPending.value;
 });
-const reintegrationStatusSummary = computed(() => {
-  return reintegrationRecords.value.reduce((acc, record) => {
-    acc[record.reviewStatus] += 1;
-    return acc;
-  }, {
-    pending_review: 0,
-    accepted: 0,
-    rejected: 0,
-  } as Record<ReintegrationRecord['reviewStatus'], number>);
-});
-const acceptedProjectionSourceReintegrationIds = ref<string[]>([]);
-const activeProjectionSourceReintegrationIds = computed(() => {
-  const plannedIds = Object.entries(reintegrationPlannedActions.value)
-    .filter(([, actions]) => actions.some((action) => action.actionKind === 'create_event_node' || action.actionKind === 'promote_event_node' || action.actionKind === 'promote_continuity_record'))
-    .map(([recordId]) => recordId);
-  return [...new Set([...acceptedProjectionSourceReintegrationIds.value, ...plannedIds])];
-});
-const soulActionSummary = computed(() => {
-  return soulActions.value.reduce((acc, action) => {
-    acc.pendingReview += action.governanceStatus === 'pending_review' ? 1 : 0;
-    acc.approved += action.governanceStatus === 'approved' ? 1 : 0;
-    acc.dispatched += action.executionStatus === 'succeeded' ? 1 : 0;
-    return acc;
-  }, {
-    pendingReview: 0,
-    approved: 0,
-    dispatched: 0,
-  });
-});
-const soulActionGroupQuickFilter = ref<SoulActionGroupQuickFilter>('all');
-const soulActionGroupQuickFilterLabel = computed(() => getSoulActionGroupQuickFilterLabel(soulActionGroupQuickFilter.value));
-const soulActionGroupQuickFilterStats = computed(() => getSoulActionGroupQuickFilterStats(
-  soulActions.value,
-  reintegrationRecords.value,
-  soulActionGroupQuickFilter.value,
-));
-const soulActionGroupCount = computed(() => getSoulActionGroupCount(soulActions.value));
-const soulActionGroups = computed(() => buildSoulActionGroups(
-  soulActions.value,
-  reintegrationRecords.value,
-  soulActionGroupQuickFilter.value,
-));
 
-async function loadStatus() {
-  try {
-    indexStatus.value = await fetchIndexStatus();
-    indexErrors.value = await fetchIndexErrors();
-  } catch (_) { /* ignore */ }
-}
-
-async function loadWorkerTasks() {
-  try {
-    workerTasks.value = await fetchWorkerTasks(8, {
-      status: (workerFilterStatus.value || undefined) as any,
-      taskType: (workerFilterTaskType.value || undefined) as any,
-    });
-  } catch (_) { /* ignore */ }
-}
-
-async function loadSchedules() {
-  try {
-    schedules.value = await fetchTaskSchedules();
-  } catch (_) { /* ignore */ }
-}
-
-async function loadReintegrationRecords(options?: { preserveMessage?: boolean }) {
-  reintegrationLoading.value = true;
-  if (!options?.preserveMessage) {
-    reintegrationMessage.value = '';
-  }
-  try {
-    const [filteredRecords, acceptedProjectionRecords] = await Promise.all([
-      fetchReintegrationRecords({ reviewStatus: reintegrationFilterStatus.value || undefined }),
-      fetchReintegrationRecords({ reviewStatus: 'accepted' }),
-    ]);
-    reintegrationRecords.value = filteredRecords;
-    acceptedProjectionSourceReintegrationIds.value = acceptedProjectionRecords.map((record) => record.id);
-  } catch (e: any) {
-    reintegrationMessage.value = e.message || '加载 reintegration records 失败';
-    reintegrationMessageType.value = 'error';
-  } finally {
-    reintegrationLoading.value = false;
-  }
-}
-
-async function loadSoulActions(options?: { preserveMessage?: boolean }) {
-  soulActionLoading.value = true;
-  if (!options?.preserveMessage) {
-    soulActionMessage.value = '';
-  }
-  try {
-    soulActions.value = await fetchSoulActions({
-      governanceStatus: soulActionFilterStatus.value || undefined,
-      executionStatus: soulActionExecutionFilter.value || undefined,
-    });
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '加载 soul actions 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionLoading.value = false;
-  }
-}
-
-async function loadPromotionProjections(options?: { preserveMessage?: boolean }) {
-  projectionLoading.value = true;
-  if (!options?.preserveMessage) {
-    projectionMessage.value = '';
-  }
-  try {
-    const sourceReintegrationIds = activeProjectionSourceReintegrationIds.value;
-    const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodeProjectionList(sourceReintegrationIds),
-      fetchContinuityProjectionList(sourceReintegrationIds),
-    ]);
-
-    const projectionErrors: string[] = [];
-
-    if (eventNodeResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(eventNodeResult.value.filters.sourceReintegrationIds);
-      eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
-        serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId)
-      ));
-    } else {
-      eventNodes.value = [];
-      projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
-    }
-
-    if (continuityResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(continuityResult.value.filters.sourceReintegrationIds);
-      continuityRecords.value = continuityResult.value.items.filter((continuity) => (
-        serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId)
-      ));
-    } else {
-      continuityRecords.value = [];
-      projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');
-    }
-
-    if (projectionErrors.length) {
-      projectionMessage.value = projectionErrors.join('；');
-      projectionMessageType.value = 'error';
-    }
-  } finally {
-    projectionLoading.value = false;
-  }
-}
-
+// ── Data Loading ───────────────────────────────────────
+async function loadStatus() { try { indexStatus.value = await fetchIndexStatus(); indexErrors.value = await fetchIndexErrors(); } catch (_) {} }
 async function loadPrompts() {
-  try {
-    promptRecords.value = await fetchAiPrompts();
-    if (!selectedPromptKey.value && promptRecords.value.length) {
-      selectedPromptKey.value = promptRecords.value[0].key;
-    }
-    syncPromptDraft();
-  } catch (e: any) {
-    promptMessage.value = e.message || '加载 Prompt 失败';
-    promptMessageType.value = 'error';
-  }
+  try { promptRecords.value = await fetchAiPrompts(); if (!selectedPromptKey.value && promptRecords.value.length) selectedPromptKey.value = promptRecords.value[0].key; syncPromptDraft(); }
+  catch (e: any) { promptMessage.value = e.message || '加载 Prompt 失败'; promptMessageType.value = 'error'; }
 }
-
 async function loadAiProviderSettings() {
-  try {
-    aiProviderSettings.value = await fetchAiProviderSettings();
-    resetAiProviderDraft();
-  } catch (e: any) {
-    aiProviderMessage.value = e.message || '加载 AI Provider 配置失败';
-    aiProviderMessageType.value = 'error';
-  }
+  try { aiProviderSettings.value = await fetchAiProviderSettings(); resetAiProviderDraft(); }
+  catch (e: any) { aiProviderMessage.value = e.message || '加载 AI Provider 配置失败'; aiProviderMessageType.value = 'error'; }
 }
 
+// ── AI Provider Handlers ───────────────────────────────
 function resetAiProviderDraft() {
   if (!aiProviderSettings.value) return;
-  aiProviderBaseUrl.value = aiProviderSettings.value.baseUrl;
-  aiProviderModel.value = aiProviderSettings.value.model;
-  aiProviderEnabled.value = aiProviderSettings.value.enabled;
-  aiProviderApiKey.value = '';
-  aiProviderClearKeyPending.value = false;
+  aiProviderBaseUrl.value = aiProviderSettings.value.baseUrl; aiProviderModel.value = aiProviderSettings.value.model; aiProviderEnabled.value = aiProviderSettings.value.enabled; aiProviderApiKey.value = ''; aiProviderClearKeyPending.value = false;
 }
-
-function markAiProviderKeyForClear() {
-  aiProviderApiKey.value = '';
-  aiProviderClearKeyPending.value = true;
-}
-
+function markAiProviderKeyForClear() { aiProviderApiKey.value = ''; aiProviderClearKeyPending.value = true; }
 function buildAiProviderPayload() {
-  return {
-    baseUrl: aiProviderBaseUrl.value.trim(),
-    model: aiProviderModel.value.trim(),
-    enabled: aiProviderEnabled.value,
-    ...(aiProviderApiKey.value.trim() ? { apiKey: aiProviderApiKey.value.trim() } : {}),
-    ...(aiProviderClearKeyPending.value ? { clearApiKey: true } : {}),
-  };
+  return { baseUrl: aiProviderBaseUrl.value.trim(), model: aiProviderModel.value.trim(), enabled: aiProviderEnabled.value, ...(aiProviderApiKey.value.trim() ? { apiKey: aiProviderApiKey.value.trim() } : {}), ...(aiProviderClearKeyPending.value ? { clearApiKey: true } : {}) };
 }
-
 async function handleSaveAiProvider() {
-  if (aiProviderValidationError.value) {
-    aiProviderMessage.value = aiProviderValidationError.value;
-    aiProviderMessageType.value = 'error';
-    return;
-  }
-  aiProviderSaving.value = true;
-  aiProviderMessage.value = '';
-  try {
-    aiProviderSettings.value = await updateAiProviderSettings(buildAiProviderPayload());
-    resetAiProviderDraft();
-    aiProviderTestResult.value = null;
-    aiProviderMessage.value = aiProviderEnabled.value ? 'AI Provider 配置已保存并立即生效' : 'AI Provider 已保存为禁用状态';
-    aiProviderMessageType.value = 'success';
-  } catch (e: any) {
-    aiProviderMessage.value = e.message || '保存 AI Provider 配置失败';
-    aiProviderMessageType.value = 'error';
-  } finally {
-    aiProviderSaving.value = false;
-  }
+  if (aiProviderValidationError.value) { aiProviderMessage.value = aiProviderValidationError.value; aiProviderMessageType.value = 'error'; return; }
+  aiProviderSaving.value = true; aiProviderMessage.value = '';
+  try { aiProviderSettings.value = await updateAiProviderSettings(buildAiProviderPayload()); resetAiProviderDraft(); aiProviderTestResult.value = null; aiProviderMessage.value = aiProviderEnabled.value ? 'AI Provider 配置已保存并立即生效' : 'AI Provider 已保存为禁用状态'; aiProviderMessageType.value = 'success'; }
+  catch (e: any) { aiProviderMessage.value = e.message || '保存 AI Provider 配置失败'; aiProviderMessageType.value = 'error'; }
+  finally { aiProviderSaving.value = false; }
 }
-
 async function handleTestAiProvider() {
-  if (aiProviderValidationError.value) {
-    aiProviderMessage.value = aiProviderValidationError.value;
-    aiProviderMessageType.value = 'error';
-    return;
-  }
-  aiProviderTesting.value = true;
-  aiProviderMessage.value = '';
-  aiProviderTestResult.value = null;
-  try {
-    aiProviderTestResult.value = await testAiProviderConnection(buildAiProviderPayload());
-    aiProviderMessage.value = aiProviderTestResult.value.message;
-    aiProviderMessageType.value = aiProviderTestResult.value.success ? 'success' : 'error';
-  } catch (e: any) {
-    aiProviderMessage.value = e.message || '测试连接失败';
-    aiProviderMessageType.value = 'error';
-  } finally {
-    aiProviderTesting.value = false;
-  }
+  if (aiProviderValidationError.value) { aiProviderMessage.value = aiProviderValidationError.value; aiProviderMessageType.value = 'error'; return; }
+  aiProviderTesting.value = true; aiProviderMessage.value = ''; aiProviderTestResult.value = null;
+  try { aiProviderTestResult.value = await testAiProviderConnection(buildAiProviderPayload()); aiProviderMessage.value = aiProviderTestResult.value.message; aiProviderMessageType.value = aiProviderTestResult.value.success ? 'success' : 'error'; }
+  catch (e: any) { aiProviderMessage.value = e.message || '测试连接失败'; aiProviderMessageType.value = 'error'; }
+  finally { aiProviderTesting.value = false; }
 }
+function discardAiProviderChanges() { resetAiProviderDraft(); aiProviderTestResult.value = null; aiProviderMessage.value = '已放弃未保存修改'; aiProviderMessageType.value = 'success'; }
 
-function discardAiProviderChanges() {
-  resetAiProviderDraft();
-  aiProviderTestResult.value = null;
-  aiProviderMessage.value = '已放弃未保存修改';
-  aiProviderMessageType.value = 'success';
-}
-
-function selectPrompt(key: PromptKey) {
-  selectedPromptKey.value = key;
-  syncPromptDraft();
-  promptMessage.value = '';
-}
-
-function syncPromptDraft() {
-  const prompt = selectedPrompt.value;
-  if (!prompt) return;
-  promptDraft.value = prompt.overrideContent ?? prompt.defaultContent;
-}
-
-function promptStatusText(prompt: PromptRecord) {
-  if (!prompt.isOverridden) return '默认';
-  return prompt.enabled ? '已覆盖' : '已禁用覆盖';
-}
-
-function promptStatusClass(prompt: PromptRecord) {
-  if (!prompt.isOverridden) return 'default';
-  return prompt.enabled ? 'overridden' : 'disabled';
-}
-
-function reintegrationStatusText(status: ReintegrationRecord['reviewStatus']) {
-  if (status === 'pending_review') return '待复核';
-  if (status === 'accepted') return '已接受';
-  return '已拒绝';
-}
-
-function reintegrationStatusClass(status: ReintegrationRecord['reviewStatus']) {
-  if (status === 'accepted') return 'overridden';
-  if (status === 'rejected') return 'disabled';
-  return 'warning';
-}
-
-function recordStripRows(record: ReintegrationRecord) {
-  return getReintegrationOutcomeStripRows(record.displaySummary ?? null);
-}
-
-function recordDisplaySummaryRows(record: ReintegrationRecord) {
-  return getReintegrationOutcomeDetailRows(record.displaySummary ?? null);
-}
-
-function recordNoPlanReasonText(record: ReintegrationRecord): string | null {
-  return getReintegrationOutcomeNoPlanReason(record.displaySummary ?? null);
-}
-
-function promotionActionLabel(actionKind: SoulAction['actionKind']) {
-  return formatSoulActionKindLabel(actionKind);
-}
-
-function soulActionStatusClass(action: SoulAction) {
-  if (action.executionStatus === 'succeeded') return 'overridden';
-  if (action.governanceStatus === 'approved') return 'warning';
-  if (action.governanceStatus === 'discarded' || action.executionStatus === 'failed') return 'disabled';
-  return 'default';
-}
-
-function soulActionStatusText(action: SoulAction) {
-  if (action.executionStatus === 'succeeded') return '已执行';
-  if (action.governanceStatus === 'approved') return '已批准';
-  if (action.governanceStatus === 'deferred') return '已延后';
-  if (action.governanceStatus === 'discarded') return '已丢弃';
-  if (action.executionStatus === 'failed') return '执行失败';
-  return '待治理';
-}
-
-function toggleReintegrationExpanded(id: string) {
-  if (reintegrationExpandedIds.value.includes(id)) {
-    reintegrationExpandedIds.value = reintegrationExpandedIds.value.filter((item) => item !== id);
-    return;
-  }
-  reintegrationExpandedIds.value = [...reintegrationExpandedIds.value, id];
-}
-
-function toggleSoulActionGroupCollapsed(id: string) {
-  if (soulActionCollapsedGroupIds.value.includes(id)) {
-    soulActionCollapsedGroupIds.value = soulActionCollapsedGroupIds.value.filter((item) => item !== id);
-    return;
-  }
-  soulActionCollapsedGroupIds.value = [...soulActionCollapsedGroupIds.value, id];
-}
-
-function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' | 'sourceReintegrationId'>): string {
-  return formatSoulActionSourceLabel(action);
-}
-
-function buildDispatchedWorkerTaskSuffix(result: Awaited<ReturnType<typeof dispatchSoulAction>>): string {
-  const workerTaskLabel = result.task ? workerTaskTypeLabel(result.task.taskType) : null;
-  const workerTaskStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
-  const workerTaskWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
-  const workerTaskMeta = [workerTaskLabel, workerTaskStatus, workerTaskWorker].filter(Boolean).join(' · ');
-  return result.result.workerTaskId
-    ? `（Worker Task: ${result.result.workerTaskId}${workerTaskMeta ? ` · ${workerTaskMeta}` : ''}）`
-    : '';
-}
-
-async function handleApproveSoulAction(action: SoulAction) {
-  soulActionActionId.value = action.id;
-  soulActionMessage.value = '';
-  try {
-    await approveSoulAction(action.id, {
-      reason: `Approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
-    });
-    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'approved');
-    soulActionMessageType.value = 'success';
-    await loadSoulActions({ preserveMessage: true });
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '批准 soul action 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionActionId.value = null;
-  }
-}
-
-async function handleApproveSoulActionGroup(group: { groupKey: string; actions: SoulAction[]; pendingCount: number }) {
-  const pendingActions = group.actions.filter((action) => action.governanceStatus === 'pending_review');
-  if (!pendingActions.length) {
-    soulActionMessage.value = '当前分组没有待批准的 soul actions';
-    soulActionMessageType.value = 'error';
-    return;
-  }
-
-  soulActionGroupActionId.value = group.groupKey;
-  soulActionMessage.value = '';
-  try {
-    for (const action of pendingActions) {
-      await approveSoulAction(action.id, {
-        reason: `Batch approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
-      });
-    }
-    const approvedCount = pendingActions.length;
-    const totalCount = group.actions.length;
-    soulActionMessage.value = `已批量批准 ${approvedCount}/${totalCount} 条 soul actions`;
-    soulActionMessageType.value = 'success';
-    await loadSoulActions({ preserveMessage: true });
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '批量批准 soul actions 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionGroupActionId.value = null;
-  }
-}
-
-async function handleDispatchSoulActionGroup(group: { groupKey: string; actions: SoulAction[]; dispatchReadyCount: number }) {
-  const dispatchableActions = group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched');
-  if (!dispatchableActions.length) {
-    soulActionMessage.value = '当前分组没有可派发的 soul actions';
-    soulActionMessageType.value = 'error';
-    return;
-  }
-  if (dispatchableActions.length !== group.actions.length) {
-    soulActionMessage.value = '仅当本组 actions 全部已批准且未派发时才支持组级派发';
-    soulActionMessageType.value = 'error';
-    return;
-  }
-
-  soulActionGroupDispatchId.value = group.groupKey;
-  soulActionMessage.value = '';
-  try {
-    const dispatchResults = [] as Awaited<ReturnType<typeof dispatchSoulAction>>[];
-    for (const action of dispatchableActions) {
-      dispatchResults.push(await dispatchSoulAction(action.id));
-    }
-    const dispatchedCount = dispatchableActions.length;
-    const totalCount = group.actions.length;
-    const lastDispatchResult = dispatchResults.at(-1) ?? null;
-    const workerTaskSuffix = buildDispatchedWorkerTaskSuffix(lastDispatchResult);
-    const lastDispatchMessage = lastDispatchResult ? getDispatchExecutionMessage(lastDispatchResult.result) : null;
-    soulActionMessage.value = lastDispatchMessage
-      ? `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions · ${lastDispatchMessage}${workerTaskSuffix}`
-      : `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions${workerTaskSuffix}`;
-    soulActionMessageType.value = 'success';
-    await loadSoulActions({ preserveMessage: true });
-    await loadReintegrationRecords();
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '批量派发 soul actions 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionGroupDispatchId.value = null;
-  }
-}
-
-async function handleDeferSoulAction(action: SoulAction) {
-  soulActionActionId.value = action.id;
-  soulActionMessage.value = '';
-  try {
-    await deferSoulAction(action.id, {
-      reason: `Deferred from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
-    });
-    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'deferred');
-    soulActionMessageType.value = 'success';
-    await loadSoulActions({ preserveMessage: true });
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '延后 soul action 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionActionId.value = null;
-  }
-}
-
-async function handleDiscardSoulAction(action: SoulAction) {
-  soulActionActionId.value = action.id;
-  soulActionMessage.value = '';
-  try {
-    await discardSoulAction(action.id, {
-      reason: `Discarded from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
-    });
-    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'discarded');
-    soulActionMessageType.value = 'success';
-    await loadSoulActions({ preserveMessage: true });
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '丢弃 soul action 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionActionId.value = null;
-  }
-}
-
-async function handleDispatchSoulAction(action: SoulAction) {
-  soulActionActionId.value = action.id;
-  soulActionMessage.value = '';
-  try {
-    const result = await dispatchSoulAction(action.id);
-    const workerTaskSuffix = buildDispatchedWorkerTaskSuffix(result);
-    soulActionMessage.value = `${getDispatchExecutionMessage(result.result)}${workerTaskSuffix}`;
-    soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
-    await loadSoulActions({ preserveMessage: true });
-    await loadReintegrationRecords();
-  } catch (e: any) {
-    soulActionMessage.value = e.message || '派发 soul action 失败';
-    soulActionMessageType.value = 'error';
-  } finally {
-    soulActionActionId.value = null;
-  }
-}
-
-async function handleAcceptReintegration(record: ReintegrationRecord) {
-  reintegrationActionId.value = record.id;
-  reintegrationMessage.value = '';
-  try {
-    const result = await acceptReintegrationRecord(record.id, {
-      reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
-    });
-    reintegrationPlannedActions.value = {
-      ...reintegrationPlannedActions.value,
-      [record.id]: result.soulActions,
-    };
-    reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
-      ? reintegrationExpandedIds.value
-      : [...reintegrationExpandedIds.value, record.id];
-    reintegrationMessage.value = getReintegrationReviewMessage('accept', result.displaySummary);
-    reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords({ preserveMessage: true });
-    await loadSoulActions();
-    await loadPromotionProjections({ preserveMessage: true });
-  } catch (e: any) {
-    reintegrationMessage.value = e.message || '接受 reintegration record 失败';
-    reintegrationMessageType.value = 'error';
-  } finally {
-    reintegrationActionId.value = null;
-  }
-}
-
-async function handleRejectReintegration(record: ReintegrationRecord) {
-  reintegrationActionId.value = record.id;
-  reintegrationMessage.value = '';
-  try {
-    await rejectReintegrationRecord(record.id, {
-      reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
-    });
-    reintegrationMessage.value = getReintegrationReviewMessage('reject');
-    reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords({ preserveMessage: true });
-  } catch (e: any) {
-    reintegrationMessage.value = e.message || '拒绝 reintegration record 失败';
-    reintegrationMessageType.value = 'error';
-  } finally {
-    reintegrationActionId.value = null;
-  }
-}
-
-async function handlePlanReintegration(record: ReintegrationRecord) {
-  reintegrationActionId.value = record.id;
-  reintegrationMessage.value = '';
-  try {
-    const result = await planReintegrationPromotions(record.id);
-    const soulActions = result.soulActions || [];
-    reintegrationPlannedActions.value = {
-      ...reintegrationPlannedActions.value,
-      [record.id]: soulActions,
-    };
-    reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
-      ? reintegrationExpandedIds.value
-      : [...reintegrationExpandedIds.value, record.id];
-    reintegrationMessage.value = getReintegrationReviewMessage('plan', result.displaySummary);
-    reintegrationMessageType.value = 'success';
-    await loadReintegrationRecords({ preserveMessage: true });
-    await loadSoulActions();
-    await loadPromotionProjections({ preserveMessage: true });
-  } catch (e: any) {
-    reintegrationMessage.value = e.message || '手动规划 promotion actions 失败';
-    reintegrationMessageType.value = 'error';
-  } finally {
-    reintegrationActionId.value = null;
-  }
-}
-
-function discardPromptChanges() {
-  syncPromptDraft();
-  promptMessage.value = '已放弃未保存修改';
-  promptMessageType.value = 'success';
-}
-
+// ── Prompt Handlers ────────────────────────────────────
+function selectPrompt(key: PromptKey) { selectedPromptKey.value = key; syncPromptDraft(); promptMessage.value = ''; }
+function syncPromptDraft() { const prompt = selectedPrompt.value; if (!prompt) return; promptDraft.value = prompt.overrideContent ?? prompt.defaultContent; }
+function promptStatusText(prompt: PromptRecord) { if (!prompt.isOverridden) return '默认'; return prompt.enabled ? '已覆盖' : '已禁用覆盖'; }
+function promptStatusClass(prompt: PromptRecord) { if (!prompt.isOverridden) return 'default'; return prompt.enabled ? 'overridden' : 'disabled'; }
+function discardPromptChanges() { syncPromptDraft(); promptMessage.value = '已放弃未保存修改'; promptMessageType.value = 'success'; }
 async function handleSavePrompt(enabled: boolean) {
-  const prompt = selectedPrompt.value;
-  if (!prompt) return;
-  promptSaving.value = true;
-  promptMessage.value = '';
-  try {
-    await updateAiPrompt(prompt.key, { content: promptDraft.value, enabled });
-    await loadPrompts();
-    selectedPromptKey.value = prompt.key;
-    syncPromptDraft();
-    promptMessage.value = enabled ? 'Prompt override 已保存并启用' : 'Prompt override 已保存但未启用';
-    promptMessageType.value = 'success';
-  } catch (e: any) {
-    promptMessage.value = e.message || '保存 Prompt 失败';
-    promptMessageType.value = 'error';
-  } finally {
-    promptSaving.value = false;
-  }
+  const prompt = selectedPrompt.value; if (!prompt) return; promptSaving.value = true; promptMessage.value = '';
+  try { await updateAiPrompt(prompt.key, { content: promptDraft.value, enabled }); await loadPrompts(); selectedPromptKey.value = prompt.key; syncPromptDraft(); promptMessage.value = enabled ? 'Prompt override 已保存并启用' : 'Prompt override 已保存但未启用'; promptMessageType.value = 'success'; }
+  catch (e: any) { promptMessage.value = e.message || '保存 Prompt 失败'; promptMessageType.value = 'error'; }
+  finally { promptSaving.value = false; }
 }
-
 async function handleTogglePromptEnabled() {
-  const prompt = selectedPrompt.value;
-  if (!prompt || !prompt.isOverridden) return;
-  promptSaving.value = true;
-  promptMessage.value = '';
-  try {
-    await updateAiPrompt(prompt.key, {
-      content: prompt.overrideContent || promptDraft.value,
-      enabled: !prompt.enabled,
-      notes: prompt.notes ?? null,
-    });
-    await loadPrompts();
-    selectedPromptKey.value = prompt.key;
-    syncPromptDraft();
-    promptMessage.value = !prompt.enabled ? 'Override 已启用' : 'Override 已禁用，运行时将回退默认 Prompt';
-    promptMessageType.value = 'success';
-  } catch (e: any) {
-    promptMessage.value = e.message || '切换 override 状态失败';
-    promptMessageType.value = 'error';
-  } finally {
-    promptSaving.value = false;
-  }
+  const prompt = selectedPrompt.value; if (!prompt || !prompt.isOverridden) return; promptSaving.value = true; promptMessage.value = '';
+  try { await updateAiPrompt(prompt.key, { content: prompt.overrideContent || promptDraft.value, enabled: !prompt.enabled, notes: prompt.notes ?? null }); await loadPrompts(); selectedPromptKey.value = prompt.key; syncPromptDraft(); promptMessage.value = !prompt.enabled ? 'Override 已启用' : 'Override 已禁用，运行时将回退默认 Prompt'; promptMessageType.value = 'success'; }
+  catch (e: any) { promptMessage.value = e.message || '切换 override 状态失败'; promptMessageType.value = 'error'; }
+  finally { promptSaving.value = false; }
 }
-
 async function handleResetPrompt() {
-  const prompt = selectedPrompt.value;
-  if (!prompt) return;
-  promptSaving.value = true;
-  promptMessage.value = '';
-  try {
-    await resetAiPrompt(prompt.key);
-    await loadPrompts();
-    selectedPromptKey.value = prompt.key;
-    syncPromptDraft();
-    promptMessage.value = '已恢复默认 Prompt';
-    promptMessageType.value = 'success';
-  } catch (e: any) {
-    promptMessage.value = e.message || '重置 Prompt 失败';
-    promptMessageType.value = 'error';
-  } finally {
-    promptSaving.value = false;
-  }
+  const prompt = selectedPrompt.value; if (!prompt) return; promptSaving.value = true; promptMessage.value = '';
+  try { await resetAiPrompt(prompt.key); await loadPrompts(); selectedPromptKey.value = prompt.key; syncPromptDraft(); promptMessage.value = '已恢复默认 Prompt'; promptMessageType.value = 'success'; }
+  catch (e: any) { promptMessage.value = e.message || '重置 Prompt 失败'; promptMessageType.value = 'error'; }
+  finally { promptSaving.value = false; }
 }
 
-async function handleCreateSchedule() {
-  scheduleSubmitting.value = true;
-  scheduleMessage.value = '';
-  try {
-    const cronExpr = schedulePreset.value === 'custom' ? scheduleCronCustom.value : schedulePreset.value;
-    let input: any = undefined;
-    if (scheduleTaskType.value === 'openclaw_task') {
-      input = { instruction: scheduleInstruction.value.trim(), outputDimension: scheduleDimension.value };
-    } else if (scheduleTaskType.value === 'summarize_note' || scheduleTaskType.value === 'update_persona_snapshot') {
-      throw new Error('该任务类型需要绑定具体笔记，暂不支持在设置页创建定时任务');
-    }
-    // classify_inbox, daily_report, weekly_report use default inputs (no extra config needed)
-    await createTaskSchedule({
-      taskType: scheduleTaskType.value,
-      cronExpression: cronExpr,
-      label: scheduleLabel.value.trim(),
-      input,
-    });
-    scheduleMessage.value = '定时任务已创建';
-    scheduleMessageType.value = 'success';
-    scheduleLabel.value = '';
-    await loadSchedules();
-  } catch (e: any) {
-    scheduleMessage.value = e.message || '创建失败';
-    scheduleMessageType.value = 'error';
-  } finally {
-    scheduleSubmitting.value = false;
-  }
+// ── Config Handlers ────────────────────────────────────
+async function handleSave() {
+  saving.value = true; message.value = ''; indexResult.value = null;
+  try { const result = await updateConfig(vaultPath.value); config.value = { ...config.value!, vaultPath: vaultPath.value }; indexResult.value = result.indexResult; message.value = 'Vault 路径已更新，索引完成'; messageType.value = 'success'; }
+  catch (e: any) { message.value = e.message || '保存失败'; messageType.value = 'error'; }
+  finally { saving.value = false; }
+}
+async function handleReindex() {
+  reindexing.value = true; message.value = ''; indexResult.value = null;
+  try { indexResult.value = await triggerIndex(); message.value = '重新索引完成'; messageType.value = 'success'; await loadStatus(); }
+  catch (e: any) { message.value = e.message || '索引失败'; messageType.value = 'error'; }
+  finally { reindexing.value = false; }
 }
 
-async function handleToggleSchedule(s: TaskSchedule) {
-  try {
-    await updateTaskSchedule(s.id, { enabled: !s.enabled });
-    await loadSchedules();
-  } catch (e: any) {
-    scheduleMessage.value = e.message || '操作失败';
-    scheduleMessageType.value = 'error';
-  }
-}
+function formatTime(ts: string) { return new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); }
 
-async function handleDeleteSchedule(id: string) {
-  try {
-    await deleteTaskSchedule(id);
-    await loadSchedules();
-  } catch (e: any) {
-    scheduleMessage.value = e.message || '删除失败';
-    scheduleMessageType.value = 'error';
-  }
-}
-
-const KNOWN_CRONS = ['0 9 * * *', '0 */12 * * *', '0 9 * * 1-5', '0 9 * * 1', '0 22 * * *'];
-
-function startEditSchedule(s: TaskSchedule) {
-  editingScheduleId.value = s.id;
-  editLabel.value = s.label;
-  if (KNOWN_CRONS.includes(s.cronExpression)) {
-    editCronPreset.value = s.cronExpression;
-    editCronCustom.value = '';
-  } else {
-    editCronPreset.value = 'custom';
-    editCronCustom.value = s.cronExpression;
-  }
-}
-
-async function handleSaveScheduleEdit(id: string) {
-  try {
-    const cronExpr = editCronPreset.value === 'custom' ? editCronCustom.value : editCronPreset.value;
-    await updateTaskSchedule(id, {
-      label: editLabel.value.trim(),
-      cronExpression: cronExpr,
-    });
-    editingScheduleId.value = null;
-    scheduleMessage.value = '定时任务已更新';
-    scheduleMessageType.value = 'success';
-    await loadSchedules();
-  } catch (e: any) {
-    scheduleMessage.value = e.message || '更新失败';
-    scheduleMessageType.value = 'error';
-  }
-}
-
-async function handleRunScheduleNow(id: string) {
-  scheduleRunningId.value = id;
-  scheduleMessage.value = '';
-  try {
-    await runTaskScheduleNow(id);
-    scheduleMessage.value = '已触发立即执行';
-    scheduleMessageType.value = 'success';
-    await loadSchedules();
-    await loadWorkerTasks();
-  } catch (e: any) {
-    scheduleMessage.value = e.message || '执行失败';
-    scheduleMessageType.value = 'error';
-  } finally {
-    scheduleRunningId.value = null;
-  }
-}
+// ── WebSocket ──────────────────────────────────────────
+function handleWsUpdate(_event: Event) { loadStatus(); }
 
 onMounted(async () => {
-  try {
-    config.value = await fetchConfig();
-    vaultPath.value = config.value.vaultPath;
-  } catch (e) {
-    message.value = '加载配置失败';
-    messageType.value = 'error';
-  }
+  try { config.value = await fetchConfig(); vaultPath.value = config.value.vaultPath; }
+  catch (e) { message.value = '加载配置失败'; messageType.value = 'error'; }
   await loadStatus();
-  await loadWorkerTasks();
-  await loadSchedules();
-  await loadReintegrationRecords();
-  await loadSoulActions();
-  await loadPromotionProjections({ preserveMessage: true });
   await loadPrompts();
   await loadAiProviderSettings();
   document.addEventListener('ws-update', handleWsUpdate);
 });
 
-onUnmounted(() => {
-  document.removeEventListener('ws-update', handleWsUpdate);
-});
-
-function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent<WsEvent>).detail;
-  const preserveSoulActionMessage = soulActionMessageType.value === 'success' && Boolean(soulActionMessage.value);
-  const preserveReintegrationMessage = reintegrationMessageType.value === 'success' && Boolean(reintegrationMessage.value);
-  loadStatus();
-  if (wsEvent.type === 'worker-task-updated' || isIndexRefreshEvent(wsEvent)) {
-    loadWorkerTasks();
-  }
-  if (wsEvent.type === 'schedule-updated') {
-    loadSchedules();
-  }
-  if (wsEvent.type === 'worker-task-updated' || wsEvent.type === 'soul-action-updated' || wsEvent.type === 'reintegration-record-updated') {
-    loadReintegrationRecords({ preserveMessage: preserveReintegrationMessage });
-    loadSoulActions({ preserveMessage: preserveSoulActionMessage });
-    if (wsEvent.type === 'soul-action-updated' || wsEvent.type === 'reintegration-record-updated') {
-      loadPromotionProjections({ preserveMessage: true });
-    }
-  }
-  if (wsEvent.type === 'event-node-updated' || wsEvent.type === 'continuity-record-updated') {
-    loadPromotionProjections();
-  }
-}
-
-async function handleSave() {
-  saving.value = true;
-  message.value = '';
-  indexResult.value = null;
-
-  try {
-    const result = await updateConfig(vaultPath.value);
-    config.value = { ...config.value!, vaultPath: vaultPath.value };
-    indexResult.value = result.indexResult;
-    message.value = 'Vault 路径已更新，索引完成';
-    messageType.value = 'success';
-  } catch (e: any) {
-    message.value = e.message || '保存失败';
-    messageType.value = 'error';
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function handleClassifyInbox() {
-  classifying.value = true;
-  aiMessage.value = '';
-  try {
-    const task = await classifyInbox();
-    aiMessage.value = workerTaskActionMessage('created', task);
-    aiMessageType.value = 'success';
-    await loadWorkerTasks();
-  } catch (e: any) {
-    aiMessage.value = e.message || 'Inbox 整理任务创建失败';
-    aiMessageType.value = 'error';
-  } finally {
-    classifying.value = false;
-  }
-}
-
-async function handleCreateWorkerTask() {
-  workerSubmitting.value = true;
-  workerMessage.value = '';
-  try {
-    const task = await createWorkerTask({
-      taskType: 'openclaw_task',
-      input: {
-        instruction: workerInstruction.value.trim(),
-        outputDimension: workerDimension.value,
-      },
-    });
-    workerMessage.value = workerTaskActionMessage('created', task);
-    workerMessageType.value = 'success';
-    await loadWorkerTasks();
-  } catch (e: any) {
-    workerMessage.value = e.message || '关联任务创建失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerSubmitting.value = false;
-  }
-}
-
-async function handleRetryWorkerTask(taskId: string) {
-  workerActionTaskId.value = taskId;
-  workerMessage.value = '';
-  try {
-    const task = await retryWorkerTask(taskId);
-    workerMessage.value = workerTaskActionMessage('retried', task);
-    workerMessageType.value = 'success';
-    await loadWorkerTasks();
-  } catch (e: any) {
-    workerMessage.value = e.message || '任务重试失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerActionTaskId.value = null;
-  }
-}
-
-async function handleCancelWorkerTask(taskId: string) {
-  workerActionTaskId.value = taskId;
-  workerMessage.value = '';
-  try {
-    const task = await cancelWorkerTask(taskId);
-    workerMessage.value = workerTaskActionMessage('cancelled', task);
-    workerMessageType.value = 'success';
-    await loadWorkerTasks();
-  } catch (e: any) {
-    workerMessage.value = e.message || '任务取消失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerActionTaskId.value = null;
-  }
-}
-
-async function handleClearFinishedTasks() {
-  workerMessage.value = '';
-  try {
-    const deleted = await clearFinishedWorkerTasks();
-    workerMessage.value = deleted > 0 ? `已清除 ${deleted} 条任务记录` : '没有可清除的任务';
-    workerMessageType.value = 'success';
-    await loadWorkerTasks();
-  } catch (e: any) {
-    workerMessage.value = e.message || '清除失败';
-    workerMessageType.value = 'error';
-  }
-}
-
-function openWorkerTaskDetail(taskId: string) {
-  selectedWorkerTaskId.value = taskId;
-}
-
-function formatTime(ts: string) {
-  return new Date(ts).toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function taskTypeLabel(taskType: string): string {
-  return workerTaskTypeLabel(taskType);
-}
-
-function openWorkerOutput(note: WorkerTaskOutputNote) {
-  selectedNoteId.value = note.id;
-}
-
-function jumpToSearch(note: WorkerTaskOutputNote) {
-  router.push({ path: '/search', query: { q: note.title } });
-}
-
-async function handleReindex() {
-  reindexing.value = true;
-  message.value = '';
-  indexResult.value = null;
-
-  try {
-    indexResult.value = await triggerIndex();
-    message.value = '重新索引完成';
-    messageType.value = 'success';
-    await loadStatus();
-  } catch (e: any) {
-    message.value = e.message || '索引失败';
-    messageType.value = 'error';
-  } finally {
-    reindexing.value = false;
-  }
-}
+onUnmounted(() => { document.removeEventListener('ws-update', handleWsUpdate); });
 </script>
 
 <style scoped>
-.settings-view {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.settings-view h2 {
-  font-size: 22px;
-  margin-bottom: 20px;
-}
-
-.settings-card {
-  background: var(--card-bg);
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 3px var(--shadow);
-}
-
-.settings-card h3 {
-  font-size: 16px;
-  margin-bottom: 16px;
-  color: var(--text);
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: #555;
-}
-
-.input-row {
-  display: flex;
-  gap: 8px;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.input-row input:focus {
-  outline: none;
-  border-color: #409eff;
-}
-
-.input-row button {
-  padding: 8px 16px;
-  background: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.input-row button:hover:not(:disabled) {
-  background: #337ecc;
-}
-
-.input-row button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 6px;
-}
-
-.message {
-  padding: 10px 14px;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-top: 12px;
-}
-
-.message.success {
-  background: #f0f9eb;
-  color: #67c23a;
-  border: 1px solid #e1f3d8;
-}
-
-.message.error {
-  background: #fef0f0;
-  color: #f56c6c;
-  border: 1px solid #fde2e2;
-}
-
-.index-result {
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--meta-bg);
-  border-radius: 4px;
-}
-
-.index-result h4 {
-  font-size: 14px;
-  margin-bottom: 8px;
-  color: #555;
-}
-
-.stats-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.stat {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.stat.indexed { color: #67c23a; }
-.stat.skipped { color: #909399; }
-.stat.deleted { color: #e6a23c; }
-.stat.errors { color: #f56c6c; }
-
-.prompt-center {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 16px;
-}
-
-.prompt-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.prompt-list-item {
-  text-align: left;
-  border: 1px solid var(--border-color, #e5e7eb);
-  background: var(--card-bg);
-  border-radius: 8px;
-  padding: 12px;
-  cursor: pointer;
-}
-
-.prompt-list-item.active {
-  border-color: #409eff;
-  box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.15);
-}
-
-.prompt-list-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.prompt-key,
-.prompt-updated {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.prompt-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 6px 0;
-}
-
-.prompt-status {
-  font-size: 12px;
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-
-.prompt-status.default {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.prompt-status.overridden {
-  background: #ecfdf3;
-  color: #16a34a;
-}
-
-.prompt-status.disabled {
-  background: #fff7ed;
-  color: #ea580c;
-}
-
-.prompt-status.warning {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.reintegration-card {
-  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(62% 0.06 250) 22%);
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(96% 0.01 250) 8%), var(--card-bg));
-}
-
-.reintegration-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-  margin-bottom: 14px;
-}
-
-.reintegration-subtitle {
-  margin-top: 4px;
-  max-width: 56ch;
-}
-
-.reintegration-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reintegration-summary-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.reintegration-summary-item {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: color-mix(in oklch, var(--meta-bg) 88%, oklch(97% 0.015 250) 12%);
-  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 82%, transparent);
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--text-secondary);
-}
-
-.reintegration-summary-item strong {
-  font-size: 18px;
-  color: var(--text);
-}
-
-.reintegration-filter-state {
-  margin-bottom: 10px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.soul-action-filter-state {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.soul-action-filter-pill {
-  font-size: 11px;
-}
-
-.reintegration-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.reintegration-item {
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 84%, transparent);
-  background: color-mix(in oklch, var(--card-bg) 94%, oklch(98% 0.01 250) 6%);
-}
-
-.reintegration-item-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.reintegration-item-title-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.reintegration-summary-text {
-  margin: 10px 0 8px;
-  color: var(--text);
-  line-height: 1.55;
-}
-
-.reintegration-meta-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.reintegration-reason-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.reintegration-reason-input {
-  min-width: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklch, var(--border-color, #d1d5db) 85%, transparent);
-  background: var(--card-bg);
-  color: var(--text);
-}
-
-.reintegration-no-plan-reason,
-.reintegration-review-reason {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.reintegration-no-plan-reason {
-  color: var(--warning-text, #9a6700);
-}
-
-.reintegration-expanded {
-  margin-top: 12px;
-  display: grid;
-  gap: 12px;
-}
-
-.reintegration-evidence-block,
-.reintegration-actions-block {
-  padding: 12px;
-  border-radius: 10px;
-  background: var(--meta-bg);
-}
-
-.reintegration-section-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.reintegration-display-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.reintegration-evidence-block pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.reintegration-actions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.reintegration-action-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: color-mix(in oklch, var(--card-bg) 90%, oklch(98% 0.01 250) 10%);
-}
-
-.reintegration-action-meta {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--text-muted);
-  word-break: break-all;
-}
-
-
-.soul-action-card {
-  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(66% 0.05 150) 22%);
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(97% 0.015 150) 8%), var(--card-bg));
-}
-
-.soul-action-filters {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.soul-action-summary-strip {
-  margin-bottom: 14px;
-}
-
-.soul-action-group-list {
-  gap: 12px;
-}
-
-.soul-action-group {
-  display: grid;
-  gap: 12px;
-  border-style: dashed;
-}
-
-.soul-action-group-meta {
-  margin-top: 0;
-}
-
-.soul-action-group-toolbar {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.soul-action-group-actions {
-  display: grid;
-  gap: 10px;
-}
-
-.soul-action-item {
-  display: grid;
-  gap: 12px;
-  background: color-mix(in oklch, var(--card-bg) 88%, oklch(98% 0.012 150) 12%);
-}
-
-.soul-action-meta-grid {
-  margin-top: 0;
-}
-
-.soul-action-detail-grid {
-  display: grid;
-  gap: 6px;
-}
-
-.soul-action-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.soul-action-error {
-  color: #f56c6c;
-}
-.provider-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.provider-toggle-group {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.switch-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.provider-key-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.provider-key-meta :deep(.privacy-wrap) {
-  display: inline-flex;
-  width: auto;
-}
-
-.provider-key-meta :deep(.privacy-mask) {
-  padding: 6px 10px;
-  border-radius: 999px;
-}
-
-.provider-test-result {
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  background: var(--meta-bg);
-  font-size: 13px;
-  color: var(--text-secondary);
-  display: grid;
-  gap: 6px;
-}
-
-.prompt-editor {
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--card-bg);
-}
-
-.prompt-editor-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.prompt-editor-head h4 {
-  margin: 0;
-}
-
-.placeholder-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.placeholder-list code {
-  background: var(--meta-bg);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px;
-}
-
-.prompt-textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 240px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: var(--card-bg);
-  color: var(--text);
-}
-
-.prompt-textarea.readonly {
-  background: var(--meta-bg);
-}
-
-.prompt-default-panel {
-  margin-top: 16px;
-}
-
-.prompt-default-panel summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-}
-
-.prompt-actions {
-  flex-wrap: wrap;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-row .label {
-  color: var(--text-muted);
-}
-
-.info-row .value {
-  color: var(--text);
-  font-family: monospace;
-}
-
-.info-row .value.ws-on {
-  color: #67c23a;
-}
-
-.info-row .value.ws-off {
-  color: #f56c6c;
-}
-
-.action-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.btn-reindex {
-  padding: 8px 16px;
-  background: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-reindex:hover:not(:disabled) {
-  background: #337ecc;
-}
-
-.btn-reindex:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.queue-info {
-  font-size: 13px;
-  color: #909399;
-}
-
-.error-log {
-  margin-top: 16px;
-}
-
-.error-log h4 {
-  font-size: 14px;
-  color: #f56c6c;
-  margin-bottom: 8px;
-}
-
-.error-list {
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #fde2e2;
-  border-radius: 4px;
-  background: #fef0f0;
-}
-
-.error-item {
-  display: flex;
-  gap: 12px;
-  padding: 6px 10px;
-  font-size: 12px;
-  border-bottom: 1px solid #fde2e2;
-}
-
-.error-item:last-child {
-  border-bottom: none;
-}
-
-.error-time {
-  color: #999;
-  white-space: nowrap;
-}
-
-.error-path {
-  color: #333;
-  word-break: break-all;
-}
-
-.error-msg {
-  color: #f56c6c;
-  white-space: nowrap;
-}
-
-.btn-ai {
-  padding: 8px 16px;
-  background: #67c23a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-worker {
-  padding: 8px 16px;
-  background: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
+.settings-view { max-width: 800px; margin: 0 auto; }
+.settings-view h2 { font-size: 22px; margin-bottom: 20px; }
+.settings-card { background: var(--card-bg); border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px var(--shadow); }
+.settings-card h3 { font-size: 16px; margin-bottom: 16px; color: var(--text); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #555; }
+.input-row { display: flex; gap: 8px; }
+.input-row input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.input-row input:focus { outline: none; border-color: #409eff; }
+.input-row button { padding: 8px 16px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+.input-row button:hover:not(:disabled) { background: #337ecc; }
+.input-row button:disabled { opacity: 0.6; cursor: not-allowed; }
+.hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.message { padding: 10px 14px; border-radius: 4px; font-size: 14px; margin-top: 12px; }
+.message.success { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+.message.error { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+.index-result { margin-top: 16px; padding: 12px; background: var(--meta-bg); border-radius: 4px; }
+.index-result h4 { font-size: 14px; margin-bottom: 8px; color: #555; }
+.stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.stat { font-size: 13px; color: var(--text-secondary); }
+.stat.indexed { color: #67c23a; } .stat.skipped { color: #909399; } .stat.deleted { color: #e6a23c; } .stat.errors { color: #f56c6c; }
+.action-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.btn-reindex { padding: 8px 16px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.btn-reindex:hover:not(:disabled) { background: #337ecc; }
+.btn-reindex:disabled { opacity: 0.6; cursor: not-allowed; }
+.queue-info { font-size: 13px; color: #909399; }
+.error-log { margin-top: 16px; }
+.error-log h4 { font-size: 14px; color: #f56c6c; margin-bottom: 8px; }
+.error-list { max-height: 200px; overflow-y: auto; border: 1px solid #fde2e2; border-radius: 4px; background: #fef0f0; }
+.error-item { display: flex; gap: 12px; padding: 6px 10px; font-size: 12px; border-bottom: 1px solid #fde2e2; }
+.error-item:last-child { border-bottom: none; }
+.error-time { color: #999; white-space: nowrap; } .error-path { color: #333; word-break: break-all; } .error-msg { color: #f56c6c; white-space: nowrap; }
+.btn-worker { padding: 8px 16px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
 .btn-worker:hover:not(:disabled) { background: #337ecc; }
 .btn-worker:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-link { border: none; background: transparent; color: #409eff; cursor: pointer; padding: 0; }
+.btn-cancel, .btn-confirm-danger { padding: 8px 18px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.btn-cancel { background: var(--surface-muted); color: var(--text-secondary); }
+.btn-cancel:hover { background: color-mix(in srgb, var(--surface-muted) 88%, white); }
+.btn-confirm-danger { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 28%, var(--border)); }
+.btn-confirm-danger:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
+.btn-danger-sm { padding: 6px 14px; border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); cursor: pointer; font-size: 12px; }
+.toggle-btn { flex-shrink: 0; padding: 6px 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted); color: var(--text-secondary); cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.toggle-btn.active { border-color: color-mix(in srgb, var(--ok) 40%, var(--border)); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
 
-.btn-ai:hover:not(:disabled) { background: #529b2e; }
-.btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Provider */
+.provider-summary { display: grid; gap: 8px; margin-bottom: 16px; }
+.provider-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+.provider-summary-row:last-child { border-bottom: none; }
+.provider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.provider-toggle-group { display: flex; flex-direction: column; justify-content: center; }
+.switch-row { display: flex; align-items: center; gap: 8px; }
+.provider-key-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.provider-key-meta :deep(.privacy-wrap) { display: inline-flex; width: auto; }
+.provider-key-meta :deep(.privacy-mask) { padding: 6px 10px; border-radius: 999px; }
+.provider-test-result { margin-top: 12px; padding: 12px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; background: var(--meta-bg); font-size: 13px; color: var(--text-secondary); display: grid; gap: 6px; }
 
-.classify-result {
-  margin-top: 16px;
-  padding: 12px;
-  background: var(--meta-bg);
-  border-radius: 4px;
-}
+/* Prompt */
+.prompt-center { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; }
+.prompt-list { display: flex; flex-direction: column; gap: 10px; }
+.prompt-list-item { text-align: left; border: 1px solid var(--border-color, #e5e7eb); background: var(--card-bg); border-radius: 8px; padding: 12px; cursor: pointer; }
+.prompt-list-item.active { border-color: #409eff; box-shadow: 0 0 0 1px rgba(64, 158, 255, 0.15); }
+.prompt-list-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.prompt-key, .prompt-updated { font-size: 12px; color: var(--text-muted); }
+.prompt-desc { font-size: 13px; color: var(--text-secondary); margin: 6px 0; }
+.prompt-status { font-size: 12px; border-radius: 999px; padding: 2px 8px; }
+.prompt-status.default { background: #f3f4f6; color: #6b7280; }
+.prompt-status.overridden { background: #ecfdf3; color: #16a34a; }
+.prompt-status.disabled { background: #fff7ed; color: #ea580c; }
+.prompt-status.warning { background: #fef3c7; color: #b45309; }
+.prompt-editor { border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; padding: 16px; background: var(--card-bg); }
+.prompt-editor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.prompt-editor-head h4 { margin: 0; }
+.placeholder-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.placeholder-list code { background: var(--meta-bg); border-radius: 4px; padding: 2px 6px; font-size: 12px; }
+.prompt-textarea { width: 100%; resize: vertical; min-height: 240px; border: 1px solid #ddd; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: var(--card-bg); color: var(--text); }
+.prompt-textarea.readonly { background: var(--meta-bg); }
+.prompt-default-panel { margin-top: 16px; }
+.prompt-default-panel summary { cursor: pointer; color: var(--text-secondary); margin-bottom: 12px; }
+.prompt-actions { flex-wrap: wrap; }
 
-.classify-list {
-  margin-top: 10px;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
+/* System info */
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--text-muted); }
+.info-row .value { color: var(--text); font-family: monospace; }
+.info-row .value.ws-on { color: #67c23a; }
+.info-row .value.ws-off { color: #f56c6c; }
 
-.classify-item {
-  display: flex;
-  gap: 12px;
-  padding: 6px 10px;
-  font-size: 12px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.classify-item:last-child { border-bottom: none; }
-.classify-item.ok { background: #f0f9eb; }
-.classify-item.fail { background: #fef0f0; }
-
-.ci-file { color: #333; word-break: break-all; flex: 1; }
-.ci-info { color: #67c23a; white-space: nowrap; }
-.ci-error { color: #f56c6c; white-space: nowrap; }
-
-.worker-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.worker-form .form-group {
-  margin-bottom: 0;
-}
-
-.worker-form input,
-.worker-form select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-  background: var(--surface);
-  color: var(--text);
-  box-sizing: border-box;
-}
-
-.worker-list {
-  margin-top: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.worker-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.worker-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.worker-filter {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.worker-header-row h4 {
-  margin: 0;
-  font-size: 14px;
-}
-
-.btn-link {
-  border: none;
-  background: transparent;
-  color: #409eff;
-  cursor: pointer;
-  padding: 0;
-}
-
-.btn-link.btn-clear {
-  color: #f56c6c;
-}
-
-.worker-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--meta-bg);
-}
-
-.worker-item-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.worker-status {
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.worker-status.status-pending { color: #e6a23c; }
-.worker-status.status-running { color: #409eff; }
-.worker-status.status-succeeded { color: #67c23a; }
-.worker-status.status-failed { color: #f56c6c; }
-.worker-status.status-cancelled { color: #909399; }
-
-.worker-empty-state {
-  margin-top: 12px;
-  padding: 16px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: var(--meta-bg);
-  color: var(--text-muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-.worker-empty-hint {
-  display: block;
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.worker-meta-pills {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.worker-pill {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-family: monospace;
-}
-
-.worker-meta {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.worker-params,
-.worker-finished {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.worker-summary {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.worker-error {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #f56c6c;
-}
-
-.worker-output {
-  margin-top: 8px;
-  display: grid;
-  gap: 8px;
-}
-
-.worker-output-note {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card-bg);
-  cursor: pointer;
-  text-align: left;
-}
-
-.worker-output-note:hover {
-  border-color: #409eff;
-}
-
-.worker-output-title {
-  font-size: 13px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.worker-output-file {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-family: monospace;
-  flex-shrink: 0;
-}
-
-.worker-actions {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.btn-inline {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--card-bg);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-inline:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-retry-inline {
-  color: #409eff;
-  border-color: color-mix(in srgb, #409eff 30%, var(--border));
-}
-
-.btn-cancel-inline {
-  color: #f56c6c;
-  border-color: color-mix(in srgb, #f56c6c 30%, var(--border));
-}
-
-.btn-jump-inline {
-  color: #67c23a;
-  border-color: color-mix(in srgb, #67c23a 30%, var(--border));
-}
-
-/* Privacy & Security */
-.security-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-}
-
+/* Security */
+.security-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .security-row:last-of-type { border-bottom: none; }
+.security-label { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.security-hint { font-size: 12px; color: var(--text-muted); }
+.security-actions { display: flex; gap: 8px; align-items: center; }
+.pin-setup { padding: 16px; margin-top: 8px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--surface-muted) 60%, transparent); display: grid; gap: 12px; }
+.security-question-section { padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--signal-soft) 50%, transparent); border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--border)); display: grid; gap: 10px; }
+.section-label { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--signal); }
+.timeout-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; }
 
-.security-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.security-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.toggle-btn {
-  flex-shrink: 0;
-  padding: 6px 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.toggle-btn.active {
-  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-  color: var(--ok);
-}
-
-.security-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.btn-danger-sm {
-  padding: 6px 14px;
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  color: var(--danger);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-edit-sm {
-  padding: 6px 14px;
-  border: 1px solid color-mix(in srgb, var(--signal) 30%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--signal) 10%, transparent);
-  color: var(--signal, #409eff);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-edit-sm:hover {
-  background: color-mix(in srgb, var(--signal) 20%, transparent);
-}
-
-.schedule-edit-form {
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-muted) 40%, transparent);
-}
-
-.schedule-edit-form .btn-cancel {
-  padding: 6px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.schedule-edit-form .btn-cancel:hover {
-  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
-}
-
-.pin-setup {
-  padding: 16px;
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-muted) 60%, transparent);
-  display: grid;
-  gap: 12px;
-}
-
-.security-question-section {
-  padding: 14px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--signal-soft) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--border));
-  display: grid;
-  gap: 10px;
-}
-
-.section-label {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--signal);
-}
-
-.timeout-select {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.btn-danger {
-  padding: 8px 16px;
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  color: var(--danger);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-/* Clear PIN confirmation */
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(4, 11, 20, 0.6);
-  backdrop-filter: blur(8px);
-}
-
-.confirm-card {
-  padding: 28px;
-  border: 1px solid var(--border-strong);
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
-  box-shadow: 0 32px 64px -28px var(--shadow-strong);
-  width: min(380px, 90vw);
-  display: grid;
-  gap: 14px;
-}
-
+/* Confirm overlay */
+.confirm-overlay { position: fixed; inset: 0; z-index: 9100; display: flex; align-items: center; justify-content: center; background: rgba(4, 11, 20, 0.6); backdrop-filter: blur(8px); }
+.confirm-card { padding: 28px; border: 1px solid var(--border-strong); border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 96%, transparent); box-shadow: 0 32px 64px -28px var(--shadow-strong); width: min(380px, 90vw); display: grid; gap: 14px; }
 .confirm-card h3 { margin: 0; font-size: 18px; }
 .confirm-card p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
 
-.confirm-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.btn-cancel, .btn-confirm-danger {
-  padding: 8px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn-cancel {
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-}
-
-.btn-cancel:hover {
-  background: color-mix(in srgb, var(--surface-muted) 88%, white);
-}
-
-.btn-confirm-danger {
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
-}
-
-.btn-confirm-danger:hover {
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-}
-
-.manual-task-collapse {
-  border-color: color-mix(in srgb, var(--text-muted) 18%, var(--border));
-  opacity: 0.75;
-  transition: opacity 0.2s;
-}
-
-.manual-task-collapse[open] {
-  opacity: 1;
-}
-
-.manual-task-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.manual-task-summary::-webkit-details-marker {
-  display: none;
-}
-
-.manual-task-summary h3 {
-  margin: 0;
-}
-
-.manual-task-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: color-mix(in srgb, var(--text-muted) 14%, transparent);
-  color: var(--text-muted);
-  border: 1px solid color-mix(in srgb, var(--text-muted) 20%, var(--border));
-}
-
-.schedule-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.schedule-form .form-group {
-  margin-bottom: 0;
-}
-
-.schedule-form input,
-.schedule-form select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 14px;
-  background: var(--surface);
-  color: var(--text);
-  box-sizing: border-box;
-}
-
-.schedule-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--meta-bg);
-  margin-top: 8px;
-}
-
-.schedule-item-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.schedule-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.schedule-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.schedule-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.schedule-meta {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.btn-run-now {
-  padding: 6px 14px;
-  border: 1px solid color-mix(in srgb, #409eff 30%, var(--border));
-  border-radius: 999px;
-  background: color-mix(in srgb, #409eff 10%, transparent);
-  color: #409eff;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.btn-run-now:hover:not(:disabled) {
-  background: color-mix(in srgb, #409eff 18%, transparent);
-}
-
-.btn-run-now:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.schedule-failures {
-  color: #f56c6c;
-  font-weight: 500;
-}
-
-.schedule-error {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #f56c6c;
-  word-break: break-all;
-}
 @media (max-width: 900px) {
-  .reintegration-head {
-    flex-direction: column;
-  }
-
-  .reintegration-summary-strip {
-    grid-template-columns: 1fr;
-  }
-
-  .reintegration-reason-row {
-    grid-template-columns: 1fr;
-  }
-
-  .reintegration-head-actions {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-
-  .soul-action-controls {
-    flex-direction: column;
-  }
-
-  .prompt-center {
-    grid-template-columns: 1fr;
-  }
+  .prompt-center { grid-template-columns: 1fr; }
 }
-
 </style>
