@@ -2148,7 +2148,7 @@ test('continuity integrator falls back to output-count summary for succeeded tas
   });
 });
 
-test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot', async (t) => {
+test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot', { concurrency: false }, async (t) => {
   const env = await createTestEnv('lifeos-persona-snapshot-success-');
 
   t.after(async () => {
@@ -2489,7 +2489,7 @@ test('post-index PR3 baseline queues reviewable soul action instead of auto-disp
   assert.equal(snapshot, null);
 });
 
-test('generator gate queues PR3 reviewable update_persona_snapshot action', async (t) => {
+test('generator gate queues PR3 reviewable update_persona_snapshot action', { concurrency: false }, async (t) => {
   const env = await createTestEnv('lifeos-persona-dispatch-');
 
   t.after(async () => {
@@ -2515,12 +2515,15 @@ test('generator gate queues PR3 reviewable update_persona_snapshot action', asyn
     actionKind: 'update_persona_snapshot',
     noteId: 'note-persona-dispatch',
     trigger: 'post_index_growth_note',
+    confidence: 0.6,
+    analysisReason: 'legacy generator path',
   });
 
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
     decision: 'queue_for_review',
-    reason: 'persona snapshot candidate requires review-backed dispatch',
+    reason: 'update_persona_snapshot 候选，置信度 60%，legacy generator path，需要人工审批',
+    confidence: 0.6,
   });
 
   const dispatchResult = await dispatchSoulActionCandidate(candidate!, gateDecision);
@@ -2536,7 +2539,7 @@ test('generator gate queues PR3 reviewable update_persona_snapshot action', asyn
   assert.equal(snapshot, null);
 });
 
-test('generator gate queues and dispatches review-backed extract_tasks closure', async (t) => {
+test('generator gate queues and dispatches review-backed extract_tasks closure', { concurrency: false }, async (t) => {
   const env = await createTestEnv('lifeos-extract-dispatch-');
   const originalFetch = globalThis.fetch;
   const originalApiKey = process.env.ANTHROPIC_API_KEY;
@@ -2582,12 +2585,15 @@ test('generator gate queues and dispatches review-backed extract_tasks closure',
     actionKind: 'extract_tasks',
     noteId: 'note-extract-closure',
     trigger: 'manual_extract_tasks_request',
+    confidence: 0.6,
+    analysisReason: 'legacy generator path',
   });
 
   const gateDecision = evaluateInterventionGate(candidate);
   assert.deepEqual(gateDecision, {
     decision: 'queue_for_review',
-    reason: 'extract_tasks candidate requires review-backed dispatch',
+    reason: '手动提取任务请求，置信度 60%，legacy generator path，需要人工审批',
+    confidence: 0.6,
   });
 
   const queued = await dispatchSoulActionCandidate(candidate!, gateDecision);
@@ -2627,6 +2633,7 @@ test('generator and gate stay observational when source context is missing', () 
   assert.deepEqual(gateDecision, {
     decision: 'observe_only',
     reason: 'missing source note context for governance queue',
+    confidence: 0,
   });
 });
 

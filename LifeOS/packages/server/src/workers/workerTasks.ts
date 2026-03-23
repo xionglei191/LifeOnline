@@ -38,7 +38,7 @@ import {
   attachWorkerTaskToSoulAction,
   createOrReuseSoulAction,
   deriveSoulActionKindFromWorkerTask,
-  getSoulActionBySourceNoteIdAndKind,
+  getSoulActionByIdentityAndKind,
   getSoulActionByWorkerTaskId,
   syncSoulActionFromWorkerTask,
 } from '../soul/soulActions.js';
@@ -256,7 +256,11 @@ function bindSoulActionToWorkerTask(task: WorkerTask): void {
     return;
   }
 
-  const soulAction = getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, actionKind)
+  const soulAction = getSoulActionByIdentityAndKind({
+    sourceNoteId: task.sourceNoteId,
+    sourceReintegrationId: task.sourceReintegrationId ?? null,
+    actionKind,
+  })
     ?? createOrReuseSoulAction({
       sourceNoteId: task.sourceNoteId,
       sourceReintegrationId: task.sourceReintegrationId ?? null,
@@ -597,7 +601,11 @@ async function runUpdatePersonaSnapshot(
     ? `已更新人格快照：${sourceNoteTitle}`
     : `已更新人格快照：${sourceNoteTitle}（原笔记内容为空）`;
   const action = task.sourceNoteId
-    ? getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, 'update_persona_snapshot')
+    ? getSoulActionByIdentityAndKind({
+      sourceNoteId: task.sourceNoteId,
+      sourceReintegrationId: task.sourceReintegrationId ?? null,
+      actionKind: 'update_persona_snapshot',
+    })
     : null;
 
   const snapshot = upsertPersonaSnapshot({
