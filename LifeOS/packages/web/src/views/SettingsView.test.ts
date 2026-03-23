@@ -758,26 +758,26 @@ describe('SettingsView soul action governance wiring', () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain('Promotion Projections');
-    expect(wrapper.text()).toContain('Event Nodes');
-    expect(wrapper.text()).toContain('Continuity Records');
+    expect(wrapper.text()).toContain('提升投射');
+    expect(wrapper.text()).toContain('事件节点');
+    expect(wrapper.text()).toContain('连续性记录');
     expect(wrapper.text()).toContain('Ready event node');
     expect(wrapper.text()).toContain('ready continuity');
     expect(wrapper.text()).not.toContain('External event node');
     expect(wrapper.text()).not.toContain('external continuity');
-    expect(wrapper.text()).toContain('Reintegration record-ready');
-    expect(wrapper.text()).toContain('Promotion: ready-1');
-    expect(wrapper.text()).toContain('Promotion: ready-2');
-    expect(wrapper.text()).toContain('Threshold: high');
-    expect(wrapper.text()).toContain('Status: active');
-    expect(wrapper.text()).toContain('Strength: medium');
-    expect(wrapper.text()).toContain('Source Reintegration');
+    expect(wrapper.text()).toContain('回流 record-ready');
+    expect(wrapper.text()).toContain('提升动作：ready-1');
+    expect(wrapper.text()).toContain('提升动作：ready-2');
+    expect(wrapper.text()).toContain('阈值：high');
+    expect(wrapper.text()).toContain('状态：active');
+    expect(wrapper.text()).toContain('强度：medium');
+    expect(wrapper.text()).toContain('来源回流');
     expect(wrapper.text()).toContain('未提供');
     expect(wrapper.text()).toContain('record-ready');
     expect(wrapper.text()).toContain('record-ready');
-    expect(wrapper.text()).toContain('Source Action');
-    expect(wrapper.text()).toContain('Explanation');
-    expect(wrapper.text()).toContain('Evidence');
+    expect(wrapper.text()).toContain('来源动作');
+    expect(wrapper.text()).toContain('判定说明');
+    expect(wrapper.text()).toContain('证据');
     expect(wrapper.text()).toContain('"reason": "projection"');
     expect(wrapper.text()).toContain('"source": "settings-test"');
     expect(wrapper.text()).toContain('"trend": "stable"');
@@ -821,7 +821,7 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
 
     await flushPromises();
-    expect(wrapper.text()).toContain('Promotion Projections');
+    expect(wrapper.text()).toContain('提升投射');
     expect(wrapper.text()).toContain('Ready event node');
     expect(wrapper.text()).toContain('continuity fetch failed');
     expect(wrapper.text()).toContain('Reintegration Review');
@@ -836,10 +836,10 @@ describe('SettingsView soul action governance wiring', () => {
     const wrapper = mountSettingsView();
 
     await flushPromises();
-    expect(wrapper.text()).toContain('Promotion Projections');
+    expect(wrapper.text()).toContain('提升投射');
     expect(wrapper.text()).toContain('ready continuity');
     expect(wrapper.text()).toContain('event nodes fetch failed');
-    expect(wrapper.text()).toContain('暂无 event nodes');
+    expect(wrapper.text()).toContain('暂无事件节点');
 
     wrapper.unmount();
   });

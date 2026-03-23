@@ -2,7 +2,7 @@
   <div class="settings-card projection-card">
     <div class="reintegration-head">
       <div>
-        <h3>Promotion Projections</h3>
+        <h3>提升投射</h3>
         <p class="hint reintegration-subtitle">读取 PR6 promotion dispatch 后真正落地的 event node 与 continuity record。</p>
       </div>
       <div class="reintegration-head-actions">
@@ -12,11 +12,11 @@
 
     <div class="reintegration-summary-strip projection-summary-strip">
       <div class="reintegration-summary-item">
-        <span>Event Nodes</span>
+        <span>事件节点</span>
         <strong>{{ eventNodes.length }}</strong>
       </div>
       <div class="reintegration-summary-item">
-        <span>Continuity Records</span>
+        <span>连续性记录</span>
         <strong>{{ continuityRecords.length }}</strong>
       </div>
     </div>
@@ -25,96 +25,96 @@
 
     <div v-if="loading" class="worker-empty-state">加载中...</div>
     <div v-else-if="!eventNodes.length && !continuityRecords.length" class="worker-empty-state">
-      当前还没有 promotion projections
+      当前还没有提升投射
     </div>
     <div v-else class="projection-grid">
       <section class="projection-column">
-        <div class="projection-section-title">Event Nodes</div>
+        <div class="projection-section-title">事件节点</div>
         <div v-if="eventNodes.length" class="reintegration-list">
           <article v-for="eventNode in eventNodes" :key="eventNode.id" class="reintegration-item projection-item">
             <div class="reintegration-item-title-row">
               <strong>{{ eventNode.title }}</strong>
               <span class="worker-pill">{{ eventNode.eventKind }}</span>
-              <span class="worker-pill">Reintegration {{ eventNode.sourceReintegrationId }}</span>
+              <span class="worker-pill">回流 {{ eventNode.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-summary-text">{{ eventNode.summary }}</div>
             <div class="reintegration-meta-grid">
-              <span>Promotion: {{ eventNode.promotionSoulActionId }}</span>
-              <span>Threshold: {{ eventNode.threshold }}</span>
-              <span>Status: {{ eventNode.status }}</span>
+              <span>提升动作：{{ eventNode.promotionSoulActionId }}</span>
+              <span>阈值：{{ eventNode.threshold }}</span>
+              <span>状态：{{ eventNode.status }}</span>
               <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
-                <span class="projection-detail-label">Source Note</span>
+                <span class="projection-detail-label">来源笔记</span>
                 <code>{{ eventNode.sourceNoteId ?? '未提供' }}</code>
               </div>
               <div class="projection-detail-block">
-                <span class="projection-detail-label">Source Reintegration</span>
+                <span class="projection-detail-label">来源回流</span>
                 <code>{{ eventNode.sourceReintegrationId }}</code>
               </div>
               <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
-                <span class="projection-detail-label">Source Action</span>
+                <span class="projection-detail-label">来源动作</span>
                 <code>{{ eventNode.sourceSoulActionId }}</code>
               </div>
             </div>
             <div class="projection-detail-block">
-              <span class="projection-detail-label">Explanation</span>
+              <span class="projection-detail-label">判定说明</span>
               <pre class="projection-json">{{ formatJson(eventNode.explanation) }}</pre>
             </div>
             <div class="projection-detail-block">
-              <span class="projection-detail-label">Evidence</span>
+              <span class="projection-detail-label">证据</span>
               <pre class="projection-json">{{ formatJson(eventNode.evidence) }}</pre>
             </div>
           </article>
         </div>
-        <div v-else class="worker-empty-state">暂无 event nodes</div>
+        <div v-else class="worker-empty-state">暂无事件节点</div>
       </section>
 
       <section class="projection-column">
-        <div class="projection-section-title">Continuity Records</div>
+        <div class="projection-section-title">连续性记录</div>
         <div v-if="continuityRecords.length" class="reintegration-list">
           <article v-for="continuity in continuityRecords" :key="continuity.id" class="reintegration-item projection-item">
             <div class="reintegration-item-title-row">
               <strong>{{ continuity.summary }}</strong>
               <span class="worker-pill">{{ continuity.continuityKind }}</span>
-              <span class="worker-pill">Reintegration {{ continuity.sourceReintegrationId }}</span>
+              <span class="worker-pill">回流 {{ continuity.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-meta-grid">
-              <span>Target: {{ continuity.target }}</span>
-              <span>Strength: {{ continuity.strength }}</span>
-              <span>Promotion: {{ continuity.promotionSoulActionId }}</span>
+              <span>目标：{{ continuity.target }}</span>
+              <span>强度：{{ continuity.strength }}</span>
+              <span>提升动作：{{ continuity.promotionSoulActionId }}</span>
               <span>记录于 {{ formatTime(continuity.recordedAt) }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
-                <span class="projection-detail-label">Source Note</span>
+                <span class="projection-detail-label">来源笔记</span>
                 <code>{{ continuity.sourceNoteId ?? '未提供' }}</code>
               </div>
               <div class="projection-detail-block">
-                <span class="projection-detail-label">Source Reintegration</span>
+                <span class="projection-detail-label">来源回流</span>
                 <code>{{ continuity.sourceReintegrationId }}</code>
               </div>
               <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
-                <span class="projection-detail-label">Source Action</span>
+                <span class="projection-detail-label">来源动作</span>
                 <code>{{ continuity.sourceSoulActionId }}</code>
               </div>
             </div>
             <div class="projection-detail-block">
-              <span class="projection-detail-label">Continuity</span>
+              <span class="projection-detail-label">连续性内容</span>
               <pre class="projection-json">{{ formatJson(continuity.continuity) }}</pre>
             </div>
             <div class="projection-detail-block">
-              <span class="projection-detail-label">Explanation</span>
+              <span class="projection-detail-label">判定说明</span>
               <pre class="projection-json">{{ formatJson(continuity.explanation) }}</pre>
             </div>
             <div class="projection-detail-block">
-              <span class="projection-detail-label">Evidence</span>
+              <span class="projection-detail-label">证据</span>
               <pre class="projection-json">{{ formatJson(continuity.evidence) }}</pre>
             </div>
           </article>
         </div>
-        <div v-else class="worker-empty-state">暂无 continuity records</div>
+        <div v-else class="worker-empty-state">暂无连续性记录</div>
       </section>
     </div>
   </div>

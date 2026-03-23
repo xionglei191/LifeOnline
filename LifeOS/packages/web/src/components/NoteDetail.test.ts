@@ -512,7 +512,6 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('Ready event node');
     expect(document.body.textContent).toContain('ready continuity');
-    expect(document.body.textContent).toContain('Promotion Projections');
     expect(document.body.textContent).not.toContain('Actions 1');
     expect(document.body.textContent).not.toContain('External event node');
     expect(document.body.textContent).not.toContain('external continuity');
@@ -556,7 +555,6 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain('提升投射');
     expect(document.body.textContent).toContain('Canonical event node');
     expect(document.body.textContent).toContain('canonical continuity');
-    expect(document.body.textContent).toContain('Promotion Projections');
     expect(document.body.textContent).not.toContain('External event node');
     expect(document.body.textContent).not.toContain('external continuity');
 
@@ -784,7 +782,7 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(document.body.textContent).toContain('提升投射');
-    expect(document.body.textContent).toContain('当前还没有 promotion projections');
+    expect(document.body.textContent).toContain('当前还没有提升投射');
 
     wrapper.unmount();
   });
