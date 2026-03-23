@@ -6,7 +6,7 @@
           <p class="eyebrow">Signal Analytics</p>
           <h2>把生活记录转成<span>可判断、可比较、可行动</span>的系统信号。</h2>
           <p class="hero-summary">
-            这里不只是报表，而是你的生命节律监控台。趋势、平衡、月度变化和标签热点会一起告诉你，
+            这里不只是报表，而是你的完成节律监控台。完成趋势、维度完成率、月度对比和标签热点会一起告诉你，
             最近的资源究竟投向了哪里。
           </p>
         </div>
@@ -18,14 +18,14 @@
             <span class="metric-meta">days</span>
           </article>
           <article class="metric">
-            <span class="metric-label">信号图层</span>
+            <span class="metric-label">分析图层</span>
             <strong>4</strong>
-            <span class="metric-meta">panels</span>
+            <span class="metric-meta">趋势 / 雷达 / 月度 / 标签</span>
           </article>
           <article class="metric accent">
-            <span class="metric-label">分析焦点</span>
-            <strong>Balance</strong>
-            <span class="metric-meta">rate / flow / tags</span>
+            <span class="metric-label">当前焦点</span>
+            <strong>完成率</strong>
+            <span class="metric-meta">趋势 / 对比 / 标签热度</span>
           </article>
         </div>
       </section>

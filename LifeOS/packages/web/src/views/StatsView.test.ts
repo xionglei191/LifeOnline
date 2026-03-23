@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mount, flushPromises } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 
 const apiMocks = vi.hoisted(() => ({
@@ -40,6 +40,8 @@ vi.mock('../lib/echarts', () => ({
 }));
 
 import StatsView from './StatsView.vue';
+
+enableAutoUnmount(afterEach);
 
 function buildWrapper() {
   return mount(StatsView, {
@@ -105,6 +107,28 @@ describe('StatsView', () => {
 
     wrapper.unmount();
   });
+  it('describes the stats hero in terms of completion facts instead of generic signal copy', async () => {
+    apiMocks.fetchStatsTrend.mockResolvedValue([{ day: '2026-03-01', total: 2, done: 1 }]);
+    apiMocks.fetchStatsRadar.mockResolvedValue([{ dimension: 'life', rate: 80 }]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('完成节律监控台');
+    expect(wrapper.text()).toContain('分析图层');
+    expect(wrapper.text()).toContain('趋势 / 雷达 / 月度 / 标签');
+    expect(wrapper.text()).toContain('当前焦点');
+    expect(wrapper.text()).toContain('完成率');
+    expect(wrapper.text()).toContain('趋势 / 对比 / 标签热度');
+    expect(wrapper.text()).not.toContain('panels');
+
+    wrapper.unmount();
+  });
+
   it('reloads all stats panels when note-created websocket events arrive', async () => {
     apiMocks.fetchStatsTrend
       .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])
