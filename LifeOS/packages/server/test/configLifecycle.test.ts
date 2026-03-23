@@ -403,6 +403,49 @@ test('dashboard weekly highlights only include unfinished high-priority tasks an
   }
 });
 
+test('dashboard dimension stats include the canonical _inbox dimension for the inbox view', async () => {
+  const env = await createTestEnv('lifeos-dashboard-inbox-dimension-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const inboxNotePath = path.join(env.vaultPath, '_Inbox', '2026-03-23-inbox-note.md');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await fs.mkdir(path.dirname(inboxNotePath), { recursive: true });
+    await fs.writeFile(inboxNotePath, `---\ntype: "note"\ndimension: "_inbox"\nstatus: "pending"\npriority: "medium"\ndate: "2026-03-23"\ncreated: "2026-03-23T09:00:00.000Z"\nupdated: "2026-03-23T09:00:00.000Z"\n---\n\nInbox note for dashboard stats\n`);
+
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const dashboard = await api<import('../../shared/src/types.js').DashboardData>(baseUrl, '/api/dashboard');
+    const inboxStat = dashboard.dimensionStats.find((item) => item.dimension === '_inbox');
+
+    assert.ok(inboxStat);
+    assert.deepEqual(inboxStat, {
+      dimension: '_inbox',
+      total: 1,
+      pending: 1,
+      in_progress: 0,
+      done: 0,
+      health_score: 0,
+    });
+    assert.equal(dashboard.inboxCount, 1);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dashboard, timeline, and calendar APIs respond with shared view contracts', async () => {
   const env = await createTestEnv('lifeos-view-contracts-');
   const configFile = env.configPath;

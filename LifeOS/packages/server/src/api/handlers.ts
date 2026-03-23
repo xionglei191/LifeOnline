@@ -50,7 +50,7 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
       ORDER BY date ASC, created ASC
     `).all(startOfWeek, endOfWeek);
 
-    const dimensions: Dimension[] = ['health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
+    const dimensions: Dimension[] = ['_inbox', 'health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
     const dimensionStats: DimensionStat[] = [];
 
     const statsStmt = db.prepare(`

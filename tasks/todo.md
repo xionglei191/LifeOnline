@@ -1,17 +1,17 @@
-# 当前轮：Soul Action Governance 分组最近活跃事实收口
+# 当前轮：Inbox dashboard dimension stats contract 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 已有 grouped governance / quick filter / batch actions，但组级别仍缺少“最近活跃 / 最近动作”事实，用户难以判断哪组刚变化、该优先处理哪组。
-- [x] 在 `LifeOS/packages/web/src/utils/soulActionGroups.ts` 为每个分组补充 `latestActivityAt` / `latestActivityLabel`，按 action 级最近活动（finished/started/discarded/deferred/approved/updated/created）计算，并改为按最近活跃排序，而不是仅按 reintegration 创建时间排序。
-- [x] 在 `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 的组级 meta 区显式展示“最近创建/最近更新/最近批准/最近完成”等时间事实，帮助用户快速判断优先级。
-- [x] 在 `LifeOS/packages/web/src/utils/soulActionGroups.test.ts`、`src/components/SoulActionGovernancePanel.test.ts`、`src/views/SettingsView.test.ts` 增加 focused 回归，锁定最新活跃排序、组级事实渲染，以及父视图向 panel 透传的 grouped props。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/soulActionGroups.test.ts src/components/SoulActionGovernancePanel.test.ts src/views/SettingsView.test.ts`。
+- [x] 识别新的 server/web contract gap：`LifeOS/packages/web/src/views/DimensionView.vue` 与 `src/composables/useDimensionNotes.ts` 已将 inbox 主路径映射到 canonical `_inbox` 维度，但 `LifeOS/packages/server/src/api/handlers.ts` 的 dashboard `dimensionStats` 仍漏掉 `_inbox`，导致 inbox hero stats 在真实接口下只能退回零值。
+- [x] 在 `LifeOS/packages/server/src/api/handlers.ts` 把 `_inbox` 纳入 dashboard `dimensionStats` 生成列表，让 inbox 路由读取 dashboard 时能拿到 canonical 维度统计，而不是只靠 `inboxCount` 单独兜底。
+- [x] 在 `LifeOS/packages/server/test/configLifecycle.test.ts` 增加 focused API 合约回归，锁定 `/api/dashboard` 会返回 `_inbox` 维度统计，且与 `inboxCount` 一致。
+- [x] 复核 `LifeOS/packages/web/src/views/DimensionView.test.ts` 已有 inbox 路由断言，会直接消费 `_inbox` dashboard stat，因此本轮不重复平移同类 web 测试。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/DimensionView.test.ts` 通过；server 侧新增断言 `dashboard dimension stats include the canonical _inbox dimension for the inbox view` 已通过，但 `test/configLifecycle.test.ts` 整文件仍被一条既有失败 `updating config treats equivalent vault paths as unchanged after normalization` 拉红。
 
 ## 结果
-- grouped governance 现在不只展示“有几条待治理/可派发”，还直接告诉用户这组最近发生了什么、是什么时候发生的。
-- settings 页分组顺序会优先把最近刚批准/刚完成/刚更新的治理组放到前面，更贴近实际处理优先级。
+- inbox 主路径现在能从 canonical dashboard contract 直接拿到 `_inbox` hero stats，不再出现 web 已支持、server 却漏发该维度的事实断裂。
+- `inboxCount` 与 `dimensionStats[_inbox]` 现在来自同一事实源视角，减少了 inbox 页面与 dashboard 数据表达不一致的风险。
 
 ## 下一步建议
-- 如果这轮测试通过，下一步可继续补一个轻量组级排序提示（例如“按最近活跃排序”）或把最近活跃事实同步投射到 Reintegration Review，减少两块面板的信息落差。
+- 下一轮优先看 dashboard today todos 的 priority 排序是否仍按字符串排序，若是，则修成与 shared priority 语义一致的 server 排序，避免首页主路径把 medium/low 排到 high 前面。
 
 ---
