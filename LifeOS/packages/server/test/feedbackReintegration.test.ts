@@ -74,6 +74,7 @@ function buildTerminalTask<T extends SupportedReintegrationTaskType>(taskType: T
     error: null,
     resultSummary: `${taskType} summary`,
     sourceNoteId: taskType === 'openclaw_task' ? null : 'note-1',
+    sourceReintegrationId: null,
     scheduleId: null,
     outputNotePaths: taskType === 'openclaw_task' || taskType === 'update_persona_snapshot' ? [] : [`/tmp/${taskType}.md`],
     outputNotes: taskType === 'openclaw_task' || taskType === 'update_persona_snapshot'
@@ -1258,13 +1259,14 @@ test('createFeedbackReintegrationPayload preserves linked reintegration identity
   const task = buildTerminalTask('weekly_report', {
     id: 'task-linked-reintegration-source',
     sourceNoteId: 'note-linked-reintegration-source',
+    sourceReintegrationId: 'reint:linked-promotion-source',
   });
 
   getDb().prepare(`
     INSERT INTO worker_tasks (
       id, task_type, input_json, status, worker, created_at, updated_at,
-      started_at, finished_at, error, result_json, result_summary, source_note_id, output_note_paths, schedule_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      started_at, finished_at, error, result_json, result_summary, source_note_id, source_reintegration_id, output_note_paths, schedule_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     task.id,
     task.taskType,
@@ -1279,6 +1281,7 @@ test('createFeedbackReintegrationPayload preserves linked reintegration identity
     task.result ? JSON.stringify(task.result) : null,
     task.resultSummary,
     task.sourceNoteId,
+    task.sourceReintegrationId,
     JSON.stringify(task.outputNotePaths),
     task.scheduleId,
   );

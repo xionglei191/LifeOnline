@@ -8,6 +8,7 @@ import {
   type SoulActionGovernanceStatus,
   type SoulActionKind,
 } from './types.js';
+import { recordGateOutcome } from './gateLearning.js';
 
 interface SoulActionRow {
   id: string;
@@ -284,7 +285,7 @@ export function approveSoulAction(id: string, governanceReason?: string | null, 
     throw new Error('Only not_dispatched soul actions can be approved');
   }
 
-  return updateSoulActionGovernanceState({
+  const result = updateSoulActionGovernanceState({
     id,
     governanceStatus: 'approved',
     governanceReason: governanceReason ?? action.governanceReason,
@@ -293,6 +294,12 @@ export function approveSoulAction(id: string, governanceReason?: string | null, 
     discardedAt: null,
     updatedAt: now,
   });
+
+  if (result) {
+    recordGateOutcome(result.actionKind, 'approved');
+  }
+
+  return result;
 }
 
 export function deferSoulAction(id: string, governanceReason?: string | null, now = new Date().toISOString()): SoulAction | null {
@@ -305,7 +312,7 @@ export function deferSoulAction(id: string, governanceReason?: string | null, no
     throw new Error('Only not_dispatched soul actions can be deferred');
   }
 
-  return updateSoulActionGovernanceState({
+  const result = updateSoulActionGovernanceState({
     id,
     governanceStatus: 'deferred',
     governanceReason: governanceReason ?? action.governanceReason,
@@ -314,6 +321,12 @@ export function deferSoulAction(id: string, governanceReason?: string | null, no
     discardedAt: null,
     updatedAt: now,
   });
+
+  if (result) {
+    recordGateOutcome(result.actionKind, 'deferred');
+  }
+
+  return result;
 }
 
 export function discardSoulAction(id: string, governanceReason?: string | null, now = new Date().toISOString()): SoulAction | null {
@@ -326,7 +339,7 @@ export function discardSoulAction(id: string, governanceReason?: string | null, 
     throw new Error('Only not_dispatched soul actions can be discarded');
   }
 
-  return updateSoulActionGovernanceState({
+  const result = updateSoulActionGovernanceState({
     id,
     governanceStatus: 'discarded',
     governanceReason: governanceReason ?? action.governanceReason,
@@ -335,6 +348,12 @@ export function discardSoulAction(id: string, governanceReason?: string | null, 
     discardedAt: now,
     updatedAt: now,
   });
+
+  if (result) {
+    recordGateOutcome(result.actionKind, 'discarded');
+  }
+
+  return result;
 }
 
 export function attachWorkerTaskToSoulAction(soulActionId: string, workerTaskId: string, now = new Date().toISOString()): SoulAction | null {

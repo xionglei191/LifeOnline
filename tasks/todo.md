@@ -1,56 +1,53 @@
-# 当前轮：切到 reintegration outcome / execution summary 主线并完成一轮收口
+# 当前轮：切到 reintegration outcome / source identity 主线并完成一轮收口
 
 ## 进展
 - [x] 先按基线/进度文档与 `tasks/todo.md` 重新判断是否需要继续上一轮 reject websocket 碎修
 - [x] 结论：不再继续沿 `reject -> soul-action websocket refresh` 做局部补丁，转向更高价值的新缺口：
   - `feedbackReintegration` / `reintegrationOutcome` / `ActionOutcomePacket` 的真实闭环
-  - `soulActionDispatcher` / worker terminal update 在 execution summary 与 source identity 上的一致性
-- [x] 复核并沿用当前 working tree 中已存在、且与该主线一致的代码改动：
+  - worker terminal outcome 到 reintegration record 的 `source identity` 贯通
+- [x] 沿当前 dirty tree 主线继续收口 outcome/source identity：
+  - `LifeOS/packages/shared/src/types.ts`
+    - 给 `ActionOutcomePacket` 补齐 `sourceSoulActionId` / `sourceReintegrationId`
+    - 让 shared reintegration evidence contract 显式承载这两个 source identity 字段
   - `LifeOS/packages/server/src/workers/feedbackReintegration.ts`
-    - 去掉本地重复的 reintegration payload / evidence / signal 映射拼装逻辑
-    - 改为统一复用 `reintegratioonOutcome.ts` 中的 `buildOutcomePacketExtractTaskEvidence(...)`、`buildReintegrationRecordInputFromOutcomePacket(...)`、`getOutcomeTaskSignalKind(...)`
+    - `createFeedbackReintegrationPayload(...)` 现在会从 `getSoulActionByWorkerTaskId(...)` 带出 linked soul action / reintegration identity
+    - `createReintegrationRecordInput(...)` 继续统一走 `buildReintegrationRecordInputFromOutcomePacket(...)`
   - `LifeOS/packages/server/src/soul/reintegrationOutcome.ts`
-    - 作为 outcome packet -> summary / evidence / next action candidate / suggested actions 的统一装配点继续承载闭环
-  - `LifeOS/packages/server/src/soul/soulActionDispatcher.ts`
-    - dispatch 结果补齐 `executionSummary`，区分 `event_node` / `continuity_record` / `worker_task`
-  - `LifeOS/packages/server/src/soul/soulActions.ts`
-    - 持久化 soul action 读取时补挂 `executionSummary`
-    - worker-task terminal sync 后返回带 execution summary 的 soul action
+    - outcome evidence / record input 装配现在统一保留 `sourceSoulActionId` / `sourceReintegrationId`
+    - record input 默认优先继承 packet 自带的 source soul action id，并允许通过 options 覆盖 reintegration id
   - `LifeOS/packages/server/src/workers/workerTasks.ts`
-    - worker task 进入 terminal 状态时，在 `worker-task-updated` 之外补发 `soul-action-updated`
-- [x] 补齐/修正本轮相关测试对新字段的断言：
-  - `feedbackReintegration.test.ts`
-    - outcome packet 现在稳定包含 `sourceSoulActionId` / `sourceReintegrationId`
-    - reintegration evidence 断言同步更新为显式 `null`
-  - `reintegrationApi.test.ts`
-    - 已有针对 rejected projection visibility / soul-action execution summary 的 API 用例覆盖继续保留并通过
+    - terminal reintegration upsert 现在把 linked soul action 的 `sourceReintegrationId` 一并传进 record-input builder
+- [x] 补齐/更新测试：
+  - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
+    - 更新 shared evidence / record-input 断言，显式覆盖新增 identity 字段
+    - 新增 linked worker soul action 场景：验证 outcome packet / reintegration record input 会带上 `sourceSoulActionId`
+    - 新增 linked promotion soul action 场景：验证 reintegration source identity 不会在 packet -> record input 过程中丢失
 
 ## 结果
-- reintegration outcome 的 packet/evidence/record-input 装配不再在 `feedbackReintegration.ts` 与 `reintegrationOutcome.ts` 间各写一套，重复映射明显收口。
-- `dispatch response`、`persisted soul action detail/list`、`worker terminal websocket update` 三条路径现在都能围绕 `executionSummary` 对齐，而不是只有 dispatch 响应临时有摘要。
-- outcome packet 新增 source identity 字段后，后续继续打通 reintegration/source-soul-action 生命周期会更顺手。
+- `ActionOutcomePacket -> ReintegrationRecord evidence -> ReintegrationRecordInput` 这条链现在不再只保留 `sourceNoteId`，而是能把真实 linked soul action / reintegration identity 一起带下来。
+- 后续无论是继续做 `generateSoulActionsFromOutcome(...)`，还是追查 projection / accepted-review 生命周期里的 source identity，当前 packet/evidence 已经有可用锚点，不需要再回头补一层临时映射。
+- 这次改动仍保持在现有 dirty tree 主线上，没有再回到 reject websocket 碎修。
 
 ## 验证
-- [x] `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts --test-name-pattern "rejected reintegration-backed soul action does not expose promotion summary or persisted projection execution summary|global projection lists hide rejected reintegration artifacts while keeping accepted ones visible|reintegration reject emits reintegration-record-updated websocket event aligned with follow-up lists"`
-  - 结果：通过（43 tests / 0 fail）
-- [x] 针对 `feedbackReintegration.test.ts` 本轮新增字段断言做了对齐修正，核心 outcome/evidence 断言已和当前实现一致
-- [!] 发现独立阻塞：
-  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "buildReintegrationEvidenceFromOutcomePacket centralizes evidence assembly for packet context and persona snapshot|buildReintegrationSummaryFromOutcomePacket centralizes signal kind, continuity summary, and next action candidate from packet context|outcome packet next-action candidate picks the highest-priority earliest-due task instead of preserving item order|worker-task terminal updates emit soul-action-updated event with execution summary aligned to soul action list|dispatchApprovedSoulAction returns executionSummary for promotion and worker-task dispatch paths"`
-  - 结果：同文件中的另一条既有用例 `update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot` 触发 `SQLITE_CONSTRAINT_UNIQUE`，导致整次 test file 失败
-  - 判断：这是当前 dirty tree 中独立存在的 persona snapshot / DB 唯一键问题，不是本轮 outcome/execution summary 线新增回归；本轮未继续展开，以免再次切散主线
+- [x] 运行针对本轮 source identity 收口的定向测试：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "(linked soul action identity|linked reintegration identity|shared reintegration evidence contract shape|record input from outcome packet|centralizes record assembly for terminal tasks|prefers explicit sourceReintegrationId over a non-reintegration sourceNoteId|update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot)"`
+- [x] 结果：本轮新增/更新的 source identity 相关断言通过；同时复核到既有显式 source reintegration 用例也通过
+- [!] 仍有独立阻塞：
+  - 同一次 `feedbackReintegration.test.ts` 跑测里，既有用例 `update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot` 仍触发 `SQLITE_CONSTRAINT_UNIQUE`
+  - 该失败与本轮新增的 outcome/source identity 断言不同线；当前更像是 persona snapshot / DB 唯一键的既有脏树问题
 
 ## 未完成项
-- `update_persona_snapshot` 唯一键冲突尚未定位根因，仍阻塞 `feedbackReintegration.test.ts` 整文件重新全绿
-- 仍未完全回答：`sourceSoulActionId / sourceReintegrationId` 在 persona / projection / accepted-review 生命周期里应该如何统一沉淀与回流
-- `dispatchApprovedSoulAction` 与后续 persisted projection / websocket refresh 的跨层语义虽然更齐，但还没形成一套集中 helper 约束
+- `update_persona_snapshot` 唯一键冲突尚未定位根因，仍阻塞 `feedbackReintegration.test.ts` 整文件回归全绿
+- `sourceSoulActionId / sourceReintegrationId` 虽然已进入 packet/evidence，但 persona / accepted review / projection 生命周期的统一落盘规则还没完全收口
+- 尚未进一步把 `generateSoulActionsFromOutcome(...)` 与 projection planning 全部改造成直接消费这套 source identity 语义
 
 ## 下一步建议
 - 下一轮优先单独处理 `update_persona_snapshot` 的 `SQLITE_CONSTRAINT_UNIQUE`：
-  - 看 persona snapshot upsert 唯一键、重复执行路径、测试环境 fixture 是否存在双写
+  - 看 persona snapshot upsert 唯一键、worker task source identity 变更后是否引入双写路径
   - 修完后再把 `feedbackReintegration.test.ts` 整文件回归跑绿
 - 随后继续顺着 source identity 主线推进：
   - 明确 `ActionOutcomePacket -> ReintegrationRecord -> SoulAction -> Projection` 各层该保留哪些 source ids
-  - 评估是否把 `executionSummary` / projection summary / source identity 的装配进一步收敛到共享 helper，减少 server handler 与 model mapping 各自拼装
+  - 再评估是否把 `generateSoulActionsFromOutcome(...)` / promotion planning 与 source identity 装配进一步集中到共享 helper
 
 ---
 最近更新：2026-03-24 01:08 Asia/Shanghai
