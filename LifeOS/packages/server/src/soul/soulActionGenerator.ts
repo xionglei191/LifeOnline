@@ -45,7 +45,7 @@ export async function generateSoulActionCandidates(input: {
   }
 
   // Run cognitive analysis (AI with rule fallback)
-  const analysis = await analyzeNoteContent(input.noteId, content);
+  const analysis = await analyzeNoteContent(input.noteId, content, { dimension: input.noteDimension });
 
   if (analysis.suggestedActions.length === 0) {
     return {

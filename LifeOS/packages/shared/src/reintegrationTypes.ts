@@ -2,6 +2,7 @@
 
 import type { ContinuityTarget, ContinuityStrength, SoulActionKind, ReintegrationReviewStatus, ReintegrationSignalKind } from './core.js';
 import type { WorkerTaskType, TerminalWorkerTaskStatus } from './workerTypes.js';
+import type { SoulAction } from './soulActionTypes.js';
 
 export interface ExtractTaskReintegrationEvidenceItem {
   title: string;
@@ -360,7 +361,7 @@ export interface ReintegrationReviewRequest {
 
 export interface AcceptReintegrationRecordResponse {
   reintegrationRecord: ReintegrationRecord;
-  soulActions: { id: string; actionKind: SoulActionKind }[];
+  soulActions: SoulAction[];
   nextActionSummary: ReintegrationNextActionSummary | null;
   displaySummary: ReintegrationOutcomeDisplaySummary;
 }
@@ -371,7 +372,7 @@ export interface RejectReintegrationRecordResponse {
 
 export interface PlanReintegrationPromotionsResponse {
   reintegrationRecord: ReintegrationRecord;
-  soulActions: { id: string; actionKind: SoulActionKind }[];
+  soulActions: SoulAction[];
   nextActionSummary: ReintegrationNextActionSummary | null;
   displaySummary: ReintegrationOutcomeDisplaySummary;
 }
