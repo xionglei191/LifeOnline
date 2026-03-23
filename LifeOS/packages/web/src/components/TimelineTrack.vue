@@ -77,7 +77,7 @@
                 <span class="picker-status-dot" :class="'dot-' + note.status"></span>
                 <span class="picker-title">{{ note.title || note.file_name.replace('.md', '') }}</span>
               </div>
-              <p v-if="note.content" class="picker-content">{{ truncateContent(note.content, 80) }}</p>
+              <p v-if="pickerBodyPreview(note)" class="picker-content">{{ pickerBodyPreview(note) }}</p>
               <div class="picker-meta">
                 <span class="picker-type">{{ getTypeLabel(note.type) }}</span>
                 <span v-if="note.priority" class="picker-priority" :class="`priority-${note.priority}`">{{ priorityLabel(note.priority) }}</span>
@@ -302,6 +302,19 @@ function onDotLeave() {
 function truncateContent(text: string, len: number) {
   const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
   return clean.length > len ? clean.slice(0, len) + '…' : clean;
+}
+
+function pickerBodyPreview(note: Note) {
+  if (note.encrypted) {
+    return '🔒 内容已加密，预览已隐藏';
+  }
+  if (note.privacy === 'private' || note.privacy === 'sensitive') {
+    return '🔒 当前内容受隐私保护，预览已隐藏';
+  }
+  if (!note.content) {
+    return '';
+  }
+  return truncateContent(note.content, 80);
 }
 
 function getTypeLabel(type: string) {

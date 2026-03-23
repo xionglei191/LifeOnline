@@ -172,6 +172,54 @@ describe('SearchView', () => {
     expect(wrapper.find('.state-display-stub').attributes('data-type')).toBe('error');
   });
 
+  it('clears the selected note when the search query changes', async () => {
+    apiMocks.searchNotes
+      .mockResolvedValueOnce({
+        query: 'growth',
+        total: 1,
+        filters: { q: 'growth' },
+        notes: [{ id: 'note-growth' }],
+      })
+      .mockResolvedValueOnce({
+        query: 'health',
+        total: 1,
+        filters: { q: 'health' },
+        notes: [{ id: 'note-health' }],
+      });
+
+    wrapper = mount(SearchView, {
+      global: {
+        stubs: {
+          NoteList: {
+            props: ['notes'],
+            emits: ['selectNote'],
+            template: '<button class="note-list-stub" @click="$emit(\'selectNote\', notes[0].id)">{{ notes.length }}</button>',
+          },
+          NoteDetail: {
+            props: ['noteId'],
+            template: '<div class="note-detail-stub">{{ noteId ?? "none" }}</div>',
+          },
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+        },
+      },
+    });
+    await flushPromises();
+
+    await wrapper.get('.note-list-stub').trigger('click');
+    await nextTick();
+    expect(wrapper.find('.note-detail-stub').text()).toBe('note-growth');
+
+    routeState.current!.query.q = 'health';
+    await nextTick();
+    expect(wrapper.find('.note-detail-stub').text()).toBe('none');
+
+    await flushPromises();
+    expect(wrapper.text()).toContain('找到 1 条关于 “health” 的结果。');
+  });
+
   it('clears stale search results when the query disappears', async () => {
     apiMocks.searchNotes.mockResolvedValue({
       query: 'growth',

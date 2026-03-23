@@ -116,6 +116,44 @@ describe('TimelineTrack', () => {
     wrapper.unmount();
   });
 
+  it('hides protected content in the multi-note picker while keeping public content visible', async () => {
+    const wrapper = mount(TimelineTrack, {
+      props: {
+        tracks: [
+          {
+            dimension: 'growth',
+            notes: [
+              createNote({ id: 'note-private', dimension: 'growth', date: '2026-03-22', title: 'Private title', content: 'private body', privacy: 'private', encrypted: false }),
+              createNote({ id: 'note-encrypted', dimension: 'growth', date: '2026-03-22', title: 'Encrypted title', content: 'encrypted body', privacy: 'public', encrypted: true }),
+              createNote({ id: 'note-public', dimension: 'growth', date: '2026-03-22', title: 'Public title', content: 'public body', privacy: 'public', encrypted: false }),
+            ],
+          },
+        ],
+        startDate: '2026-03-20',
+        endDate: '2026-03-24',
+      },
+      global: {
+        stubs: {
+          NotePreview: true,
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await wrapper.get('.dot').trigger('click');
+    await nextTick();
+
+    const pickerText = document.body.textContent || '';
+    expect(pickerText).toContain('🔒 当前内容受隐私保护，预览已隐藏');
+    expect(pickerText).toContain('🔒 内容已加密，预览已隐藏');
+    expect(pickerText).toContain('public body');
+    expect(pickerText).not.toContain('private body');
+    expect(pickerText).not.toContain('encrypted body');
+
+    wrapper.unmount();
+  });
+
   it('orders multi-note picker entries by visible shared titles', async () => {
     const wrapper = mount(TimelineTrack, {
       props: {

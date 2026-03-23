@@ -96,7 +96,10 @@ function handleWsUpdate(event: Event) {
   void performSearch(query);
 }
 
-watch(() => route.query.q, (newQuery) => {
+watch(() => route.query.q, (newQuery, oldQuery) => {
+  if (newQuery !== oldQuery) {
+    selectedNoteId.value = null;
+  }
   performSearch(typeof newQuery === 'string' ? newQuery : '');
 }, { immediate: true });
 
