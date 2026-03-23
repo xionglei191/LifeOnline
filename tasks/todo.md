@@ -34,8 +34,14 @@
 ## 验证
 - [x] 运行针对本轮 source identity 收口的定向测试：
   - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/feedbackReintegration.test.ts --test-name-pattern "update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot"`
-- [x] 结果：persona snapshot 成功路径之前仍报 `SQLITE_CONSTRAINT_UNIQUE`，确认阻塞点就是 worker task 绑定与 snapshot upsert 之间的 identity 解析不一致
-- [ ] 修复后再回放同一 persona snapshot 路径与相关 reintegration 测试，确认是否全绿
+- [x] 结果：persona snapshot 成功路径之前仍报 `SQLITE_CONSTRAINT_UNIQUE`，最终定位为测试文件内共享全局 DB handle 与 `process.env.DB_PATH` 切换叠加导致的串扰，而不是 persona snapshot 主路径本身
+- [x] 修复：
+  - `workerTasks.ts` 里 worker-task 绑定与 persona snapshot 执行统一改为按 `getSoulActionByIdentityAndKind(...)` 查找 soul action
+  - `feedbackReintegration.test.ts` 的 persona snapshot 成功用例在创建临时 env 前显式 `closeDb()`，避免沿用上一个测试打开的数据库连接
+  - 收口 generator / gate 断言漂移到当前返回 shape
+- [x] 回放验证：
+  - `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test --test-concurrency=1 test/feedbackReintegration.test.ts --test-name-pattern "update_persona_snapshot execution syncs SoulAction lifecycle and upserts persona snapshot"`
+  - 结果：通过
 
 ## 未完成项
 - 还没重新跑修复后的 persona snapshot 成功路径与整组 reintegration 相关测试

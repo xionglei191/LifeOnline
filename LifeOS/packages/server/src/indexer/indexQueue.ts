@@ -1,5 +1,5 @@
 import { indexFile, deleteFileRecord } from './indexer.js';
-import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from '../soul/postIndexPersonaTrigger.js';
+import { getIndexedNoteTriggerSnapshot, triggerCognitiveAnalysisAfterIndex } from '../soul/postIndexPersonaTrigger.js';
 import type { WsEvent, IndexOperation, IndexErrorEventData } from '@lifeos/shared';
 
 interface QueueItem {
@@ -65,7 +65,7 @@ export class IndexQueue {
         try {
           if (item.operation === 'upsert') {
             await indexFile(filePath);
-            await triggerPersonaSnapshotAfterIndex({ filePath, previousNote });
+            await triggerCognitiveAnalysisAfterIndex({ filePath, previousNote });
           } else {
             await deleteFileRecord(filePath);
           }

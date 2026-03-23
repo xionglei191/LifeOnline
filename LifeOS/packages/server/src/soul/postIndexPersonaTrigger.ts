@@ -1,6 +1,6 @@
 import { getDb } from '../db/client.js';
-import { generateSoulActionCandidate } from './soulActionGenerator.js';
-import { evaluateInterventionGate } from './interventionGate.js';
+import { generateSoulActionCandidates, type SoulActionCandidate } from './soulActionGenerator.js';
+import { evaluateInterventionGate, type GateDecisionType } from './interventionGate.js';
 import { createOrReuseSoulAction } from './soulActions.js';
 
 interface IndexedNoteSnapshot {
@@ -10,10 +10,11 @@ interface IndexedNoteSnapshot {
   content: string;
 }
 
-export interface PostIndexPersonaTriggerResult {
+export interface PostIndexTriggerResult {
   triggered: boolean;
   reason: string;
-  soulActionId: string | null;
+  soulActionIds: string[];
+  candidateCount: number;
 }
 
 interface IndexedNoteRow {
@@ -29,9 +30,7 @@ function readIndexedNoteByFilePath(filePath: string): IndexedNoteSnapshot | null
     .prepare('SELECT id, file_path, type, dimension, content FROM notes WHERE file_path = ?')
     .get(filePath) as IndexedNoteRow | undefined;
 
-  if (!row) {
-    return null;
-  }
+  if (!row) return null;
 
   return {
     id: row.id,
@@ -45,63 +44,96 @@ export function getIndexedNoteTriggerSnapshot(filePath: string): IndexedNoteSnap
   return readIndexedNoteByFilePath(filePath);
 }
 
-function shouldTriggerPersonaSnapshot(
+/**
+ * Determine if this note should be analyzed at all.
+ * 
+ * Previously: hardcoded to only growth-dimension notes.
+ * Now: any note with changed content goes through cognitive analysis,
+ * which decides what actions to suggest.
+ */
+function shouldAnalyze(
   previousNote: IndexedNoteSnapshot | null,
   currentNote: IndexedNoteSnapshot | null,
 ): currentNote is IndexedNoteSnapshot {
   if (!currentNote) return false;
   if (currentNote.type !== 'note') return false;
-  if (currentNote.dimension !== 'growth') return false;
   if (!currentNote.content.trim()) return false;
-  if (!previousNote) return true;
-  return previousNote.content !== currentNote.content;
+  // Only analyze if content actually changed
+  if (previousNote && previousNote.content === currentNote.content) return false;
+  return true;
 }
 
-export async function triggerPersonaSnapshotAfterIndex(params: {
+/**
+ * After a note is indexed, run it through the cognitive pipeline:
+ * 1. Cognitive analysis (AI or rules) extracts structured signals
+ * 2. Smart generator produces ranked action candidates
+ * 3. Intervention gate decides each candidate's fate
+ * 4. Qualifying candidates become soul actions
+ */
+export async function triggerCognitiveAnalysisAfterIndex(params: {
   filePath: string;
   previousNote: IndexedNoteSnapshot | null;
-}): Promise<PostIndexPersonaTriggerResult> {
+}): Promise<PostIndexTriggerResult> {
   const currentNote = readIndexedNoteByFilePath(params.filePath);
-  if (!shouldTriggerPersonaSnapshot(params.previousNote, currentNote)) {
+
+  if (!shouldAnalyze(params.previousNote, currentNote)) {
     return {
       triggered: false,
-      reason: 'current note does not match PR3 persona snapshot review baseline',
-      soulActionId: null,
+      reason: 'note does not qualify for cognitive analysis',
+      soulActionIds: [],
+      candidateCount: 0,
     };
   }
 
-  const candidate = generateSoulActionCandidate({
+  // Run through the cognitive pipeline
+  const { candidates, analysis, skippedReason } = await generateSoulActionCandidates({
     sourceNoteId: currentNote.id,
     noteId: currentNote.id,
     noteContent: currentNote.content,
+    noteDimension: currentNote.dimension,
+    noteType: currentNote.type,
   });
-  const gateDecision = evaluateInterventionGate(candidate);
 
-  if (!candidate) {
+  if (candidates.length === 0) {
     return {
       triggered: false,
-      reason: 'candidate generation returned null for PR3 persona snapshot review baseline',
-      soulActionId: null,
+      reason: skippedReason ?? '认知分析未产生候选动作',
+      soulActionIds: [],
+      candidateCount: 0,
     };
   }
 
-  if (gateDecision.decision !== 'queue_for_review') {
-    return {
-      triggered: false,
-      reason: gateDecision.reason,
-      soulActionId: null,
-    };
-  }
+  // Evaluate each candidate through the gate
+  const soulActionIds: string[] = [];
 
-  const soulAction = createOrReuseSoulAction({
-    sourceNoteId: candidate.sourceNoteId,
-    actionKind: candidate.actionKind,
-    governanceReason: gateDecision.reason,
-  });
+  for (const candidate of candidates) {
+    const gateDecision = evaluateInterventionGate(candidate);
+
+    if (gateDecision.decision === 'discard' || gateDecision.decision === 'observe_only') {
+      continue;
+    }
+
+    // dispatch_now or queue_for_review → create soul action
+    const soulAction = createOrReuseSoulAction({
+      sourceNoteId: candidate.sourceNoteId,
+      actionKind: candidate.actionKind,
+      governanceReason: `${gateDecision.reason} [置信度: ${(candidate.confidence * 100).toFixed(0)}%]`,
+    });
+
+    soulActionIds.push(soulAction.id);
+  }
 
   return {
-    triggered: true,
-    reason: gateDecision.reason,
-    soulActionId: soulAction.id,
+    triggered: soulActionIds.length > 0,
+    reason: soulActionIds.length > 0
+      ? `认知分析产生 ${candidates.length} 个候选，${soulActionIds.length} 个通过门控`
+      : `认知分析产生 ${candidates.length} 个候选，但均未通过门控`,
+    soulActionIds,
+    candidateCount: candidates.length,
   };
 }
+
+// ── Legacy compat alias (will be removed) ──────────────
+/** @deprecated Use triggerCognitiveAnalysisAfterIndex instead */
+export const triggerPersonaSnapshotAfterIndex = triggerCognitiveAnalysisAfterIndex;
+export type PostIndexPersonaTriggerResult = PostIndexTriggerResult;
