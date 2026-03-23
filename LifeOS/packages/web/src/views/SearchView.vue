@@ -2,7 +2,7 @@
   <div class="search-view">
     <section class="hero-panel">
       <div class="hero-copy">
-        <p class="eyebrow">Search Console</p>
+        <p class="eyebrow">语义检索台</p>
         <h2>把分散记录重新聚拢到<span>一条语义线索</span>上。</h2>
         <p v-if="!loading && result" class="hero-summary">
           找到 <strong>{{ result.total }}</strong> 条关于 “<strong>{{ result.filters.q }}</strong>” 的结果。

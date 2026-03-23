@@ -80,7 +80,9 @@ describe('SearchView', () => {
     await flushPromises();
 
     expect(apiMocks.searchNotes).toHaveBeenCalledWith(' growth ');
+    expect(wrapper.text()).toContain('语义检索台');
     expect(wrapper.text()).toContain('找到 1 条关于 “growth” 的结果。');
+    expect(wrapper.text()).not.toContain('Search Console');
     expect(wrapper.text()).not.toContain('找到 1 条关于 “ growth ” 的结果。');
   });
 
