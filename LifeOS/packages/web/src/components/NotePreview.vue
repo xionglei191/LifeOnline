@@ -13,12 +13,14 @@
               {{ dimensionLabel(displayNotes[0].dimension) }}
             </span>
             <span class="preview-type">{{ typeLabels[displayNotes[0].type] }}</span>
+            <span v-if="displayNotes[0].priority" class="preview-priority" :class="'pri-' + displayNotes[0].priority">{{ priorityLabels[displayNotes[0].priority] }}</span>
             <span class="preview-status" :class="'status-' + displayNotes[0].status">{{ statusLabels[displayNotes[0].status] }}</span>
           </div>
           <h4 class="preview-title">{{ displayNotes[0].title || displayNotes[0].file_name.replace('.md', '') }}</h4>
           <p v-if="displayNotes[0].content" class="preview-body">{{ truncate(displayNotes[0].content, 160) }}</p>
           <div class="preview-footer">
             <span class="preview-date">{{ displayNotes[0].date?.slice(0, 10) }}</span>
+            <span v-if="displayNotes[0].updated" class="preview-updated">更新 {{ formatUpdated(displayNotes[0].updated) }}</span>
             <span v-if="displayNotes[0].due" class="preview-due">截止 {{ displayNotes[0].due?.slice(0, 10) }}</span>
           </div>
         </template>
@@ -40,6 +42,7 @@
                 <span class="multi-type">{{ typeLabels[n.type] }}</span>
                 <span v-if="n.priority" class="multi-priority" :class="'pri-' + n.priority">{{ priorityLabels[n.priority] }}</span>
                 <span class="multi-date">{{ n.date?.slice(5, 10) }}</span>
+                <span v-if="n.updated" class="multi-updated">更新 {{ formatUpdated(n.updated) }}</span>
               </div>
             </div>
           </div>
@@ -105,6 +108,15 @@ function truncate(text: string, len: number) {
   const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
   return clean.length > len ? clean.slice(0, len) + '…' : clean;
 }
+
+function formatUpdated(updated: string) {
+  return new Date(updated).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 </script>
 
 <style scoped>
@@ -134,6 +146,7 @@ function truncate(text: string, len: number) {
 
 .preview-dim,
 .preview-type,
+.preview-priority,
 .preview-status {
   padding: 3px 9px;
   border-radius: 999px;
@@ -142,6 +155,9 @@ function truncate(text: string, len: number) {
 }
 
 .preview-type { background: var(--surface-muted); color: var(--text-secondary); }
+.preview-priority.pri-high { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+.preview-priority.pri-medium { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.preview-priority.pri-low { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .preview-status { background: var(--surface-muted); color: var(--text-muted); }
 .status-pending { color: var(--signal) !important; }
 .status-in_progress { color: var(--warn) !important; }
@@ -168,8 +184,13 @@ function truncate(text: string, len: number) {
 .preview-footer {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
   font-size: 0.76rem;
   color: var(--text-muted);
+}
+
+.preview-updated {
+  color: var(--text-secondary);
 }
 
 .preview-due { color: var(--warn); }
@@ -250,6 +271,7 @@ function truncate(text: string, len: number) {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .multi-type {
@@ -273,7 +295,11 @@ function truncate(text: string, len: number) {
 .multi-date {
   font-size: 0.72rem;
   color: var(--text-muted);
-  margin-left: auto;
+}
+
+.multi-updated {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
 }
 
 .preview-fade-enter-active,

@@ -58,6 +58,28 @@ describe('NotePreview', () => {
     wrapper.unmount();
   });
 
+  it('projects shared priority and updated facts in the single-note preview path', () => {
+    const wrapper = mount(NotePreview, {
+      props: {
+        note: createNote({ priority: 'high', updated: '2026-03-23T11:45:00.000Z', due: '2026-03-24' }),
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toContain('高');
+    expect(document.body.textContent).toContain('截止 2026-03-24');
+    expect(document.body.textContent).toMatch(/更新 .*03\/23.*11:45|更新 .*3\/23.*11:45|更新 .*03\/23.*19:45|更新 .*3\/23.*19:45/);
+
+    wrapper.unmount();
+  });
+
   it('orders multi-note previews by visible shared titles', () => {
     const wrapper = mount(NotePreview, {
       props: {
@@ -78,6 +100,29 @@ describe('NotePreview', () => {
 
     const previewTitles = Array.from(document.body.querySelectorAll('.multi-title')).map((node) => node.textContent?.trim());
     expect(previewTitles).toEqual(['Alpha title', 'Zeta title']);
+
+    wrapper.unmount();
+  });
+
+  it('renders recency facts in the multi-note preview path', () => {
+    const wrapper = mount(NotePreview, {
+      props: {
+        notes: [
+          createNote({ id: 'preview-b', title: 'Beta title', updated: '2026-03-23T11:45:00.000Z' }),
+          createNote({ id: 'preview-a', title: 'Alpha title', updated: '2026-03-23T09:15:00.000Z' }),
+        ],
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toMatch(/更新 .*03\/23.*11:45|更新 .*3\/23.*11:45|更新 .*03\/23.*19:45|更新 .*3\/23.*19:45/);
 
     wrapper.unmount();
   });
