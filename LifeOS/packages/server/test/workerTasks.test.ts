@@ -33,7 +33,12 @@ test('createWorkerTask persists pending task with worker and metadata', async ()
   const env = await createTestEnv('lifeos-worker-create-');
   try {
     initDatabase();
-    const task = createWorkerTask({ taskType: 'extract_tasks', input: { noteId: 'note-1' }, sourceNoteId: 'source-1' }, 'schedule-1');
+    const task = createWorkerTask({
+      taskType: 'extract_tasks',
+      input: { noteId: 'note-1' },
+      sourceNoteId: 'source-1',
+      sourceReintegrationId: 'reint:source-1',
+    }, 'schedule-1');
     const stored = getWorkerTask(task.id);
 
     assert.ok(stored);
@@ -41,6 +46,7 @@ test('createWorkerTask persists pending task with worker and metadata', async ()
     assert.equal(stored?.worker, 'lifeos');
     assert.equal(stored?.scheduleId, 'schedule-1');
     assert.equal(stored?.sourceNoteId, 'source-1');
+    assert.equal(stored?.sourceReintegrationId, 'reint:source-1');
     assert.equal(stored?.result, null);
   } finally {
     await env.cleanup();

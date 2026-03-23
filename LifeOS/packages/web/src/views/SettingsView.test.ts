@@ -1,6 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import {
+  formatReintegrationOutcomeNextActionText,
+  formatReintegrationSignalKindLabel,
+  formatReintegrationStrengthLabel,
+  formatReintegrationTargetLabel,
+  formatContinuityKindLabel,
+  formatContinuityStrengthLabel,
+  formatContinuityTargetLabel,
+  formatEventKindLabel,
+  formatEventNodeStatusLabel,
+  formatEventNodeThresholdLabel,
+  formatProjectionContinuityDetails,
+  formatProjectionExplanationDetails,
+  getAcceptReintegrationMessage,
+  getAcceptReintegrationMessageFromDisplaySummary,
+  getPlanReintegrationMessage,
+  getPlanReintegrationMessageFromDisplaySummary,
+  getRejectReintegrationMessage,
+  getReintegrationOutcomeDetailRows,
+  getReintegrationOutcomeNoPlanReason,
+  getReintegrationReviewMessage,
+  getDispatchExecutionMessage,
+  getProjectionContinuitySummary,
+  getProjectionExplanationSummary,
+  formatSoulActionSourceLabel,
+  getReintegrationExtractTaskCount,
+  getReintegrationNextActionCandidate,
+  getReintegrationNextActionSummary,
+  getSoulActionGovernanceMessage,
+} from '@lifeos/shared';
 import type { PromptRecord, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -90,6 +120,7 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     workerTaskId: overrides.workerTaskId ?? null,
     governanceReason: overrides.governanceReason ?? null,
+    promotionSummary: overrides.promotionSummary ?? null,
     resultSummary: overrides.resultSummary ?? null,
     error: overrides.error ?? null,
     createdAt: overrides.createdAt,
@@ -104,18 +135,21 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> & Pic
     id: overrides.id,
     workerTaskId: overrides.workerTaskId ?? 'task-1',
     sourceNoteId: overrides.sourceNoteId ?? 'note-1',
+    soulActionId: overrides.soulActionId ?? null,
     signalKind: overrides.signalKind ?? 'daily_report_reintegration',
     taskType: overrides.taskType ?? 'daily_report',
+    terminalStatus: overrides.terminalStatus ?? 'succeeded',
     summary: overrides.summary ?? `${overrides.id} summary`,
     reviewStatus: overrides.reviewStatus ?? 'accepted',
-    payload: overrides.payload ?? {},
-    result: overrides.result ?? null,
+    target: overrides.target ?? 'derived_outputs',
+    strength: overrides.strength ?? 'medium',
     reviewReason: overrides.reviewReason ?? null,
-    evidence: overrides.evidence ?? null,
+    evidence: overrides.evidence ?? {},
+    nextActionSummary: overrides.nextActionSummary,
+    displaySummary: overrides.displaySummary,
     createdAt: overrides.createdAt,
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     reviewedAt: overrides.reviewedAt ?? null,
-    reviewedBy: overrides.reviewedBy ?? null,
   };
 }
 
@@ -134,6 +168,13 @@ const reintegrationRecords: ReintegrationRecord[] = [
     taskType: 'extract_tasks',
     signalKind: 'task_extraction_reintegration',
     target: 'task_record',
+    displaySummary: {
+      plannedActionCount: 0,
+      nextActionCreatedCount: 2,
+      nextActionText: '整理周报素材（high · due 2026-03-22）',
+      hasNextActionEvidence: true,
+      noPlanReason: 'next_action_evidence_only',
+    },
     evidence: {
       extractTaskCreated: 2,
       extractTaskItems: [
@@ -167,6 +208,60 @@ const reintegrationRecords: ReintegrationRecord[] = [
   createReintegrationRecord({ id: 'record-mixed', createdAt: '2026-03-20T10:00:00.000Z', summary: 'mixed group', reviewStatus: 'pending_review' }),
 ];
 
+const plannedReadySoulAction = createSoulAction({
+  id: 'planned-ready-1',
+  sourceNoteId: 'record-ready',
+  createdAt: '2026-03-21T10:07:00.000Z',
+  governanceStatus: 'pending_review',
+  executionStatus: 'not_dispatched',
+  actionKind: 'create_event_node',
+  promotionSummary: {
+    sourceSummary: 'ready group',
+    primaryReason: 'accepted reintegration record',
+    rationale: 'review-backed PR6 promotion',
+    reviewBacked: true,
+    projectionKind: 'event',
+  },
+});
+
+const plannedReadyNextActionSummary = {
+  createdCount: 2,
+  candidateTitle: '整理周报素材',
+  candidatePriority: 'high',
+  candidateDue: '2026-03-22',
+  candidateOutputNoteId: 'task-note-1',
+} as const;
+
+const plannedReadyDisplaySummary = {
+  plannedActionCount: 1,
+  nextActionCreatedCount: 2,
+  nextActionText: '整理周报素材（high · due 2026-03-22）',
+  hasNextActionEvidence: true,
+  noPlanReason: null,
+} as const;
+
+const plannedReadyMessage = getPlanReintegrationMessageFromDisplaySummary(plannedReadyDisplaySummary);
+
+const acceptedMixedDisplaySummary = {
+  plannedActionCount: 1,
+  nextActionCreatedCount: null,
+  nextActionText: null,
+  hasNextActionEvidence: false,
+  noPlanReason: null,
+} as const;
+
+const acceptedMixedMessage = getAcceptReintegrationMessageFromDisplaySummary(acceptedMixedDisplaySummary);
+
+const acceptedEvidenceOnlyDisplaySummary = {
+  plannedActionCount: 0,
+  nextActionCreatedCount: 2,
+  nextActionText: '整理周报素材（high · due 2026-03-22）',
+  hasNextActionEvidence: true,
+  noPlanReason: 'next_action_evidence_only',
+} as const;
+
+const acceptedEvidenceOnlyMessage = getAcceptReintegrationMessageFromDisplaySummary(acceptedEvidenceOnlyDisplaySummary);
+
 const soulActions: SoulAction[] = [
   createSoulAction({ id: 'ready-1', sourceNoteId: 'note-ready-1', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
   createSoulAction({ id: 'ready-2', sourceNoteId: 'note-ready-2', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
@@ -186,7 +281,11 @@ const eventNodes: EventNode[] = [
     threshold: 'high',
     status: 'active',
     evidence: { source: 'settings-test' },
-    explanation: { reason: 'projection' },
+    explanation: {
+      whyHighThreshold: 'review-backed PR6 promotion',
+      whyNow: 'ready group',
+      reviewBacked: true,
+    },
     occurredAt: '2026-03-21T10:03:00.000Z',
     createdAt: '2026-03-21T10:03:00.000Z',
     updatedAt: '2026-03-21T10:03:00.000Z',
@@ -221,9 +320,18 @@ const continuityRecords: ContinuityRecord[] = [
     target: 'derived_outputs',
     strength: 'medium',
     summary: 'ready continuity',
-    continuity: { trend: 'stable' },
+    continuity: {
+      anchor: 'ready continuity',
+      observationWindow: 'single_reviewed_signal',
+      claim: 'ready continuity',
+      scope: 'daily',
+    },
     evidence: { source: 'settings-test' },
-    explanation: { reason: 'projection' },
+    explanation: {
+      whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+      whyReviewBacked: 'accepted reintegration record',
+      reviewBacked: true,
+    },
     recordedAt: '2026-03-21T10:04:00.000Z',
     createdAt: '2026-03-21T10:04:00.000Z',
     updatedAt: '2026-03-21T10:04:00.000Z',
@@ -416,6 +524,10 @@ describe('SettingsView soul action governance wiring', () => {
     apiMocks.fetchIndexErrors.mockResolvedValue([]);
     apiMocks.fetchWorkerTasks.mockResolvedValue([]);
     apiMocks.fetchTaskSchedules.mockResolvedValue([]);
+    expect(formatSoulActionSourceLabel(soulActions[2]!)).toBe('Reintegration record-mixed (source note note-mixed-1)');
+    expect(getReintegrationExtractTaskCount(reintegrationRecords[0]!)).toBe(2);
+    expect(getReintegrationNextActionSummary(reintegrationRecords[0]!)?.candidateTitle).toBe('整理周报素材');
+    expect(getReintegrationNextActionCandidate(reintegrationRecords[0]!)?.title).toBe('整理周报素材');
     apiMocks.fetchReintegrationRecords.mockResolvedValue(reintegrationRecords);
     apiMocks.fetchSoulActions.mockResolvedValue(soulActions);
     apiMocks.fetchEventNodeProjectionList.mockImplementation(async (sourceReintegrationIds?: string[]) => {
@@ -450,6 +562,12 @@ describe('SettingsView soul action governance wiring', () => {
         dispatched: true,
         reason: 'dispatched',
         workerTaskId: 'worker-task-ready-1',
+        executionSummary: {
+          objectType: 'worker_task',
+          objectId: 'worker-task-ready-1',
+          operation: 'enqueued',
+          summary: '人格快照更新 · 等待执行 · LifeOS',
+        },
       },
       task: {
         id: 'worker-task-ready-1',
@@ -475,6 +593,7 @@ describe('SettingsView soul action governance wiring', () => {
         summary: 'mixed group',
         reviewStatus: 'accepted',
         reviewedAt: '2026-03-21T10:06:00.000Z',
+        displaySummary: acceptedMixedDisplaySummary,
       }),
       soulActions: [
         createSoulAction({
@@ -485,16 +604,23 @@ describe('SettingsView soul action governance wiring', () => {
           executionStatus: 'not_dispatched',
         }),
       ],
+      nextActionSummary: null,
+      displaySummary: acceptedMixedDisplaySummary,
     });
-    clientMocks.planReintegrationPromotions.mockResolvedValue([
-      createSoulAction({
-        id: 'planned-ready-1',
-        sourceNoteId: 'record-ready',
-        createdAt: '2026-03-21T10:07:00.000Z',
-        governanceStatus: 'pending_review',
-        executionStatus: 'not_dispatched',
+    clientMocks.planReintegrationPromotions.mockResolvedValue({
+      reintegrationRecord: createReintegrationRecord({
+        id: 'record-ready',
+        createdAt: '2026-03-21T10:00:00.000Z',
+        summary: 'ready group',
+        reviewStatus: 'accepted',
+        reviewedAt: '2026-03-21T10:05:00.000Z',
+        nextActionSummary: plannedReadyNextActionSummary,
+        displaySummary: plannedReadyDisplaySummary,
       }),
-    ]);
+      soulActions: [plannedReadySoulAction],
+      nextActionSummary: plannedReadyNextActionSummary,
+      displaySummary: plannedReadyDisplaySummary,
+    });
   });
 
   afterEach(() => {
@@ -714,6 +840,9 @@ describe('SettingsView soul action governance wiring', () => {
 
     await flushPromises();
 
+    expect(wrapper.text()).toContain(formatReintegrationSignalKindLabel(reintegrationRecords[0]!));
+    expect(wrapper.text()).toContain(`强度 ${formatReintegrationStrengthLabel(reintegrationRecords[0]!)}`);
+    expect(wrapper.text()).toContain(`Target: ${formatReintegrationTargetLabel(reintegrationRecords[0]!)}`);
     expect(wrapper.text()).toContain('产出行动项 2');
     expect(wrapper.text()).toContain('下一步候选：整理周报素材（high · due 2026-03-22）');
 
@@ -727,6 +856,297 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('补充复盘提纲');
     expect(wrapper.text()).toContain('task-note-1');
     expect(wrapper.text()).toContain('task-note-2');
+
+    wrapper.unmount();
+  });
+
+  it('shows accept feedback with no-plan explanation when accepted reintegration keeps only next-action evidence', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-evidence-only-accept',
+        createdAt: '2026-03-21T10:32:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        reviewStatus: 'pending_review',
+      }),
+    ]).mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-evidence-only-accept',
+        createdAt: '2026-03-21T10:32:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        reviewStatus: 'accepted',
+        reviewedAt: '2026-03-21T10:33:00.000Z',
+        displaySummary: acceptedEvidenceOnlyDisplaySummary,
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        evidence: {
+          extractTaskCreated: 2,
+        },
+      }),
+    ]);
+
+    vi.mocked(client.acceptReintegrationRecord).mockResolvedValueOnce({
+      reintegrationRecord: createReintegrationRecord({
+        id: 'record-evidence-only-accept',
+        createdAt: '2026-03-21T10:32:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        reviewStatus: 'accepted',
+        reviewedAt: '2026-03-21T10:33:00.000Z',
+        displaySummary: acceptedEvidenceOnlyDisplaySummary,
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        evidence: {
+          extractTaskCreated: 2,
+        },
+      }),
+      soulActions: [],
+      nextActionSummary: {
+        createdCount: 2,
+        candidateTitle: '整理周报素材',
+        candidatePriority: 'high',
+        candidateDue: '2026-03-22',
+        candidateOutputNoteId: 'task-note-1',
+      },
+      displaySummary: acceptedEvidenceOnlyDisplaySummary,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    const acceptButton = wrapper.findAll('.reintegration-card .btn-worker').find((button) => button.attributes('disabled') === undefined);
+    expect(acceptButton).toBeTruthy();
+
+    await acceptButton!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(acceptedEvidenceOnlyMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(acceptedEvidenceOnlyMessage);
+
+    wrapper.unmount();
+  });
+
+  it('renders promotion summary text for planned reintegration actions in detail view', async () => {
+    vi.mocked(client.planReintegrationPromotions).mockResolvedValueOnce({
+      soulActions: [plannedReadySoulAction],
+      nextActionSummary: plannedReadyNextActionSummary,
+      displaySummary: plannedReadyDisplaySummary,
+    });
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    const planButton = wrapper.findAll('button').find((button) => button.text() === '手动补规划');
+    expect(planButton).toBeTruthy();
+    await planButton!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Planned promotion actions');
+    expect(wrapper.text()).toContain('投射 EventNode · review-backed · ready group · accepted reintegration record');
+
+    wrapper.unmount();
+  });
+
+  it('renders websocket-provided next-action and display summaries without falling back to evidence-derived reintegration guesses', async () => {
+    const clientMocks = vi.mocked(client);
+    clientMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-ws-contract',
+        createdAt: '2026-03-21T11:00:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        reviewStatus: 'accepted',
+        nextActionSummary: {
+          createdCount: 3,
+          candidateTitle: '来自 websocket contract 的下一步候选',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-23',
+          candidateOutputNoteId: 'task-note-ws-contract',
+        },
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: 3,
+          nextActionText: null,
+          hasNextActionEvidence: false,
+          noPlanReason: 'no_outcome_signal',
+        },
+        evidence: {
+          extractTaskCreated: 1,
+          nextActionCandidate: {
+            title: '来自 evidence 的旧候选',
+            dimension: 'growth',
+            priority: 'low',
+            due: '2026-03-25',
+            filePath: '/vault/growth/old.md',
+            outputNoteId: 'task-note-old',
+          },
+        },
+      }),
+    ]);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('产出行动项 3');
+    expect(wrapper.text()).not.toContain('下一步候选：');
+    expect(wrapper.text()).not.toContain('来自 evidence 的旧候选');
+    expect(wrapper.text()).not.toContain('来自 websocket contract 的下一步候选（high · due 2026-03-23）');
+    expect(wrapper.text()).toContain('当前没有足够 outcome signal 进入可规划状态');
+
+    wrapper.unmount();
+  });
+
+  it('renders display summary detail rows from the shared reintegration outcome formatter', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-detail-rows',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: 'next_action_evidence_only',
+        },
+      }),
+    ]);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+    const expandButton = wrapper.findAll('button').find((button) => button.text() === '展开详情');
+    expect(expandButton?.exists()).toBe(true);
+    await expandButton!.trigger('click');
+    await flushPromises();
+
+    const expectedRows = getReintegrationOutcomeDetailRows({
+      plannedActionCount: 0,
+      nextActionCreatedCount: 2,
+      nextActionText: '整理周报素材（high · due 2026-03-22）',
+      hasNextActionEvidence: true,
+      noPlanReason: 'next_action_evidence_only',
+    });
+
+    for (const row of expectedRows) {
+      expect(wrapper.text()).toContain(`${row.label}：${row.value}`);
+    }
+
+    wrapper.unmount();
+  });
+
+  it('renders next-action strip rows and no-plan reason from the shared reintegration outcome formatter', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-strip-rows',
+        createdAt: '2026-03-21T10:25:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: 'next_action_evidence_only',
+        },
+      }),
+      createReintegrationRecord({
+        id: 'record-no-plan-reason',
+        createdAt: '2026-03-21T10:26:00.000Z',
+        taskType: 'classification_reintegration' as never,
+        signalKind: 'classification_reintegration',
+        target: 'derived_outputs',
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: null,
+          nextActionText: null,
+          hasNextActionEvidence: false,
+          noPlanReason: 'no_suggested_actions',
+        },
+      }),
+    ]);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('产出行动项 2');
+    expect(wrapper.text()).toContain('下一步候选：整理周报素材（high · due 2026-03-22）');
+    expect(wrapper.text()).toContain(getReintegrationOutcomeNoPlanReason({
+      plannedActionCount: 0,
+      nextActionCreatedCount: null,
+      nextActionText: null,
+      hasNextActionEvidence: false,
+      noPlanReason: 'no_suggested_actions',
+    }));
+
+    wrapper.unmount();
+  });
+
+  it('prefers displaySummary next-action text over evidence-derived candidate text in the reintegration control plane', async () => {
+    apiMocks.fetchReintegrationRecords.mockResolvedValueOnce([
+      createReintegrationRecord({
+        id: 'record-display-summary-text',
+        createdAt: '2026-03-21T10:30:00.000Z',
+        taskType: 'extract_tasks',
+        signalKind: 'task_extraction_reintegration',
+        target: 'task_record',
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: 2,
+          nextActionText: '来自 displaySummary 的下一步候选（high · due 2026-03-23）',
+          hasNextActionEvidence: true,
+          noPlanReason: 'next_action_evidence_only',
+        },
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '来自 summary 的下一步候选',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-24',
+          candidateOutputNoteId: 'task-note-display',
+        },
+        evidence: {
+          extractTaskCreated: 2,
+          nextActionCandidate: {
+            title: '来自 evidence 的旧候选',
+            dimension: 'growth',
+            priority: 'low',
+            due: '2026-03-25',
+            filePath: '/vault/growth/old.md',
+            outputNoteId: 'task-note-old',
+          },
+        },
+      }),
+    ]);
+
+    const wrapper = mountSettingsView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('产出行动项 2');
+    expect(wrapper.text()).toContain('下一步候选：来自 displaySummary 的下一步候选（high · due 2026-03-23）');
+    expect(wrapper.text()).not.toContain('来自 evidence 的旧候选');
+    expect(wrapper.text()).not.toContain(formatReintegrationOutcomeNextActionText({
+      createdCount: 2,
+      candidateTitle: '来自 summary 的下一步候选',
+      candidatePriority: 'high',
+      candidateDue: '2026-03-24',
+      candidateOutputNoteId: 'task-note-display',
+    }));
 
     wrapper.unmount();
   });
@@ -832,9 +1252,19 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('回流 record-ready');
     expect(wrapper.text()).toContain('提升动作：ready-1');
     expect(wrapper.text()).toContain('提升动作：ready-2');
-    expect(wrapper.text()).toContain('阈值：high');
-    expect(wrapper.text()).toContain('状态：active');
-    expect(wrapper.text()).toContain('强度：medium');
+    expect(wrapper.text()).toContain(formatEventKindLabel(eventNodes[0]!));
+    expect(wrapper.text()).toContain(`阈值：${formatEventNodeThresholdLabel(eventNodes[0]!)}`);
+    expect(wrapper.text()).toContain(`状态：${formatEventNodeStatusLabel(eventNodes[0]!)}`);
+    expect(wrapper.text()).toContain(`目标：${formatContinuityTargetLabel(continuityRecords[0]!)}`);
+    expect(wrapper.text()).toContain(`强度：${formatContinuityStrengthLabel(continuityRecords[0]!)}`);
+    expect(wrapper.text()).toContain(formatContinuityKindLabel(continuityRecords[0]!));
+    expect(wrapper.text()).toContain(getProjectionExplanationSummary(eventNodes[0]!)?.primaryReason ?? '');
+    expect(wrapper.text()).toContain('review-backed');
+    expect(wrapper.text()).toContain('ready group · review-backed PR6 promotion · review-backed');
+    expect(wrapper.text()).toContain(getProjectionContinuitySummary(continuityRecords[0]!)?.anchor ?? '');
+    expect(wrapper.text()).toContain(`scope ${getProjectionContinuitySummary(continuityRecords[0]!)?.scope}`);
+    expect(wrapper.text()).toContain('ready continuity · scope daily');
+    expect(wrapper.text()).toContain('accepted reintegration record · PR6 continuity promotion · review-backed');
     expect(wrapper.text()).toContain('来源回流');
     expect(wrapper.text()).toContain('未提供');
     expect(wrapper.text()).toContain('record-ready');
@@ -842,9 +1272,13 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.text()).toContain('来源动作');
     expect(wrapper.text()).toContain('判定说明');
     expect(wrapper.text()).toContain('证据');
-    expect(wrapper.text()).toContain('"reason": "projection"');
+    expect(wrapper.text()).toContain(formatProjectionExplanationDetails(eventNodes[0]!)[0] ?? '');
+    expect(wrapper.text()).toContain('治理依据：review-backed');
+    expect(wrapper.text()).toContain(formatProjectionContinuityDetails(continuityRecords[0]!)[0] ?? '');
+    expect(wrapper.text()).toContain(formatProjectionContinuityDetails(continuityRecords[0]!)[1] ?? '');
+    expect(wrapper.text()).not.toContain('"whyNow": "ready group"');
     expect(wrapper.text()).toContain('"source": "settings-test"');
-    expect(wrapper.text()).toContain('"trend": "stable"');
+    expect(wrapper.text()).not.toContain('"scope": "daily"');
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
 
@@ -1492,8 +1926,10 @@ describe('SettingsView soul action governance wiring', () => {
     await acceptButton!.trigger('click');
     await flushPromises();
 
+    const acceptMessage = acceptedMixedMessage;
+
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -1508,7 +1944,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1532,7 +1968,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1547,8 +1983,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(acceptMessage);
 
     wrapper.unmount();
   });
@@ -1581,7 +2017,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -1596,7 +2032,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1620,7 +2056,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1635,8 +2071,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(plannedReadyMessage);
 
     wrapper.unmount();
   });
@@ -1671,7 +2107,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -1697,8 +2133,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(plannedReadyMessage);
 
     wrapper.unmount();
   });
@@ -1733,7 +2169,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -1759,7 +2195,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1774,8 +2210,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(plannedReadyMessage);
 
     wrapper.unmount();
   });
@@ -1810,7 +2246,7 @@ describe('SettingsView soul action governance wiring', () => {
     await flushPromises();
 
     expect(clientMocks.planReintegrationPromotions).toHaveBeenCalledWith('record-ready');
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -1836,7 +2272,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -1851,8 +2287,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已规划 1 条候选动作');
+    expect(wrapper.text()).toContain(plannedReadyMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(plannedReadyMessage);
 
     wrapper.unmount();
   });
@@ -1923,8 +2359,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该回流记录');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
+    expect(wrapper.text()).toContain(getReintegrationReviewMessage('reject'));
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(getReintegrationReviewMessage('reject'));
 
     wrapper.unmount();
   });
@@ -1987,8 +2423,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该回流记录');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
+    expect(wrapper.text()).toContain(getReintegrationReviewMessage('reject'));
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(getReintegrationReviewMessage('reject'));
 
     wrapper.unmount();
   });
@@ -2051,8 +2487,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该回流记录');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
+    expect(wrapper.text()).toContain(getReintegrationReviewMessage('reject'));
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(getReintegrationReviewMessage('reject'));
 
     wrapper.unmount();
   });
@@ -2128,8 +2564,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已拒绝该回流记录');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已拒绝该回流记录');
+    expect(wrapper.text()).toContain(getReintegrationReviewMessage('reject'));
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(getReintegrationReviewMessage('reject'));
 
     wrapper.unmount();
   });
@@ -2168,8 +2604,10 @@ describe('SettingsView soul action governance wiring', () => {
     await acceptButton!.trigger('click');
     await flushPromises();
 
+    const acceptMessage = acceptedMixedMessage;
+
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -2195,8 +2633,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(acceptMessage);
 
     wrapper.unmount();
   });
@@ -2235,8 +2673,10 @@ describe('SettingsView soul action governance wiring', () => {
     await acceptButton!.trigger('click');
     await flushPromises();
 
+    const acceptMessage = acceptedMixedMessage;
+
     expect(clientMocks.acceptReintegrationRecord).toHaveBeenCalledWith('record-mixed', { reason: undefined });
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenLastCalledWith(['record-ready', 'record-mixed']);
     apiMocks.fetchSoulActions.mockClear();
@@ -2262,7 +2702,7 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2277,8 +2717,8 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('已接受并自动规划 1 条候选动作');
-    expect(wrapper.find('.reintegration-card .message.success').text()).toBe('已接受并自动规划 1 条候选动作');
+    expect(wrapper.text()).toContain(acceptMessage);
+    expect(wrapper.find('.reintegration-card .message.success').text()).toBe(acceptMessage);
 
     wrapper.unmount();
   });
@@ -2325,7 +2765,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.dispatchSoulAction.mock.calls.map(([id]) => id)).toEqual(['ready-1', 'ready-2']);
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`已批量派发 2/2 条 soul actions · ${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('groupDispatchId')).toBe(null);
 
@@ -2349,7 +2797,15 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-group', readyGroup);
     await flushPromises();
 
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`已批量派发 2/2 条 soul actions · ${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2362,7 +2818,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`已批量派发 2/2 条 soul actions · ${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2375,7 +2839,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('已批量派发 2/2 条 soul actions（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`已批量派发 2/2 条 soul actions · ${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();
@@ -2452,6 +2924,7 @@ describe('SettingsView soul action governance wiring', () => {
       result: {
         dispatched: true,
         reason: 'dispatched later',
+        executionSummary: null,
       },
     });
     await flushPromises();
@@ -2505,6 +2978,7 @@ describe('SettingsView soul action governance wiring', () => {
       result: {
         dispatched: true,
         reason: 'dispatched later',
+        executionSummary: null,
       },
     });
     await flushPromises();
@@ -2534,7 +3008,7 @@ describe('SettingsView soul action governance wiring', () => {
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).not.toHaveBeenCalled();
-    expect(panel.props('message')).toBe('生成 Event Node 已批准');
+    expect(panel.props('message')).toBe(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'approved'));
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2605,7 +3079,7 @@ describe('SettingsView soul action governance wiring', () => {
       reason: 'Deferred from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('生成 Event Node 已延后');
+    expect(panel.props('message')).toBe(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'deferred'));
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2630,7 +3104,7 @@ describe('SettingsView soul action governance wiring', () => {
       reason: 'Discarded from settings reintegration governance panel for Reintegration record-mixed (source note note-mixed-1)',
     });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
-    expect(panel.props('message')).toBe('生成 Event Node 已丢弃');
+    expect(panel.props('message')).toBe(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'discarded'));
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2697,7 +3171,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.dispatchSoulAction).toHaveBeenCalledWith('ready-1');
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(1);
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(panel.props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(panel.props('messageType')).toBe('success');
     expect(panel.props('actionId')).toBe(null);
 
@@ -2720,7 +3202,15 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(panel.props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2733,7 +3223,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();
@@ -2755,7 +3253,15 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(panel.props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2768,7 +3274,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();
@@ -2790,7 +3304,15 @@ describe('SettingsView soul action governance wiring', () => {
     panel.vm.$emit('dispatch-action', readyAction);
     await flushPromises();
 
-    expect(panel.props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(panel.props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2803,7 +3325,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchWorkerTasks).toHaveBeenCalled();
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     apiMocks.fetchSoulActions.mockClear();
     apiMocks.fetchReintegrationRecords.mockClear();
     apiMocks.fetchWorkerTasks.mockClear();
@@ -2816,7 +3346,15 @@ describe('SettingsView soul action governance wiring', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalled();
     expect(apiMocks.fetchSoulActions).toHaveBeenCalled();
     expect(apiMocks.fetchWorkerTasks).not.toHaveBeenCalled();
-    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe('dispatched（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）');
+    expect(wrapper.findComponent(SoulActionGovernancePanel).props('message')).toBe(`${getDispatchExecutionMessage({
+      reason: 'dispatched',
+      executionSummary: {
+        objectType: 'worker_task',
+        objectId: 'worker-task-ready-1',
+        operation: 'enqueued',
+        summary: '人格快照更新 · 等待执行 · LifeOS',
+      },
+    })}（Worker Task: worker-task-ready-1 · 人格快照更新 · 等待执行 · LifeOS）`);
     expect(wrapper.findComponent(SoulActionGovernancePanel).props('messageType')).toBe('success');
 
     wrapper.unmount();

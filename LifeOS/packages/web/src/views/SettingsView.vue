@@ -362,8 +362,8 @@
             <div class="reintegration-item-title-row">
               <strong>{{ taskTypeLabel(record.taskType) }}</strong>
               <span class="prompt-status" :class="reintegrationStatusClass(record.reviewStatus)">{{ reintegrationStatusText(record.reviewStatus) }}</span>
-              <span class="worker-pill">{{ record.signalKind }}</span>
-              <span class="worker-pill">{{ record.strength }}</span>
+              <span class="worker-pill">{{ formatReintegrationSignalKindLabel(record) }}</span>
+              <span class="worker-pill">强度 {{ formatReintegrationStrengthLabel(record) }}</span>
             </div>
             <button class="btn-link" @click="toggleReintegrationExpanded(record.id)">
               {{ reintegrationExpandedIds.includes(record.id) ? '收起详情' : '展开详情' }}
@@ -374,16 +374,20 @@
 
           <div class="reintegration-meta-grid">
             <span>Worker: {{ record.workerTaskId }}</span>
-            <span>Target: {{ record.target }}</span>
+            <span>Target: {{ formatReintegrationTargetLabel(record) }}</span>
             <span>创建于 {{ formatTime(record.createdAt) }}</span>
             <span v-if="record.reviewedAt">复核于 {{ formatTime(record.reviewedAt) }}</span>
           </div>
 
-          <div v-if="record.taskType === 'extract_tasks' && getReintegrationExtractTaskCount(record) !== null" class="reintegration-next-action-strip">
-            <span class="worker-pill">产出行动项 {{ getReintegrationExtractTaskCount(record) }}</span>
-            <span v-if="getReintegrationNextActionCandidate(record)">
-              下一步候选：{{ formatReintegrationNextActionCandidate(getReintegrationNextActionCandidate(record)) }}
-            </span>
+          <div v-if="record.taskType === 'extract_tasks' && recordStripRows(record).length" class="reintegration-next-action-strip">
+            <template v-for="row in recordStripRows(record)" :key="`${record.id}-${row.label}`">
+              <span v-if="row.label === '产出行动项'" class="worker-pill">{{ row.label }} {{ row.value }}</span>
+              <span v-else>{{ row.label }}：{{ row.value }}</span>
+            </template>
+          </div>
+
+          <div v-if="recordNoPlanReasonText(record)" class="reintegration-no-plan-reason">
+            {{ recordNoPlanReasonText(record) }}
           </div>
 
           <div class="reintegration-reason-row">
@@ -435,6 +439,13 @@
               </div>
             </div>
 
+            <div v-if="record.displaySummary" class="reintegration-evidence-block">
+              <div class="reintegration-section-label">Display summary</div>
+              <div class="reintegration-display-summary">
+                <div v-for="row in recordDisplaySummaryRows(record)" :key="`${row.label}-${row.value}`">{{ row.label }}：{{ row.value }}</div>
+              </div>
+            </div>
+
             <div class="reintegration-evidence-block">
               <div class="reintegration-section-label">Evidence</div>
               <pre>{{ JSON.stringify(record.evidence, null, 2) }}</pre>
@@ -447,6 +458,9 @@
                   <div>
                     <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
                     <div class="reintegration-action-meta">{{ action.id }}</div>
+                    <div v-if="formatSoulActionPromotionSummary(action)" class="reintegration-action-meta">
+                      {{ formatSoulActionPromotionSummary(action) }}
+                    </div>
                   </div>
                   <span class="prompt-status default">{{ action.governanceStatus }}</span>
                 </div>
@@ -801,7 +815,8 @@ import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.v
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
-import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, ExtractTaskReintegrationEvidenceItem } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
+import { formatReintegrationSignalKindLabel, formatReintegrationStrengthLabel, formatReintegrationTargetLabel, formatSoulActionKindLabel, formatSoulActionPromotionSummary, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationExtractTaskItems, getReintegrationOutcomeDetailRows, getReintegrationOutcomeNoPlanReason, getReintegrationOutcomeStripRows, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -1019,7 +1034,7 @@ const reintegrationStatusSummary = computed(() => {
 const acceptedProjectionSourceReintegrationIds = ref<string[]>([]);
 const activeProjectionSourceReintegrationIds = computed(() => {
   const plannedIds = Object.entries(reintegrationPlannedActions.value)
-    .filter(([, actions]) => actions.some((action) => action.actionKind === 'promote_event_node' || action.actionKind === 'promote_continuity_record'))
+    .filter(([, actions]) => actions.some((action) => action.actionKind === 'create_event_node' || action.actionKind === 'promote_event_node' || action.actionKind === 'promote_continuity_record'))
     .map(([recordId]) => recordId);
   return [...new Set([...acceptedProjectionSourceReintegrationIds.value, ...plannedIds])];
 });
@@ -1283,46 +1298,20 @@ function reintegrationStatusClass(status: ReintegrationRecord['reviewStatus']) {
   return 'warning';
 }
 
-function getReintegrationExtractTaskItems(record: ReintegrationRecord): ExtractTaskReintegrationEvidenceItem[] {
-  const items = record.evidence && typeof record.evidence === 'object'
-    ? (record.evidence as Record<string, unknown>).extractTaskItems
-    : null;
-  return Array.isArray(items)
-    ? items.filter((item): item is ExtractTaskReintegrationEvidenceItem => !!item && typeof item === 'object' && typeof (item as { filePath?: unknown }).filePath === 'string')
-    : [];
+function recordStripRows(record: ReintegrationRecord) {
+  return getReintegrationOutcomeStripRows(record.displaySummary ?? null);
 }
 
-function getReintegrationExtractTaskCount(record: ReintegrationRecord): number | null {
-  const count = record.evidence && typeof record.evidence === 'object'
-    ? (record.evidence as Record<string, unknown>).extractTaskCreated
-    : null;
-  return typeof count === 'number' ? count : null;
+function recordDisplaySummaryRows(record: ReintegrationRecord) {
+  return getReintegrationOutcomeDetailRows(record.displaySummary ?? null);
 }
 
-function getReintegrationNextActionCandidate(record: ReintegrationRecord): ExtractTaskReintegrationEvidenceItem | null {
-  const candidate = record.evidence && typeof record.evidence === 'object'
-    ? (record.evidence as Record<string, unknown>).nextActionCandidate
-    : null;
-  if (!candidate || typeof candidate !== 'object' || typeof (candidate as { filePath?: unknown }).filePath !== 'string') {
-    return null;
-  }
-  return candidate as ExtractTaskReintegrationEvidenceItem;
-}
-
-function formatReintegrationNextActionCandidate(candidate: ExtractTaskReintegrationEvidenceItem | null): string {
-  if (!candidate) {
-    return '未提供';
-  }
-  const suffix = [candidate.priority, candidate.due ? `due ${candidate.due}` : null].filter(Boolean).join(' · ');
-  return suffix ? `${candidate.title}（${suffix}）` : candidate.title;
+function recordNoPlanReasonText(record: ReintegrationRecord): string | null {
+  return getReintegrationOutcomeNoPlanReason(record.displaySummary ?? null);
 }
 
 function promotionActionLabel(actionKind: SoulAction['actionKind']) {
-  if (actionKind === 'promote_event_node') return '生成 Event Node';
-  if (actionKind === 'promote_continuity_record') return '生成 Continuity Record';
-  if (actionKind === 'create_event_node') return '创建 Event Node';
-  if (actionKind === 'update_persona_snapshot') return '更新 Persona Snapshot';
-  return '提取行动项';
+  return formatSoulActionKindLabel(actionKind);
 }
 
 function soulActionStatusClass(action: SoulAction) {
@@ -1358,13 +1347,7 @@ function toggleSoulActionGroupCollapsed(id: string) {
 }
 
 function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' | 'sourceReintegrationId'>): string {
-  if (action.sourceReintegrationId && action.sourceNoteId) {
-    return `Reintegration ${action.sourceReintegrationId} (source note ${action.sourceNoteId})`;
-  }
-  if (action.sourceReintegrationId) {
-    return `Reintegration ${action.sourceReintegrationId}`;
-  }
-  return `source note ${action.sourceNoteId}`;
+  return formatSoulActionSourceLabel(action);
 }
 
 function buildDispatchedWorkerTaskSuffix(result: Awaited<ReturnType<typeof dispatchSoulAction>>): string {
@@ -1384,7 +1367,7 @@ async function handleApproveSoulAction(action: SoulAction) {
     await approveSoulAction(action.id, {
       reason: `Approved from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已批准`;
+    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'approved');
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1447,8 +1430,11 @@ async function handleDispatchSoulActionGroup(group: { groupKey: string; actions:
     const dispatchedCount = dispatchableActions.length;
     const totalCount = group.actions.length;
     const lastDispatchResult = dispatchResults.at(-1) ?? null;
-    const workerTaskSuffix = lastDispatchResult ? buildDispatchedWorkerTaskSuffix(lastDispatchResult) : '';
-    soulActionMessage.value = `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions${workerTaskSuffix}`;
+    const workerTaskSuffix = buildDispatchedWorkerTaskSuffix(lastDispatchResult);
+    const lastDispatchMessage = lastDispatchResult ? getDispatchExecutionMessage(lastDispatchResult.result) : null;
+    soulActionMessage.value = lastDispatchMessage
+      ? `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions · ${lastDispatchMessage}${workerTaskSuffix}`
+      : `已批量派发 ${dispatchedCount}/${totalCount} 条 soul actions${workerTaskSuffix}`;
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
@@ -1467,7 +1453,7 @@ async function handleDeferSoulAction(action: SoulAction) {
     await deferSoulAction(action.id, {
       reason: `Deferred from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已延后`;
+    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'deferred');
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1485,7 +1471,7 @@ async function handleDiscardSoulAction(action: SoulAction) {
     await discardSoulAction(action.id, {
       reason: `Discarded from settings reintegration governance panel for ${soulActionApprovalReasonLabel(action)}`,
     });
-    soulActionMessage.value = `${promotionActionLabel(action.actionKind)} 已丢弃`;
+    soulActionMessage.value = getSoulActionGovernanceMessage(action, 'discarded');
     soulActionMessageType.value = 'success';
     await loadSoulActions({ preserveMessage: true });
   } catch (e: any) {
@@ -1502,7 +1488,7 @@ async function handleDispatchSoulAction(action: SoulAction) {
   try {
     const result = await dispatchSoulAction(action.id);
     const workerTaskSuffix = buildDispatchedWorkerTaskSuffix(result);
-    soulActionMessage.value = `${result.result.reason}${workerTaskSuffix}`;
+    soulActionMessage.value = `${getDispatchExecutionMessage(result.result)}${workerTaskSuffix}`;
     soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
     await loadSoulActions({ preserveMessage: true });
     await loadReintegrationRecords();
@@ -1528,9 +1514,7 @@ async function handleAcceptReintegration(record: ReintegrationRecord) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
       ? reintegrationExpandedIds.value
       : [...reintegrationExpandedIds.value, record.id];
-    reintegrationMessage.value = result.soulActions.length
-      ? `已接受并自动规划 ${result.soulActions.length} 条候选动作`
-      : '已接受，但当前没有可规划的候选动作';
+    reintegrationMessage.value = getReintegrationReviewMessage('accept', result.displaySummary);
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
@@ -1550,7 +1534,7 @@ async function handleRejectReintegration(record: ReintegrationRecord) {
     await rejectReintegrationRecord(record.id, {
       reason: reintegrationReasonDrafts.value[record.id]?.trim() || undefined,
     });
-    reintegrationMessage.value = '已拒绝该回流记录';
+    reintegrationMessage.value = getReintegrationReviewMessage('reject');
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
   } catch (e: any) {
@@ -1565,7 +1549,8 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
   reintegrationActionId.value = record.id;
   reintegrationMessage.value = '';
   try {
-    const soulActions = await planReintegrationPromotions(record.id);
+    const result = await planReintegrationPromotions(record.id);
+    const soulActions = result.soulActions || [];
     reintegrationPlannedActions.value = {
       ...reintegrationPlannedActions.value,
       [record.id]: soulActions,
@@ -1573,9 +1558,7 @@ async function handlePlanReintegration(record: ReintegrationRecord) {
     reintegrationExpandedIds.value = reintegrationExpandedIds.value.includes(record.id)
       ? reintegrationExpandedIds.value
       : [...reintegrationExpandedIds.value, record.id];
-    reintegrationMessage.value = soulActions.length
-      ? `已规划 ${soulActions.length} 条候选动作`
-      : '当前没有可规划的候选动作';
+    reintegrationMessage.value = getReintegrationReviewMessage('plan', result.displaySummary);
     reintegrationMessageType.value = 'success';
     await loadReintegrationRecords({ preserveMessage: true });
     await loadSoulActions();
@@ -2272,10 +2255,15 @@ async function handleReindex() {
   color: var(--text);
 }
 
+.reintegration-no-plan-reason,
 .reintegration-review-reason {
   margin-top: 10px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.reintegration-no-plan-reason {
+  color: var(--warning-text, #9a6700);
 }
 
 .reintegration-expanded {
@@ -2298,6 +2286,14 @@ async function handleReindex() {
   text-transform: uppercase;
   color: var(--text-muted);
   margin-bottom: 8px;
+}
+
+.reintegration-display-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .reintegration-evidence-block pre {

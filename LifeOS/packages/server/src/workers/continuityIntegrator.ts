@@ -1,4 +1,7 @@
-import type { ActionOutcomePacket, SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from './feedbackReintegration.js';
+import type { ActionOutcomePacket } from '@lifeos/shared';
+import type { SupportedReintegrationTaskType } from './feedbackReintegration.js';
+import type { TerminalWorkerTaskStatus } from '@lifeos/shared';
+import { hasReintegrationSignalFromOutcomePacket } from '../soul/reintegrationOutcome.js';
 
 export type ContinuityTarget = 'source_note' | 'derived_outputs' | 'task_record';
 export type ContinuityStrength = 'low' | 'medium';
@@ -24,7 +27,7 @@ const TASK_TYPE_TARGETS: Record<SupportedReintegrationTaskType, ContinuityTarget
 };
 
 export function integrateContinuity(packet: ActionOutcomePacket): ContinuityIntegrationResult {
-  const shouldReintegrate = packet.status === 'succeeded' && (!!packet.resultSummary || packet.outputNotePaths.length > 0);
+  const shouldReintegrate = packet.status === 'succeeded' && hasReintegrationSignalFromOutcomePacket(packet);
   const target = packet.taskType === 'extract_tasks'
     ? 'task_record'
     : packet.sourceNoteId

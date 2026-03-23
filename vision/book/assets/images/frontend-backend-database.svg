@@ -1,0 +1,46 @@
+<svg width="1280" height="780" viewBox="0 0 1280 780" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="780" rx="32" fill="#FCF7F0"/>
+  <rect x="40" y="40" width="1200" height="700" rx="28" fill="#FFFDF9" stroke="#E7D8C8" stroke-width="2"/>
+  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 1 · 技术基础地图</text>
+  <text x="72" y="156" fill="#241913" font-size="40" font-family="Georgia, serif" font-weight="700">前端 Frontend / 后端 Backend / 数据库 Database</text>
+  <text x="72" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">给零基础读者建立第一张系统地图：用户看到的是前端，规则跑在后端，记忆落在数据库。</text>
+
+  <rect x="88" y="278" width="250" height="186" rx="28" fill="#FFF4E8" stroke="#E4B487" stroke-width="2.5"/>
+  <text x="120" y="338" fill="#8A3B12" font-size="20" font-family="Arial, sans-serif" letter-spacing="1.5">USER</text>
+  <text x="120" y="384" fill="#271B15" font-size="36" font-family="Georgia, serif" font-weight="700">用户</text>
+  <text x="120" y="420" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">点击、输入、查看结果</text>
+
+  <rect x="440" y="248" width="320" height="244" rx="30" fill="#F4E6D9" stroke="#B88439" stroke-width="3"/>
+  <text x="476" y="314" fill="#8A3B12" font-size="20" font-family="Arial, sans-serif" letter-spacing="1.5">FRONTEND</text>
+  <text x="476" y="362" fill="#271B15" font-size="40" font-family="Georgia, serif" font-weight="700">前端</text>
+  <text x="476" y="400" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">页面、按钮、表单、图表</text>
+  <text x="476" y="430" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">负责呈现信息与接收操作</text>
+
+  <rect x="830" y="248" width="320" height="244" rx="30" fill="#E9E1D8" stroke="#66725F" stroke-width="3"/>
+  <text x="864" y="314" fill="#5D6A57" font-size="20" font-family="Arial, sans-serif" letter-spacing="1.5">BACKEND</text>
+  <text x="864" y="362" fill="#271B15" font-size="40" font-family="Georgia, serif" font-weight="700">后端</text>
+  <text x="864" y="400" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">规则、权限、逻辑、接口</text>
+  <text x="864" y="430" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">负责真正处理系统事务</text>
+
+  <rect x="800" y="560" width="350" height="110" rx="26" fill="#F9EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+  <text x="832" y="602" fill="#8A3B12" font-size="18" font-family="Arial, sans-serif" letter-spacing="1.2">DATABASE</text>
+  <text x="832" y="638" fill="#271B15" font-size="32" font-family="Georgia, serif" font-weight="700">数据库</text>
+  <text x="978" y="638" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">系统长期记忆</text>
+
+  <path d="M338 368H420" stroke="#8A3B12" stroke-width="4" stroke-linecap="round"/>
+  <path d="M408 356L432 368L408 380" stroke="#8A3B12" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="338" y="342" fill="#8A3B12" font-size="18" font-family="Arial, sans-serif">操作 / 输入</text>
+
+  <path d="M760 368H810" stroke="#7A5A34" stroke-width="4" stroke-linecap="round"/>
+  <path d="M798 356L822 368L798 380" stroke="#7A5A34" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="736" y="342" fill="#7A5A34" font-size="18" font-family="Arial, sans-serif">API 请求</text>
+
+  <path d="M990 492V540" stroke="#66725F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M978 528L990 552L1002 528" stroke="#66725F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1016" y="526" fill="#66725F" font-size="18" font-family="Arial, sans-serif">读写数据</text>
+
+  <rect x="84" y="554" width="650" height="116" rx="24" fill="#F6EFE7" stroke="#E7D8C8"/>
+  <text x="116" y="596" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">最简单的一次“保存”会发生什么？</text>
+  <text x="116" y="634" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">用户在前端输入 → 前端发请求给后端 → 后端验证并写入数据库</text>
+  <text x="116" y="662" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">→ 后端返回结果 → 前端更新界面</text>
+</svg>

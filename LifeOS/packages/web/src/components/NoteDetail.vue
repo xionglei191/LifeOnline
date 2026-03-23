@@ -192,13 +192,12 @@
                 <div class="projection-action-meta">
                   <span>治理 {{ action.governanceStatus }}</span>
                   <span>执行 {{ action.executionStatus }}</span>
-                  <span v-if="action.sourceReintegrationId">Reintegration {{ action.sourceReintegrationId }}</span>
+                  <span v-if="action.sourceReintegrationId">{{ formatSoulActionSourceLabel(action) }}</span>
                   <span>创建于 {{ formatProjectionTime(action.createdAt) }}</span>
                 </div>
-                <div v-if="action.governanceReason || action.resultSummary || action.error" class="projection-action-detail-grid">
+                <div v-if="action.governanceReason || formatSoulActionOutcomeSummary(action)" class="projection-action-detail-grid">
                   <div v-if="action.governanceReason" class="reintegration-review-reason">治理理由：{{ action.governanceReason }}</div>
-                  <div v-if="action.resultSummary" class="reintegration-review-reason">执行摘要：{{ action.resultSummary }}</div>
-                  <div v-if="action.error" class="reintegration-review-reason soul-action-error">执行错误：{{ action.error }}</div>
+                  <div v-if="formatSoulActionOutcomeSummary(action)" class="reintegration-review-reason">执行摘要：{{ formatSoulActionOutcomeSummary(action) }}</div>
                 </div>
               </article>
             </div>
@@ -317,6 +316,7 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchSoulActions } from '../api/client';
+import { formatSoulActionKindLabel, formatSoulActionOutcomeSummary, formatSoulActionSourceLabel } from '@lifeos/shared';
 import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
@@ -485,10 +485,7 @@ function formatProjectionTime(ts: string) {
 }
 
 function promotionActionLabel(actionKind: SoulAction['actionKind']) {
-  if (actionKind === 'create_event_node') return '创建 Event Node';
-  if (actionKind === 'promote_event_node') return '提升 Event Node';
-  if (actionKind === 'promote_continuity_record') return '提升 Continuity Record';
-  return actionKind;
+  return formatSoulActionKindLabel(actionKind);
 }
 
 function soulActionStatusText(action: SoulAction) {

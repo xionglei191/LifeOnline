@@ -1018,6 +1018,14 @@ test('event node and continuity APIs respond with shared projection contracts', 
     const eventResponse = await api<import('../../shared/src/types.js').ListEventNodesResponse>(baseUrl, '/api/event-nodes');
     const continuityResponse = await api<import('../../shared/src/types.js').ListContinuityRecordsResponse>(baseUrl, '/api/continuity-records');
 
+    const listedEventNode = eventResponse.eventNodes.find((node) => node.id === eventNode.id);
+    const listedContinuity = continuityResponse.continuityRecords.find((record) => record.id === continuityRecord.id);
+    assert.ok(listedEventNode);
+    assert.ok(listedContinuity);
+    assert.equal(listedEventNode?.explanationSummary, null);
+    assert.equal(listedContinuity?.continuitySummary?.scope, 'daily');
+    assert.equal(listedContinuity?.explanationSummary, null);
+
     assert.ok(eventResponse.eventNodes.some((node) => node.id === eventNode.id));
     assert.ok(continuityResponse.continuityRecords.some((record) => record.id === continuityRecord.id));
   } finally {
@@ -1238,6 +1246,7 @@ test('reintegration APIs respond with shared reintegration contracts', async () 
     assert.equal(accepted.reintegrationRecord.id, reintegrationRecord.id);
     assert.equal(accepted.reintegrationRecord.reviewStatus, 'accepted');
     assert.ok(Array.isArray(accepted.soulActions));
+    assert.equal(typeof accepted.displaySummary?.plannedActionCount, 'number');
 
     const planned = await api<import('../../shared/src/types.js').PlanReintegrationPromotionsResponse>(
       baseUrl,
@@ -1245,6 +1254,7 @@ test('reintegration APIs respond with shared reintegration contracts', async () 
       { method: 'POST' },
     );
     assert.ok(Array.isArray(planned.soulActions));
+    assert.equal(typeof planned.displaySummary?.plannedActionCount, 'number');
 
     const rejectedSeed = upsertReintegrationRecord({
       workerTaskId: 'worker-task-reintegration-reject-contract',

@@ -13,6 +13,12 @@ export interface SoulActionDispatchResult {
   reason: string;
   soulActionId: string | null;
   workerTaskId: string | null;
+  executionSummary?: {
+    objectType: 'event_node' | 'continuity_record' | 'worker_task' | null;
+    objectId: string | null;
+    operation: 'created' | 'updated' | 'enqueued' | null;
+    summary: string | null;
+  } | null;
   eventNode?: EventNode | null;
   continuityRecord?: ContinuityRecord | null;
 }
@@ -23,6 +29,7 @@ function buildWorkerTaskRequestFromSoulAction(action: SoulAction) {
       taskType: 'update_persona_snapshot' as const,
       input: { noteId: action.sourceNoteId },
       sourceNoteId: action.sourceNoteId,
+      sourceReintegrationId: action.sourceReintegrationId ?? undefined,
     };
   }
 
@@ -31,6 +38,7 @@ function buildWorkerTaskRequestFromSoulAction(action: SoulAction) {
       taskType: 'extract_tasks' as const,
       input: { noteId: action.sourceNoteId },
       sourceNoteId: action.sourceNoteId,
+      sourceReintegrationId: action.sourceReintegrationId ?? undefined,
     };
   }
 
@@ -110,6 +118,21 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       reason: result.summary,
       soulActionId: soulAction.id,
       workerTaskId: null,
+      executionSummary: result.eventNode
+        ? {
+            objectType: 'event_node',
+            objectId: result.eventNode.id,
+            operation: result.summary.startsWith('已更新') ? 'updated' : 'created',
+            summary: result.summary,
+          }
+        : result.continuityRecord
+          ? {
+              objectType: 'continuity_record',
+              objectId: result.continuityRecord.id,
+              operation: result.summary.startsWith('已更新') ? 'updated' : 'created',
+              summary: result.summary,
+            }
+          : null,
       eventNode: result.eventNode,
       continuityRecord: result.continuityRecord,
     };
@@ -124,6 +147,12 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     reason: 'approved soul action dispatched through worker host',
     soulActionId: soulAction.id,
     workerTaskId: task.id,
+    executionSummary: {
+      objectType: 'worker_task',
+      objectId: task.id,
+      operation: 'enqueued',
+      summary: 'approved soul action dispatched through worker host',
+    },
     eventNode: null,
     continuityRecord: null,
   };

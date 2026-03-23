@@ -362,6 +362,12 @@ export function initDatabase(): void {
     console.log('Migration: added schedule_id column to worker_tasks');
   }
 
+  // Migration: add source_reintegration_id column to worker_tasks if missing
+  if (!columns.some(c => c.name === 'source_reintegration_id')) {
+    database.exec('ALTER TABLE worker_tasks ADD COLUMN source_reintegration_id TEXT');
+    console.log('Migration: added source_reintegration_id column to worker_tasks');
+  }
+
   // Migration: add inbox_origin column to notes if missing
   const notesCols = database.prepare("PRAGMA table_info(notes)").all() as Array<{ name: string }>;
   if (!notesCols.some(c => c.name === 'inbox_origin')) {
@@ -389,7 +395,7 @@ export function initDatabase(): void {
     selectColumnsSql: `        id,
         ${normalizeLegacyTaskTypeSql()},
         input_json, status, worker, created_at, updated_at,
-        started_at, finished_at, error, result_json, result_summary, source_note_id, output_note_paths, schedule_id`,
+        started_at, finished_at, error, result_json, result_summary, source_note_id, source_reintegration_id, output_note_paths, schedule_id`,
     recreateIndexesSql: WORKER_TASK_INDEXES_SQL,
     rebuildingLog: 'Migration: rebuilding worker_tasks table with latest task_type CHECK constraint...',
     rebuiltLog: 'Migration: worker_tasks table rebuilt with latest task types',

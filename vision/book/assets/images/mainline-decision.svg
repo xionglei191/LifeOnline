@@ -1,0 +1,33 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 8 · 主线判断图</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">如何判断一个改动是不是在主线上？</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">不要只问“做没做事”，而要问：这件事有没有增强系统真正重要的骨架？</text>
+
+  <rect x="430" y="248" width="420" height="104" rx="26" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="464" y="310" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">这个改动增强了哪一层？</text>
+
+  <rect x="146" y="430" width="320" height="132" rx="26" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="180" y="490" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">骨架层工作</text>
+  <text x="180" y="524" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">认知对象 / 动作 / 治理 /</text>
+  <text x="180" y="552" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">回流 / 连续性</text>
+
+  <rect x="814" y="430" width="330" height="132" rx="26" fill="#F7E5DE" stroke="#D8B091" stroke-width="2.5"/>
+  <text x="848" y="490" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">表层修补</text>
+  <text x="848" y="524" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">copy / 样式 / 局部对称收边 /</text>
+  <text x="848" y="552" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">无关 polish</text>
+
+  <path d="M640 352V404" stroke="#8A3B12" stroke-width="4" stroke-linecap="round"/>
+  <path d="M628 392L640 416L652 392" stroke="#8A3B12" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M640 416L466 446" stroke="#9A6A32" stroke-width="4" stroke-linecap="round"/>
+  <path d="M640 416L814 446" stroke="#A06A47" stroke-width="4" stroke-linecap="round"/>
+
+  <rect x="112" y="640" width="450" height="116" rx="24" fill="#EEF2E8" stroke="#B8C1A6"/>
+  <text x="146" y="684" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">如果是骨架层工作</text>
+  <text x="146" y="722" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">优先做：因为它让系统更接近正式运行态、更接近主线。</text>
+
+  <rect x="718" y="640" width="450" height="116" rx="24" fill="#FFF4EC" stroke="#E4C3A7"/>
+  <text x="752" y="684" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">如果是表层修补</text>
+  <text x="752" y="722" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">默认降级：除非它暴露出更深层的 contract / fact-source / governance 问题。</text>
+</svg>

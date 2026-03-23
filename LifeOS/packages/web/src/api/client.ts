@@ -332,6 +332,21 @@ export async function fetchReintegrationRecords(filters?: {
   return data.items;
 }
 
+function normalizeReintegrationPlanningResponse<T extends {
+  reintegrationRecord: ReintegrationRecord;
+  nextActionSummary: AcceptReintegrationRecordResponse['nextActionSummary'] | PlanReintegrationPromotionsResponse['nextActionSummary'];
+  displaySummary: AcceptReintegrationRecordResponse['displaySummary'] | PlanReintegrationPromotionsResponse['displaySummary'];
+}>(result: T): T {
+  return {
+    ...result,
+    reintegrationRecord: {
+      ...result.reintegrationRecord,
+      nextActionSummary: result.nextActionSummary ?? result.reintegrationRecord.nextActionSummary ?? null,
+      displaySummary: result.displaySummary ?? result.reintegrationRecord.displaySummary ?? null,
+    },
+  };
+}
+
 export async function acceptReintegrationRecord(id: string, payload: ReintegrationReviewRequest = {}): Promise<AcceptReintegrationRecordResponse> {
   const res = await fetch(`${API_BASE}/reintegration-records/${encodeURIComponent(id)}/accept`, {
     method: 'POST',
@@ -342,7 +357,7 @@ export async function acceptReintegrationRecord(id: string, payload: Reintegrati
   if (!res.ok) {
     throw new Error(data.error || 'Failed to accept reintegration record');
   }
-  return data as AcceptReintegrationRecordResponse;
+  return normalizeReintegrationPlanningResponse(data as AcceptReintegrationRecordResponse);
 }
 
 export async function rejectReintegrationRecord(id: string, payload: ReintegrationReviewRequest = {}): Promise<RejectReintegrationRecordResponse> {
@@ -358,15 +373,12 @@ export async function rejectReintegrationRecord(id: string, payload: Reintegrati
   return data as RejectReintegrationRecordResponse;
 }
 
-export async function planReintegrationPromotions(id: string): Promise<SoulAction[]> {
+export async function planReintegrationPromotions(id: string): Promise<PlanReintegrationPromotionsResponse> {
   const res = await fetch(`${API_BASE}/reintegration-records/${encodeURIComponent(id)}/plan-promotions`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({} as Partial<PlanReintegrationPromotionsResponse> & { error?: string }));
-  if (!res.ok) {
-    throw new Error(data.error || 'Failed to plan reintegration promotions');
-  }
-  return data.soulActions || [];
+  const data = await expectApiSuccess<PlanReintegrationPromotionsResponse>(res, 'Failed to plan reintegration promotions');
+  return normalizeReintegrationPlanningResponse(data);
 }
 
 export async function fetchSoulActionList(filters?: {
@@ -423,7 +435,7 @@ export async function fetchSoulAction(id: string): Promise<SoulAction> {
   return data.soulAction as SoulAction;
 }
 
-export async function approveSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+export async function approveSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulActionResponse['soulAction']> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -447,7 +459,7 @@ export async function dispatchSoulAction(id: string): Promise<DispatchSoulAction
   return data as DispatchSoulActionResponse;
 }
 
-export async function deferSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+export async function deferSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulActionResponse['soulAction']> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/defer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -460,7 +472,7 @@ export async function deferSoulAction(id: string, payload: ReintegrationReviewRe
   return data.soulAction as SoulAction;
 }
 
-export async function discardSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulAction> {
+export async function discardSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulActionResponse['soulAction']> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/discard`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

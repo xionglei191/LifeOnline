@@ -503,6 +503,7 @@ export interface WorkerTask<T extends WorkerTaskType = WorkerTaskType> {
   result?: WorkerTaskResultMap[T] | null;
   resultSummary?: string | null;
   sourceNoteId?: string | null;
+  sourceReintegrationId?: string | null;
   scheduleId?: string | null;
   outputNotePaths?: string[];
   outputNotes?: WorkerTaskOutputNote[];
@@ -578,6 +579,7 @@ export interface CreateWorkerTaskRequest {
   taskType: WorkerTaskType;
   input?: WorkerTaskInputMap[WorkerTaskType];
   sourceNoteId?: string;
+  sourceReintegrationId?: string;
 }
 
 export interface WorkerTaskListResponse {
@@ -1244,6 +1246,8 @@ export interface ReintegrationEvidenceSummary {
   taskId: string;
   taskType: WorkerTaskType;
   sourceNoteId: string | null;
+  sourceSoulActionId: string | null;
+  sourceReintegrationId: string | null;
   resultSummary: string | null;
   error: string | null;
   outputNotePaths: string[];
@@ -1262,6 +1266,8 @@ export interface ActionOutcomePacket {
   resultSummary: string | null;
   error: string | null;
   sourceNoteId: string | null;
+  sourceSoulActionId: string | null;
+  sourceReintegrationId: string | null;
   outputNotePaths: string[];
   extractTaskCreated: number | null;
   extractTaskItems: ExtractTaskReintegrationEvidenceItem[];

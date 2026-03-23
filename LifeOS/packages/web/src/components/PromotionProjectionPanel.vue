@@ -34,15 +34,18 @@
           <article v-for="eventNode in eventNodes" :key="eventNode.id" class="reintegration-item projection-item">
             <div class="reintegration-item-title-row">
               <strong>{{ eventNode.title }}</strong>
-              <span class="worker-pill">{{ eventNode.eventKind }}</span>
+              <span class="worker-pill">{{ formatEventKindLabel(eventNode) }}</span>
               <span class="worker-pill">回流 {{ eventNode.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-summary-text">{{ eventNode.summary }}</div>
             <div class="reintegration-meta-grid">
               <span>提升动作：{{ eventNode.promotionSoulActionId }}</span>
-              <span>阈值：{{ eventNode.threshold }}</span>
-              <span>状态：{{ eventNode.status }}</span>
+              <span>阈值：{{ formatEventNodeThresholdLabel(eventNode) }}</span>
+              <span>状态：{{ formatEventNodeStatusLabel(eventNode) }}</span>
               <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
+            </div>
+            <div v-if="getProjectionExplanationSummary(eventNode)" class="projection-inline-summary">
+              <span class="worker-pill subtle">{{ formatProjectionExplanationSummary(eventNode) ?? 'review-backed projection' }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
@@ -58,9 +61,11 @@
                 <code>{{ eventNode.sourceSoulActionId }}</code>
               </div>
             </div>
-            <div class="projection-detail-block">
+            <div v-if="projectionExplanationRows(eventNode).length" class="projection-detail-block">
               <span class="projection-detail-label">判定说明</span>
-              <pre class="projection-json">{{ formatJson(eventNode.explanation) }}</pre>
+              <ul class="projection-detail-list">
+                <li v-for="row in projectionExplanationRows(eventNode)" :key="`${eventNode.id}-${row.label}`">{{ row.label }}：{{ row.value }}</li>
+              </ul>
             </div>
             <div class="projection-detail-block">
               <span class="projection-detail-label">证据</span>
@@ -77,14 +82,18 @@
           <article v-for="continuity in continuityRecords" :key="continuity.id" class="reintegration-item projection-item">
             <div class="reintegration-item-title-row">
               <strong>{{ continuity.summary }}</strong>
-              <span class="worker-pill">{{ continuity.continuityKind }}</span>
+              <span class="worker-pill">{{ formatContinuityKindLabel(continuity) }}</span>
               <span class="worker-pill">回流 {{ continuity.sourceReintegrationId }}</span>
             </div>
             <div class="reintegration-meta-grid">
-              <span>目标：{{ continuity.target }}</span>
-              <span>强度：{{ continuity.strength }}</span>
+              <span>目标：{{ formatContinuityTargetLabel(continuity) }}</span>
+              <span>强度：{{ formatContinuityStrengthLabel(continuity) }}</span>
               <span>提升动作：{{ continuity.promotionSoulActionId }}</span>
               <span>记录于 {{ formatTime(continuity.recordedAt) }}</span>
+            </div>
+            <div v-if="formatProjectionContinuitySummary(continuity) || getProjectionExplanationSummary(continuity)" class="projection-inline-summary">
+              <span v-if="formatProjectionContinuitySummary(continuity)" class="worker-pill subtle">{{ formatProjectionContinuitySummary(continuity) }}</span>
+              <span v-if="formatProjectionExplanationSummary(continuity)" class="worker-pill subtle">{{ formatProjectionExplanationSummary(continuity) }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
@@ -100,13 +109,17 @@
                 <code>{{ continuity.sourceSoulActionId }}</code>
               </div>
             </div>
-            <div class="projection-detail-block">
+            <div v-if="formatProjectionContinuityDetails(continuity).length" class="projection-detail-block">
               <span class="projection-detail-label">连续性内容</span>
-              <pre class="projection-json">{{ formatJson(continuity.continuity) }}</pre>
+              <ul class="projection-detail-list">
+                <li v-for="detail in formatProjectionContinuityDetails(continuity)" :key="detail">{{ detail }}</li>
+              </ul>
             </div>
-            <div class="projection-detail-block">
+            <div v-if="projectionExplanationRows(continuity).length" class="projection-detail-block">
               <span class="projection-detail-label">判定说明</span>
-              <pre class="projection-json">{{ formatJson(continuity.explanation) }}</pre>
+              <ul class="projection-detail-list">
+                <li v-for="row in projectionExplanationRows(continuity)" :key="`${continuity.id}-${row.label}`">{{ row.label }}：{{ row.value }}</li>
+              </ul>
             </div>
             <div class="projection-detail-block">
               <span class="projection-detail-label">证据</span>
@@ -121,6 +134,20 @@
 </template>
 
 <script setup lang="ts">
+import {
+  formatContinuityKindLabel,
+  formatContinuityStrengthLabel,
+  formatContinuityTargetLabel,
+  formatEventKindLabel,
+  formatEventNodeStatusLabel,
+  formatEventNodeThresholdLabel,
+  formatProjectionContinuityDetails,
+  formatProjectionContinuitySummary,
+  formatProjectionExplanationSummary,
+  getProjectionContinuitySummary,
+  getProjectionExplanationRows,
+  getProjectionExplanationSummary,
+} from '@lifeos/shared';
 import type { ContinuityRecord, EventNode } from '@lifeos/shared';
 
 const props = defineProps<{
@@ -138,6 +165,10 @@ const emit = defineEmits<{
 
 function formatJson(value: Record<string, unknown>) {
   return JSON.stringify(value, null, 2);
+}
+
+function projectionExplanationRows(projection: EventNode | ContinuityRecord) {
+  return getProjectionExplanationRows(projection);
 }
 </script>
 
@@ -173,6 +204,13 @@ function formatJson(value: Record<string, unknown>) {
   min-width: 0;
 }
 
+.projection-inline-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .projection-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -192,6 +230,17 @@ function formatJson(value: Record<string, unknown>) {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.projection-detail-list {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .projection-json {

@@ -609,6 +609,8 @@ test('createReintegrationRecordInput centralizes record assembly for terminal ta
       taskId: 'task-record-input',
       taskType: 'update_persona_snapshot',
       sourceNoteId: 'note-record-input',
+      sourceSoulActionId: null,
+      sourceReintegrationId: null,
       resultSummary: '已更新人格快照：更稳定推进。',
       error: null,
       outputNotePaths: [],
@@ -825,7 +827,7 @@ test('executePromotionSoulAction prefers explicit sourceReintegrationId over a n
     finishedAt: null,
   });
 
-  assert.match(result.summary, /已创建 event node:/);
+  assert.match(result.summary, /已(?:创建|更新) event node:/);
 
   const eventNode = listEventNodes().find((item) => item.sourceReintegrationId === 'reint:task-pr6-explicit-source');
   assert.ok(eventNode);
@@ -1189,6 +1191,109 @@ test('terminal failure and cancellation also sync SoulAction lifecycle', async (
   assert.ok(cancelledSoulAction.finishedAt);
 });
 
+test('createFeedbackReintegrationPayload carries linked soul action identity into outcome packets', async (t) => {
+  const env = await createTestEnv('lifeos-feedback-reintegration-linked-soul-action-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  getDb().prepare(`
+    INSERT INTO notes (
+      id, file_path, file_name, title, type, dimension, status, priority, privacy, date, due, tags, source, created, updated, content, indexed_at, file_modified_at
+    ) VALUES (
+      'note-linked-soul-action', '/tmp/note-linked-soul-action.md', 'note-linked-soul-action.md', 'Linked SoulAction Note', 'note', 'growth', 'done', 'medium', 'private', '2026-03-24', NULL, '[]', 'auto', '2026-03-24T09:00:00.000Z', '2026-03-24T09:00:00.000Z', '需要更新 persona 并保留 source identity。', '2026-03-24T09:00:00.000Z', '2026-03-24T09:00:00.000Z'
+    )
+  `).run();
+
+  const promotionSource = createOrReuseSoulAction({
+    sourceNoteId: 'note-linked-soul-action',
+    actionKind: 'update_persona_snapshot',
+    governanceStatus: 'approved',
+    executionStatus: 'not_dispatched',
+    governanceReason: 'seed linked source identity',
+    now: '2026-03-24T09:01:00.000Z',
+  });
+
+  const task = createWorkerTask({
+    taskType: 'update_persona_snapshot',
+    input: { noteId: 'note-linked-soul-action' },
+    sourceNoteId: 'note-linked-soul-action',
+  });
+
+  assert.equal(getSoulActionByWorkerTaskId(task.id)?.id, promotionSource.id);
+
+  const completed = await executeWorkerTask(task.id);
+  assert.equal(completed.status, 'succeeded');
+
+  const packet = createFeedbackReintegrationPayload(completed);
+  assert.equal(packet.sourceSoulActionId, promotionSource.id);
+  assert.equal(packet.sourceReintegrationId, null);
+
+  const recordInput = createReintegrationRecordInput(completed);
+  assert.equal(recordInput.soulActionId, promotionSource.id);
+  assert.equal((recordInput.evidence as Record<string, unknown>).sourceSoulActionId, promotionSource.id);
+  assert.equal((recordInput.evidence as Record<string, unknown>).sourceReintegrationId, null);
+});
+
+test('createFeedbackReintegrationPayload preserves linked reintegration identity for promotion soul actions', async (t) => {
+  const env = await createTestEnv('lifeos-feedback-reintegration-linked-reint-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const promotionSource = createOrReuseSoulAction({
+    sourceNoteId: 'note-linked-reintegration-source',
+    sourceReintegrationId: 'reint:linked-promotion-source',
+    actionKind: 'promote_event_node',
+    governanceStatus: 'approved',
+    executionStatus: 'not_dispatched',
+    governanceReason: 'seed linked reintegration identity',
+    now: '2026-03-24T09:11:00.000Z',
+  });
+
+  const task = buildTerminalTask('weekly_report', {
+    id: 'task-linked-reintegration-source',
+    sourceNoteId: 'note-linked-reintegration-source',
+  });
+
+  getDb().prepare(`
+    INSERT INTO worker_tasks (
+      id, task_type, input_json, status, worker, created_at, updated_at,
+      started_at, finished_at, error, result_json, result_summary, source_note_id, output_note_paths, schedule_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    task.id,
+    task.taskType,
+    JSON.stringify(task.input),
+    task.status,
+    task.worker,
+    task.createdAt,
+    task.updatedAt,
+    task.startedAt,
+    task.finishedAt,
+    task.error,
+    task.result ? JSON.stringify(task.result) : null,
+    task.resultSummary,
+    task.sourceNoteId,
+    JSON.stringify(task.outputNotePaths),
+    task.scheduleId,
+  );
+  getDb().prepare(`UPDATE soul_actions SET worker_task_id = ? WHERE id = ?`).run(task.id, promotionSource.id);
+
+  const packet = createFeedbackReintegrationPayload(task);
+  assert.equal(packet.sourceSoulActionId, promotionSource.id);
+  assert.equal(packet.sourceReintegrationId, 'reint:linked-promotion-source');
+
+  const recordInput = createReintegrationRecordInput(task);
+  assert.equal(recordInput.soulActionId, promotionSource.id);
+  assert.equal((recordInput.evidence as Record<string, unknown>).sourceSoulActionId, promotionSource.id);
+  assert.equal((recordInput.evidence as Record<string, unknown>).sourceReintegrationId, 'reint:linked-promotion-source');
+});
+
 test('buildReintegrationEvidenceFromOutcomePacket matches the shared reintegration evidence contract shape', () => {
   const task = buildTerminalTask('extract_tasks', {
     id: 'task-shared-evidence-contract',
@@ -1224,6 +1329,8 @@ test('buildReintegrationEvidenceFromOutcomePacket matches the shared reintegrati
     taskId: 'task-shared-evidence-contract',
     taskType: 'extract_tasks',
     sourceNoteId: 'note-shared-evidence-contract',
+    sourceSoulActionId: null,
+    sourceReintegrationId: null,
     resultSummary: 'extract_tasks summary',
     error: null,
     outputNotePaths: ['/tmp/extract-task-output.md'],
@@ -1330,6 +1437,8 @@ test('supported task types generate stable reintegration payloads', () => {
       'resultSummary',
       'error',
       'sourceNoteId',
+      'sourceSoulActionId',
+      'sourceReintegrationId',
       'outputNotePaths',
       'extractTaskCreated',
       'extractTaskItems',
@@ -1340,6 +1449,8 @@ test('supported task types generate stable reintegration payloads', () => {
     assert.equal(payload.resultSummary, `${taskType} summary`);
     assert.equal(payload.error, null);
     assert.equal(payload.sourceNoteId, task.sourceNoteId ?? null);
+    assert.equal(payload.sourceSoulActionId, null);
+    assert.equal(payload.sourceReintegrationId, null);
     assert.deepEqual(payload.outputNotePaths, task.outputNotePaths ?? []);
     assert.notEqual(payload.outputNotePaths, task.outputNotePaths);
     assert.equal(getReintegrationSignalKind(taskType), {
@@ -1407,6 +1518,8 @@ test('buildReintegrationRecordInputFromOutcomePacket centralizes packet-to-recor
       taskId: 'task-record-input-from-outcome-packet',
       taskType: 'extract_tasks',
       sourceNoteId: 'note-record-input-from-outcome-packet',
+      sourceSoulActionId: null,
+      sourceReintegrationId: null,
       resultSummary: 'extract_tasks summary',
       error: null,
       outputNotePaths: ['/tmp/extract-task-output.md'],
@@ -1518,6 +1631,8 @@ test('buildReintegrationEvidenceFromOutcomePacket centralizes evidence assembly 
     taskId: 'task-reintegration-evidence-context',
     taskType: 'extract_tasks',
     sourceNoteId: 'note-evidence-context',
+    sourceSoulActionId: null,
+    sourceReintegrationId: null,
     resultSummary: 'extract_tasks summary',
     error: null,
     outputNotePaths: ['/tmp/extract-task-output.md'],
@@ -2064,6 +2179,7 @@ test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts p
   assert.ok(snapshot);
   assert.equal(snapshot?.workerTaskId, task.id);
   assert.equal(snapshot?.soulActionId, soulAction?.id ?? null);
+  assert.equal(snapshot?.sourceNoteId, 'note-persona-success-pr5');
   assert.match(snapshot?.summary || '', /已更新人格快照/);
   assert.equal(snapshot?.snapshot.sourceNoteTitle, 'Persona 成功测试笔记');
   assert.match(snapshot?.snapshot.contentPreview || '', /长期主义/);

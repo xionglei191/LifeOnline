@@ -1,0 +1,55 @@
+<svg width="1260" height="820" viewBox="0 0 1260 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1260" height="820" rx="32" fill="#FBF6EE"/>
+  <rect x="40" y="40" width="1180" height="740" rx="28" fill="#FFFDF9" stroke="#E6D8C7" stroke-width="2"/>
+  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 2 · 软件开发流程</text>
+  <text x="72" y="156" fill="#241913" font-size="40" font-family="Georgia, serif" font-weight="700">需求 → 架构 → 实现 → 测试 → 发布 → 复盘</text>
+  <text x="72" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">开发不是直接开始写代码，而是一段有阶段感、有判断点、有回路的工程过程。</text>
+
+  <g font-family="Georgia, serif" font-weight="700" font-size="28" fill="#241913">
+    <rect x="72" y="296" width="156" height="154" rx="28" fill="#FFF1E4" stroke="#E5B07F" stroke-width="2.5"/>
+    <text x="108" y="360">需求</text>
+    <text x="88" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Requirement</text>
+
+    <rect x="258" y="296" width="156" height="154" rx="28" fill="#F7ECDD" stroke="#D9BF92" stroke-width="2.5"/>
+    <text x="294" y="360">架构</text>
+    <text x="276" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Architecture</text>
+
+    <rect x="444" y="296" width="156" height="154" rx="28" fill="#EFE5DC" stroke="#C8A98E" stroke-width="2.5"/>
+    <text x="480" y="360">实现</text>
+    <text x="462" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Implementation</text>
+
+    <rect x="630" y="296" width="156" height="154" rx="28" fill="#E8E4D8" stroke="#AEB28D" stroke-width="2.5"/>
+    <text x="666" y="360">测试</text>
+    <text x="674" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Testing</text>
+
+    <rect x="816" y="296" width="156" height="154" rx="28" fill="#F3E5DD" stroke="#D7AD8E" stroke-width="2.5"/>
+    <text x="852" y="360">发布</text>
+    <text x="846" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Release</text>
+
+    <rect x="1002" y="296" width="156" height="154" rx="28" fill="#F8EFE4" stroke="#D2BC9C" stroke-width="2.5"/>
+    <text x="1038" y="360">复盘</text>
+    <text x="1026" y="396" font-size="18" fill="#6B5C53" font-family="Arial, sans-serif" font-weight="400">Retrospective</text>
+  </g>
+
+  <g stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M228 372H246" stroke="#8A3B12"/>
+    <path d="M234 360L258 372L234 384" stroke="#8A3B12"/>
+    <path d="M414 372H432" stroke="#9A6A32"/>
+    <path d="M420 360L444 372L420 384" stroke="#9A6A32"/>
+    <path d="M600 372H618" stroke="#8C6950"/>
+    <path d="M606 360L630 372L606 384" stroke="#8C6950"/>
+    <path d="M786 372H804" stroke="#66725F"/>
+    <path d="M792 360L816 372L792 384" stroke="#66725F"/>
+    <path d="M972 372H990" stroke="#A06A47"/>
+    <path d="M978 360L1002 372L978 384" stroke="#A06A47"/>
+  </g>
+
+  <path d="M1088 482C1088 596 922 660 618 660C342 660 190 618 130 530" stroke="#B88439" stroke-width="4" stroke-dasharray="10 10"/>
+  <path d="M142 536L124 522L118 548" stroke="#B88439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="560" y="628" fill="#7A5A34" font-size="19" font-family="Arial, sans-serif">复盘之后，新的理解会回到下一轮需求</text>
+
+  <rect x="84" y="542" width="470" height="132" rx="24" fill="#FFF6EC" stroke="#E6D8C7"/>
+  <text x="114" y="584" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">大模型时代有什么变化？</text>
+  <text x="114" y="622" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">变化不在于流程消失，而在于每一步都可以被 AI 深度辅助。</text>
+  <text x="114" y="650" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">但人依然要负责判断、组织、取舍和验收。</text>
+</svg>

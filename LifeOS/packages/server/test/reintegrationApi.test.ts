@@ -11,6 +11,8 @@ import {
   getReintegrationOutcomeDisplaySummary,
   type AcceptReintegrationRecordResponse,
   type DispatchSoulActionResponse,
+  type ListContinuityRecordsResponse,
+  type ListEventNodesResponse,
   type ListReintegrationRecordsResponse,
   type RejectReintegrationRecordResponse,
   type ListSoulActionsResponse,
@@ -221,6 +223,93 @@ test('reintegration list API supports source-note scoping for main-path projecti
   }
 });
 
+test('rejected reintegration-backed soul action does not expose promotion summary or persisted projection execution summary', async () => {
+  const env = await createTestEnv('lifeos-reintegration-rejected-soul-action-projection-visibility-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    const record = upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-rejected-soul-action-projection-visibility',
+      sourceNoteId: 'note-api-pr6-rejected-soul-action-projection-visibility',
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'rejected',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'rejected reintegration should not expose stale projection execution summary',
+      evidence: { source: 'api-rejected-soul-action-projection-visibility-test' },
+      reviewReason: 'rejected for soul action projection visibility coverage',
+      reviewedAt: '2026-03-22T14:20:00.000Z',
+      now: '2026-03-22T14:20:00.000Z',
+    });
+
+    const action = createOrReuseSoulAction({
+      sourceNoteId: record.sourceNoteId ?? `reint:${record.id}`,
+      sourceReintegrationId: record.id,
+      actionKind: 'promote_event_node',
+      governanceStatus: 'approved',
+      executionStatus: 'succeeded',
+      governanceReason: 'historical approved projection action',
+      now: '2026-03-22T14:21:00.000Z',
+    });
+
+    upsertEventNode({
+      sourceReintegrationId: record.id,
+      sourceNoteId: record.sourceNoteId,
+      sourceSoulActionId: null,
+      promotionSoulActionId: action.id,
+      eventKind: 'milestone_report',
+      title: 'stale rejected event node',
+      summary: 'should not leak through soul action execution summary',
+      threshold: 'high',
+      status: 'active',
+      evidence: { source: 'api-rejected-soul-action-projection-visibility-test' },
+      explanation: { why: 'stale projection artifact' },
+      occurredAt: '2026-03-22T14:22:00.000Z',
+      now: '2026-03-22T14:22:00.000Z',
+    });
+
+    const listed = await api<ListSoulActionsResponse>(
+      baseUrl,
+      `/api/soul-actions?sourceReintegrationId=${encodeURIComponent(record.id)}&governanceStatus=approved&executionStatus=succeeded`,
+    );
+    const listedAction = listed.soulActions.find((item) => item.id === action.id);
+    assert.ok(listedAction);
+    assert.equal(listed.filters.sourceReintegrationId, record.id);
+    assert.equal(listedAction?.executionSummary, null);
+    assert.equal(listedAction?.promotionSummary, null);
+
+    const detail = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}`,
+    );
+    assert.equal(detail.soulAction.id, action.id);
+    assert.equal(detail.soulAction.executionSummary, null);
+    assert.equal(detail.soulAction.promotionSummary, null);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('rejected reintegration record does not leak persisted event or continuity projections through follow-up lists', async () => {
   const env = await createTestEnv('lifeos-reintegration-rejected-projection-visibility-');
   const configFile = env.configPath;
@@ -311,6 +400,140 @@ test('rejected reintegration record does not leak persisted event or continuity 
     assert.deepEqual(continuityRecords.filters.sourceReintegrationIds, [record.id]);
     assert.equal(eventNodes.eventNodes.length, 0);
     assert.equal(continuityRecords.continuityRecords.length, 0);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('global projection lists hide rejected reintegration artifacts while keeping accepted ones visible', async () => {
+  const env = await createTestEnv('lifeos-global-projection-visibility-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    const rejectedRecord = upsertReintegrationRecord({
+      workerTaskId: 'api-global-rejected-projection-visibility',
+      sourceNoteId: 'note-api-global-rejected-projection-visibility',
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'rejected',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'rejected reintegration should not appear in global projection lists',
+      evidence: { source: 'api-global-projection-visibility-test' },
+      reviewReason: 'rejected for global visibility coverage',
+      reviewedAt: '2026-03-24T00:10:00.000Z',
+      now: '2026-03-24T00:10:00.000Z',
+    });
+
+    const acceptedRecord = upsertReintegrationRecord({
+      workerTaskId: 'api-global-accepted-projection-visibility',
+      sourceNoteId: 'note-api-global-accepted-projection-visibility',
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'accepted',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'accepted reintegration should still appear in global projection lists',
+      evidence: { source: 'api-global-projection-visibility-test' },
+      reviewReason: 'accepted for global visibility coverage',
+      reviewedAt: '2026-03-24T00:11:00.000Z',
+      now: '2026-03-24T00:11:00.000Z',
+    });
+
+    const rejectedEventNode = upsertEventNode({
+      sourceReintegrationId: rejectedRecord.id,
+      sourceNoteId: rejectedRecord.sourceNoteId,
+      sourceSoulActionId: null,
+      promotionSoulActionId: 'soul:promote_event_node:reint:api-global-rejected-projection-visibility',
+      eventKind: 'milestone_report',
+      title: 'rejected global event node',
+      summary: 'should stay hidden from global event lists',
+      threshold: 'high',
+      status: 'active',
+      evidence: { source: 'api-global-projection-visibility-test' },
+      explanation: { why: 'rejected global artifact' },
+      occurredAt: '2026-03-24T00:12:00.000Z',
+      now: '2026-03-24T00:12:00.000Z',
+    });
+
+    const acceptedEventNode = upsertEventNode({
+      sourceReintegrationId: acceptedRecord.id,
+      sourceNoteId: acceptedRecord.sourceNoteId,
+      sourceSoulActionId: null,
+      promotionSoulActionId: 'soul:promote_event_node:reint:api-global-accepted-projection-visibility',
+      eventKind: 'weekly_reflection',
+      title: 'accepted global event node',
+      summary: 'should stay visible in global event lists',
+      threshold: 'high',
+      status: 'active',
+      evidence: { source: 'api-global-projection-visibility-test' },
+      explanation: { why: 'accepted global artifact' },
+      occurredAt: '2026-03-24T00:13:00.000Z',
+      now: '2026-03-24T00:13:00.000Z',
+    });
+
+    const rejectedContinuityRecord = upsertContinuityRecord({
+      sourceReintegrationId: rejectedRecord.id,
+      sourceNoteId: rejectedRecord.sourceNoteId,
+      sourceSoulActionId: null,
+      promotionSoulActionId: 'soul:promote_continuity_record:reint:api-global-rejected-projection-visibility',
+      continuityKind: 'daily_rhythm',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'rejected global continuity record',
+      continuity: { scope: 'daily', claim: 'rejected-global' },
+      evidence: { source: 'api-global-projection-visibility-test' },
+      explanation: { why: 'rejected global artifact' },
+      recordedAt: '2026-03-24T00:14:00.000Z',
+      now: '2026-03-24T00:14:00.000Z',
+    });
+
+    const acceptedContinuityRecord = upsertContinuityRecord({
+      sourceReintegrationId: acceptedRecord.id,
+      sourceNoteId: acceptedRecord.sourceNoteId,
+      sourceSoulActionId: null,
+      promotionSoulActionId: 'soul:promote_continuity_record:reint:api-global-accepted-projection-visibility',
+      continuityKind: 'weekly_theme',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'accepted global continuity record',
+      continuity: { scope: 'weekly', claim: 'accepted-global' },
+      evidence: { source: 'api-global-projection-visibility-test' },
+      explanation: { why: 'accepted global artifact' },
+      recordedAt: '2026-03-24T00:15:00.000Z',
+      now: '2026-03-24T00:15:00.000Z',
+    });
+
+    const globalEventNodes = await api<ListEventNodesResponse>(baseUrl, '/api/event-nodes');
+    const globalContinuityRecords = await api<ListContinuityRecordsResponse>(baseUrl, '/api/continuity-records');
+
+    assert.equal(globalEventNodes.filters.sourceReintegrationIds, undefined);
+    assert.equal(globalContinuityRecords.filters.sourceReintegrationIds, undefined);
+    assert.ok(globalEventNodes.eventNodes.some((item) => item.id === acceptedEventNode.id));
+    assert.ok(!globalEventNodes.eventNodes.some((item) => item.id === rejectedEventNode.id));
+    assert.ok(globalContinuityRecords.continuityRecords.some((item) => item.id === acceptedContinuityRecord.id));
+    assert.ok(!globalContinuityRecords.continuityRecords.some((item) => item.id === rejectedContinuityRecord.id));
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);

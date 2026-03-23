@@ -16,6 +16,7 @@ export const WORKER_TASK_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
   result_json TEXT,
   result_summary TEXT,
   source_note_id TEXT,
+  source_reintegration_id TEXT,
   output_note_paths TEXT,
   schedule_id TEXT`;
 

@@ -1,15 +1,17 @@
+import {
+  buildContinuityPromotionExplanation as buildSharedContinuityPromotionExplanation,
+  buildEventPromotionExplanation as buildSharedEventPromotionExplanation,
+  getPromotionProjectionSourceForReintegration,
+  getPromotionSourceForReintegration,
+} from '@lifeos/shared';
+import { generateSoulActionsFromOutcome, getReintegrationNextActionCandidate } from './reintegrationOutcome.js';
 import type { ReintegrationRecord } from './reintegrationRecords.js';
 import type { ContinuityRecord } from './continuityRecords.js';
 import type { EventNode } from './eventNodes.js';
 import type { ContinuityRecordKind, EventKind, SoulActionKind } from './types.js';
 
-const PR6_SIGNAL_ACTION_MATRIX: Partial<Record<ReintegrationRecord['signalKind'], SoulActionKind[]>> = {
-  persona_snapshot_reintegration: ['promote_event_node', 'promote_continuity_record'],
-  daily_report_reintegration: ['promote_event_node', 'promote_continuity_record'],
-  weekly_report_reintegration: ['promote_event_node', 'promote_continuity_record'],
-};
-
 const PR6_SIGNAL_EVENT_KIND: Partial<Record<ReintegrationRecord['signalKind'], EventKind>> = {
+  task_extraction_reintegration: 'milestone_report',
   persona_snapshot_reintegration: 'persona_shift',
   daily_report_reintegration: 'milestone_report',
   weekly_report_reintegration: 'weekly_reflection',
@@ -33,29 +35,11 @@ export function assertAcceptedPromotionReintegration(record: ReintegrationRecord
   }
 }
 
-export function getPromotionSourceForReintegration(record: ReintegrationRecord): {
-  sourceNoteId: string;
-  sourceReintegrationId: string;
-} {
-  return {
-    sourceNoteId: record.sourceNoteId ?? record.id,
-    sourceReintegrationId: record.id,
-  };
-}
-
-export function getPromotionProjectionSourceForReintegration(record: ReintegrationRecord): {
-  sourceNoteId: string | null;
-  sourceReintegrationId: string;
-} {
-  return {
-    sourceNoteId: record.sourceNoteId,
-    sourceReintegrationId: record.id,
-  };
-}
+export { getPromotionProjectionSourceForReintegration, getPromotionSourceForReintegration } from '@lifeos/shared';
 
 export function getPromotionActionKindsForReintegration(record: ReintegrationRecord): SoulActionKind[] {
   assertAcceptedPromotionReintegration(record);
-  return [...(PR6_SIGNAL_ACTION_MATRIX[record.signalKind] ?? [])];
+  return generateSoulActionsFromOutcome(record).suggestedActionKinds;
 }
 
 export function getEventKindForReintegrationSignal(signalKind: ReintegrationRecord['signalKind']): EventKind {
@@ -91,19 +75,11 @@ export function getContinuityScopeForKind(continuityKind: ContinuityRecordKind):
 }
 
 export function buildEventPromotionExplanation(record: ReintegrationRecord): Record<string, unknown> {
-  return {
-    whyHighThreshold: 'review-backed PR6 promotion',
-    whyNow: record.summary,
-    reviewBacked: true,
-  };
+  return { ...buildSharedEventPromotionExplanation(record) };
 }
 
 export function buildContinuityPromotionExplanation(record: ReintegrationRecord): Record<string, unknown> {
-  return {
-    whyNotOrdinaryArtifact: 'PR6 continuity promotion',
-    whyReviewBacked: record.reviewReason ?? 'accepted reintegration record',
-    reviewBacked: true,
-  };
+  return { ...buildSharedContinuityPromotionExplanation(record) };
 }
 
 export function buildEventNodePromotionInput(
@@ -111,6 +87,7 @@ export function buildEventNodePromotionInput(
   promotionSoulActionId: string,
 ): Omit<EventNode, 'id' | 'createdAt' | 'updatedAt'> {
   const { sourceNoteId, sourceReintegrationId } = getPromotionProjectionSourceForReintegration(record);
+  const nextActionCandidate = getReintegrationNextActionCandidate(record);
 
   return {
     sourceReintegrationId,
@@ -118,7 +95,7 @@ export function buildEventNodePromotionInput(
     sourceSoulActionId: record.soulActionId,
     promotionSoulActionId,
     eventKind: getEventKindForReintegrationSignal(record.signalKind),
-    title: getEventTitleForReintegrationSignal(record.signalKind),
+    title: nextActionCandidate?.title ?? getEventTitleForReintegrationSignal(record.signalKind),
     summary: record.summary,
     threshold: 'high',
     status: 'active',

@@ -35,17 +35,19 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> & Pic
     id: overrides.id,
     workerTaskId: overrides.workerTaskId ?? 'task-1',
     sourceNoteId: overrides.sourceNoteId ?? 'note-1',
-    signalKind: overrides.signalKind ?? 'daily_report_reintegration',
+    soulActionId: overrides.soulActionId ?? null,
     taskType: overrides.taskType ?? 'daily_report',
+    terminalStatus: overrides.terminalStatus ?? 'succeeded',
+    signalKind: overrides.signalKind ?? 'daily_report_reintegration',
     reviewStatus: overrides.reviewStatus ?? 'pending_review',
-    payload: overrides.payload ?? {},
-    result: overrides.result ?? null,
+    target: overrides.target ?? 'derived_outputs',
+    strength: overrides.strength ?? 'medium',
+    summary: overrides.summary ?? `${overrides.id} summary`,
     reviewReason: overrides.reviewReason ?? null,
-    evidence: overrides.evidence ?? null,
+    evidence: overrides.evidence ?? {},
     createdAt: overrides.createdAt,
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     reviewedAt: overrides.reviewedAt ?? null,
-    reviewedBy: overrides.reviewedBy ?? null,
   };
 }
 
@@ -129,7 +131,19 @@ describe('soulActionGroups', () => {
     expect(groups[0]?.actions).toHaveLength(2);
   });
 
-  it('sorts groups by latest action activity instead of reintegration created time', () => {
+  it('uses reintegration recency when the source record changed after grouped actions', () => {
+    const groups = buildSoulActionGroups(soulActions, [
+      createReintegrationRecord({ id: 'record-ready', createdAt: '2026-03-21T10:00:00.000Z', updatedAt: '2026-03-21T10:06:00.000Z' }),
+      ...reintegrationRecords.filter((record) => record.id !== 'record-ready'),
+    ], 'all');
+
+    expect(groups[0]?.groupKey).toBe('record-ready');
+    expect(groups[0]?.recentActivityKind).toBe('reintegration');
+    expect(groups[0]?.recentActivityLabel).toBe('最近变更');
+    expect(groups[0]?.recentActivityAt).toBe('2026-03-21T10:06:00.000Z');
+  });
+
+  it('sorts groups by latest grouped activity instead of reintegration created time', () => {
     const groups = buildSoulActionGroups([
       ...soulActions,
       createSoulAction({
@@ -148,8 +162,9 @@ describe('soulActionGroups', () => {
       'record-ready',
       'record-dispatched',
     ]);
-    expect(groups[0]?.latestActivityLabel).toBe('最近完成');
-    expect(groups[0]?.latestActivityAt).toBe('2026-03-21T10:05:00.000Z');
+    expect(groups[0]?.recentActivityKind).toBe('action');
+    expect(groups[0]?.recentActivityLabel).toBe('最近完成');
+    expect(groups[0]?.recentActivityAt).toBe('2026-03-21T10:05:00.000Z');
   });
 
   it('falls back to sourceNoteId grouping for non-promotion soul actions', () => {
@@ -175,6 +190,9 @@ describe('soulActionGroups', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.groupKey).toBe('note-1');
     expect(groups[0]?.reintegrationRecord).toBeNull();
+    expect(groups[0]?.recentActivityKind).toBe('action');
+    expect(groups[0]?.recentActivityLabel).toBe('最近动作');
+    expect(groups[0]?.recentActivityAt).toBe('2026-03-18T10:02:00.000Z');
   });
 
   it('reports the current filter label and stats consistently', () => {

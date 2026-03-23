@@ -1,7 +1,8 @@
 import { getDb } from '../db/client.js';
 import type { ReintegrationSignalKind } from '../workers/feedbackReintegration.js';
+import { getReintegrationNextActionSummary as getSharedReintegrationNextActionSummary, type ReintegrationNextActionSummary, type ReintegrationRecord } from '@lifeos/shared';
 import { planPromotionSoulActions } from './reintegrationPromotionPlanner.js';
-import { getReintegrationRecordByWorkerTaskId, type ReintegrationRecord } from './reintegrationRecords.js';
+import { getReintegrationRecordByWorkerTaskId } from './reintegrationRecords.js';
 
 interface ReintegrationRecordRow {
   id: string;
@@ -35,7 +36,7 @@ function rowToReintegrationRecord(row: ReintegrationRecordRow): ReintegrationRec
     target: row.target,
     strength: row.strength,
     summary: row.summary,
-    evidence: JSON.parse(row.evidence_json) as Record<string, unknown>,
+    evidence: JSON.parse(row.evidence_json),
     reviewReason: row.review_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -65,6 +66,9 @@ export function listReintegrationRecords(filters?: {
 function updateReintegrationReviewStatus(id: string, reviewStatus: 'accepted' | 'rejected', reason: string | null, now = new Date().toISOString()): ReintegrationRecord | null {
   const row = getDb().prepare('SELECT * FROM reintegration_records WHERE id = ?').get(id) as ReintegrationRecordRow | undefined;
   if (!row) return null;
+  if (row.review_status !== 'pending_review') {
+    throw new Error(`Only pending_review reintegration records can be marked as ${reviewStatus}`);
+  }
   getDb().prepare(`
     UPDATE reintegration_records
     SET review_status = ?, review_reason = ?, reviewed_at = ?, updated_at = ?
@@ -72,6 +76,10 @@ function updateReintegrationReviewStatus(id: string, reviewStatus: 'accepted' | 
   `).run(reviewStatus, reason, now, now, id);
   const updated = getDb().prepare('SELECT * FROM reintegration_records WHERE id = ?').get(id) as ReintegrationRecordRow | undefined;
   return updated ? rowToReintegrationRecord(updated) : null;
+}
+
+export function getReintegrationNextActionSummary(record: ReintegrationRecord): ReintegrationNextActionSummary | null {
+  return getSharedReintegrationNextActionSummary(record);
 }
 
 export function acceptReintegrationRecord(id: string, reason: string | null): ReintegrationRecord | null {
@@ -100,4 +108,30 @@ export function rejectReintegrationRecord(id: string, reason: string | null): Re
 export function getReintegrationRecord(id: string): ReintegrationRecord | null {
   const row = getDb().prepare('SELECT * FROM reintegration_records WHERE id = ?').get(id) as ReintegrationRecordRow | undefined;
   return row ? rowToReintegrationRecord(row) : null;
+}
+
+export function hasAcceptedProjectionVisibility(sourceReintegrationId: string | null | undefined): boolean {
+  if (!sourceReintegrationId) {
+    return false;
+  }
+
+  return getReintegrationRecord(sourceReintegrationId)?.reviewStatus === 'accepted';
+}
+
+export function filterAcceptedProjectionReintegrationIds(sourceReintegrationIds: string[] | undefined): string[] | undefined {
+  if (!sourceReintegrationIds?.length) {
+    return sourceReintegrationIds;
+  }
+
+  const visibleIds = sourceReintegrationIds.filter((id) => hasAcceptedProjectionVisibility(id));
+  return visibleIds.length ? visibleIds : [];
+}
+
+export function listAcceptedProjectionReintegrationIds(): string[] {
+  const rows = getDb().prepare(`
+    SELECT id FROM reintegration_records
+    WHERE review_status = 'accepted'
+    ORDER BY created_at DESC
+  `).all() as Array<{ id: string }>;
+  return rows.map((row) => row.id);
 }

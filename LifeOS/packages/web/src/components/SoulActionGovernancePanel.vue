@@ -67,6 +67,7 @@
             <span class="worker-pill">pending {{ group.pendingCount }}</span>
             <span class="worker-pill">ready {{ group.dispatchReadyCount }}</span>
             <span class="worker-pill source-pill">Reintegration {{ group.groupKey }}</span>
+            <span v-if="group.recentActivityAt" class="worker-pill">{{ group.recentActivityLabel }} {{ formatTime(group.recentActivityAt) }}</span>
           </div>
           <div class="reintegration-head-actions soul-action-group-toolbar">
             <button
@@ -94,7 +95,6 @@
           <span v-if="group.reintegrationRecord?.sourceNoteId">Source note: {{ group.reintegrationRecord.sourceNoteId }}</span>
           <span v-if="group.reintegrationRecord">Signal: {{ group.reintegrationRecord.signalKind }}</span>
           <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
-          <span v-if="group.latestActivityAt">{{ group.latestActivityLabel }} {{ formatTime(group.latestActivityAt) }}</span>
         </div>
 
         <div v-if="!collapsedGroupIds.includes(group.groupKey)" class="soul-action-group-actions">
@@ -116,15 +116,17 @@
               <span v-if="action.finishedAt">完成于 {{ formatTime(action.finishedAt) }}</span>
             </div>
 
-            <div v-if="action.governanceReason || action.resultSummary || action.error" class="soul-action-detail-grid">
-              <div v-if="action.governanceReason" class="reintegration-review-reason">
+            <div v-if="promotionExplanationRows(action).length || action.governanceReason || formatSoulActionOutcomeSummary(action) || action.error" class="soul-action-detail-grid">
+              <template v-if="promotionExplanationRows(action).length">
+                <div v-for="row in promotionExplanationRows(action)" :key="`${action.id}-${row.label}`" class="reintegration-review-reason">
+                  {{ row.label }}：{{ row.value }}
+                </div>
+              </template>
+              <div v-else-if="action.governanceReason" class="reintegration-review-reason">
                 治理理由：{{ action.governanceReason }}
               </div>
-              <div v-if="action.resultSummary" class="reintegration-review-reason">
-                执行摘要：{{ action.resultSummary }}
-              </div>
-              <div v-if="action.error" class="reintegration-review-reason soul-action-error">
-                执行错误：{{ action.error }}
+              <div v-if="formatSoulActionOutcomeSummary(action)" class="reintegration-review-reason">
+                执行摘要：{{ formatSoulActionOutcomeSummary(action) }}
               </div>
             </div>
 
@@ -170,6 +172,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatSoulActionOutcomeSummary, getPromotionExplanationRows } from '@lifeos/shared';
 import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import type { SoulActionGroup, SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
 
@@ -214,4 +217,8 @@ const emit = defineEmits<{
   (event: 'discard-action', action: SoulAction): void;
   (event: 'dispatch-action', action: SoulAction): void;
 }>();
+
+function promotionExplanationRows(action: SoulAction) {
+  return getPromotionExplanationRows(action);
+}
 </script>

@@ -12,7 +12,7 @@ import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSched
 import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../soul/soulActions.js';
 import { normalizeSoulActionSourceFilters } from '../soul/types.js';
 import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
-import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord, getReintegrationNextActionSummary } from '../soul/reintegrationReview.js';
+import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord, getReintegrationNextActionSummary, filterAcceptedProjectionReintegrationIds, hasAcceptedProjectionVisibility, listAcceptedProjectionReintegrationIds } from '../soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
 import { listEventNodes, getEventNodeBySourceReintegrationId, type EventNode } from '../soul/eventNodes.js';
 import { listContinuityRecords, getContinuityRecordBySourceReintegrationId, type ContinuityRecord } from '../soul/continuityRecords.js';
@@ -593,6 +593,10 @@ function getPersistedSoulActionExecutionSummary(soulAction: ReturnType<typeof ge
     };
   }
 
+  if (!hasAcceptedProjectionVisibility(soulAction.sourceReintegrationId)) {
+    return null;
+  }
+
   if (soulAction.actionKind === 'create_event_node' || soulAction.actionKind === 'promote_event_node') {
     const eventNode = getEventNodeBySourceReintegrationId(soulAction.sourceReintegrationId ?? '');
     if (eventNode?.promotionSoulActionId === soulAction.id) {
@@ -639,7 +643,9 @@ function attachSoulActionExecutionSummaryAndPromotionSummary(soulAction: ReturnT
   const reintegrationRecord = getReintegrationRecord(withExecutionSummary.sourceReintegrationId);
   return {
     ...withExecutionSummary,
-    promotionSummary: getSoulActionPromotionSummary(withExecutionSummary, reintegrationRecord),
+    promotionSummary: hasAcceptedProjectionVisibility(withExecutionSummary.sourceReintegrationId)
+      ? getSoulActionPromotionSummary(withExecutionSummary, reintegrationRecord)
+      : null,
   };
 }
 
@@ -931,13 +937,10 @@ function getSourceReintegrationIds(query: unknown): string[] | undefined {
   return ids.length ? ids : undefined;
 }
 
-function filterVisibleProjectionReintegrationIds(sourceReintegrationIds: string[] | undefined): string[] | undefined {
-  if (!sourceReintegrationIds?.length) {
-    return sourceReintegrationIds;
-  }
-
-  const visibleIds = sourceReintegrationIds.filter((id) => getReintegrationRecord(id)?.reviewStatus === 'accepted');
-  return visibleIds.length ? visibleIds : [];
+function getVisibleProjectionReintegrationIds(sourceReintegrationIds: string[] | undefined): string[] {
+  return sourceReintegrationIds
+    ? filterAcceptedProjectionReintegrationIds(sourceReintegrationIds) ?? []
+    : listAcceptedProjectionReintegrationIds();
 }
 
 export async function listEventNodesHandler(
@@ -946,9 +949,9 @@ export async function listEventNodesHandler(
 ): Promise<void> {
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
-    const visibleSourceReintegrationIds = filterVisibleProjectionReintegrationIds(sourceReintegrationIds);
+    const visibleSourceReintegrationIds = getVisibleProjectionReintegrationIds(sourceReintegrationIds);
     const response: ListEventNodesResponse = {
-      eventNodes: visibleSourceReintegrationIds?.length === 0
+      eventNodes: visibleSourceReintegrationIds.length === 0
         ? []
         : listEventNodes(visibleSourceReintegrationIds)
             .map((eventNode) => attachEventNodeProjectionSummary(eventNode))
@@ -970,9 +973,9 @@ export async function listContinuityRecordsHandler(
 ): Promise<void> {
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
-    const visibleSourceReintegrationIds = filterVisibleProjectionReintegrationIds(sourceReintegrationIds);
+    const visibleSourceReintegrationIds = getVisibleProjectionReintegrationIds(sourceReintegrationIds);
     const response: ListContinuityRecordsResponse = {
-      continuityRecords: visibleSourceReintegrationIds?.length === 0
+      continuityRecords: visibleSourceReintegrationIds.length === 0
         ? []
         : listContinuityRecords(visibleSourceReintegrationIds)
             .map((continuityRecord) => attachContinuityRecordProjectionSummary(continuityRecord))

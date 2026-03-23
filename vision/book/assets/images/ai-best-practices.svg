@@ -1,0 +1,45 @@
+<svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="840" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="756" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 6 · AI 辅助开发最佳实践</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">先想清楚 → 写任务书 → 执行 → 验证 → 复盘</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">高质量 AI 开发不是“随便生成”，而是一套有约束、有验证、有反馈回路的工作方式。</text>
+
+  <g>
+    <rect x="76" y="314" width="196" height="176" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+    <text x="112" y="376" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">想清楚</text>
+    <text x="112" y="414" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">拆需求、画流程、定边界</text>
+
+    <rect x="310" y="314" width="196" height="176" rx="28" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+    <text x="346" y="376" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">任务书</text>
+    <text x="346" y="414" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">写清目标、禁区、成功标准</text>
+
+    <rect x="544" y="314" width="196" height="176" rx="28" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+    <text x="598" y="376" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">执行</text>
+    <text x="578" y="414" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让 AI 在制度里工作</text>
+
+    <rect x="778" y="314" width="196" height="176" rx="28" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+    <text x="822" y="376" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">验证</text>
+    <text x="800" y="414" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">编译、测试、diff、手查</text>
+
+    <rect x="1012" y="314" width="196" height="176" rx="28" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+    <text x="1058" y="376" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">复盘</text>
+    <text x="1036" y="414" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">总结价值与下一步</text>
+  </g>
+
+  <g stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M272 400H294" stroke="#8A3B12"/>
+    <path d="M280 388L304 400L280 412" stroke="#8A3B12"/>
+    <path d="M506 400H528" stroke="#9A6A32"/>
+    <path d="M514 388L538 400L514 412" stroke="#9A6A32"/>
+    <path d="M740 400H762" stroke="#8C6950"/>
+    <path d="M748 388L772 400L748 412" stroke="#8C6950"/>
+    <path d="M974 400H996" stroke="#66725F"/>
+    <path d="M982 388L1006 400L982 412" stroke="#66725F"/>
+  </g>
+
+  <rect x="130" y="576" width="1020" height="128" rx="24" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="164" y="620" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">关键提醒</text>
+  <text x="164" y="658" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">不要只看 AI 写了多少，而要看它是否推进了主线、是否减少了漂移、是否让系统更可治理。</text>
+  <text x="164" y="686" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">真正高质量的 AI 开发，依赖的是流程和制度，而不是单条提示词。</text>
+</svg>

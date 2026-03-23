@@ -1,4 +1,4 @@
-import type { WorkerTask } from '@lifeos/shared';
+import type { WorkerTask, SoulActionDispatchExecutionSummary } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import {
   SUPPORTED_SOUL_ACTION_KINDS,
@@ -87,6 +87,34 @@ function buildSoulActionId(input: {
   actionKind: SoulActionKind;
 }): string {
   return `soul:${input.actionKind}:${getSoulActionIdentityKey(input)}`;
+}
+
+function getPersistedSoulActionExecutionSummary(soulAction: SoulAction | null | undefined): SoulActionDispatchExecutionSummary | null {
+  if (!soulAction) {
+    return null;
+  }
+
+  if (soulAction.workerTaskId) {
+    return {
+      objectType: 'worker_task',
+      objectId: soulAction.workerTaskId,
+      operation: soulAction.executionStatus === 'pending' ? 'enqueued' : null,
+      summary: soulAction.resultSummary,
+    };
+  }
+
+  return null;
+}
+
+export function attachSoulActionExecutionSummary(soulAction: SoulAction | null | undefined): SoulAction | null {
+  if (!soulAction) {
+    return soulAction;
+  }
+
+  return {
+    ...soulAction,
+    executionSummary: getPersistedSoulActionExecutionSummary(soulAction),
+  };
 }
 
 function mapWorkerTaskStatusToExecutionStatus(status: WorkerTask['status']): SoulActionExecutionStatus {
@@ -338,9 +366,14 @@ export function syncSoulActionFromWorkerTask(task: WorkerTask): SoulAction | nul
     return null;
   }
 
-  const existing = getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, actionKind)
+  const existing = getSoulActionByIdentityAndKind({
+    sourceNoteId: task.sourceNoteId,
+    sourceReintegrationId: task.sourceReintegrationId ?? null,
+    actionKind,
+  })
     ?? createOrReuseSoulAction({
       sourceNoteId: task.sourceNoteId,
+      sourceReintegrationId: task.sourceReintegrationId ?? null,
       actionKind,
       now: task.updatedAt,
       governanceStatus: 'approved',
@@ -362,7 +395,7 @@ export function syncSoulActionFromWorkerTask(task: WorkerTask): SoulAction | nul
     existing.id,
   );
 
-  return getSoulAction(existing.id);
+  return attachSoulActionExecutionSummary(getSoulAction(existing.id));
 }
 
 export function listSoulActions(filters?: ListSoulActionsFilters): SoulAction[] {

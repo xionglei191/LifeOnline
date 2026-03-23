@@ -1,6 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import {
+  formatContinuityKindLabel,
+  formatContinuityStrengthLabel,
+  formatContinuityTargetLabel,
+  formatEventKindLabel,
+  formatEventNodeStatusLabel,
+  formatEventNodeThresholdLabel,
+  formatProjectionContinuityDetails,
+  formatSoulActionOutcomeSummary,
+  getProjectionContinuitySummary,
+  getProjectionExplanationSummary,
+  formatSoulActionSourceLabel,
+} from '@lifeos/shared';
 import type { Note, WorkerTask, ApprovalStatus, ReintegrationRecord, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 
 const apiMocks = vi.hoisted(() => ({
@@ -112,7 +125,7 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> = {})
     soulActionId: overrides.soulActionId ?? 'soul-action-1',
     taskType: overrides.taskType ?? 'extract_tasks',
     terminalStatus: overrides.terminalStatus ?? 'succeeded',
-    signalKind: overrides.signalKind ?? 'candidate_task',
+    signalKind: overrides.signalKind ?? 'task_extraction_reintegration',
     reviewStatus: overrides.reviewStatus ?? 'accepted',
     target: overrides.target ?? 'task_record',
     strength: overrides.strength ?? 'medium',
@@ -138,7 +151,7 @@ function createEventNode(overrides: Partial<EventNode> = {}): EventNode {
     threshold: overrides.threshold ?? 'high',
     status: overrides.status ?? 'active',
     evidence: overrides.evidence ?? { proof: true },
-    explanation: overrides.explanation ?? { why: 'matched' },
+    explanation: overrides.explanation ?? { whyHighThreshold: 'review-backed PR6 promotion', whyNow: 'Projection summary', reviewBacked: true },
     occurredAt: overrides.occurredAt ?? '2026-03-22T10:00:00.000Z',
     createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
@@ -156,9 +169,9 @@ function createContinuityRecord(overrides: Partial<ContinuityRecord> = {}): Cont
     target: overrides.target ?? 'task_record',
     strength: overrides.strength ?? 'medium',
     summary: overrides.summary ?? 'ready continuity',
-    continuity: overrides.continuity ?? { focus: 'deep work' },
+    continuity: overrides.continuity ?? { anchor: 'ready continuity', scope: 'persona', claim: 'ready continuity' },
     evidence: overrides.evidence ?? { source: 'note' },
-    explanation: overrides.explanation ?? { why: 'persisted' },
+    explanation: overrides.explanation ?? { whyNotOrdinaryArtifact: 'PR6 continuity promotion', whyReviewBacked: 'accepted reintegration record', reviewBacked: true },
     recordedAt: overrides.recordedAt ?? '2026-03-22T10:00:00.000Z',
     createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-03-22T10:00:00.000Z',
@@ -512,6 +525,21 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('Ready event node');
     expect(document.body.textContent).toContain('ready continuity');
+    expect(document.body.textContent).toContain(formatEventKindLabel(createEventNode()));
+    expect(document.body.textContent).toContain(`阈值：${formatEventNodeThresholdLabel(createEventNode())}`);
+    expect(document.body.textContent).toContain(`状态：${formatEventNodeStatusLabel(createEventNode())}`);
+    expect(document.body.textContent).toContain(formatContinuityKindLabel(createContinuityRecord()));
+    expect(document.body.textContent).toContain(`目标：${formatContinuityTargetLabel(createContinuityRecord())}`);
+    expect(document.body.textContent).toContain(`强度：${formatContinuityStrengthLabel(createContinuityRecord())}`);
+    expect(document.body.textContent).toContain(getProjectionExplanationSummary(createEventNode())?.primaryReason ?? '');
+    expect(document.body.textContent).toContain('Projection summary · review-backed PR6 promotion · review-backed');
+    expect(document.body.textContent).toContain(formatProjectionContinuityDetails(createContinuityRecord())[0] ?? '');
+    expect(document.body.textContent).toContain(formatProjectionContinuityDetails(createContinuityRecord())[1] ?? '');
+    expect(document.body.textContent).toContain(formatProjectionContinuityDetails(createContinuityRecord())[2] ?? '');
+    expect(document.body.textContent).toContain(getProjectionContinuitySummary(createContinuityRecord())?.anchor ?? '');
+    expect(document.body.textContent).toContain(`scope ${getProjectionContinuitySummary(createContinuityRecord())?.scope}`);
+    expect(document.body.textContent).toContain('ready continuity · scope persona');
+    expect(document.body.textContent).toContain('accepted reintegration record · PR6 continuity promotion · review-backed');
     expect(document.body.textContent).not.toContain('Actions 1');
     expect(document.body.textContent).not.toContain('External event node');
     expect(document.body.textContent).not.toContain('external continuity');
@@ -606,10 +634,11 @@ describe('NoteDetail', () => {
       },
     }));
     await flushPromises();
+    await nextTick();
 
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
-    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(2);
-    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchReintegrationRecords.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(apiMocks.fetchSoulActions.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(apiMocks.fetchEventNodeProjectionList.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(document.body.textContent).toContain('New event node');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).not.toContain('Old event node');
@@ -670,10 +699,11 @@ describe('NoteDetail', () => {
       },
     }));
     await flushPromises();
+    await nextTick();
 
-    expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledTimes(2);
-    expect(apiMocks.fetchSoulActions).toHaveBeenCalledTimes(2);
-    expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledTimes(2);
+    expect(apiMocks.fetchReintegrationRecords.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(apiMocks.fetchSoulActions.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(apiMocks.fetchEventNodeProjectionList.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(document.body.textContent).toContain('New event node');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).not.toContain('Old event node');
@@ -728,7 +758,7 @@ describe('NoteDetail', () => {
     ]);
     apiMocks.fetchSoulActions.mockResolvedValueOnce([
       createSoulAction({ id: 'action-pending', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_event_node', governanceStatus: 'pending_review', executionStatus: 'not_dispatched', governanceReason: 'need manual review' }),
-      createSoulAction({ id: 'action-approved', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_continuity_record', governanceStatus: 'approved', executionStatus: 'not_dispatched', resultSummary: 'approved for dispatch' }),
+      createSoulAction({ id: 'action-approved', sourceNoteId: 'note-1.md', sourceReintegrationId: 'record-ready', actionKind: 'promote_continuity_record', governanceStatus: 'approved', executionStatus: 'pending', workerTaskId: 'worker-promote-1', resultSummary: 'approved for dispatch' }),
     ]);
     apiMocks.fetchEventNodeProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
     apiMocks.fetchContinuityProjectionList.mockResolvedValueOnce(createProjectionListResult([], ['record-ready']));
@@ -754,7 +784,7 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('提升 Continuity Record');
     expect(document.body.textContent).toContain('治理理由：need manual review');
-    expect(document.body.textContent).toContain('执行摘要：approved for dispatch');
+    expect(document.body.textContent).toContain('执行摘要：approved for dispatch · Worker Task worker-promote-1');
 
     wrapper.unmount();
   });

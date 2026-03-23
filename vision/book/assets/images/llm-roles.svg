@@ -1,0 +1,33 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 5 · 大模型角色图</text>
+  <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">大模型在软件开发中的 5 种角色</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">最好的理解方式，不是把 AI 当成魔法，而是把它放进一组清晰的职责里。</text>
+
+  <g>
+    <rect x="86" y="270" width="340" height="148" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+    <text x="118" y="324" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">助手 Assistant</text>
+    <text x="118" y="364" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">解释概念、补代码、写文档、找 bug</text>
+
+    <rect x="470" y="270" width="340" height="148" rx="28" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+    <text x="502" y="324" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">搭档 Partner</text>
+    <text x="502" y="364" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">讨论需求、架构、边界与优先级</text>
+
+    <rect x="854" y="270" width="340" height="148" rx="28" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+    <text x="886" y="324" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">执行器 Operator</text>
+    <text x="886" y="364" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">按任务书改文件、跑测试、修问题</text>
+
+    <rect x="174" y="482" width="420" height="176" rx="28" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+    <text x="206" y="538" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">团队模拟器</text>
+    <text x="206" y="574" fill="#5D6A57" font-size="19" font-family="Arial, sans-serif">Team Simulator</text>
+    <text x="206" y="610" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">模拟产品、工程、评审、QA 等</text>
+    <text x="206" y="640" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">不同角色的视角</text>
+
+    <rect x="642" y="470" width="500" height="200" rx="28" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+    <text x="674" y="530" fill="#241913" font-size="32" font-family="Georgia, serif" font-weight="700">系统组件 System Component</text>
+    <text x="674" y="570" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">直接参与业务逻辑：总结、分类、回流、动作规划</text>
+    <text x="674" y="604" fill="#8A3B12" font-size="19" font-family="Arial, sans-serif">在 LifeOnline 里，AI 更接近这种角色：</text>
+    <text x="674" y="634" fill="#8A3B12" font-size="19" font-family="Arial, sans-serif">它不只是开发工具，也是系统的一部分</text>
+  </g>
+</svg>

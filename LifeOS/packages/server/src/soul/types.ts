@@ -1,4 +1,8 @@
-import { normalizeSoulActionSourceFilters as normalizeSharedSoulActionSourceFilters, type ListSoulActionsResponse as SharedListSoulActionsResponse } from '@lifeos/shared';
+import {
+  normalizeSoulActionSourceFilters as normalizeSharedSoulActionSourceFilters,
+  type ListSoulActionsResponse as SharedListSoulActionsResponse,
+  type SoulActionPromotionSummary,
+} from '@lifeos/shared';
 
 export const SUPPORTED_SOUL_ACTION_KINDS = [
   'extract_tasks',
@@ -39,6 +43,7 @@ export interface SoulAction {
   executionStatus: SoulActionExecutionStatus;
   status: SoulActionExecutionStatus;
   governanceReason: string | null;
+  promotionSummary?: SoulActionPromotionSummary | null;
   workerTaskId: string | null;
   createdAt: string;
   updatedAt: string;

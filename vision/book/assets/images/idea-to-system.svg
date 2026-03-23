@@ -1,0 +1,53 @@
+<svg width="1280" height="820" viewBox="0 0 1280 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="820" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="736" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 7 · 从想法到系统</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">一个想法如何变成一套真正的系统？</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">关键不是直接开写，而是把灵感一步步组织成：问题、边界、闭环、系统。</text>
+
+  <g>
+    <rect x="88" y="312" width="176" height="138" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+    <text x="124" y="370" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">想法</text>
+    <text x="124" y="402" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Idea</text>
+
+    <rect x="304" y="296" width="196" height="170" rx="28" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+    <text x="336" y="354" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">问题定义</text>
+    <text x="336" y="388" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Problem / User Pain</text>
+    <text x="336" y="418" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">为什么值得做？</text>
+
+    <rect x="540" y="280" width="214" height="202" rx="28" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+    <text x="572" y="338" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">输入输出</text>
+    <text x="572" y="372" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Input / Process / Output</text>
+    <text x="572" y="402" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">状态 / 存储 / 规则</text>
+    <text x="572" y="432" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">系统怎么运转？</text>
+
+    <rect x="794" y="264" width="214" height="230" rx="28" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+    <text x="826" y="322" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">最小闭环</text>
+    <text x="826" y="356" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Minimum Viable Loop</text>
+    <text x="826" y="386" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">先跑通主路径</text>
+    <text x="826" y="416" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">先验证价值</text>
+    <text x="826" y="446" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">不要一上来做大全</text>
+
+    <rect x="1048" y="248" width="184" height="260" rx="28" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+    <text x="1080" y="306" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">系统</text>
+    <text x="1080" y="340" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">System</text>
+    <text x="1080" y="372" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">可以扩展</text>
+    <text x="1080" y="402" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">可以维护</text>
+    <text x="1080" y="432" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">可以协作</text>
+  </g>
+
+  <g stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M264 378H288" stroke="#8A3B12"/>
+    <path d="M276 366L300 378L276 390" stroke="#8A3B12"/>
+    <path d="M500 378H524" stroke="#9A6A32"/>
+    <path d="M512 366L536 378L512 390" stroke="#9A6A32"/>
+    <path d="M754 378H778" stroke="#8C6950"/>
+    <path d="M766 366L790 378L766 390" stroke="#8C6950"/>
+    <path d="M1008 378H1032" stroke="#66725F"/>
+    <path d="M1020 366L1044 378L1020 390" stroke="#66725F"/>
+  </g>
+
+  <rect x="150" y="586" width="980" height="120" rx="24" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="184" y="630" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">关键提醒</text>
+  <text x="184" y="668" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">真正有效的起步方式不是“先做一个漂亮页面”，而是先把主线问题和最小闭环定义清楚。</text>
+</svg>

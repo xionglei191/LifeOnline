@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { formatSoulActionOutcomeSummary } from '@lifeos/shared';
 import type { VueWrapper } from '@vue/test-utils';
 import { mount } from '@vue/test-utils';
 import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
@@ -14,6 +15,7 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     status: overrides.status ?? overrides.executionStatus ?? 'not_dispatched',
     sourceNoteId: overrides.sourceNoteId,
     sourceReintegrationId: overrides.sourceReintegrationId ?? null,
+    promotionSummary: overrides.promotionSummary ?? null,
     workerTaskId: overrides.workerTaskId ?? null,
     governanceReason: overrides.governanceReason ?? null,
     resultSummary: overrides.resultSummary ?? null,
@@ -33,18 +35,19 @@ function createReintegrationRecord(overrides: Partial<ReintegrationRecord> & Pic
     id: overrides.id,
     workerTaskId: overrides.workerTaskId ?? 'task-1',
     sourceNoteId: overrides.sourceNoteId ?? 'note-1',
+    soulActionId: overrides.soulActionId ?? null,
     signalKind: overrides.signalKind ?? 'daily_report_reintegration',
     taskType: overrides.taskType ?? 'daily_report',
+    terminalStatus: overrides.terminalStatus ?? 'succeeded',
     summary: overrides.summary ?? `${overrides.id} summary`,
     reviewStatus: overrides.reviewStatus ?? 'accepted',
-    payload: overrides.payload ?? {},
-    result: overrides.result ?? null,
+    target: overrides.target ?? 'derived_outputs',
+    strength: overrides.strength ?? 'medium',
     reviewReason: overrides.reviewReason ?? null,
-    evidence: overrides.evidence ?? null,
+    evidence: overrides.evidence ?? {},
     createdAt: overrides.createdAt,
     updatedAt: overrides.updatedAt ?? overrides.createdAt,
     reviewedAt: overrides.reviewedAt ?? null,
-    reviewedBy: overrides.reviewedBy ?? null,
   };
 }
 
@@ -58,7 +61,7 @@ const soulActions: SoulAction[] = [
   createSoulAction({ id: 'ready-1', sourceNoteId: 'note-ready-1', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched' }),
   createSoulAction({ id: 'ready-2', sourceNoteId: 'note-ready-2', sourceReintegrationId: 'record-ready', createdAt: '2026-03-21T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
   createSoulAction({ id: 'mixed-1', sourceNoteId: 'note-mixed-1', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:01:00.000Z', governanceStatus: 'pending_review', executionStatus: 'not_dispatched' }),
-  createSoulAction({ id: 'mixed-2', sourceNoteId: 'note-mixed-2', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record' }),
+  createSoulAction({ id: 'mixed-2', sourceNoteId: 'note-mixed-2', sourceReintegrationId: 'record-mixed', createdAt: '2026-03-20T10:02:00.000Z', governanceStatus: 'approved', executionStatus: 'not_dispatched', actionKind: 'promote_continuity_record', finishedAt: '2026-03-21T10:05:00.000Z' }),
   createSoulAction({ id: 'done-1', sourceNoteId: 'note-done-1', sourceReintegrationId: 'record-done', createdAt: '2026-03-19T10:01:00.000Z', governanceStatus: 'approved', executionStatus: 'succeeded' }),
 ];
 
@@ -114,17 +117,67 @@ describe('SoulActionGovernancePanel', () => {
 
     expect(wrapper.text()).toContain('Reintegration record-ready');
     expect(wrapper.text()).toContain('Source note: note-1');
-    expect(wrapper.text()).toContain('最近更新 2026/03/21');
+    expect(wrapper.text()).toContain('最近动作 2026/03/21');
     expect(wrapper.text()).not.toContain('note-ready-1');
     expect(wrapper.text()).not.toContain('note-ready-2');
   });
 
-  it('renders the latest activity label and timestamp from grouped activity metadata', () => {
+  it('renders promotion source summary and rationale from the shared soul-action contract', () => {
     const wrapper = mountPanel('dispatch_ready_only', {
+      groups: buildSoulActionGroups([
+        createSoulAction({
+          id: 'ready-1',
+          sourceNoteId: 'note-ready-1',
+          sourceReintegrationId: 'record-ready',
+          createdAt: '2026-03-21T10:01:00.000Z',
+          governanceStatus: 'approved',
+          executionStatus: 'not_dispatched',
+          promotionSummary: {
+            sourceSummary: 'ready group',
+            primaryReason: 'accepted by reviewer',
+            rationale: 'review-backed PR6 promotion',
+            reviewBacked: true,
+            projectionKind: 'event',
+          },
+        }),
+      ], reintegrationRecords, 'dispatch_ready_only'),
+    });
+
+    expect(wrapper.text()).toContain('来源摘要：ready group');
+    expect(wrapper.text()).toContain('主要原因：accepted by reviewer');
+    expect(wrapper.text()).toContain('提升理由：review-backed PR6 promotion');
+    expect(wrapper.text()).toContain('治理依据：review-backed');
+  });
+
+  it('renders shared outcome summary text for worker-backed or failed soul actions', () => {
+    const action = createSoulAction({
+      id: 'done-2',
+      sourceNoteId: 'note-done-2',
+      sourceReintegrationId: 'record-done',
+      createdAt: '2026-03-19T10:06:00.000Z',
+      governanceStatus: 'approved',
+      executionStatus: 'pending',
+      workerTaskId: 'worker-task-2',
+      resultSummary: 'approved soul action dispatched through worker host',
+    });
+
+    const wrapper = mountPanel('all', {
+      groups: buildSoulActionGroups([action], reintegrationRecords, 'all'),
+    });
+
+    expect(wrapper.text()).toContain(`执行摘要：${formatSoulActionOutcomeSummary(action)}`);
+  });
+
+  it('renders recent activity metadata in the group header and sorts groups by that recency', () => {
+    const wrapper = mountPanel('all', {
       formatTime: (ts: string) => `fmt:${ts}`,
     });
 
-    expect(wrapper.text()).toContain('最近更新 fmt:2026-03-21T10:02:00.000Z');
+    const groups = wrapper.findAll('.soul-action-group');
+    expect(groups[0]?.text()).toContain('record-mixed');
+    expect(groups[0]?.text()).toContain('最近完成 fmt:2026-03-21T10:05:00.000Z');
+    expect(groups[1]?.text()).toContain('record-ready');
+    expect(groups[1]?.text()).toContain('最近动作 fmt:2026-03-21T10:02:00.000Z');
   });
 
   it('renders only pending groups with synced label and stats in pending_only mode', () => {

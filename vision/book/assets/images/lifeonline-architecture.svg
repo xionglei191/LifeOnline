@@ -1,0 +1,46 @@
+<svg width="1360" height="900" viewBox="0 0 1360 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1360" height="900" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1276" height="816" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 9 · LifeOnline 组织架构图</text>
+  <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">LifeOnline / LifeOS / Vault / OpenClaw / R2 的关系</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">关键理解：LifeOS 是第一阶段宿主，不是整个项目本体。</text>
+
+  <rect x="430" y="238" width="500" height="112" rx="28" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+  <text x="466" y="300" fill="#241913" font-size="36" font-family="Georgia, serif" font-weight="700">LifeOnline</text>
+  <text x="666" y="300" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">整个联合认知体工程</text>
+
+  <rect x="82" y="438" width="280" height="176" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="116" y="498" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">LingGuangCatcher</text>
+  <text x="116" y="536" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">现实输入侧</text>
+  <text x="116" y="566" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">生活流入口 / capture layer</text>
+
+  <rect x="402" y="396" width="320" height="246" rx="30" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="438" y="458" fill="#241913" font-size="36" font-family="Georgia, serif" font-weight="700">LifeOS</text>
+  <text x="438" y="496" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">第一阶段后台宿主</text>
+  <text x="438" y="526" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">承载控制面与运行态</text>
+  <text x="438" y="556" fill="#8A3B12" font-size="19" font-family="Arial, sans-serif">不是整个项目本体</text>
+
+  <rect x="762" y="438" width="220" height="176" rx="28" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="796" y="500" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">Vault</text>
+  <text x="796" y="538" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">内容事实源</text>
+  <text x="796" y="568" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">知识与记录底座</text>
+
+  <rect x="1030" y="438" width="230" height="176" rx="28" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+  <text x="1064" y="500" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">OpenClaw</text>
+  <text x="1064" y="538" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">外部执行器</text>
+  <text x="1064" y="568" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">把动作送到现实世界</text>
+
+  <rect x="1110" y="688" width="150" height="86" rx="22" fill="#FFF8EF" stroke="#E6D7C7"/>
+  <text x="1148" y="742" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">R2</text>
+  <text x="1136" y="764" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">桥接 / 冷存储 / 备份</text>
+
+  <g stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M680 350V384" stroke="#8A3B12"/>
+    <path d="M668 372L680 396L692 372" stroke="#8A3B12"/>
+    <path d="M680 396L220 438" stroke="#8A3B12"/>
+    <path d="M680 396L562 396" stroke="#9A6A32"/>
+    <path d="M680 396L872 438" stroke="#66725F"/>
+    <path d="M680 396L1144 438" stroke="#A06A47"/>
+    <path d="M1146 614L1182 688" stroke="#B88439"/>
+  </g>
+</svg>

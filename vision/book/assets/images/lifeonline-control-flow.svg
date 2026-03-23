@@ -1,0 +1,76 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" rx="36" fill="#FBF6EF"/>
+  <rect x="44" y="44" width="1312" height="812" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="80" y="116" fill="#7F3415" font-size="24" font-family="Arial, sans-serif" letter-spacing="2">图 3 · LifeOnline 第一阶段控制流程图</text>
+  <text x="80" y="164" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">输入 → 理解 → SoulAction → 治理 → 执行 → 回流 → 连续性</text>
+  <text x="80" y="206" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">这不是普通 Web 工具流程，而是联合认知体第一阶段最小但真实的运行骨架。</text>
+
+  <g>
+    <rect x="86" y="304" width="158" height="124" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+    <text x="123" y="360" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">输入</text>
+    <text x="118" y="392" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Input</text>
+
+    <rect x="276" y="304" width="158" height="124" rx="28" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+    <text x="313" y="360" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">理解</text>
+    <text x="290" y="392" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Understanding</text>
+
+    <rect x="466" y="290" width="196" height="150" rx="30" fill="#F0E6DD" stroke="#CDA98E" stroke-width="2.8"/>
+    <text x="494" y="352" fill="#241913" font-size="32" font-family="Georgia, serif" font-weight="700">SoulAction</text>
+    <text x="498" y="388" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">动作候选 / 行动对象</text>
+
+    <rect x="700" y="280" width="258" height="172" rx="30" fill="#EEE7DA" stroke="#AEB28D" stroke-width="2.8"/>
+    <text x="762" y="338" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">治理层</text>
+    <text x="742" y="374" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">Gate / Review / Dispatch</text>
+    <text x="746" y="404" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">approve ≠ dispatch</text>
+
+    <rect x="990" y="304" width="162" height="124" rx="28" fill="#F7E8DF" stroke="#D8B091" stroke-width="2.5"/>
+    <text x="1026" y="360" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">执行</text>
+    <text x="1021" y="392" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Execution</text>
+
+    <rect x="1186" y="304" width="164" height="124" rx="28" fill="#FFF2E8" stroke="#D6B08A" stroke-width="2.5"/>
+    <text x="1218" y="360" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">结果</text>
+    <text x="1222" y="392" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Outcome</text>
+  </g>
+
+  <g stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M244 366H258" stroke="#8A3B12"/>
+    <path d="M246 354L270 366L246 378" stroke="#8A3B12"/>
+    <path d="M434 366H448" stroke="#9A6A32"/>
+    <path d="M436 354L460 366L436 378" stroke="#9A6A32"/>
+    <path d="M662 366H684" stroke="#8C6950"/>
+    <path d="M670 354L694 366L670 378" stroke="#8C6950"/>
+    <path d="M958 366H980" stroke="#66725F"/>
+    <path d="M966 354L990 366L966 378" stroke="#66725F"/>
+    <path d="M1152 366H1174" stroke="#A06A47"/>
+    <path d="M1160 354L1184 366L1160 378" stroke="#A06A47"/>
+  </g>
+
+  <rect x="316" y="574" width="344" height="148" rx="28" fill="#FFF8EF" stroke="#E5D7C6"/>
+  <text x="350" y="628" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">回流 Reintegration</text>
+  <text x="350" y="664" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">结果被总结、解释、组织</text>
+  <text x="350" y="694" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成 next action / evidence / summary</text>
+
+  <rect x="760" y="560" width="360" height="164" rx="28" fill="#F7F1E6" stroke="#D5C09C"/>
+  <text x="796" y="616" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">连续性 Continuity</text>
+  <text x="796" y="652" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">高价值结果进入长期资产</text>
+  <text x="796" y="682" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成 EventNode / ContinuityRecord</text>
+
+  <path d="M1264 428C1264 514 1112 572 660 572" stroke="#B88439" stroke-width="4"/>
+  <path d="M672 560L642 572L672 584" stroke="#B88439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1106" y="534" fill="#7A5A34" font-size="18" font-family="Arial, sans-serif">Outcome → Reintegration</text>
+
+  <path d="M660 642H740" stroke="#7F3415" stroke-width="4" stroke-linecap="round"/>
+  <path d="M728 630L752 642L728 654" stroke="#7F3415" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="662" y="620" fill="#7F3415" font-size="18" font-family="Arial, sans-serif">summary / evidence</text>
+
+  <path d="M930 560C930 484 854 460 828 460" stroke="#66725F" stroke-width="4" stroke-dasharray="10 10"/>
+  <path d="M818 472L794 458L822 448" stroke="#66725F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="946" y="510" fill="#66725F" font-size="18" font-family="Arial, sans-serif">连续性晋升要回到治理</text>
+
+  <rect x="84" y="532" width="206" height="176" rx="24" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="112" y="580" fill="#241913" font-size="25" font-family="Georgia, serif" font-weight="700">第一阶段重点</text>
+  <text x="112" y="620" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">不是先做更多页面，</text>
+  <text x="112" y="648" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">而是让这条闭环</text>
+  <text x="112" y="676" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">先真实成立，</text>
+  <text x="112" y="704" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">再逐步长出控制面。</text>
+</svg>

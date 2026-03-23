@@ -1,0 +1,31 @@
+<svg width="1360" height="940" viewBox="0 0 1360 940" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1360" height="940" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1276" height="856" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 11 · 五层骨架图</text>
+  <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">LifeOnline 第一阶段的五层骨架</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">真正的主线不是页面数量，而是这五层是否在长、是否正在形成稳定运行态。</text>
+
+  <rect x="126" y="262" width="1108" height="104" rx="26" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="164" y="324" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">1. 认知对象层</text>
+  <text x="430" y="314" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">PersonaState / BrainstormSession /</text>
+  <text x="430" y="344" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">EventNode / ContinuityRecord / InterventionDecision</text>
+
+  <rect x="126" y="388" width="1108" height="104" rx="26" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="164" y="450" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">2. 动作层</text>
+  <text x="430" y="450" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">SoulAction：让系统从“看见信息”走向“准备行动”</text>
+
+  <rect x="126" y="514" width="1108" height="104" rx="26" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+  <text x="164" y="576" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">3. 治理层</text>
+  <text x="430" y="566" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">Gate / Review / Dispatch：</text>
+  <text x="430" y="596" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">让动作不是直接放权，而是经过审查与约束</text>
+
+  <rect x="126" y="640" width="1108" height="104" rx="26" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="164" y="702" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">4. 执行编排层</text>
+  <text x="430" y="692" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">Worker / Scheduler / External Executor：</text>
+  <text x="430" y="722" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">真正去做事，但要在治理之后</text>
+
+  <rect x="126" y="766" width="1108" height="104" rx="26" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+  <text x="164" y="828" fill="#241913" font-size="34" font-family="Georgia, serif" font-weight="700">5. 回流与连续性层</text>
+  <text x="430" y="818" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">Outcome / Reintegration / Promotion / Continuity：</text>
+  <text x="430" y="848" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">让结果进入下一轮，并沉淀为长期资产</text>
+</svg>

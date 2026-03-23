@@ -59,6 +59,7 @@ interface WorkerTaskRow {
   result_json: string | null;
   result_summary: string | null;
   source_note_id: string | null;
+  source_reintegration_id: string | null;
   output_note_paths: string | null;
   schedule_id: string | null;
 }
@@ -172,6 +173,7 @@ function rowToWorkerTask(row: WorkerTaskRow): WorkerTask {
     result: row.result_json ? JSON.parse(row.result_json) : null,
     resultSummary: row.result_summary,
     sourceNoteId: row.source_note_id,
+    sourceReintegrationId: row.source_reintegration_id,
     scheduleId: row.schedule_id,
     outputNotePaths,
     outputNotes: outputNotePaths.map(buildOutputNote),
@@ -238,6 +240,7 @@ function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
 
     const reintegrationInput = createReintegrationRecordInput(task, {
       soulActionId: getSoulActionByWorkerTaskId(task.id)?.id ?? null,
+      sourceReintegrationId: getSoulActionByWorkerTaskId(task.id)?.sourceReintegrationId ?? null,
       personaSnapshot: personaSnapshotForTask,
     });
 
@@ -256,6 +259,7 @@ function bindSoulActionToWorkerTask(task: WorkerTask): void {
   const soulAction = getSoulActionBySourceNoteIdAndKind(task.sourceNoteId, actionKind)
     ?? createOrReuseSoulAction({
       sourceNoteId: task.sourceNoteId,
+      sourceReintegrationId: task.sourceReintegrationId ?? null,
       actionKind,
       now: task.createdAt,
       governanceStatus: 'approved',
@@ -803,6 +807,7 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     result: null,
     resultSummary: null,
     sourceNoteId: request.sourceNoteId || null,
+    sourceReintegrationId: request.sourceReintegrationId || null,
     scheduleId: scheduleId || null,
     outputNotePaths: [],
   };
@@ -810,8 +815,8 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
   db.prepare(`
     INSERT INTO worker_tasks (
       id, task_type, input_json, status, worker, created_at, updated_at,
-      started_at, finished_at, error, result_json, result_summary, source_note_id, output_note_paths, schedule_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      started_at, finished_at, error, result_json, result_summary, source_note_id, source_reintegration_id, output_note_paths, schedule_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     task.id,
     task.taskType,
@@ -826,6 +831,7 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     task.result ? JSON.stringify(task.result) : null,
     task.resultSummary,
     task.sourceNoteId,
+    task.sourceReintegrationId,
     JSON.stringify(task.outputNotePaths),
     task.scheduleId
   );
@@ -900,7 +906,10 @@ function updateTaskStatus(taskId: string, updates: Partial<WorkerTask>) {
 
   const updated = getWorkerTask(taskId);
   if (updated) {
-    syncSoulActionFromWorkerTask(updated);
+    const syncedSoulAction = syncSoulActionFromWorkerTask(updated);
+    if (syncedSoulAction) {
+      broadcastUpdate({ type: 'soul-action-updated', data: syncedSoulAction });
+    }
     broadcastUpdate({ type: 'worker-task-updated', data: updated });
     if (updated.sourceNoteId) {
       broadcastUpdate({
