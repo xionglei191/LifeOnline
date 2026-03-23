@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>从零开始用大模型开发软件：以 LifeOnline 为蓝本</title>
+  <meta name="description" content="面向零基础读者的《从零开始用大模型开发软件》HTML 书稿，结合 LifeOnline 项目讲解软件工程、前后端、开发流程与 AI 辅助实践。" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="eyebrow">LIFEONLINE BOOK DRAFT</div>
+        <h1>从零开始用大模型开发软件</h1>
+        <p class="subtitle">以 <strong>LifeOnline</strong> 为蓝本的入门书稿</p>
+        <p class="subtitle">当前版本已包含 12 张插图、章节摘要、小结与术语表。</p>
+      </div>
+
+      <div class="directory-actions"><a class="directory-button" href="contents.html">查看正式目录页</a><a class="directory-button" href="chapters/chapter-01.html">从第 1 章开始</a></div>
+
+      <nav class="toc">
+        <h2>目录</h2>
+        <ol>
+          <li><a href="#intro">写给谁</a></li>
+          <li><a href="#why-lifeonline">为什么以 LifeOnline 为蓝本</a></li>
+          <li><a href="#software">软件到底是什么</a></li>
+          <li><a href="#software-engineering">什么是软件工程</a></li>
+          <li><a href="#frontend-backend">前端 / 后端 / 数据库</a></li>
+          <li><a href="#platform">平台是什么</a></li>
+          <li><a href="#llm-role">大模型在开发中的角色</a></li>
+          <li><a href="#process">软件开发流程</a></li>
+          <li><a href="#beginner">小白如何开始</a></li>
+          <li><a href="#management">项目管理方法</a></li>
+          <li><a href="#best-practices">AI 辅助最佳实践</a></li>
+          <li><a href="#lifeonline-insight">LifeOnline 的启示</a></li>
+          <li><a href="#next-step">接下来最该做什么</a></li>
+          <li><a href="#ending">结语</a></li>
+        </ol>
+      </nav>
+
+      <section class="series-box">
+        <h2>这本书想解决什么问题？</h2>
+        <p>很多人已经意识到：大模型正在改变软件开发。但大多数入门材料要么太技术，要么太空泛。这个版本试图解决一个更现实的问题：</p>
+        <ul>
+          <li>零基础的人怎么理解软件？</li>
+          <li>怎么避免把 AI 当成魔法？</li>
+          <li>怎么用真实项目学会“组织系统”？</li>
+          <li>怎么从想法走到一套能运行的工程？</li>
+        </ul>
+      </section>
+    </aside>
+
+    <main class="content">
+      <header class="hero">
+        <p class="hero-kicker">给没有软件开发经验的人</p>
+        <h1>未来的软件开发，不只是写代码，而是和 AI 一起组织系统。</h1>
+        <p class="lead">
+          这不是一篇普通的编程教程，也不是一份泛泛而谈的 AI 科普。
+          它试图用 <strong>LifeOnline</strong> 这个真实项目，带你看懂：
+          在大模型时代，一个没有软件开发背景的人，如何理解软件、组织软件、开发软件，
+          并一步步把一个想法变成真正可运行、可治理、可持续演进的系统。
+        </p>
+        <div class="chapter-summary">
+          <h3>这本书现在已经具备什么？</h3>
+          <p>它已经不是一篇单纯长文，而是一份包含多章节结构、12 张插图、术语表、章节摘要和项目方法论骨架的在线书稿。</p>
+        </div>
+      </header>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这本章会讲什么？</h3>
+        <p>这章先解决一个最基础的问题：这本书到底写给谁，以及为什么零基础的人也值得进入软件创造。</p>
+      </section>
+
+      <section class="chapter" id="intro">
+        <div class="chapter-no">01</div>
+        <div class="chapter-body">
+          <h2>先说清楚：这本书是写给谁的？</h2>
+          <p>这本书是写给<strong>没有软件开发经验的小白</strong>的。不是写给已经会写一堆框架代码的人，也不是写给只想看几个提示词就立刻做出产品的人。</p>
+          <p>如果你现在的状态是：</p>
+          <ul>
+            <li>听说过 ChatGPT、Claude、Gemini，但还没有系统地做过软件</li>
+            <li>分不清前端（Frontend）和后端（Backend）</li>
+            <li>听过数据库（Database），但不知道它在系统里到底扮演什么角色</li>
+            <li>觉得“软件开发很厉害”，但又隐约觉得自己似乎也能参与</li>
+          </ul>
+          <p>那么，这本书就是给你的。</p>
+          <blockquote>
+            它不打算先把你变成语法机器，而是先帮你建立一张地图：软件是什么、系统怎么长、AI 应该怎么被使用。
+          </blockquote>
+          <p>过去，很多人把“不会编程”理解成“没有资格参与软件创造”。大模型时代改变了这件事：不会写代码的人，也第一次可能真正参与系统的构思、设计、拆解、验证、组织和迭代。</p>
+          <p>但门槛下降，不等于复杂性消失。恰恰相反，越是容易生成代码，越需要理解：什么是系统、什么是工程、什么是边界、什么是治理。</p>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 6</div>
+          <h3>AI 辅助开发最佳实践图</h3>
+          <img src="assets/images/ai-best-practices.svg" alt="AI 辅助开发最佳实践图" class="book-figure" />
+          <figcaption>图 6：这张图强调，AI 辅助开发最关键的是流程与制度，而不是单条提示词。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card deep">
+          <div class="figure-badge">图 11</div>
+          <h3>LifeOnline 第一阶段的五层骨架图</h3>
+          <img src="assets/images/five-layer-skeleton.svg" alt="LifeOnline 第一阶段五层骨架图" class="book-figure" />
+          <figcaption>图 11：这张图把项目真正的主线固定成五层骨架，而不是一堆零散页面。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 1</div>
+          <h3>前端 / 后端 / 数据库的关系图</h3>
+          <img src="assets/images/frontend-backend-database.svg" alt="前端、后端和数据库关系图" class="book-figure" />
+          <figcaption>图 1：先给零基础读者建立“系统不是一个页面”的基础地图。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="why-lifeonline">
+        <div class="chapter-no">02</div>
+        <div class="chapter-body">
+          <h2>为什么要以 LifeOnline 为蓝本？</h2>
+          <p>因为 LifeOnline 不是一个“玩具项目（Toy Project）”。它不是只想做一个界面好看的控制台，也不是只想堆一个能聊天的 AI 工具。</p>
+          <blockquote>
+            它代表的是一种更接近未来的软件形态：软件不再只是页面和按钮，而可能是一个<strong>人机联合认知体（Human-AI Cognitive System）</strong>。
+          </blockquote>
+          <p>换句话说，LifeOnline 想处理的不只是“用户点一下按钮，系统回一个结果”这种传统交互，而是更长的链条：</p>
+          <ul>
+            <li>接住现实生活中的输入</li>
+            <li>把这些输入整理成可理解的对象</li>
+            <li>从中产生动作候选（Action Candidates）</li>
+            <li>经过治理（Governance）和审查（Review）</li>
+            <li>执行动作</li>
+            <li>把结果回流到系统里</li>
+            <li>形成连续性（Continuity）</li>
+          </ul>
+          <p>这非常适合拿来做一本书的蓝本。因为它逼着我们去面对那些真正重要的问题：</p>
+          <ul>
+            <li>软件到底是什么？</li>
+            <li>一个系统为什么需要治理，而不是只靠功能堆积？</li>
+            <li>AI 在系统里到底是工具、搭档，还是组件？</li>
+            <li>“能跑”为什么不等于“工程成立”？</li>
+          </ul>
+          <p>如果我们能用 LifeOnline 讲明白这些问题，这本书就不会只是一本过时很快的“某某框架教程”，而更像一本有长期价值的系统入门书。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>选择 LifeOnline 作为蓝本，不是因为它“酷”，而是因为它迫使我们正视系统、治理、回流和连续性这些真正重要的问题。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的关键任务</h3>
+        <p>把“软件是页面”这层浅理解，推进成“软件是对现实问题的一种可运行组织方式”。</p>
+      </section>
+
+      <section class="chapter" id="software">
+        <div class="chapter-no">03</div>
+        <div class="chapter-body">
+          <h2>软件到底是什么？</h2>
+          <p>很多初学者对软件的第一印象，是一个 App、一个网站、一套按钮、一个页面。这些理解不能说错，但它们只看到了“表面”。</p>
+          <blockquote>
+            更本质地说：软件，是把现实世界中的目标、规则、流程和信息，变成一套可以稳定运行的数字系统。
+          </blockquote>
+          <p>比如，一个记账软件并不只是一个输入框和几张图表，它背后其实在做这些事：</p>
+          <ul>
+            <li>接收输入</li>
+            <li>校验输入</li>
+            <li>分类和组织数据</li>
+            <li>保存历史</li>
+            <li>汇总和统计</li>
+            <li>为后续查询和决策服务</li>
+          </ul>
+          <p>也就是说，软件的本质不是“页面长什么样”，而是“系统如何组织现实问题”。</p>
+          <p>这点非常关键。因为如果你把软件理解成页面，就会沉迷于颜色、按钮、布局；但如果你把软件理解成系统，就会开始问更重要的问题：</p>
+          <ul>
+            <li>输入是什么？</li>
+            <li>状态是什么？</li>
+            <li>规则是什么？</li>
+            <li>数据流向哪里？</li>
+            <li>系统最后如何产生价值？</li>
+          </ul>
+          <p>这一层理解，是所有后续技术学习的基础。因为一旦你能看到系统，代码就不再只是神秘的字符，而是系统的一种实现方式。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>软件不是“界面集合”，而是对现实问题的一种可运行组织方式。理解这一点，你才会开始从系统角度而不是从页面角度思考。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="software-engineering">
+        <div class="chapter-no">04</div>
+        <div class="chapter-body">
+          <h2>什么是软件工程（Software Engineering，软件工程）？</h2>
+          <p>很多人以为“会写代码”就等于“会做软件”，其实不是。会写代码，更像是会使用工具；而软件工程，是在组织一整个工程过程。</p>
+          <div class="callout">
+            <h3>软件工程真正关心什么？</h3>
+            <ul>
+              <li>需求（Requirement）：到底要解决什么问题</li>
+              <li>架构（Architecture）：系统应该如何分层</li>
+              <li>模块（Module）：每一块做什么、边界在哪里</li>
+              <li>流程（Process）：开发顺序和协作机制是什么</li>
+              <li>测试（Testing）：如何确保今天改的东西不会明天坏掉</li>
+              <li>部署（Deployment）：如何把系统真正跑起来</li>
+              <li>维护（Maintenance）：系统长大后如何持续演进</li>
+              <li>协作（Collaboration）：多人和 AI 怎么一起工作</li>
+            </ul>
+          </div>
+          <p>一个很好懂的比喻是：写代码像是拿起锤子钉木板，软件工程则像是在设计房屋结构、安排施工顺序、控制材料质量和验收标准。</p>
+          <p>所以软件工程不是“让代码出现”，而是：</p>
+          <blockquote>
+            让软件不成为一次性的拼装品，而成为长期可以生长、可以维护、可以协作、可以反复演进的工程。
+          </blockquote>
+          <p>这也是为什么大模型时代并不会让软件工程消失。AI 可以帮你写很多代码，但它不会自动替你定义边界、自动保证系统长期可维护。人必须承担判断、组织、取舍和治理的角色。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>软件工程不是“把代码写出来”，而是保证系统可以被设计、实现、验证、维护和协作地长期生长。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的关键任务</h3>
+        <p>帮读者建立第一张技术地图：前端负责呈现，后端负责规则，数据库负责记忆。</p>
+      </section>
+
+      <section class="chapter" id="frontend-backend">
+        <div class="chapter-no">05</div>
+        <div class="chapter-body">
+          <h2>前端（Frontend）、后端（Backend）和数据库（Database）到底是什么？</h2>
+          <p>这是小白必须建立的第一张技术地图。你不一定一开始就会写它们，但一定要先知道它们分别在做什么。</p>
+          <p><strong>前端（Frontend）</strong>，是用户直接看到、直接操作的那一层。网页、按钮、输入框、图表、列表、页面切换，都属于前端世界。前端负责的是“呈现”和“交互”。</p>
+          <p><strong>后端（Backend）</strong>，是真正处理数据、规则、权限、业务逻辑的那一层。前端点“保存”，真正决定是否能保存、如何保存、保存到哪里，是后端在做。</p>
+          <p><strong>数据库（Database）</strong>，则是系统的长期记忆仓库。系统想记住用户、订单、文章、任务、事件、状态，都要落到数据库中。</p>
+          <ol>
+            <li>用户在前端输入内容</li>
+            <li>前端把请求发给后端</li>
+            <li>后端检查规则和权限</li>
+            <li>后端把数据写进数据库</li>
+            <li>后端返回结果</li>
+            <li>前端把结果展示给用户</li>
+          </ol>
+          <p>理解了这张图，很多技术词就不再那么可怕。因为你开始知道：不同技术不是一团乱麻，而是在系统中扮演不同层级的角色。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>前端负责呈现和交互，后端负责规则和处理，数据库负责记忆。理解这三层，是进入软件世界最关键的一步。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="platform">
+        <div class="chapter-no">06</div>
+        <div class="chapter-body">
+          <h2>平台（Platform，平台）是什么？</h2>
+          <p>很多人会把“平台”当成一个空泛的大词，但它其实有很明确的意义：平台是能够承载多种能力、多条流程、多类模块的底座。</p>
+          <div class="comparison-grid">
+            <article>
+              <h3>工具 Tool</h3>
+              <p>做一件明确的事，比如一个待办清单、一个图片压缩器、一个笔记输入页。</p>
+            </article>
+            <article>
+              <h3>产品 Product</h3>
+              <p>围绕某类用户问题，提供一套更完整的使用体验，通常有多个模块协作。</p>
+            </article>
+            <article>
+              <h3>平台 Platform</h3>
+              <p>能承载多个流程、多个模块、多个场景，强调边界、复用和长期演化。</p>
+            </article>
+            <article>
+              <h3>联合认知体 Cognitive System</h3>
+              <p>不仅承载业务，还承载认知对象、动作治理、结果回流与连续性积累。</p>
+            </article>
+          </div>
+          <p>LifeOnline 之所以重要，就是因为它不是一个简单工具，而是在向“平台”甚至“联合认知体”演化。它要组织的不只是某个单一功能，而是：</p>
+          <ul>
+            <li>现实输入</li>
+            <li>内容事实源</li>
+            <li>认知对象</li>
+            <li>动作系统</li>
+            <li>治理流程</li>
+            <li>执行编排</li>
+            <li>回流机制</li>
+            <li>连续性资产</li>
+          </ul>
+          <p>对初学者来说，理解“工具—产品—平台—联合认知体”这条演化线，会大大提高你的判断力。你会开始分得清：一个系统眼下是在做一个小功能，还是在长一个长期有效的骨架。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>平台不是“大一点的产品”，而是能承载多种流程和模块的底座；联合认知体则是在此基础上进一步长出认知、治理与连续性能力。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 7</div>
+          <h3>一个想法如何变成系统</h3>
+          <img src="assets/images/idea-to-system.svg" alt="一个想法如何变成系统" class="book-figure" />
+          <figcaption>图 7：这张图强调，起步顺序应该是“定义问题与闭环”，而不是先做页面。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 2</div>
+          <h3>软件开发流程图</h3>
+          <img src="assets/images/software-development-flow.svg" alt="软件开发流程图" class="book-figure" />
+          <figcaption>图 2：这张图帮助读者理解“开发不是直接开始写代码”。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 4</div>
+          <h3>工具 / 产品 / 平台 / 联合认知体的演化图</h3>
+          <img src="assets/images/tool-product-platform-cognitive-system.svg" alt="工具、产品、平台与联合认知体演化图" class="book-figure" />
+          <figcaption>图 4：帮助读者理解，复杂系统不是“功能变多”而已，而是组织能力在增强。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的关键任务</h3>
+        <p>把 AI 从“魔法黑箱”拉回到可理解的角色系统中。</p>
+      </section>
+
+      <section class="chapter" id="llm-role">
+        <div class="chapter-no">07</div>
+        <div class="chapter-body">
+          <h2>大模型（LLM，Large Language Model）在软件开发里扮演什么角色？</h2>
+          <p>大模型最容易被误解的地方，是人们会以为它是“自动写代码的魔法”。现实不是这样。它很强，但它的强，主要体现在理解语言、组织语言、生成候选结构、补全方案、协助推理上。</p>
+          <div class="role-grid">
+            <article><h3>助手 Assistant</h3><p>解释概念、写代码片段、写文档、查 bug。</p></article>
+            <article><h3>搭档 Partner</h3><p>一起讨论需求、架构、边界、优先级。</p></article>
+            <article><h3>执行器 Operator</h3><p>根据任务书修改文件、跑测试、补验证。</p></article>
+            <article><h3>团队模拟器 Team Simulator</h3><p>模拟产品、工程、评审、测试等不同角色。</p></article>
+            <article><h3>系统组件 System Component</h3><p>直接参与产品逻辑，比如分类、总结、回流分析、动作规划。</p></article>
+          </div>
+          <p>LifeOnline 特别有代表性，因为它不仅在“开发时”使用大模型，也在“系统内部”把大模型作为一部分能力来使用。</p>
+          <blockquote>
+            所以在 LifeOnline 里，大模型不是单纯的开发工具，它还是系统的一部分。
+          </blockquote>
+          <p>理解这点很重要。因为当 AI 进入系统内部后，很多问题会从“怎么写提示词”升级成“怎么治理 AI 的输出、怎么让系统可追踪、怎么让结果能回流、怎么让连续性成立”。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>把 AI 放进清晰角色里看，你就不容易神化它。真正成熟的做法，是明确它在哪些环节辅助、在哪些环节执行、在哪些环节必须被治理。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 5</div>
+          <h3>大模型在软件开发中的 5 种角色</h3>
+          <img src="assets/images/llm-roles.svg" alt="大模型在软件开发中的五种角色图" class="book-figure" />
+          <figcaption>图 5：帮助读者把 AI 放进一组清晰职责里，而不是把它当成模糊的万能魔法。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="process">
+        <div class="chapter-no">08</div>
+        <div class="chapter-body">
+          <h2>大模型时代的软件开发流程，和传统开发有什么不同？</h2>
+          <p>流程本身并没有消失。一个正常的软件开发过程，仍然是：想法、需求、架构、实现、测试、发布、维护。但 AI 的加入，让每一个阶段都可以被辅助甚至部分执行。</p>
+          <ul>
+            <li>需求阶段：AI 可以帮你拆模糊需求，识别遗漏和假需求</li>
+            <li>架构阶段：AI 可以帮你画模块图，发现边界不清</li>
+            <li>实现阶段：AI 可以写样板代码，补类型，做重构</li>
+            <li>测试阶段：AI 可以补测试用例，解释失败原因</li>
+            <li>发布和复盘阶段：AI 可以帮你生成说明、总结问题模式</li>
+          </ul>
+          <p>但这里有一个很大的陷阱：很多人会因此误以为“既然 AI 什么都能帮，那我就不需要理解开发流程了”。</p>
+          <blockquote>
+            真相恰恰相反：AI 越强，人越需要承担“组织者（Organizer）和判断者（Judge）”的角色。
+          </blockquote>
+          <p>也就是说，你不一定要亲自写每一行代码，但你必须知道：</p>
+          <ul>
+            <li>当前在做哪一步</li>
+            <li>这一步的目标是什么</li>
+            <li>产出是否靠谱</li>
+            <li>下一步该怎么接</li>
+          </ul>
+          <p>不会这个，AI 就会把你带到一个看起来很忙、实际上很散的地方。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>AI 改变的是每个阶段的效率，不是流程本身。人依然要知道现在在哪一阶段、目标是什么、产出是否可靠。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="beginner">
+        <div class="chapter-no">09</div>
+        <div class="chapter-body">
+          <h2>一个小白如何开始做软件？</h2>
+          <p>很多人一开始最容易犯的错误，是急着写页面、急着做功能、急着让东西看起来“像个产品”。其实更好的顺序，是先想清楚问题。</p>
+          <p>先回答五个问题：</p>
+          <ul>
+            <li>你到底要解决什么问题？</li>
+            <li>这个问题的信息流是什么？输入、处理、输出分别是什么？</li>
+            <li>系统边界是什么？第一阶段做什么、不做什么？</li>
+            <li>用户到底看见什么？体验流程是什么？</li>
+            <li>系统内部真正运转的对象和状态是什么？</li>
+          </ul>
+          <p>接下来，不要先做页面，而要先画图：</p>
+          <ul>
+            <li>控制流程图（Control Flow Diagram）</li>
+            <li>组织架构图（Architecture Diagram）</li>
+          </ul>
+          <p>然后再去做最小闭环（Minimum Viable Loop）：不要一开始就做“完整系统”，而是先做一条能跑通、能验证价值、能支撑后续扩展的主路径。</p>
+          <p>对于 LifeOnline 来说，这条主路径就不是“先把所有页面做好看”，而是先跑通：</p>
+          <blockquote>
+            输入 → 理解 → SoulAction → Gate / Review / Dispatch → Execution → Outcome → Reintegration → Continuity
+          </blockquote>
+          <p>这就是“系统活起来”的最小骨架。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>对小白来说，最好的起步方式不是追求完整，而是先做出一条可验证、可解释、可延展的最小闭环。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的关键任务</h3>
+        <p>让读者意识到：没有优先级和阶段管理，AI 只会让项目更快地漂。</p>
+      </section>
+
+      <section class="chapter" id="management">
+        <div class="chapter-no">10</div>
+        <div class="chapter-body">
+          <h2>管理方法（Management Methods，管理方法）：为什么做软件不能只靠灵感？</h2>
+          <p>做软件如果只靠灵感，最常见的结果就是：今天加一个功能，明天补一个界面，后天觉得那里也不错，最后代码越来越多，但系统越来越不清楚。</p>
+          <p>所以软件开发必须有管理。最核心的三件事是：</p>
+          <ul>
+            <li><strong>优先级（Priority）</strong>：不是所有事情都一样重要</li>
+            <li><strong>阶段（Phase）</strong>：不是所有事情都该现在做</li>
+            <li><strong>范围控制（Scope）</strong>：不是所有好想法都该进当前版本</li>
+          </ul>
+          <p>LifeOnline 当前用的 P1～P5，就非常适合作为初学者学习“管理感”的例子：</p>
+          <ul>
+            <li>P1：SoulAction 治理面</li>
+            <li>P2：Detail / Lifecycle</li>
+            <li>P3：Governance API</li>
+            <li>P4：Outcome / Reintegration</li>
+            <li>P5：Continuity Promotion</li>
+          </ul>
+          <p>你不一定要照抄这五条，但你一定要学会：任何项目都要有一个“主线优先级框架”。没有它，AI 很快就会把你的项目带向低价值的忙碌。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>没有优先级，就没有管理；没有管理，项目就会滑向“看起来很忙、其实很散”的状态。AI 越强，主线管理越重要。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="best-practices">
+        <div class="chapter-no">11</div>
+        <div class="chapter-body">
+          <h2>AI 辅助开发的最佳实践（Best Practices，最佳实践）</h2>
+          <p>如果你真的想在大模型时代高质量地开发软件，下面这些实践比任何单条提示词都重要。</p>
+          <ul>
+            <li><strong>先想清楚，再让 AI 动手</strong>：先拆问题、画流程、设边界，再进入实现</li>
+            <li><strong>让 AI 在制度里工作</strong>：明确当前目标、优先级、成功标准和禁区</li>
+            <li><strong>一定要有交接物（Handoff Artifact）</strong>：任务书、文档、流程图、状态对象、测试结果</li>
+            <li><strong>不要只看 AI 写了多少</strong>：更要看它是否推进了主线、减少了漂移</li>
+            <li><strong>一定要做验证（Verification）</strong>：编译、测试、手查关键逻辑、看 diff</li>
+            <li><strong>汇报要讲价值</strong>：不只讲“做了什么”，还要讲“为什么这一步重要”</li>
+          </ul>
+          <p>这也是 LifeOnline 这段时间最重要的一个启示：真正有价值的进展，不是今天又多了几个文件，而是系统有没有更接近“正式可治理的联合认知运行态”。</p>
+          <p>所以 AI 辅助开发最好的用法，不是“让 AI 随便做点有价值的事”，而是：</p>
+          <blockquote>
+            让 AI 在明确主线、明确边界、明确成功标准的制度里，持续地推进真正重要的系统骨架。
+          </blockquote>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>高质量 AI 开发依赖三件事：清晰目标、正式交接物、严格验证。少一样，系统都容易漂。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card deep" id="lifeonline-control-flow">
+          <div class="figure-badge">图 3</div>
+          <h3>LifeOnline 第一阶段控制流程图</h3>
+          <img src="assets/images/lifeonline-control-flow.svg" alt="LifeOnline 第一阶段控制流程图" class="book-figure" />
+          <figcaption>图 3：这是整本书里最关键的项目样本图，后续应继续精修。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 10</div>
+          <h3>传统开发 vs AI 辅助开发</h3>
+          <img src="assets/images/traditional-vs-ai-development.svg" alt="传统开发与 AI 辅助开发对比图" class="book-figure" />
+          <figcaption>图 10：这张图说明，AI 改变的是效率结构，但不会替代系统判断和工程组织。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="lifeonline-insight">
+        <div class="chapter-no">12</div>
+        <div class="chapter-body">
+          <h2>LifeOnline 给我们的一个最重要启示</h2>
+          <p>LifeOnline 最有价值的地方，不只是它做了什么，而是它迫使我们换了一种视角去看软件。</p>
+          <blockquote>
+            不要把软件理解成页面和功能的堆积，而要理解成一个被持续组织、持续治理、持续回流的系统。
+          </blockquote>
+          <p>这句话对初学者尤其重要。因为初学者最大的风险往往不是不会写代码，而是：</p>
+          <ul>
+            <li>把软件理解得太浅</li>
+            <li>把 AI 想得太神</li>
+            <li>把页面当系统</li>
+            <li>把提交数当进展</li>
+            <li>把“做了很多事”误认为“做对了事”</li>
+          </ul>
+          <p>LifeOnline 的价值，在于它把这些误区都暴露了出来：如果你不关心治理、不关心连续性、不关心回流、不关心事实源一致性，那么你做出来的东西很容易只是一个看起来厉害、实际上很浅的工具。</p>
+          <p>而真正高级的软件开发，应该有思想、有结构、有节奏、有主线，也有能力长期演进。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>LifeOnline 的价值，不只是功能，而是它让我们看到：真正重要的是系统如何被组织、治理和持续生长。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 8</div>
+          <h3>如何判断一个改动是不是在主线上</h3>
+          <img src="assets/images/mainline-decision.svg" alt="如何判断一个改动是不是在主线上" class="book-figure" />
+          <figcaption>图 8：这张图把“骨架层工作”和“表层修补”区分开来，帮助读者建立项目判断力。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card deep">
+          <div class="figure-badge">图 9</div>
+          <h3>LifeOnline 组织架构图</h3>
+          <img src="assets/images/lifeonline-architecture.svg" alt="LifeOnline 组织架构图" class="book-figure" />
+          <figcaption>图 9：理解这张图后，读者会更容易明白“宿主”和“项目本体”的区别。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter" id="next-step">
+        <div class="chapter-no">13</div>
+        <div class="chapter-body">
+          <h2>如果你现在是小白，接下来最该做什么？</h2>
+          <p>如果你读到这里，最重要的不是立刻去学十门技术，而是先做五件更朴素但更有效的事：</p>
+          <ol>
+            <li><strong>学会画图</strong>：先把问题画出来，而不是先把页面做出来</li>
+            <li><strong>学会分层</strong>：知道前端、后端、数据库、外部服务、核心流程各自做什么</li>
+            <li><strong>学会做最小闭环</strong>：先跑通一条主路径，而不是一上来做大全</li>
+            <li><strong>学会和 AI 协作</strong>：把它当搭档、执行器、第二大脑，而不是魔法黑箱</li>
+            <li><strong>学会管理</strong>：真正决定项目质量的，往往不是手速，而是判断力和组织力</li>
+          </ol>
+          <p>你甚至可以从一个很小的题目开始：例如做一个“生活记录 + 总结 + 下一步建议”的小系统。关键不是功能多，而是你能否清楚地说出：</p>
+          <ul>
+            <li>输入是什么</li>
+            <li>系统怎么理解输入</li>
+            <li>系统生成什么动作或建议</li>
+            <li>结果怎样被记录</li>
+            <li>下一轮如何接上</li>
+          </ul>
+          <p>当你开始这样思考，你就已经不只是“在学编程”，而是在学做系统。</p>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>你下一步最该练的，不只是写代码，而是画图、分层、定义闭环、管理主线，以及和 AI 建立正确协作方式。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ending">
+        <div class="chapter-no">14</div>
+        <div class="chapter-body">
+          <h2>最后的结语：为什么这件事值得被“书写历史”？</h2>
+          <p>我们正站在一个很特别的时间点上。过去，做软件像是在学一门很高门槛的手艺：先学语言，再学框架，再慢慢学系统。现在，大模型正在重写这个过程。</p>
+          <p>不会写代码的人，第一次有可能真正参与软件创造。这是巨大的变化。但这并不意味着工程思维不重要了，恰恰相反——它变得更重要了。</p>
+          <blockquote>
+            未来的软件开发，不只是“人写代码”，也不只是“AI 写代码”，而是<strong>人和 AI 一起组织系统</strong>。
+          </blockquote>
+          <p>这不是某个工具的小升级，而是一种新的创造方式。LifeOnline 这样的项目之所以有意义，不只是因为它做了某个功能，而是因为它让我们看到：未来的软件，可能会更像一个会记录、会治理、会回流、会积累连续性的联合认知体。</p>
+          <p>而你现在开始理解它，就已经站在这段历史里面了。</p>
+          <div class="chapter-summary">
+            <h3>全书收束</h3>
+            <p>这本书想留下的，不是一堆零散技巧，而是一种新的理解：在大模型时代，软件开发的核心是组织系统、治理系统，并和 AI 一起把想法做成可持续生长的工程。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 12</div>
+          <h3>P1 ~ P5 主线优先级图</h3>
+          <img src="assets/images/p1-p5-priorities.svg" alt="P1 到 P5 主线优先级图" class="book-figure" />
+          <figcaption>图 12：这张图帮助读者理解，项目管理的关键不是任务越多越好，而是优先级越清楚越好。</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的关键任务</h3>
+        <p>把全书高频词汇收拢成可快速回看的术语表。</p>
+      </section>
+
+      <section class="chapter" id="glossary">
+        <div class="chapter-no">15</div>
+        <div class="chapter-body">
+          <h2>术语速查表（Glossary，术语表）</h2>
+          <div class="comparison-grid glossary-grid">
+            <article><h3>Frontend 前端</h3><p>用户直接看到和操作的那一层，负责呈现与交互。</p></article>
+            <article><h3>Backend 后端</h3><p>真正处理规则、权限、逻辑和数据的一层。</p></article>
+            <article><h3>Database 数据库</h3><p>系统长期保存数据的地方，可以理解为系统的记忆仓库。</p></article>
+            <article><h3>Requirement 需求</h3><p>系统为什么存在、要解决什么问题、这一阶段先做什么。</p></article>
+            <article><h3>Architecture 架构</h3><p>系统如何分层、模块如何协作、数据如何流动。</p></article>
+            <article><h3>Governance 治理</h3><p>对动作、权限、执行和结果进行审查、约束和管理的机制。</p></article>
+            <article><h3>Reintegration 回流</h3><p>把执行结果重新组织并纳入系统下一轮运行的过程。</p></article>
+            <article><h3>Continuity 连续性</h3><p>让高价值结果进入长期资产，形成可继承、可演进的系统记忆。</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="book-navigation">
+        <div class="nav-card">
+          <div class="nav-label">阅读建议</div>
+          <h3>如果你是第一次读</h3>
+          <p>建议顺序：先读“软件是什么”→“软件工程”→“前后端地图”→“AI 最佳实践”→ 再回来看 LifeOnline 的主线骨架。</p>
+        </div>
+        <div class="nav-card">
+          <div class="nav-label">下一步</div>
+          <h3>如果你想继续深入</h3>
+          <p>后续可以继续拆成独立章节页，并把每章扩成更完整的教材版本。</p>
+        </div>
+      </section>
+
+      <footer class="footer-note">
+        <p>当前文件：<code>vision/book/index.html</code></p>
+        <p>样式文件：<code>vision/book/assets/styles.css</code></p>
+        <p>当前状态：已经从书稿骨架扩成“每章都有实质内容”的第一版。</p>
+        <p>下一步建议：继续补正式插图、拆章节页面、加入图注与章节摘要。</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

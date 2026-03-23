@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 辅助最佳实践｜从零开始用大模型开发软件</title>
+  <link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+  <div class="chapter-page-shell">
+    <main class="content chapter-page">
+      <header class="hero chapter-hero">
+        <p class="hero-kicker">Chapter 11</p>
+        <h1>AI 辅助最佳实践：怎样和 AI 协作，才不会把项目越做越漂？</h1>
+        <p class="lead">知道 AI 能干什么还不够，更关键的是知道怎么用它。真正高质量的 AI 协作，不是“随便给个需求让它写”，而是一套有结构、有边界、有验证的工作方法。</p>
+      </header>
+
+      <section class="chapter-lead-card">
+        <div class="lead-chip">Chapter Guide</div>
+        <h3>这一章的核心任务</h3>
+        <p>把“使用 AI”从模糊感觉，变成一套可重复的方法：先想清楚，再下任务；先设边界，再执行；先做验证，再接受结果。</p>
+      </section>
+
+      <section class="chapter">
+        <div class="chapter-no">01</div>
+        <div class="chapter-body">
+          <h2>原则一：先想清楚，再让 AI 动手</h2>
+          <p>最差的一种用法，是把一句模糊需求直接扔给 AI，然后希望它从头到尾自动生成一个正确系统。</p>
+          <p>更好的顺序应该是：</p>
+          <ul>
+            <li>先拆问题</li>
+            <li>先画流程</li>
+            <li>先确定边界</li>
+            <li>先明确本轮目标</li>
+            <li>再让 AI 进入执行阶段</li>
+          </ul>
+          <p>这一点非常重要。因为 AI 能执行得很快，所以如果你没想清楚，它也会很快地把错误方向放大。</p>
+        </div>
+      </section>
+
+      <section class="chapter">
+        <div class="chapter-no">02</div>
+        <div class="chapter-body">
+          <h2>原则二：让 AI 在制度里工作</h2>
+          <p>高质量协作的关键，不是“写一个更华丽的提示词”，而是让 AI 进入明确制度：</p>
+          <ul>
+            <li>当前目标是什么</li>
+            <li>当前优先级是什么</li>
+            <li>成功标准是什么</li>
+            <li>哪些不能做</li>
+            <li>本轮需要跑什么验证</li>
+          </ul>
+          <p>对 LifeOnline 来说，这类制度已经非常明确，例如：</p>
+          <ul>
+            <li>停止低价值 copy / polish 扫描</li>
+            <li>优先补 SoulAction / governance / reintegration 主线</li>
+            <li>先收 contract，再做控制面</li>
+            <li>汇报按 P1 ~ P5 讲，而不是按 commit 流水账讲</li>
+          </ul>
+          <p>这就叫“让 agent 在制度里工作”。</p>
+        </div>
+      </section>
+
+      <section class="chapter">
+        <div class="chapter-no">03</div>
+        <div class="chapter-body">
+          <h2>原则三：一定要有交接物（Handoff Artifact）</h2>
+          <p>AI 最怕的事情之一，就是上一轮做了什么没人知道，下一轮又从头猜。</p>
+          <p>所以真正成熟的协作，必须有交接物，比如：</p>
+          <ul>
+            <li>任务书</li>
+            <li>设计文档</li>
+            <li>流程图</li>
+            <li>进展汇报</li>
+            <li>状态对象</li>
+            <li>测试结果</li>
+          </ul>
+          <p>在 LifeOnline 这样的项目里，更进一步的是：很多“交接物”本身会变成正式系统对象，例如：</p>
+          <ul>
+            <li>SoulAction</li>
+            <li>ActionOutcomePacket</li>
+            <li>ReintegrationSummary</li>
+          </ul>
+          <p>也就是说，交接物不只是文档，它还可能直接成为系统运行的一部分。</p>
+        </div>
+      </section>
+
+      <section class="chapter">
+        <div class="chapter-no">04</div>
+        <div class="chapter-body">
+          <h2>原则四：一定要验证，不要默认 AI 是对的</h2>
+          <p>这是所有 AI 辅助开发里最重要的一条底线：不要因为 AI 写得像，就默认它是对的。</p>
+          <p>你至少要做这些验证：</p>
+          <ul>
+            <li>编译（Build）</li>
+            <li>测试（Test）</li>
+            <li>查看 diff（改动差异）</li>
+            <li>手动检查关键逻辑</li>
+            <li>确认有没有改到不该改的区域</li>
+          </ul>
+          <p>如果是长期 worker，还要额外检查：</p>
+          <ul>
+            <li>有没有真实日志推进</li>
+            <li>有没有真实产出</li>
+            <li>是否只是“进程活着”但主线没动</li>
+          </ul>
+          <p>没有验证的 AI 协作，本质上只是把风险提前了。</p>
+        </div>
+      </section>
+
+      <section class="chapter">
+        <div class="chapter-no">05</div>
+        <div class="chapter-body">
+          <h2>原则五：不要只问“做了什么”，要问“为什么有价值”</h2>
+          <p>AI 很容易产出大量内容，但内容多不等于项目进展好。</p>
+          <p>所以好的进展汇报，不应该只说：</p>
+          <ul>
+            <li>今天改了什么文件</li>
+            <li>今天生成了什么页面</li>
+            <li>今天写了几个测试</li>
+          </ul>
+          <p>它还应该说清楚：</p>
+          <ul>
+            <li>这一步推进了哪条主线</li>
+            <li>它为什么比表层改动更重要</li>
+            <li>它减少了什么漂移或分叉</li>
+            <li>下一步最自然接哪里</li>
+          </ul>
+          <div class="chapter-summary">
+            <h3>本章小结</h3>
+            <p>AI 协作最好的方法，不是让 AI 随意发挥，而是让它在清晰目标、正式交接物和严格验证之中推进真正重要的系统骨架。</p>
+          </div>
+        </div>
+      </section>
+
+      <nav class="chapter-pager">
+        <a class="pager-link" href="chapter-10.html">← 项目管理方法</a>
+        <a class="pager-link" href="../index.html">总书稿首页</a>
+        <a class="pager-link" href="../contents.html">目录页</a>
+        <a class="pager-link" href="chapter-12.html">LifeOnline 的启示 →</a>
+      </nav>
+    </main>
+  </div>
+</body>
+</html>
