@@ -2,7 +2,7 @@
   <section class="filter-bar">
     <div class="bar-head">
       <div>
-        <p class="bar-kicker">Signal Filters</p>
+        <p class="bar-kicker">信号筛选</p>
         <h3>筛选与排序</h3>
       </div>
       <button class="reset-btn" @click="resetFilters">重置</button>

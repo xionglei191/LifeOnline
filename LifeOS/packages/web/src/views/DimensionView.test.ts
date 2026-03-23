@@ -37,7 +37,9 @@ function buildWrapper() {
           template: '<div class="dimension-stats-stub">{{ dimension }}:{{ total }}:{{ healthScore }}</div>',
         },
         DimensionCharts: true,
-        FilterBar: true,
+        FilterBar: {
+          template: '<div class="filter-bar-stub">信号筛选</div>',
+        },
         NoteList: {
           props: ['notes'],
           emits: ['selectNote'],
@@ -96,6 +98,7 @@ describe('DimensionView', () => {
 
     expect(apiMocks.fetchDashboard).toHaveBeenCalledTimes(1);
     expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:9:33');
+    expect(wrapper.find('.filter-bar-stub').text()).toContain('信号筛选');
     expect(wrapper.find('.note-list-stub').text()).toContain('note-life');
   });
 

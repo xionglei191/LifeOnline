@@ -119,15 +119,19 @@ describe('StatsView', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('完成节律监控台');
+    expect(wrapper.text()).toContain('生命信号分析');
     expect(wrapper.text()).toContain('分析图层');
     expect(wrapper.text()).toContain('趋势 / 雷达 / 月度 / 标签');
     expect(wrapper.text()).toContain('当前焦点');
     expect(wrapper.text()).toContain('完成率');
     expect(wrapper.text()).toContain('当前趋势窗口天数');
+    expect(wrapper.text()).toContain('完成趋势');
     expect(wrapper.text()).toContain('维度雷达');
     expect(wrapper.text()).toContain('月度对比');
     expect(wrapper.text()).toContain('标签热度');
     expect(wrapper.text()).toContain('趋势 / 对比 / 标签热度');
+    expect(wrapper.text()).not.toContain('Signal Analytics');
+    expect(wrapper.text()).not.toContain('Completion Flow');
     expect(wrapper.text()).not.toContain('Balance Radar');
     expect(wrapper.text()).not.toContain('Monthly Shift');
     expect(wrapper.text()).not.toContain('Tag Heat');

@@ -10,7 +10,7 @@
             <span class="brand-slash"></span>
           </div>
           <div class="brand-copy">
-            <p class="brand-kicker">Personal Mission Control</p>
+            <p class="brand-kicker">个人任务中枢</p>
             <h1>LIFE/OS</h1>
           </div>
         </div>
@@ -96,11 +96,11 @@ import { useTheme } from './composables/useTheme';
 import { usePrivacy } from './composables/usePrivacy';
 
 const navItems = [
-  { to: '/', label: '仪表盘', hint: 'Today', icon: '⊞' },
-  { to: '/timeline', label: '时间线', hint: 'Tracks', icon: '⋯' },
-  { to: '/calendar', label: '日历', hint: 'Calendar', icon: '▦' },
-  { to: '/stats', label: '统计', hint: 'Signals', icon: '◈' },
-  { to: '/settings', label: '设置', hint: 'Config', icon: '⚙' },
+  { to: '/', label: '仪表盘', hint: '今日聚焦', icon: '⊞' },
+  { to: '/timeline', label: '时间线', hint: '轨迹回看', icon: '⋯' },
+  { to: '/calendar', label: '日历', hint: '月历视图', icon: '▦' },
+  { to: '/stats', label: '统计', hint: '信号分析', icon: '◈' },
+  { to: '/settings', label: '设置', hint: '系统配置', icon: '⚙' },
 ];
 
 const { isConnected } = useWebSocket();

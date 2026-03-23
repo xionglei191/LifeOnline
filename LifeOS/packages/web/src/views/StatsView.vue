@@ -3,7 +3,7 @@
     <div class="page-shell">
       <section class="hero-panel">
         <div class="hero-copy">
-          <p class="eyebrow">Signal Analytics</p>
+          <p class="eyebrow">生命信号分析</p>
           <h2>把生活记录转成<span>可判断、可比较、可行动</span>的系统信号。</h2>
           <p class="hero-summary">
             这里不只是报表，而是你的完成节律监控台。完成趋势、维度完成率、月度对比和标签热点会一起告诉你，
@@ -36,7 +36,7 @@
         <section class="stats-card wide">
           <div class="card-header">
             <div>
-              <p class="card-kicker">Completion Flow</p>
+              <p class="card-kicker">完成趋势</p>
               <h3>完成趋势</h3>
             </div>
             <div class="day-tabs">
