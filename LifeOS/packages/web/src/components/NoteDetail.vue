@@ -59,7 +59,7 @@
           <template v-else>
           <header class="note-hero">
             <div class="hero-copy">
-              <p class="hero-kicker">Record Detail</p>
+              <p class="hero-kicker">记录详情</p>
               <h2>{{ note.title || note.file_name.replace('.md', '') }}</h2>
               <div class="hero-meta">
                 <span class="meta-pill dimension">{{ getDimensionLabel(note.dimension) }}</span>
@@ -87,7 +87,7 @@
 
           <section class="control-grid">
             <div class="control-panel">
-              <p class="panel-kicker">Status Control</p>
+              <p class="panel-kicker">状态调整</p>
               <div class="btn-group">
                 <button
                   v-for="s in statuses"
@@ -102,7 +102,7 @@
             </div>
 
             <div class="control-panel">
-              <p class="panel-kicker">Priority Control</p>
+              <p class="panel-kicker">优先级调整</p>
               <div class="btn-group">
                 <button
                   v-for="p in priorities"
@@ -119,7 +119,7 @@
 
           <section class="append-section">
             <div class="append-head">
-              <p class="panel-kicker">Append Log</p>
+              <p class="panel-kicker">追加记录</p>
               <span class="append-hint">追加说明、复盘或上下文</span>
             </div>
             <textarea v-model="appendText" placeholder="添加备注..." rows="4" class="append-input" :disabled="saving"></textarea>
@@ -134,7 +134,7 @@
           <section class="append-section danger-section">
             <div class="append-head">
               <div>
-                <p class="panel-kicker">Danger Zone</p>
+                <p class="panel-kicker">危险操作</p>
                 <span class="append-hint">删除 Vault 中的真实 Markdown 文件</span>
               </div>
               <button @click="showDeleteConfirm = true" :disabled="saving || deleting" class="danger-btn">
@@ -145,7 +145,7 @@
 
           <section class="body-content">
             <div class="body-head">
-              <p class="panel-kicker">Markdown</p>
+              <p class="panel-kicker">正文内容</p>
             </div>
             <PrivacyMask :privacy="note.privacy || 'private'">
               <div class="markdown-body" v-html="renderedContent"></div>
@@ -154,7 +154,7 @@
 
           <section v-if="personaSnapshot" class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">Persona Snapshot</p>
+              <p class="panel-kicker">人格快照</p>
               <span class="append-hint">当前笔记最近一次人格快照</span>
             </div>
             <div class="snapshot-card">
@@ -170,12 +170,12 @@
           <section v-if="hasPromotionProjectionSection" class="ai-panel projection-panel-shell">
             <div class="append-head">
               <div>
-                <p class="panel-kicker">Promotion Projection</p>
+                <p class="panel-kicker">提升投射</p>
                 <span class="append-hint">当前笔记触发的 PR6 promotion 落地结果</span>
               </div>
               <div class="projection-note-meta" v-if="noteProjectionSourceReintegrationIds.length">
-                <span class="meta-pill">Sources {{ noteProjectionSourceReintegrationIds.length }}</span>
-                <span class="meta-pill" v-if="relevantNoteSoulActions.length">Actions {{ relevantNoteSoulActions.length }}</span>
+                <span class="meta-pill">来源 {{ noteProjectionSourceReintegrationIds.length }}</span>
+                <span class="meta-pill" v-if="relevantNoteSoulActions.length">动作 {{ relevantNoteSoulActions.length }}</span>
               </div>
             </div>
             <div v-if="relevantNoteSoulActions.length" class="projection-action-summary">
@@ -215,7 +215,7 @@
 
           <section class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">Worker Task</p>
+              <p class="panel-kicker">关联任务</p>
               <span class="append-hint">基于当前笔记内容发起关联任务，包含 LifeOS 与 OpenClaw 执行路径</span>
             </div>
             <div class="worker-form-grid">
@@ -246,7 +246,7 @@
 
           <section class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">Recent Related Tasks</p>
+              <p class="panel-kicker">最近关联任务</p>
               <span class="append-hint">展示由当前笔记发起的最近关联任务</span>
             </div>
             <div class="related-worker-toolbar">
@@ -277,7 +277,7 @@
 
           <section class="ai-panel">
             <div class="append-head">
-              <p class="panel-kicker">Task Extraction</p>
+              <p class="panel-kicker">行动项提取</p>
               <span class="append-hint">将当前笔记的行动项提取为 worker task，并在下方关联任务中查看结果</span>
             </div>
             <div class="ai-actions">

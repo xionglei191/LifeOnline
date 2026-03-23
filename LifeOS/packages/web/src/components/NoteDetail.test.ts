@@ -293,9 +293,11 @@ describe('NoteDetail', () => {
 
     await flushPromises();
 
-    expect(document.body.textContent).toContain('Worker Task');
-    expect(document.body.textContent).toContain('Recent Related Tasks');
+    expect(document.body.textContent).toContain('关联任务');
+    expect(document.body.textContent).toContain('最近关联任务');
     expect(document.body.textContent).toContain('基于当前笔记内容发起关联任务，包含 LifeOS 与 OpenClaw 执行路径');
+    expect(document.body.textContent).not.toContain('Worker Task');
+    expect(document.body.textContent).not.toContain('Recent Related Tasks');
     expect(document.body.textContent).not.toContain('External Worker Task');
     expect(document.body.textContent).not.toContain('Recent External Tasks');
     expect(document.body.textContent).not.toContain('当前笔记还没有发起过外部任务');
@@ -386,9 +388,10 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(apiMocks.fetchPersonaSnapshot).toHaveBeenCalledWith('note-1.md');
-    expect(document.body.textContent).toContain('Persona Snapshot');
+    expect(document.body.textContent).toContain('人格快照');
     expect(document.body.textContent).toContain('已更新人格快照：Test Note');
     expect(document.body.textContent).toContain('Current note preview for persona snapshot.');
+    expect(document.body.textContent).not.toContain('Persona Snapshot');
 
     wrapper.unmount();
   });
@@ -503,12 +506,14 @@ describe('NoteDetail', () => {
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready']);
-    expect(document.body.textContent).toContain('Promotion Projection');
-    expect(document.body.textContent).toContain('Actions 1');
+    expect(document.body.textContent).toContain('提升投射');
+    expect(document.body.textContent).toContain('动作 1');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('Ready event node');
     expect(document.body.textContent).toContain('ready continuity');
+    expect(document.body.textContent).toContain('Promotion Projections');
+    expect(document.body.textContent).not.toContain('Actions 1');
     expect(document.body.textContent).not.toContain('External event node');
     expect(document.body.textContent).not.toContain('external continuity');
 
@@ -548,8 +553,10 @@ describe('NoteDetail', () => {
 
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
     expect(apiMocks.fetchContinuityProjectionList).toHaveBeenCalledWith(['record-ready']);
+    expect(document.body.textContent).toContain('提升投射');
     expect(document.body.textContent).toContain('Canonical event node');
     expect(document.body.textContent).toContain('canonical continuity');
+    expect(document.body.textContent).toContain('Promotion Projections');
     expect(document.body.textContent).not.toContain('External event node');
     expect(document.body.textContent).not.toContain('external continuity');
 
@@ -707,7 +714,7 @@ describe('NoteDetail', () => {
     expect(apiMocks.fetchReintegrationRecords).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchSoulActions).toHaveBeenCalledWith({ sourceNoteId: 'note-1.md' });
     expect(apiMocks.fetchEventNodeProjectionList).toHaveBeenCalledWith(['record-ready']);
-    expect(document.body.textContent).toContain('Actions 1');
+    expect(document.body.textContent).toContain('动作 1');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).toContain('提升 Event Node');
     expect(document.body.textContent).toContain('Ready event node');
@@ -743,7 +750,7 @@ describe('NoteDetail', () => {
 
     await flushPromises();
 
-    expect(document.body.textContent).toContain('Actions 2');
+    expect(document.body.textContent).toContain('动作 2');
     expect(document.body.textContent).toContain('待治理 1');
     expect(document.body.textContent).toContain('待派发 1');
     expect(document.body.textContent).toContain('提升 Event Node');
@@ -776,7 +783,7 @@ describe('NoteDetail', () => {
 
     await flushPromises();
 
-    expect(document.body.textContent).toContain('Promotion Projection');
+    expect(document.body.textContent).toContain('提升投射');
     expect(document.body.textContent).toContain('当前还没有 promotion projections');
 
     wrapper.unmount();
@@ -805,7 +812,7 @@ describe('NoteDetail', () => {
     await flushPromises();
 
     expect(document.body.textContent).toContain('projection fetch failed');
-    expect(document.body.textContent).toContain('Promotion Projection');
+    expect(document.body.textContent).toContain('提升投射');
 
     wrapper.unmount();
   });
