@@ -403,6 +403,51 @@ test('dashboard weekly highlights only include unfinished high-priority tasks an
   }
 });
 
+test('dashboard today todos sort by semantic priority before created time', async () => {
+  const env = await createTestEnv('lifeos-dashboard-today-priority-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  const highTaskPath = path.join(env.vaultPath, '事业', '2026-03-23-high-task.md');
+  const mediumTaskPath = path.join(env.vaultPath, '生活', '2026-03-23-medium-task.md');
+  const lowTaskPath = path.join(env.vaultPath, '成长', '2026-03-23-low-task.md');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await fs.mkdir(path.dirname(highTaskPath), { recursive: true });
+    await fs.mkdir(path.dirname(mediumTaskPath), { recursive: true });
+    await fs.mkdir(path.dirname(lowTaskPath), { recursive: true });
+
+    await fs.writeFile(lowTaskPath, `---\ntype: "task"\ndimension: "growth"\nstatus: "pending"\npriority: "low"\ndate: "2026-03-23"\ncreated: "2026-03-23T09:00:00.000Z"\nupdated: "2026-03-23T09:00:00.000Z"\n---\n\nLow priority today task\n`);
+    await fs.writeFile(mediumTaskPath, `---\ntype: "task"\ndimension: "life"\nstatus: "pending"\npriority: "medium"\ndate: "2026-03-23"\ncreated: "2026-03-23T08:00:00.000Z"\nupdated: "2026-03-23T08:00:00.000Z"\n---\n\nMedium priority today task\n`);
+    await fs.writeFile(highTaskPath, `---\ntype: "task"\ndimension: "career"\nstatus: "pending"\npriority: "high"\ndate: "2026-03-23"\ncreated: "2026-03-23T10:00:00.000Z"\nupdated: "2026-03-23T10:00:00.000Z"\n---\n\nHigh priority today task\n`);
+
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const dashboard = await api<import('../../shared/src/types.js').DashboardData>(baseUrl, '/api/dashboard');
+    const todoTitles = dashboard.todayTodos.map((note) => note.title);
+
+    assert.deepEqual(todoTitles.slice(0, 3), [
+      'High priority today task',
+      'Medium priority today task',
+      'Low priority today task',
+    ]);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dashboard dimension stats include the canonical _inbox dimension for the inbox view', async () => {
   const env = await createTestEnv('lifeos-dashboard-inbox-dimension-');
   const configFile = env.configPath;

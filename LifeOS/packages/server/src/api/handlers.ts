@@ -38,7 +38,12 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
       WHERE type IN ('task', 'schedule')
       AND date = ?
       AND status != 'done'
-      ORDER BY priority DESC, created ASC
+      ORDER BY CASE priority
+        WHEN 'high' THEN 3
+        WHEN 'medium' THEN 2
+        WHEN 'low' THEN 1
+        ELSE 0
+      END DESC, created ASC
     `).all(today);
 
     const weeklyHighlights = db.prepare(`
