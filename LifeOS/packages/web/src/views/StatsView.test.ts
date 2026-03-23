@@ -129,6 +129,26 @@ describe('StatsView', () => {
     wrapper.unmount();
   });
 
+  it('labels the radar panel from the visible radar stat set instead of hard-coded eight-dimension copy', async () => {
+    apiMocks.fetchStatsTrend.mockResolvedValue([{ day: '2026-03-01', total: 2, done: 1 }]);
+    apiMocks.fetchStatsRadar.mockResolvedValue([
+      { dimension: 'life', rate: 80 },
+      { dimension: 'growth', rate: 65 },
+    ]);
+    apiMocks.fetchStatsMonthly.mockResolvedValue([{ month: '2026-03', total: 8, done: 5 }]);
+    apiMocks.fetchStatsTags.mockResolvedValue([{ tag: 'focus', count: 3 }]);
+
+    const wrapper = buildWrapper();
+
+    await vi.runAllTimersAsync();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('当前 2 个维度完成率');
+    expect(wrapper.text()).not.toContain('八维度完成率');
+
+    wrapper.unmount();
+  });
+
   it('reloads all stats panels when note-created websocket events arrive', async () => {
     apiMocks.fetchStatsTrend
       .mockResolvedValueOnce([{ day: '2026-03-01', total: 2, done: 1 }])

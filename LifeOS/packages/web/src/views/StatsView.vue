@@ -57,7 +57,7 @@
           <div class="card-header compact">
             <div>
               <p class="card-kicker">Balance Radar</p>
-              <h3>八维度完成率</h3>
+              <h3>{{ radarTitle }}</h3>
             </div>
           </div>
           <div ref="radarEl" class="chart chart-square"></div>
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, WsEvent } from '@lifeos/shared';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
@@ -104,6 +104,7 @@ const tagsEl = ref<HTMLElement | null>(null);
 const trendDays = ref(30);
 const loading = ref(false);
 const error = ref<Error | null>(null);
+const radarDimensionCount = ref(0);
 
 let charts: echarts.ECharts[] = [];
 let resizeHandler: (() => void) | null = null;
@@ -134,6 +135,8 @@ function baseAxis() {
     splitLine: { lineStyle: { color: gridLine } },
   };
 }
+
+const radarTitle = computed(() => `当前 ${radarDimensionCount.value} 个维度完成率`);
 
 async function loadTrend(data: StatsTrendPoint[]) {
   const c = charts[0];
@@ -177,6 +180,7 @@ async function loadTrend(data: StatsTrendPoint[]) {
 }
 
 async function loadRadar(data: StatsRadarPoint[]) {
+  radarDimensionCount.value = data.length;
   const c = charts[1];
   if (!c) return;
   c.setOption({
