@@ -80,7 +80,9 @@
               <p v-if="note.content" class="picker-content">{{ truncateContent(note.content, 80) }}</p>
               <div class="picker-meta">
                 <span class="picker-type">{{ getTypeLabel(note.type) }}</span>
+                <span v-if="note.priority" class="picker-priority" :class="`priority-${note.priority}`">{{ priorityLabel(note.priority) }}</span>
                 <span class="picker-date">{{ note.date?.slice(5, 10) }}</span>
+                <span v-if="note.updated" class="picker-updated">更新 {{ formatPickerUpdated(note.updated) }}</span>
               </div>
             </button>
           </div>
@@ -308,6 +310,25 @@ function getTypeLabel(type: string) {
     milestone: '里程碑', review: '复盘',
   };
   return labels[type] || type;
+}
+
+const priorityLabels: Record<string, string> = {
+  low: '低优先级',
+  medium: '中优先级',
+  high: '高优先级',
+};
+
+function priorityLabel(priority: string) {
+  return priorityLabels[priority] || priority;
+}
+
+function formatPickerUpdated(updated: string) {
+  return new Date(updated).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 // Multi-note picker
@@ -589,16 +610,31 @@ function onDotClick(notes: Note[]) {
 .picker-meta {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
   padding-left: 16px;
   font-size: 0.72rem;
   color: var(--text-muted);
 }
 
 .picker-type,
-.picker-date {
+.picker-date,
+.picker-priority,
+.picker-updated {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--surface-muted);
+}
+
+.picker-priority.priority-high {
+  color: var(--danger);
+}
+
+.picker-priority.priority-medium {
+  color: var(--warning);
+}
+
+.picker-priority.priority-low {
+  color: var(--text-muted);
 }
 
 .picker-item:hover {

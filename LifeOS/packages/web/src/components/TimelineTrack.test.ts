@@ -67,6 +67,55 @@ describe('TimelineTrack', () => {
     }
   });
 
+  it('projects shared priority and updated facts into the multi-note picker', async () => {
+    const wrapper = mount(TimelineTrack, {
+      props: {
+        tracks: [
+          {
+            dimension: 'growth',
+            notes: [
+              createNote({
+                id: 'note-a',
+                dimension: 'growth',
+                date: '2026-03-22',
+                title: 'Alpha title',
+                priority: 'high',
+                updated: '2026-03-23T11:45:00.000Z',
+              }),
+              createNote({
+                id: 'note-b',
+                dimension: 'growth',
+                date: '2026-03-22',
+                title: 'Beta title',
+                priority: 'low',
+                updated: '2026-03-23T09:15:00.000Z',
+              }),
+            ],
+          },
+        ],
+        startDate: '2026-03-20',
+        endDate: '2026-03-24',
+      },
+      global: {
+        stubs: {
+          NotePreview: true,
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    await wrapper.get('.dot').trigger('click');
+    await nextTick();
+
+    const pickerText = document.body.textContent || '';
+    expect(pickerText).toContain('高优先级');
+    expect(pickerText).toContain('低优先级');
+    expect(pickerText).toMatch(/更新 .*03\/23.*11:45|更新 .*3\/23.*11:45|更新 .*03\/23.*19:45|更新 .*3\/23.*19:45/);
+
+    wrapper.unmount();
+  });
+
   it('orders multi-note picker entries by visible shared titles', async () => {
     const wrapper = mount(TimelineTrack, {
       props: {

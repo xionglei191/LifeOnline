@@ -1,13 +1,13 @@
-# 当前轮：Timeline hero density fact projection 收口
+# 当前轮：Timeline picker note facts projection 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/views/TimelineView.vue` hero 区仍把 busiest dimension 写成“最活跃的轨道”，同时 metric meta 还残留 `days in view` / `tracked notes` / `items` 这类泛化英文文案，无法直接表达当前窗口里真实的记录密度事实。
-- [x] 在 `LifeOS/packages/web/src/views/TimelineView.vue` 把 hero summary 改成直接暴露 `{{ busiestCount }} 条记录` 和“记录最密集维度”，并把 metric meta 改成中文事实描述，让 timeline 主路径更准确表达当前窗口统计。
-- [x] 在 `LifeOS/packages/web/src/views/TimelineView.test.ts` 增加 focused 回归，锁定 hero 会渲染记录密度事实，并防止旧英文泛化文案回归。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/TimelineView.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/TimelineTrack.vue` 的多笔记 picker 仍只展示 type 和 date，虽然 shared `Note` 已提供 `priority` / `updated`，但 timeline 主路径里无法判断同一天多条记录里哪条更紧急、哪条最近刚更新，属于新的 contract-to-UI 投射缺口。
+- [x] 在 `LifeOS/packages/web/src/components/TimelineTrack.vue` 给 picker meta 补上 `priority` 和 `updated` 的直接展示，让 timeline 多笔记选择面板也能直接暴露决策相关 note facts。
+- [x] 在 `LifeOS/packages/web/src/components/TimelineTrack.test.ts` 增加 focused 回归，锁定 picker 会渲染 shared priority 和 updated facts。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/TimelineTrack.test.ts src/views/TimelineView.test.ts`。
 
 ## 结果
-- Timeline 页主路径现在直接说明哪个维度记录最密集以及具体记录数，不再让“活跃轨道”这种泛化说法承载统计事实。
-- timeline / stats / dashboard / dimension 四条主路径对统计语义的表达继续向直接事实收口。
+- Timeline 主路径在同日多记录场景下，现在能直接区分更高优先级和最近更新的记录。
+- note facts 在 dashboard / timeline 两条主路径的投射一致性进一步提升。
 
 ---
