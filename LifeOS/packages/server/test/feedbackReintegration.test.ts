@@ -2,11 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'fs/promises';
 import path from 'path';
-import type { WorkerTask } from '@lifeos/shared';
+import {
+  formatEventKindLabel,
+  getAcceptReintegrationMessage,
+  getPlanReintegrationMessage,
+  getPlanReintegrationMessageFromDisplaySummary,
+  getProjectionContinuitySummary,
+  getProjectionExplanationSummary,
+  getReintegrationReviewMessage,
+  getReintegrationNextActionSummary as getSharedReintegrationNextActionSummary,
+  getReintegrationOutcomeDetailRows,
+  getReintegrationOutcomeNoPlanReason,
+  getReintegrationOutcomeDisplaySummary,
+  getReintegrationOutcomeSummary,
+  getSuggestedSoulActionKindsForReintegrationSignal,
+  normalizeReintegrationNextActionCandidate,
+  pickReintegrationNextActionCandidate,
+} from '@lifeos/shared';
+import type { ReintegrationEvidenceSummary, TerminalWorkerTaskStatus, WorkerTask } from '@lifeos/shared';
 import { createTestEnv } from './helpers/testEnv.js';
 import { initDatabase, getDb, closeDb } from '../src/db/client.js';
 import { createWorkerTask, executeWorkerTask, cancelWorkerTask } from '../src/workers/workerTasks.js';
 import { approveSoulAction, createOrReuseSoulAction, getSoulActionByIdentityAndKind, getSoulActionBySourceNoteIdAndKind, getSoulActionBySourceReintegrationIdAndKind, getSoulActionByWorkerTaskId } from '../src/soul/soulActions.js';
+import type { PersonaSnapshot } from '../src/soul/personaSnapshots.js';
 import { getPersonaSnapshotBySourceNoteId } from '../src/soul/personaSnapshots.js';
 import {
   createFeedbackReintegrationPayload,
@@ -17,8 +35,19 @@ import {
 } from '../src/workers/feedbackReintegration.js';
 import { integrateContinuity } from '../src/workers/continuityIntegrator.js';
 import { getReintegrationRecordByWorkerTaskId, upsertReintegrationRecord } from '../src/soul/reintegrationRecords.js';
-import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions } from '../src/soul/reintegrationReview.js';
-import { planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
+import { acceptReintegrationRecord, acceptReintegrationRecordAndPlanPromotions, getReintegrationRecord, rejectReintegrationRecord } from '../src/soul/reintegrationReview.js';
+import { generateSoulActionsFromOutcome as generatePlannedSoulActions, planPromotionSoulActions } from '../src/soul/reintegrationPromotionPlanner.js';
+import {
+  generateSoulActionsFromOutcome as describeReintegrationOutcome,
+  buildOutcomePacketExtractTaskEvidence,
+  buildReintegrationEvidenceFromOutcomePacket,
+  buildReintegrationRecordInputFromOutcomePacket,
+  buildReintegrationSummaryFromOutcomePacket,
+  generateSoulActionsFromOutcomePacket,
+  getOutcomePacketNextActionCandidate,
+  getOutcomeTaskSignalKind,
+  hasReintegrationSignalFromOutcomePacket,
+} from '../src/soul/reintegrationOutcome.js';
 import { listEventNodes } from '../src/soul/eventNodes.js';
 import { listContinuityRecords } from '../src/soul/continuityRecords.js';
 import { getPromotionActionKindsForReintegration, getPromotionSourceForReintegration, getContinuityScopeForKind, buildEventPromotionExplanation, buildContinuityPromotionExplanation, buildEventNodePromotionInput, buildContinuityPromotionInput, getPromotionGovernanceReason, getPromotionExecutionSummary } from '../src/soul/pr6PromotionRules.js';
@@ -31,7 +60,7 @@ import { getIndexedNoteTriggerSnapshot, triggerPersonaSnapshotAfterIndex } from 
 import { IndexQueue } from '../src/indexer/indexQueue.js';
 import { createFile, rewriteMarkdownContent, updateFrontmatter } from '../src/vault/fileManager.js';
 
-function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: Partial<WorkerTask> = {}): WorkerTask {
+function buildTerminalTask<T extends SupportedReintegrationTaskType>(taskType: T, overrides: Partial<WorkerTask<T>> = {}): WorkerTask<T> {
   return {
     id: `task-${taskType}`,
     taskType,
@@ -53,6 +82,43 @@ function buildTerminalTask(taskType: SupportedReintegrationTaskType, overrides: 
     ...overrides,
   };
 }
+
+test('formatEventKindLabel centralizes PR6 event kind display semantics', () => {
+  assert.equal(formatEventKindLabel({ eventKind: 'persona_shift' }), '人格切换');
+  assert.equal(formatEventKindLabel({ eventKind: 'milestone_report' }), '里程碑');
+  assert.equal(formatEventKindLabel({ eventKind: 'weekly_reflection' }), '周回顾');
+});
+
+test('shared next-action candidate helpers normalize evidence payloads and pick the strongest candidate', () => {
+  assert.deepEqual(normalizeReintegrationNextActionCandidate(null), null);
+  assert.deepEqual(normalizeReintegrationNextActionCandidate({ due: '2026-03-22' }), null);
+  assert.deepEqual(normalizeReintegrationNextActionCandidate({
+    title: '整理周报素材',
+    priority: 'high',
+    due: '2026-03-22',
+    filePath: '/tmp/high.md',
+    outputNoteId: 'task-note-high',
+  }), {
+    title: '整理周报素材',
+    dimension: '',
+    priority: 'high',
+    due: '2026-03-22',
+    filePath: '/tmp/high.md',
+    outputNoteId: 'task-note-high',
+  });
+  assert.deepEqual(pickReintegrationNextActionCandidate([
+    normalizeReintegrationNextActionCandidate({ title: '低优先级', priority: 'low', due: '2026-03-21', filePath: '/tmp/low.md' }),
+    normalizeReintegrationNextActionCandidate({ title: '高优先级', priority: 'high', due: '2026-03-23', filePath: '/tmp/high.md' }),
+    normalizeReintegrationNextActionCandidate({ title: '同优先级但更早 due', priority: 'high', due: '2026-03-22', filePath: '/tmp/high-earlier.md' }),
+  ]), {
+    title: '同优先级但更早 due',
+    dimension: '',
+    priority: 'high',
+    due: '2026-03-22',
+    filePath: '/tmp/high-earlier.md',
+    outputNoteId: null,
+  });
+});
 
 test('build PR6 promotion governance and execution summaries from centralized rules', () => {
   const record = {
@@ -144,6 +210,46 @@ test('build PR6 promotion payloads from reintegration review context', () => {
   });
 });
 
+test('build PR6 promotion payloads expose stable projection explanation and continuity summaries', () => {
+  const record = {
+    id: 'reint:projection-summary-test',
+    workerTaskId: 'task-projection-summary-test',
+    sourceNoteId: 'note-projection-summary-test',
+    soulActionId: 'soul-action-projection-summary-test',
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'A reviewed weekly pattern emerged',
+    evidence: { source: 'test' },
+    reviewReason: 'accepted by reviewer',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:00:00.000Z',
+    reviewedAt: '2026-03-22T10:00:00.000Z',
+  } as const;
+
+  const eventNode = buildEventNodePromotionInput(record, 'soul-action-event');
+  const continuity = buildContinuityPromotionInput(record, 'soul-action-continuity');
+
+  assert.equal(formatEventKindLabel(eventNode), '周回顾');
+  assert.deepEqual(getProjectionExplanationSummary(eventNode), {
+    primaryReason: record.summary,
+    rationale: 'review-backed PR6 promotion',
+    reviewBacked: true,
+  });
+  assert.deepEqual(getProjectionContinuitySummary(continuity), {
+    anchor: record.summary,
+    scope: 'weekly',
+  });
+  assert.deepEqual(getProjectionExplanationSummary(continuity), {
+    primaryReason: record.reviewReason,
+    rationale: 'PR6 continuity promotion',
+    reviewBacked: true,
+  });
+});
+
 test('build PR6 promotion payloads reuse centralized source resolution when source note is missing', () => {
   const record = {
     id: 'reint:promotion-payload-without-note',
@@ -207,27 +313,135 @@ test('build PR6 promotion explanations from reintegration review context', () =>
 test('getPromotionSourceForReintegration keeps reintegration identity for soul action planning when source note is missing', () => {
   const source = getPromotionSourceForReintegration({
     id: 'reint:promotion-source',
-    workerTaskId: 'worker-task-promotion-source',
     sourceNoteId: null,
-    soulActionId: null,
-    taskType: 'daily_report',
-    terminalStatus: 'succeeded',
-    signalKind: 'daily_report_reintegration',
-    reviewStatus: 'accepted',
-    target: 'derived_outputs',
-    strength: 'medium',
-    summary: 'promotion source helper test',
-    evidence: { source: 'feedbackReintegration.test.ts' },
-    reviewReason: 'accepted',
-    createdAt: '2026-03-22T10:00:00.000Z',
-    updatedAt: '2026-03-22T10:00:00.000Z',
-    reviewedAt: '2026-03-22T10:00:00.000Z',
   });
 
   assert.deepEqual(source, {
     sourceNoteId: 'reint:promotion-source',
     sourceReintegrationId: 'reint:promotion-source',
   });
+});
+
+test('shared reintegration outcome display summary and messages stay aligned for planned next actions', () => {
+  const reintegrationRecord = {
+    evidence: {
+      extractTaskCreated: 2,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        dimension: 'career',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: 'Tasks/整理周报素材.md',
+        outputNoteId: 'task-note-1',
+      },
+    },
+  } as const;
+
+  const nextActionSummary = getSharedReintegrationNextActionSummary(reintegrationRecord);
+  assert.deepEqual(nextActionSummary, {
+    createdCount: 2,
+    candidateTitle: '整理周报素材',
+    candidatePriority: 'high',
+    candidateDue: '2026-03-22',
+    candidateOutputNoteId: 'task-note-1',
+  });
+
+  const display = getReintegrationOutcomeDisplaySummary({
+    soulActions: [{ id: 'soul:1' }, { id: 'soul:2' }],
+    nextActionSummary,
+  }, reintegrationRecord);
+  assert.deepEqual(display, {
+    plannedActionCount: 2,
+    nextActionCreatedCount: 2,
+    nextActionText: '整理周报素材（high · due 2026-03-22）',
+    hasNextActionEvidence: true,
+    noPlanReason: null,
+  });
+  assert.equal(getAcceptReintegrationMessage({ soulActions: [{ id: 'soul:1' }, { id: 'soul:2' }], nextActionSummary }, reintegrationRecord), '已接受并自动规划 2 条候选动作');
+  assert.equal(getPlanReintegrationMessage({ soulActions: [{ id: 'soul:1' }, { id: 'soul:2' }], nextActionSummary }, reintegrationRecord), '已规划 2 条候选动作 · 下一步候选：整理周报素材（high · due 2026-03-22）');
+});
+
+test('shared reintegration planning message preserves next-action evidence when no actions can be planned', () => {
+  const reintegrationRecord = {
+    signalKind: 'task_extraction_reintegration',
+    evidence: {
+      extractTaskCreated: 0,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        dimension: 'career',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: 'Tasks/整理周报素材.md',
+        outputNoteId: 'task-note-1',
+      },
+    },
+  } as const;
+
+  const nextActionSummary = getSharedReintegrationNextActionSummary(reintegrationRecord);
+  const display = getReintegrationOutcomeDisplaySummary({
+    soulActions: [],
+    nextActionSummary,
+  }, reintegrationRecord);
+  assert.deepEqual(display, {
+    plannedActionCount: 0,
+    nextActionCreatedCount: 0,
+    nextActionText: '整理周报素材（high · due 2026-03-22）',
+    hasNextActionEvidence: true,
+    noPlanReason: 'next_action_evidence_only',
+  });
+  assert.equal(getAcceptReintegrationMessage({ soulActions: [], nextActionSummary }, reintegrationRecord), '已接受，但已有 next-action evidence，但尚未形成可规划动作 · 已记录 next-action evidence：整理周报素材（high · due 2026-03-22）');
+  assert.equal(getPlanReintegrationMessage({ soulActions: [], nextActionSummary }, reintegrationRecord), '已有 next-action evidence，但尚未形成可规划动作 · 已记录 next-action evidence：整理周报素材（high · due 2026-03-22）');
+});
+
+test('shared reintegration planning message falls back cleanly when no actions or next-action evidence exist', () => {
+  const reintegrationRecord = {
+    signalKind: 'daily_report_reintegration',
+    evidence: {},
+  } as const;
+
+  const nextActionSummary = getSharedReintegrationNextActionSummary(reintegrationRecord);
+  assert.equal(nextActionSummary, null);
+
+  const display = getReintegrationOutcomeDisplaySummary({
+    soulActions: [],
+    nextActionSummary,
+  }, reintegrationRecord);
+  assert.deepEqual(display, {
+    plannedActionCount: 0,
+    nextActionCreatedCount: null,
+    nextActionText: null,
+    hasNextActionEvidence: false,
+    noPlanReason: 'no_outcome_signal',
+  });
+  assert.equal(getAcceptReintegrationMessage({ soulActions: [], nextActionSummary }, reintegrationRecord), '已接受，但当前没有足够 outcome signal 进入可规划状态');
+  assert.equal(getPlanReintegrationMessage({ soulActions: [], nextActionSummary }, reintegrationRecord), '当前没有足够 outcome signal 进入可规划状态');
+});
+
+test('shared reintegration planning message explains signal kinds that do not generate follow-up governance actions', () => {
+  const display = getReintegrationOutcomeDisplaySummary({
+    soulActions: [],
+    nextActionSummary: null,
+  }, {
+    signalKind: 'classification_reintegration',
+    evidence: {},
+  });
+
+  assert.deepEqual(display, {
+    plannedActionCount: 0,
+    nextActionCreatedCount: null,
+    nextActionText: null,
+    hasNextActionEvidence: false,
+    noPlanReason: 'no_suggested_actions',
+  });
+  assert.equal(getPlanReintegrationMessageFromDisplaySummary(display), '该类回流当前不生成后续治理动作');
+  assert.equal(getReintegrationReviewMessage('plan', display), '该类回流当前不生成后续治理动作');
+  assert.equal(getReintegrationReviewMessage('accept', display), '已接受，但该类回流当前不生成后续治理动作');
+  assert.equal(getReintegrationReviewMessage('reject'), '已拒绝该回流记录');
+  assert.equal(getReintegrationOutcomeNoPlanReason(display), '该类回流当前不生成后续治理动作');
+  assert.deepEqual(getReintegrationOutcomeDetailRows(display), [
+    { label: '已规划候选动作', value: 0 },
+    { label: '未进入规划原因', value: '该类回流当前不生成后续治理动作' },
+  ]);
 });
 
 test('getContinuityScopeForKind maps PR6 continuity kinds to stable scopes', () => {
@@ -975,6 +1189,135 @@ test('terminal failure and cancellation also sync SoulAction lifecycle', async (
   assert.ok(cancelledSoulAction.finishedAt);
 });
 
+test('buildReintegrationEvidenceFromOutcomePacket matches the shared reintegration evidence contract shape', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-shared-evidence-contract',
+    sourceNoteId: 'note-shared-evidence-contract',
+    outputNotePaths: ['/tmp/extract-task-output.md'],
+    outputNotes: [{
+      id: 'task-note-1',
+      title: '整理周报素材',
+      filePath: '/tmp/extract-task-output.md',
+      fileName: 'extract-task-output.md',
+    }],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+  const continuity = integrateContinuity(packet);
+  const summary = buildReintegrationSummaryFromOutcomePacket(packet, continuity);
+  const evidence = buildReintegrationEvidenceFromOutcomePacket(packet, summary, null);
+
+  const sharedEvidence: ReintegrationEvidenceSummary = evidence;
+  assert.deepEqual(sharedEvidence, {
+    taskId: 'task-shared-evidence-contract',
+    taskType: 'extract_tasks',
+    sourceNoteId: 'note-shared-evidence-contract',
+    resultSummary: 'extract_tasks summary',
+    error: null,
+    outputNotePaths: ['/tmp/extract-task-output.md'],
+    extractTaskCreated: 1,
+    extractTaskItems: [{
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: 'task-note-1',
+    }],
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: 'task-note-1',
+    },
+    personaSnapshotId: null,
+    personaSnapshotSummary: null,
+    personaContentPreview: null,
+  });
+});
+
+test('shared reintegration outcome summary centralizes signal-to-action mapping for reviewed records', () => {
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('summary_reintegration'), []);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('classification_reintegration'), []);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('openclaw_reintegration'), []);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('task_extraction_reintegration'), ['create_event_node']);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('persona_snapshot_reintegration'), ['promote_event_node', 'promote_continuity_record']);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('daily_report_reintegration'), ['promote_event_node', 'promote_continuity_record']);
+  assert.deepEqual(getSuggestedSoulActionKindsForReintegrationSignal('weekly_report_reintegration'), ['promote_event_node', 'promote_continuity_record']);
+
+  assert.deepEqual(getReintegrationOutcomeSummary({
+    signalKind: 'weekly_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+  }), {
+    signalKind: 'weekly_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+    suggestedActionKinds: ['promote_event_node', 'promote_continuity_record'],
+  });
+});
+
+test('buildReintegrationSummaryFromOutcomePacket matches the shared reintegration summary contract shape', () => {
+  const task = buildTerminalTask('daily_report', {
+    id: 'task-shared-summary-contract',
+    resultSummary: '日报总结',
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+  const continuity = integrateContinuity(packet);
+  const summary = buildReintegrationSummaryFromOutcomePacket(packet, continuity);
+
+  assert.deepEqual(summary, {
+    signalKind: 'daily_report_reintegration',
+    target: 'source_note',
+    strength: 'medium',
+    summary: '日报总结 Continuity target: source_note.',
+    nextActionCandidate: null,
+    suggestedActionKinds: ['promote_event_node', 'promote_continuity_record'],
+  });
+  assert.deepEqual(getReintegrationOutcomeSummary({
+    signalKind: summary.signalKind,
+    target: summary.target,
+    strength: summary.strength,
+  }), {
+    signalKind: summary.signalKind,
+    target: summary.target,
+    strength: summary.strength,
+    suggestedActionKinds: summary.suggestedActionKinds,
+  });
+  assert.deepEqual(Object.keys(summary).sort(), [
+    'nextActionCandidate',
+    'signalKind',
+    'strength',
+    'suggestedActionKinds',
+    'summary',
+    'target',
+  ]);
+});
+
+test('getOutcomeTaskSignalKind resolves reintegration signal kinds directly from task types without constructing packets', () => {
+  assert.equal(getOutcomeTaskSignalKind('summarize_note'), 'summary_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('classify_inbox'), 'classification_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('extract_tasks'), 'task_extraction_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('update_persona_snapshot'), 'persona_snapshot_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('daily_report'), 'daily_report_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('weekly_report'), 'weekly_report_reintegration');
+  assert.equal(getOutcomeTaskSignalKind('openclaw_task'), 'openclaw_reintegration');
+});
+
 test('supported task types generate stable reintegration payloads', () => {
   for (const taskType of SUPPORTED_REINTEGRATION_TASK_TYPES) {
     const task = buildTerminalTask(taskType);
@@ -1009,6 +1352,447 @@ test('supported task types generate stable reintegration payloads', () => {
       openclaw_task: 'openclaw_reintegration',
     }[taskType]);
   }
+});
+
+test('buildReintegrationRecordInputFromOutcomePacket centralizes packet-to-record assembly including persona snapshot evidence', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-record-input-from-outcome-packet',
+    sourceNoteId: 'note-record-input-from-outcome-packet',
+    outputNotePaths: ['/tmp/extract-task-output.md'],
+    outputNotes: [{
+      id: 'task-note-1',
+      title: '整理周报素材',
+      filePath: '/tmp/extract-task-output.md',
+      fileName: 'extract-task-output.md',
+    }],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+  const continuity = integrateContinuity(packet);
+  const personaSnapshot = {
+    id: 'persona-snapshot-record-builder',
+    sourceNoteId: 'note-record-input-from-outcome-packet',
+    summary: '更稳定推进',
+    snapshot: {
+      contentPreview: '保持节奏，推进周报整理',
+    },
+  } as PersonaSnapshot;
+
+  assert.deepEqual(buildReintegrationRecordInputFromOutcomePacket(packet, continuity, {
+    soulActionId: 'soul-action-reintegration-record-builder',
+    personaSnapshot,
+  }), {
+    workerTaskId: 'task-record-input-from-outcome-packet',
+    sourceNoteId: 'note-record-input-from-outcome-packet',
+    soulActionId: 'soul-action-reintegration-record-builder',
+    taskType: 'extract_tasks',
+    terminalStatus: 'succeeded',
+    signalKind: 'task_extraction_reintegration',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'extract_tasks summary Continuity target: task_record.',
+    evidence: {
+      taskId: 'task-record-input-from-outcome-packet',
+      taskType: 'extract_tasks',
+      sourceNoteId: 'note-record-input-from-outcome-packet',
+      resultSummary: 'extract_tasks summary',
+      error: null,
+      outputNotePaths: ['/tmp/extract-task-output.md'],
+      extractTaskCreated: 1,
+      extractTaskItems: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+        outputNoteId: 'task-note-1',
+      }],
+      nextActionCandidate: {
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+        outputNoteId: 'task-note-1',
+      },
+      personaSnapshotId: 'persona-snapshot-record-builder',
+      personaSnapshotSummary: '更稳定推进',
+      personaContentPreview: '保持节奏，推进周报整理',
+    },
+  });
+});
+
+test('buildOutcomePacketExtractTaskEvidence centralizes packet extract-task evidence assembly from worker task outputs', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-packet-extract-evidence-context',
+    outputNotePaths: ['/tmp/high.md', '/tmp/medium.md'],
+    outputNotes: [
+      { id: 'task-note-high', title: '高优先任务', filePath: '/tmp/high.md', fileName: 'high.md' },
+      { id: 'task-note-medium', title: '中优先任务', filePath: '/tmp/medium.md', fileName: 'medium.md' },
+    ],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 2 个行动项',
+      created: 2,
+      sourceNoteTitle: '源笔记',
+      items: [
+        { title: '高优先任务', dimension: 'career', priority: 'high', due: '2026-03-23', filePath: '/tmp/high.md' },
+        { title: '中优先任务', dimension: 'life', priority: 'medium', due: '2026-03-22', filePath: '/tmp/medium.md' },
+      ],
+    },
+  });
+
+  assert.deepEqual(buildOutcomePacketExtractTaskEvidence(task), {
+    extractTaskCreated: 2,
+    extractTaskItems: [
+      {
+        title: '高优先任务',
+        dimension: 'career',
+        priority: 'high',
+        due: '2026-03-23',
+        filePath: '/tmp/high.md',
+        outputNoteId: 'task-note-high',
+      },
+      {
+        title: '中优先任务',
+        dimension: 'life',
+        priority: 'medium',
+        due: '2026-03-22',
+        filePath: '/tmp/medium.md',
+        outputNoteId: 'task-note-medium',
+      },
+    ],
+  });
+});
+
+test('buildReintegrationEvidenceFromOutcomePacket centralizes evidence assembly for packet context and persona snapshot', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-reintegration-evidence-context',
+    sourceNoteId: 'note-evidence-context',
+    outputNotePaths: ['/tmp/extract-task-output.md'],
+    outputNotes: [{
+      id: 'task-note-1',
+      title: '整理周报素材',
+      filePath: '/tmp/extract-task-output.md',
+      fileName: 'extract-task-output.md',
+    }],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+  const continuity = integrateContinuity(packet);
+  const summary = buildReintegrationSummaryFromOutcomePacket(packet, continuity);
+  const personaSnapshot = {
+    id: 'persona-snapshot-1',
+    sourceNoteId: 'note-evidence-context',
+    summary: '更稳定推进',
+    snapshot: {
+      contentPreview: '保持节奏，推进周报整理',
+    },
+  } as PersonaSnapshot;
+
+  assert.deepEqual(buildReintegrationEvidenceFromOutcomePacket(packet, summary, personaSnapshot), {
+    taskId: 'task-reintegration-evidence-context',
+    taskType: 'extract_tasks',
+    sourceNoteId: 'note-evidence-context',
+    resultSummary: 'extract_tasks summary',
+    error: null,
+    outputNotePaths: ['/tmp/extract-task-output.md'],
+    extractTaskCreated: 1,
+    extractTaskItems: [{
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: 'task-note-1',
+    }],
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: 'task-note-1',
+    },
+    personaSnapshotId: 'persona-snapshot-1',
+    personaSnapshotSummary: '更稳定推进',
+    personaContentPreview: '保持节奏，推进周报整理',
+  });
+});
+
+test('buildReintegrationSummaryFromOutcomePacket centralizes signal kind, continuity summary, and next action candidate from packet context', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-reintegration-summary-context',
+    resultSummary: null,
+    sourceNoteId: null,
+    outputNotePaths: [],
+    outputNotes: [],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+  const continuity = integrateContinuity(packet);
+
+  assert.deepEqual(buildReintegrationSummaryFromOutcomePacket(packet, continuity), {
+    signalKind: 'task_extraction_reintegration',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'extract_tasks completed with 0 output note(s). Continuity target: task_record.',
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: null,
+    },
+    suggestedActionKinds: ['create_event_node'],
+  });
+  assert.deepEqual(getReintegrationOutcomeSummary({
+    signalKind: 'task_extraction_reintegration',
+    target: 'task_record',
+    strength: 'medium',
+  }).suggestedActionKinds, ['create_event_node']);
+});
+
+test('outcome packet next-action candidate picks the highest-priority earliest-due task instead of preserving item order', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-outcome-packet-priority-order',
+    resultSummary: null,
+    outputNotePaths: ['/tmp/medium.md', '/tmp/high.md', '/tmp/low.md'],
+    outputNotes: [
+      { id: 'task-note-medium', title: '中优先任务', filePath: '/tmp/medium.md', fileName: 'medium.md' },
+      { id: 'task-note-high', title: '高优先任务', filePath: '/tmp/high.md', fileName: 'high.md' },
+      { id: 'task-note-low', title: '低优先任务', filePath: '/tmp/low.md', fileName: 'low.md' },
+    ],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 3 个行动项',
+      created: 3,
+      sourceNoteTitle: '源笔记',
+      items: [
+        { title: '中优先任务', dimension: 'life', priority: 'medium', due: '2026-03-22', filePath: '/tmp/medium.md' },
+        { title: '高优先任务', dimension: 'career', priority: 'high', due: '2026-03-23', filePath: '/tmp/high.md' },
+        { title: '低优先任务', dimension: 'growth', priority: 'low', due: null, filePath: '/tmp/low.md' },
+      ],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(task);
+
+  assert.deepEqual(getOutcomePacketNextActionCandidate(packet), {
+    title: '高优先任务',
+    dimension: 'career',
+    priority: 'high',
+    due: '2026-03-23',
+    filePath: '/tmp/high.md',
+    outputNoteId: 'task-note-high',
+  });
+  assert.deepEqual(createReintegrationRecordInput(task).evidence.nextActionCandidate, {
+    title: '高优先任务',
+    dimension: 'career',
+    priority: 'high',
+    due: '2026-03-23',
+    filePath: '/tmp/high.md',
+    outputNoteId: 'task-note-high',
+  });
+});
+
+test('outcome packet keeps next-action evidence visible but blocks suggested actions on failed extract_tasks', () => {
+  const extractTask = buildTerminalTask('extract_tasks', {
+    status: 'failed',
+    resultSummary: null,
+    error: 'worker failed after extraction',
+    sourceNoteId: null,
+    outputNotePaths: [],
+    outputNotes: [],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(extractTask);
+
+  assert.equal(hasReintegrationSignalFromOutcomePacket(packet), true);
+  assert.deepEqual(generateSoulActionsFromOutcomePacket(packet), {
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: null,
+    },
+    suggestedActionKinds: [],
+  });
+  assert.deepEqual(integrateContinuity(packet), {
+    taskId: 'task-extract_tasks',
+    taskType: 'extract_tasks',
+    status: 'failed',
+    shouldReintegrate: false,
+    target: 'task_record',
+    strength: 'low',
+    summary: 'extract_tasks ended as failed; continuity remains observational only (worker failed after extraction).',
+  });
+});
+
+test('outcome packet keeps next-action evidence visible but blocks suggested actions on cancelled extract_tasks', () => {
+  const extractTask = buildTerminalTask('extract_tasks', {
+    status: 'cancelled',
+    resultSummary: null,
+    error: '任务已取消',
+    sourceNoteId: null,
+    outputNotePaths: [],
+    outputNotes: [],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(extractTask);
+
+  assert.equal(hasReintegrationSignalFromOutcomePacket(packet), true);
+  assert.deepEqual(generateSoulActionsFromOutcomePacket(packet), {
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: null,
+    },
+    suggestedActionKinds: [],
+  });
+  assert.deepEqual(integrateContinuity(packet), {
+    taskId: 'task-extract_tasks',
+    taskType: 'extract_tasks',
+    status: 'cancelled',
+    shouldReintegrate: false,
+    target: 'task_record',
+    strength: 'low',
+    summary: 'extract_tasks ended as cancelled; continuity remains observational only (任务已取消).',
+  });
+});
+
+test('continuity integrator treats extract-task next-action evidence as a reintegration signal even without summary or outputs', () => {
+  const extractTask = buildTerminalTask('extract_tasks', {
+    resultSummary: null,
+    sourceNoteId: null,
+    outputNotePaths: [],
+    outputNotes: [],
+    result: {
+      title: '行动项提取',
+      summary: '已提取 1 个行动项',
+      created: 1,
+      sourceNoteTitle: '源笔记',
+      items: [{
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/tmp/extract-task-output.md',
+      }],
+    },
+  });
+  const packet = createFeedbackReintegrationPayload(extractTask);
+
+  assert.equal(hasReintegrationSignalFromOutcomePacket(packet), true);
+  assert.deepEqual(generateSoulActionsFromOutcomePacket(packet), {
+    nextActionCandidate: {
+      title: '整理周报素材',
+      dimension: 'growth',
+      priority: 'high',
+      due: '2026-03-22',
+      filePath: '/tmp/extract-task-output.md',
+      outputNoteId: null,
+    },
+    suggestedActionKinds: ['create_event_node'],
+  });
+  assert.deepEqual(integrateContinuity(packet), {
+    taskId: 'task-extract_tasks',
+    taskType: 'extract_tasks',
+    status: 'succeeded',
+    shouldReintegrate: true,
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'extract_tasks completed with 0 output note(s). Continuity target: task_record.',
+  });
+});
+
+test('outcome packet reintegration signal stays false when succeeded work has no summary outputs or next action evidence', () => {
+  const summarizeTask = buildTerminalTask('summarize_note', {
+    resultSummary: null,
+    outputNotePaths: [],
+    outputNotes: [],
+  });
+  const packet = createFeedbackReintegrationPayload(summarizeTask);
+
+  assert.equal(hasReintegrationSignalFromOutcomePacket(packet), false);
+  assert.deepEqual(generateSoulActionsFromOutcomePacket(packet), {
+    nextActionCandidate: null,
+    suggestedActionKinds: [],
+  });
+  assert.deepEqual(integrateContinuity(packet), {
+    taskId: 'task-summarize_note',
+    taskType: 'summarize_note',
+    status: 'succeeded',
+    shouldReintegrate: false,
+    target: 'source_note',
+    strength: 'medium',
+    summary: 'summarize_note ended as succeeded; no reintegration candidate was produced.',
+  });
 });
 
 test('continuity integrator returns stable, predictable results', () => {
@@ -2593,6 +3377,102 @@ test('executeWorkerTask hits reintegration wiring on cancelled supported path', 
   });
 });
 
+test('upsertReintegrationRecord preserves accepted review metadata across outcome refreshes', async (t) => {
+  const env = await createTestEnv('lifeos-reintegration-upsert-preserve-accepted-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const reviewedAt = '2026-03-22T12:11:00.000Z';
+
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-reintegration-preserve-accepted',
+    sourceNoteId: 'note-reintegration-preserve-accepted',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'accepted',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'accepted before refresh',
+    evidence: { source: 'test-initial' },
+    reviewReason: 'accepted before refresh',
+    reviewedAt,
+    now: '2026-03-22T12:12:00.000Z',
+  });
+
+  const refreshed = upsertReintegrationRecord({
+    workerTaskId: 'manual-task-reintegration-preserve-accepted',
+    sourceNoteId: 'note-reintegration-preserve-accepted',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'accepted after refresh',
+    evidence: { source: 'test-refresh' },
+    now: '2026-03-22T12:13:00.000Z',
+  });
+
+  assert.equal(refreshed.reviewStatus, 'accepted');
+  assert.equal(refreshed.reviewReason, 'accepted before refresh');
+  assert.equal(refreshed.reviewedAt, reviewedAt);
+  assert.equal(refreshed.summary, 'accepted after refresh');
+  assert.deepEqual(refreshed.evidence, { source: 'test-refresh' });
+});
+
+test('upsertReintegrationRecord preserves rejected review metadata across outcome refreshes', async (t) => {
+  const env = await createTestEnv('lifeos-reintegration-upsert-preserve-rejected-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  const reviewedAt = '2026-03-22T13:11:00.000Z';
+
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-reintegration-preserve-rejected',
+    sourceNoteId: 'note-reintegration-preserve-rejected',
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'failed',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'rejected',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'rejected before refresh',
+    evidence: { source: 'test-initial' },
+    reviewReason: 'rejected before refresh',
+    reviewedAt,
+    now: '2026-03-22T13:12:00.000Z',
+  });
+
+  const refreshed = upsertReintegrationRecord({
+    workerTaskId: 'manual-task-reintegration-preserve-rejected',
+    sourceNoteId: 'note-reintegration-preserve-rejected',
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'failed',
+    signalKind: 'daily_report_reintegration',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'rejected after refresh',
+    evidence: { source: 'test-refresh' },
+    now: '2026-03-22T13:13:00.000Z',
+  });
+
+  assert.equal(refreshed.reviewStatus, 'rejected');
+  assert.equal(refreshed.reviewReason, 'rejected before refresh');
+  assert.equal(refreshed.reviewedAt, reviewedAt);
+  assert.equal(refreshed.summary, 'rejected after refresh');
+  assert.deepEqual(refreshed.evidence, { source: 'test-refresh' });
+});
+
 test('approved create_event_node action reuses PR6 event promotion executor', async (t) => {
   const env = await createTestEnv('lifeos-pr2-create-event-node-');
 
@@ -2769,6 +3649,107 @@ test('acceptReintegrationRecordAndPlanPromotions reuses existing PR6 promotion a
   assert.equal(promotionActions.total, 2);
 });
 
+test('acceptReintegrationRecordAndPlanPromotions turns accepted extract-task reintegration into a review-backed create_event_node follow-up', async (t) => {
+  const env = await createTestEnv('lifeos-task-extraction-followup-event-plan-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-task-extraction-followup',
+    sourceNoteId: 'note-task-extraction-followup',
+    soulActionId: null,
+    taskType: 'extract_tasks',
+    terminalStatus: 'succeeded',
+    signalKind: 'task_extraction_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'extract-task follow-up summary',
+    evidence: {
+      source: 'test',
+      extractTaskCreated: 2,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        priority: 'high',
+        due: '2026-03-22',
+        outputNoteId: 'task-note-1',
+      },
+    },
+    now: '2026-03-21T10:15:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-task-extraction-followup');
+  assert.ok(record);
+
+  const accepted = acceptReintegrationRecordAndPlanPromotions(record!.id, 'accept extract-task follow-up planning');
+  assert.ok(accepted);
+  assert.equal(accepted?.reintegrationRecord.reviewStatus, 'accepted');
+  assert.equal(accepted?.soulActions.length, 1);
+  assert.equal(accepted?.soulActions[0]?.actionKind, 'create_event_node');
+  assert.equal(accepted?.soulActions[0]?.sourceNoteId, 'note-task-extraction-followup');
+  assert.equal(accepted?.soulActions[0]?.sourceReintegrationId, record!.id);
+  assert.equal('nextActionSummary' in accepted!, false);
+
+  const acceptedNextActionSummary = getSharedReintegrationNextActionSummary(accepted!.reintegrationRecord);
+  assert.equal(acceptedNextActionSummary?.createdCount, 2);
+  assert.equal(acceptedNextActionSummary?.candidateTitle, '整理周报素材');
+
+  const planned = planPromotionSoulActions(accepted!.reintegrationRecord);
+  assert.equal(planned.length, 1);
+  assert.equal(planned[0]?.id, accepted?.soulActions[0]?.id);
+});
+
+test('buildEventNodePromotionInput uses extract-task evidence for task-extraction reintegration follow-up events', () => {
+  const record = {
+    id: 'reint:task-extraction-followup-event',
+    workerTaskId: 'task-task-extraction-followup-event',
+    sourceNoteId: 'note-task-extraction-followup-event',
+    soulActionId: null,
+    taskType: 'extract_tasks',
+    terminalStatus: 'succeeded',
+    signalKind: 'task_extraction_reintegration',
+    reviewStatus: 'accepted',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'extract-task follow-up summary',
+    evidence: {
+      extractTaskCreated: 2,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        priority: 'high',
+        due: '2026-03-22',
+        outputNoteId: 'task-note-1',
+      },
+    },
+    reviewReason: 'accepted extract-task follow-up',
+    createdAt: '2026-03-22T10:00:00.000Z',
+    updatedAt: '2026-03-22T10:10:00.000Z',
+    reviewedAt: '2026-03-22T10:11:00.000Z',
+  } as const;
+
+  assert.deepEqual(buildEventNodePromotionInput(record, 'soul-action-task-extraction-event'), {
+    sourceReintegrationId: record.id,
+    sourceNoteId: record.sourceNoteId,
+    sourceSoulActionId: record.soulActionId,
+    promotionSoulActionId: 'soul-action-task-extraction-event',
+    eventKind: 'milestone_report',
+    title: '整理周报素材',
+    summary: 'extract-task follow-up summary',
+    threshold: 'high',
+    status: 'active',
+    evidence: record.evidence,
+    explanation: {
+      whyHighThreshold: 'review-backed PR6 promotion',
+      whyNow: '整理周报素材',
+      reviewBacked: true,
+    },
+    occurredAt: record.updatedAt,
+  });
+});
+
 test('acceptReintegrationRecordAndPlanPromotions keeps promotion actions distinct across multiple reintegration records for the same source note', async (t) => {
   const env = await createTestEnv('lifeos-pr6-multi-reintegration-same-note-');
 
@@ -2908,6 +3889,163 @@ test('accepted persona reintegration can plan and dispatch PR6 event and continu
   assert.equal(continuityRecords[0]?.sourceReintegrationId, reintegrationRecord!.id);
 });
 
+test('generateSoulActionsFromOutcomePacket aligns worker outcome context with accepted reintegration outcome context for extract_tasks', () => {
+  const task = buildTerminalTask('extract_tasks', {
+    id: 'task-outcome-packet-extract',
+    resultSummary: '已提取行动项',
+    result: {
+      title: '行动项提取',
+      summary: '已提取 2 个行动项',
+      created: 2,
+      sourceNoteTitle: '源笔记',
+      items: [
+        {
+          title: '整理周报素材',
+          dimension: 'growth',
+          priority: 'high',
+          due: '2026-03-22',
+          filePath: '/vault/growth/2026-03-22-整理周报素材.md',
+        },
+        {
+          title: '补充复盘提纲',
+          dimension: 'growth',
+          priority: 'medium',
+          due: null,
+          filePath: '/vault/growth/2026-03-22-补充复盘提纲.md',
+        },
+      ],
+    },
+    outputNotes: [
+      { id: 'task-note-1', title: '整理周报素材', filePath: '/vault/growth/2026-03-22-整理周报素材.md', fileName: '2026-03-22-整理周报素材.md' },
+      { id: 'task-note-2', title: '补充复盘提纲', filePath: '/vault/growth/2026-03-22-补充复盘提纲.md', fileName: '2026-03-22-补充复盘提纲.md' },
+    ],
+    outputNotePaths: [
+      '/vault/growth/2026-03-22-整理周报素材.md',
+      '/vault/growth/2026-03-22-补充复盘提纲.md',
+    ],
+  });
+
+  const packet = createFeedbackReintegrationPayload(task);
+  const packetOutcome = generateSoulActionsFromOutcomePacket(packet);
+  const recordInput = createReintegrationRecordInput(task);
+  const record = {
+    id: 'reint:task-outcome-packet-extract',
+    workerTaskId: recordInput.workerTaskId,
+    sourceNoteId: recordInput.sourceNoteId,
+    soulActionId: recordInput.soulActionId,
+    taskType: recordInput.taskType,
+    terminalStatus: recordInput.terminalStatus,
+    signalKind: recordInput.signalKind,
+    reviewStatus: 'accepted',
+    target: recordInput.target,
+    strength: recordInput.strength,
+    summary: recordInput.summary,
+    evidence: recordInput.evidence,
+    reviewReason: 'accepted extract-task packet alignment',
+    createdAt: '2026-03-22T12:10:00.000Z',
+    updatedAt: '2026-03-22T12:10:00.000Z',
+    reviewedAt: '2026-03-22T12:11:00.000Z',
+  } as const;
+  const recordOutcome = describeReintegrationOutcome(record);
+
+  assert.deepEqual(packetOutcome, recordOutcome);
+});
+
+test('describeReintegrationOutcome exposes next-action candidate and suggested action kinds from accepted extract-task evidence', async (t) => {
+  const env = await createTestEnv('lifeos-reintegration-outcome-context-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-reintegration-outcome-context',
+    sourceNoteId: 'note-reintegration-outcome-context',
+    soulActionId: null,
+    taskType: 'extract_tasks',
+    terminalStatus: 'succeeded',
+    signalKind: 'task_extraction_reintegration',
+    reviewStatus: 'accepted',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'reintegration outcome context summary',
+    evidence: {
+      extractTaskCreated: 1,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/vault/growth/2026-03-22-整理周报素材.md',
+        outputNoteId: 'task-note-1',
+      },
+    },
+    reviewReason: 'accepted reintegration outcome context',
+    now: '2026-03-22T12:00:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-reintegration-outcome-context');
+  assert.ok(record);
+
+  const outcome = describeReintegrationOutcome(record!);
+  assert.deepEqual(outcome.suggestedActionKinds, ['create_event_node']);
+  assert.deepEqual(outcome.nextActionCandidate, {
+    title: '整理周报素材',
+    dimension: 'growth',
+    priority: 'high',
+    due: '2026-03-22',
+    filePath: '/vault/growth/2026-03-22-整理周报素材.md',
+    outputNoteId: 'task-note-1',
+  });
+});
+
+test('generateSoulActionsFromOutcome creates the same accepted follow-up actions as planPromotionSoulActions for extract-task reintegration', async (t) => {
+  const env = await createTestEnv('lifeos-outcome-generator-extract-task-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-outcome-generator-extract',
+    sourceNoteId: 'note-outcome-generator-extract',
+    soulActionId: null,
+    taskType: 'extract_tasks',
+    terminalStatus: 'succeeded',
+    signalKind: 'task_extraction_reintegration',
+    reviewStatus: 'accepted',
+    target: 'task_record',
+    strength: 'medium',
+    summary: 'outcome generator extract-task summary',
+    evidence: {
+      extractTaskCreated: 1,
+      nextActionCandidate: {
+        title: '整理周报素材',
+        priority: 'high',
+        due: '2026-03-22',
+        outputNoteId: 'task-note-1',
+      },
+    },
+    reviewReason: 'accepted extract-task outcome generator test',
+    now: '2026-03-22T11:00:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-outcome-generator-extract');
+  assert.ok(record);
+
+  const generated = generatePlannedSoulActions(record!);
+  const planned = planPromotionSoulActions(record!);
+
+  assert.equal(generated.length, 1);
+  assert.equal(generated[0]?.actionKind, 'create_event_node');
+  assert.deepEqual(
+    generated.map((action) => action.id),
+    planned.map((action) => action.id),
+  );
+});
+
 test('accepted daily report reintegration plans PR6 event and continuity promotions', async (t) => {
   const env = await createTestEnv('lifeos-pr6-daily-promotion-');
   const originalFetch = globalThis.fetch;
@@ -2939,7 +4077,7 @@ test('accepted daily report reintegration plans PR6 event and continuity promoti
   const reintegrationRecord = getReintegrationRecordByWorkerTaskId(task.id);
   assert.ok(reintegrationRecord);
   const accepted = acceptReintegrationRecord(reintegrationRecord!.id, 'accept daily report event and continuity');
-  const planned = planPromotionSoulActions(accepted!);
+  const planned = generatePlannedSoulActions(accepted!);
   assert.equal(planned.length, 2);
   assert.deepEqual(
     getPromotionActionKindsForReintegration(accepted!).sort(),
@@ -2947,6 +4085,94 @@ test('accepted daily report reintegration plans PR6 event and continuity promoti
   );
   assert.ok(planned.some((action) => action.actionKind === 'promote_event_node'));
   assert.ok(planned.some((action) => action.actionKind === 'promote_continuity_record'));
+  assert.deepEqual(
+    planned.map((action) => action.id).sort(),
+    planPromotionSoulActions(accepted!).map((action) => action.id).sort(),
+  );
+});
+
+test('acceptReintegrationRecord rejects repeated review state changes once a reintegration is already accepted', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-accept-review-finality-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-accept-review-finality',
+    sourceNoteId: 'note-pr6-accept-review-finality',
+    soulActionId: null,
+    taskType: 'weekly_report',
+    terminalStatus: 'succeeded',
+    signalKind: 'weekly_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'weekly accept finality summary',
+    evidence: { source: 'test' },
+    now: '2026-03-23T09:00:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-pr6-accept-review-finality');
+  assert.ok(record);
+
+  const accepted = acceptReintegrationRecord(record!.id, 'first accept finality');
+  assert.ok(accepted);
+  assert.equal(accepted?.reviewStatus, 'accepted');
+  assert.equal(accepted?.reviewReason, 'first accept finality');
+
+  assert.throws(
+    () => rejectReintegrationRecord(record!.id, 'should not override accepted review'),
+    /Only pending_review reintegration records can be marked as rejected/,
+  );
+
+  const persisted = getReintegrationRecord(record!.id);
+  assert.equal(persisted?.reviewStatus, 'accepted');
+  assert.equal(persisted?.reviewReason, 'first accept finality');
+  assert.equal(persisted?.reviewedAt, accepted?.reviewedAt ?? null);
+});
+
+test('rejectReintegrationRecord rejects repeated review state changes once a reintegration is already rejected', async (t) => {
+  const env = await createTestEnv('lifeos-pr6-reject-review-finality-');
+
+  t.after(async () => {
+    await env.cleanup();
+  });
+
+  initDatabase();
+  upsertReintegrationRecord({
+    workerTaskId: 'manual-task-pr6-reject-review-finality',
+    sourceNoteId: 'note-pr6-reject-review-finality',
+    soulActionId: null,
+    taskType: 'daily_report',
+    terminalStatus: 'failed',
+    signalKind: 'daily_report_reintegration',
+    reviewStatus: 'pending_review',
+    target: 'derived_outputs',
+    strength: 'medium',
+    summary: 'daily reject finality summary',
+    evidence: { source: 'test' },
+    now: '2026-03-23T09:10:00.000Z',
+  });
+
+  const record = getReintegrationRecordByWorkerTaskId('manual-task-pr6-reject-review-finality');
+  assert.ok(record);
+
+  const rejected = rejectReintegrationRecord(record!.id, 'first reject finality');
+  assert.ok(rejected);
+  assert.equal(rejected?.reviewStatus, 'rejected');
+  assert.equal(rejected?.reviewReason, 'first reject finality');
+
+  assert.throws(
+    () => acceptReintegrationRecordAndPlanPromotions(record!.id, 'should not override rejected review'),
+    /Only pending_review reintegration records can be marked as accepted/,
+  );
+
+  const persisted = getReintegrationRecord(record!.id);
+  assert.equal(persisted?.reviewStatus, 'rejected');
+  assert.equal(persisted?.reviewReason, 'first reject finality');
+  assert.equal(persisted?.reviewedAt, rejected?.reviewedAt ?? null);
 });
 
 test('unaccepted reintegration cannot plan PR6 promotions', async (t) => {

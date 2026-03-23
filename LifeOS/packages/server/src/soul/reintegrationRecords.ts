@@ -1,5 +1,6 @@
 import { getDb } from '../db/client.js';
-import type { SupportedReintegrationTaskType, TerminalWorkerTaskStatus } from '../workers/feedbackReintegration.js';
+import type { ReintegrationRecord, ReintegrationRecordInput, TerminalWorkerTaskStatus } from '@lifeos/shared';
+import type { SupportedReintegrationTaskType } from '../workers/feedbackReintegration.js';
 import type { ContinuityStrength, ContinuityTarget } from '../workers/continuityIntegrator.js';
 
 export type ReintegrationReviewStatus = 'pending_review' | 'accepted' | 'rejected';
@@ -12,24 +13,7 @@ export type ReintegrationSignalKind =
   | 'weekly_report_reintegration'
   | 'openclaw_reintegration';
 
-export interface ReintegrationRecord {
-  id: string;
-  workerTaskId: string;
-  sourceNoteId: string | null;
-  soulActionId: string | null;
-  taskType: SupportedReintegrationTaskType;
-  terminalStatus: TerminalWorkerTaskStatus;
-  signalKind: ReintegrationSignalKind;
-  reviewStatus: ReintegrationReviewStatus;
-  target: ContinuityTarget;
-  strength: ContinuityStrength;
-  summary: string;
-  evidence: Record<string, unknown>;
-  reviewReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-  reviewedAt: string | null;
-}
+export type { ReintegrationRecord } from '@lifeos/shared';
 
 interface ReintegrationRecordRow {
   id: string;
@@ -63,7 +47,7 @@ function rowToReintegrationRecord(row: ReintegrationRecordRow): ReintegrationRec
     target: row.target,
     strength: row.strength,
     summary: row.summary,
-    evidence: JSON.parse(row.evidence_json) as Record<string, unknown>,
+    evidence: JSON.parse(row.evidence_json),
     reviewReason: row.review_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -80,25 +64,21 @@ export function getReintegrationRecordByWorkerTaskId(workerTaskId: string): Rein
   return row ? rowToReintegrationRecord(row) : null;
 }
 
-export function upsertReintegrationRecord(input: {
-  workerTaskId: string;
-  sourceNoteId?: string | null;
-  soulActionId?: string | null;
-  taskType: SupportedReintegrationTaskType;
-  terminalStatus: TerminalWorkerTaskStatus;
-  signalKind: ReintegrationSignalKind;
+export function upsertReintegrationRecord(input: ReintegrationRecordInput & {
   reviewStatus?: ReintegrationReviewStatus;
-  target: ContinuityTarget;
-  strength: ContinuityStrength;
-  summary: string;
-  evidence: Record<string, unknown>;
   reviewReason?: string | null;
+  reviewedAt?: string | null;
   now?: string;
 }): ReintegrationRecord {
   const existing = getReintegrationRecordByWorkerTaskId(input.workerTaskId);
   const now = input.now ?? new Date().toISOString();
   const id = existing?.id ?? buildReintegrationRecordId(input.workerTaskId);
   const createdAt = existing?.createdAt ?? now;
+  const reviewStatus = input.reviewStatus ?? existing?.reviewStatus ?? 'pending_review';
+  const reviewReason = input.reviewReason ?? existing?.reviewReason ?? null;
+  const reviewedAt = input.reviewedAt !== undefined
+    ? input.reviewedAt
+    : existing?.reviewedAt ?? (reviewStatus === 'pending_review' ? null : now);
 
   if (existing) {
     getDb().prepare(`
@@ -113,14 +93,14 @@ export function upsertReintegrationRecord(input: {
       input.taskType,
       input.terminalStatus,
       input.signalKind,
-      input.reviewStatus ?? 'pending_review',
+      reviewStatus,
       input.target,
       input.strength,
       input.summary,
       JSON.stringify(input.evidence),
-      input.reviewReason ?? null,
+      reviewReason,
       now,
-      existing.reviewedAt ?? null,
+      reviewedAt,
       input.workerTaskId,
     );
   } else {
@@ -137,15 +117,15 @@ export function upsertReintegrationRecord(input: {
       input.taskType,
       input.terminalStatus,
       input.signalKind,
-      input.reviewStatus ?? 'pending_review',
+      reviewStatus,
       input.target,
       input.strength,
       input.summary,
       JSON.stringify(input.evidence),
-      input.reviewReason ?? null,
+      reviewReason,
       createdAt,
       now,
-      null,
+      reviewedAt,
     );
   }
 
