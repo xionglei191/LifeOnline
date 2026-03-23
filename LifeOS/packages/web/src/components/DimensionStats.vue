@@ -57,11 +57,11 @@ const props = defineProps<{
   pending: number;
   inProgress: number;
   done: number;
+  healthScore: number;
 }>();
 
 const dimensionLabel = computed(() => getDimensionLabel(props.dimension));
 const dimensionColor = computed(() => getDimensionColor(props.dimension));
-const healthScore = computed(() => props.total > 0 ? Math.round((props.done / props.total) * 100) : 0);
 const pendingPercent = computed(() => props.total > 0 ? (props.pending / props.total) * 100 : 0);
 const inProgressPercent = computed(() => props.total > 0 ? (props.inProgress / props.total) * 100 : 0);
 const donePercent = computed(() => props.total > 0 ? (props.done / props.total) * 100 : 0);

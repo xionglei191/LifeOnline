@@ -9,6 +9,7 @@
         :pending="stats.pending"
         :in-progress="stats.inProgress"
         :done="stats.done"
+        :health-score="stats.healthScore"
       />
 
       <DimensionCharts :notes="notes" :dimension="dimension" />

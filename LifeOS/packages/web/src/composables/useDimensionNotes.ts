@@ -30,7 +30,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
   let activeRequestId = 0;
   let activeStatsRequestId = 0;
 
-  const dimensionStats = ref({ total: 0, pending: 0, inProgress: 0, done: 0 });
+  const dimensionStats = ref({ total: 0, pending: 0, inProgress: 0, done: 0, healthScore: 0 });
 
   const filters = ref<Filters>({
     types: [],
@@ -118,8 +118,9 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
             pending: stat.pending,
             inProgress: stat.in_progress,
             done: stat.done,
+            healthScore: stat.health_score,
           }
-        : { total: 0, pending: 0, inProgress: 0, done: 0 };
+        : { total: 0, pending: 0, inProgress: 0, done: 0, healthScore: 0 };
     } catch (e) {
       if (requestId !== activeStatsRequestId) return;
       throw e;
@@ -173,7 +174,7 @@ export function useDimensionNotes(dimension: Ref<Dimension>) {
       keyword: '',
     };
     notes.value = [];
-    dimensionStats.value = { total: 0, pending: 0, inProgress: 0, done: 0 };
+    dimensionStats.value = { total: 0, pending: 0, inProgress: 0, done: 0, healthScore: 0 };
     load();
   }, { immediate: true });
 

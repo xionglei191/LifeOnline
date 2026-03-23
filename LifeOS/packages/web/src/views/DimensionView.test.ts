@@ -33,8 +33,8 @@ function buildWrapper() {
     global: {
       stubs: {
         DimensionStats: {
-          props: ['dimension', 'total', 'pending', 'inProgress', 'done'],
-          template: '<div class="dimension-stats-stub">{{ dimension }}:{{ total }}</div>',
+          props: ['dimension', 'total', 'pending', 'inProgress', 'done', 'healthScore'],
+          template: '<div class="dimension-stats-stub">{{ dimension }}:{{ total }}:{{ healthScore }}</div>',
         },
         DimensionCharts: true,
         FilterBar: true,
@@ -91,7 +91,7 @@ describe('DimensionView', () => {
     await flushPromises();
 
     expect(apiMocks.fetchDashboard).toHaveBeenCalledTimes(1);
-    expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:9');
+    expect(wrapper.find('.dimension-stats-stub').text()).toContain('life:9:33');
     expect(wrapper.find('.note-list-stub').text()).toContain('note-life');
   });
 

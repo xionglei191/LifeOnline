@@ -100,7 +100,7 @@ describe('useDimensionNotes', () => {
     await nextTick();
 
     expect(apiMocks.fetchDashboard).toHaveBeenCalledTimes(1);
-    expect(state.stats.value).toEqual({ total: 3, pending: 1, inProgress: 1, done: 1 });
+    expect(state.stats.value).toEqual({ total: 3, pending: 1, inProgress: 1, done: 1, healthScore: 33 });
 
     wrapper.unmount();
   });
@@ -253,14 +253,16 @@ describe('useDimensionNotes', () => {
     await nextTick();
 
     expect(state.notes.value.map((note) => note.id)).toEqual(['note-life-1']);
-    const beforeRefreshCalls = apiMocks.fetchNotes.mock.calls.length;
+    const beforeRefreshNoteCalls = apiMocks.fetchNotes.mock.calls.length;
+    const beforeRefreshDashboardCalls = apiMocks.fetchDashboard.mock.calls.length;
 
     document.dispatchEvent(new CustomEvent('ws-update', { detail: { type: 'index-complete' } }));
     await nextTick();
     await nextTick();
     await nextTick();
 
-    expect(apiMocks.fetchNotes.mock.calls.length).toBe(beforeRefreshCalls + 1);
+    expect(apiMocks.fetchNotes.mock.calls.length).toBe(beforeRefreshNoteCalls + 1);
+    expect(apiMocks.fetchDashboard.mock.calls.length).toBe(beforeRefreshDashboardCalls + 1);
     expect(state.notes.value.map((note) => note.id)).toEqual(['note-life-2']);
 
     wrapper.unmount();
