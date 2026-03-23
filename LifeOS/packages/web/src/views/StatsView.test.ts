@@ -124,7 +124,13 @@ describe('StatsView', () => {
     expect(wrapper.text()).toContain('当前焦点');
     expect(wrapper.text()).toContain('完成率');
     expect(wrapper.text()).toContain('当前趋势窗口天数');
+    expect(wrapper.text()).toContain('维度雷达');
+    expect(wrapper.text()).toContain('月度对比');
+    expect(wrapper.text()).toContain('标签热度');
     expect(wrapper.text()).toContain('趋势 / 对比 / 标签热度');
+    expect(wrapper.text()).not.toContain('Balance Radar');
+    expect(wrapper.text()).not.toContain('Monthly Shift');
+    expect(wrapper.text()).not.toContain('Tag Heat');
     expect(wrapper.text()).not.toContain('days');
     expect(wrapper.text()).not.toContain('panels');
 

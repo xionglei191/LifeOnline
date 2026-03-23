@@ -56,7 +56,7 @@
         <section class="stats-card">
           <div class="card-header compact">
             <div>
-              <p class="card-kicker">Balance Radar</p>
+              <p class="card-kicker">维度雷达</p>
               <h3>{{ radarTitle }}</h3>
             </div>
           </div>
@@ -66,7 +66,7 @@
         <section class="stats-card">
           <div class="card-header compact">
             <div>
-              <p class="card-kicker">Monthly Shift</p>
+              <p class="card-kicker">月度对比</p>
               <h3>月度对比</h3>
             </div>
           </div>
@@ -76,7 +76,7 @@
         <section class="stats-card wide">
           <div class="card-header compact">
             <div>
-              <p class="card-kicker">Tag Heat</p>
+              <p class="card-kicker">标签热度</p>
               <h3>标签频率</h3>
             </div>
           </div>
