@@ -15,7 +15,7 @@
           <article class="metric">
             <span class="metric-label">趋势窗口</span>
             <strong>{{ trendDays }}</strong>
-            <span class="metric-meta">days</span>
+            <span class="metric-meta">当前趋势窗口天数</span>
           </article>
           <article class="metric">
             <span class="metric-label">分析图层</span>

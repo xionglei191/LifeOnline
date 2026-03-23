@@ -123,7 +123,9 @@ describe('StatsView', () => {
     expect(wrapper.text()).toContain('趋势 / 雷达 / 月度 / 标签');
     expect(wrapper.text()).toContain('当前焦点');
     expect(wrapper.text()).toContain('完成率');
+    expect(wrapper.text()).toContain('当前趋势窗口天数');
     expect(wrapper.text()).toContain('趋势 / 对比 / 标签热度');
+    expect(wrapper.text()).not.toContain('days');
     expect(wrapper.text()).not.toContain('panels');
 
     wrapper.unmount();
