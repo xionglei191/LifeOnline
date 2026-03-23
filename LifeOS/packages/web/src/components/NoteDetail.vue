@@ -7,53 +7,16 @@
         <div v-if="loading" class="state-card">正在调取记录详情...</div>
         <div v-else-if="error" class="state-card error-state">{{ error.message }}</div>
         <div v-else-if="note" class="note-content">
-          <!-- Approval Card for OpenClaw approval requests -->
-          <section v-if="isApprovalNote" class="approval-card">
-            <div class="approval-header">
-              <span class="approval-icon">🔔</span>
-              <h3>OpenClaw 审批请求</h3>
-            </div>
 
-            <div class="approval-details">
-              <div class="detail-row">
-                <span class="detail-label">操作类型</span>
-                <strong>{{ note.approval_operation || note.approval_action || 'N/A' }}</strong>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">风险等级</span>
-                <strong :class="'risk-' + note.approval_risk">{{ note.approval_risk || 'N/A' }}</strong>
-              </div>
-              <div v-if="note.approval_scope" class="detail-row">
-                <span class="detail-label">影响范围</span>
-                <strong>{{ note.approval_scope }}</strong>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">状态</span>
-                <strong :class="'status-' + note.approval_status">{{ note.approval_status || 'pending' }}</strong>
-              </div>
-              <div v-if="note.due" class="detail-row">
-                <span class="detail-label">过期时间</span>
-                <strong>{{ note.due }}</strong>
-              </div>
-            </div>
-
-            <div class="approval-content">
-              <p class="panel-kicker">原因</p>
-              <div class="markdown-body" v-html="renderedContent"></div>
-            </div>
-
-            <div v-if="note.approval_status === 'pending'" class="approval-actions">
-              <button @click="handleApprove" :disabled="saving" class="btn-approve">
-                {{ saving ? '处理中...' : '✅ 批准' }}
-              </button>
-              <button @click="handleReject" :disabled="saving" class="btn-reject">
-                {{ saving ? '处理中...' : '❌ 拒绝' }}
-              </button>
-            </div>
-            <div v-else class="approval-result">
-              审批已{{ note.approval_status === 'approved' ? '批准' : '拒绝' }}
-            </div>
-          </section>
+          <!-- Approval Card -->
+          <NoteApprovalCard
+            v-if="isApprovalNote"
+            :note="note"
+            :rendered-content="renderedContent"
+            :saving="saving"
+            @approve="handleApprove"
+            @reject="handleReject"
+          />
 
           <!-- Normal Note Content -->
           <template v-else>
@@ -68,7 +31,6 @@
                 <span v-if="note.priority" class="meta-pill priority" :class="'priority-' + note.priority">{{ priorityLabels[note.priority] }}</span>
               </div>
             </div>
-
             <div class="hero-facts">
               <div class="fact">
                 <span class="fact-label">日期</span>
@@ -89,30 +51,13 @@
             <div class="control-panel">
               <p class="panel-kicker">状态调整</p>
               <div class="btn-group">
-                <button
-                  v-for="s in statuses"
-                  :key="s.value"
-                  @click="handleUpdateStatus(s.value)"
-                  :disabled="saving || note.status === s.value"
-                  :class="['action-btn', { active: note.status === s.value }]"
-                >
-                  {{ s.label }}
-                </button>
+                <button v-for="s in statuses" :key="s.value" @click="handleUpdateStatus(s.value)" :disabled="saving || note.status === s.value" :class="['action-btn', { active: note.status === s.value }]">{{ s.label }}</button>
               </div>
             </div>
-
             <div class="control-panel">
               <p class="panel-kicker">优先级调整</p>
               <div class="btn-group">
-                <button
-                  v-for="p in priorities"
-                  :key="p.value"
-                  @click="handleUpdatePriority(p.value)"
-                  :disabled="saving || note.priority === p.value"
-                  :class="['action-btn', { active: note.priority === p.value }]"
-                >
-                  {{ p.label }}
-                </button>
+                <button v-for="p in priorities" :key="p.value" @click="handleUpdatePriority(p.value)" :disabled="saving || note.priority === p.value" :class="['action-btn', { active: note.priority === p.value }]">{{ p.label }}</button>
               </div>
             </div>
           </section>
@@ -137,9 +82,7 @@
                 <p class="panel-kicker">危险操作</p>
                 <span class="append-hint">删除 Vault 中的真实 Markdown 文件</span>
               </div>
-              <button @click="showDeleteConfirm = true" :disabled="saving || deleting" class="danger-btn">
-                删除笔记
-              </button>
+              <button @click="showDeleteConfirm = true" :disabled="saving || deleting" class="danger-btn">删除笔记</button>
             </div>
           </section>
 
@@ -167,125 +110,72 @@
             </div>
           </section>
 
-          <section v-if="hasPromotionProjectionSection" class="ai-panel projection-panel-shell">
+          <!-- Promotion Projection Panel -->
+          <section v-if="projection.hasPromotionProjectionSection.value" class="ai-panel projection-panel-shell">
             <div class="append-head">
               <div>
                 <p class="panel-kicker">提升投射</p>
                 <span class="append-hint">当前笔记触发的 PR6 promotion 落地结果</span>
               </div>
-              <div class="projection-note-meta" v-if="noteProjectionSourceReintegrationIds.length">
-                <span class="meta-pill">来源 {{ noteProjectionSourceReintegrationIds.length }}</span>
-                <span class="meta-pill" v-if="relevantNoteSoulActions.length">动作 {{ relevantNoteSoulActions.length }}</span>
+              <div class="projection-note-meta" v-if="projection.noteProjectionSourceReintegrationIds.value.length">
+                <span class="meta-pill">来源 {{ projection.noteProjectionSourceReintegrationIds.value.length }}</span>
+                <span class="meta-pill" v-if="projection.relevantNoteSoulActions.value.length">动作 {{ projection.relevantNoteSoulActions.value.length }}</span>
               </div>
             </div>
-            <div v-if="relevantNoteSoulActions.length" class="projection-action-summary">
-              <span class="meta-pill">待治理 {{ notePendingSoulActions.length }}</span>
-              <span class="meta-pill">待派发 {{ noteApprovedSoulActions.length }}</span>
-              <span class="meta-pill">已执行 {{ noteDispatchedSoulActions.length }}</span>
+            <div v-if="projection.relevantNoteSoulActions.value.length" class="projection-action-summary">
+              <span class="meta-pill">待治理 {{ projection.notePendingSoulActions.value.length }}</span>
+              <span class="meta-pill">待派发 {{ projection.noteApprovedSoulActions.value.length }}</span>
+              <span class="meta-pill">已执行 {{ projection.noteDispatchedSoulActions.value.length }}</span>
             </div>
-            <div v-if="relevantNoteSoulActions.length" class="projection-action-list">
-              <article v-for="action in relevantNoteSoulActions" :key="action.id" class="projection-action-item">
+            <div v-if="projection.relevantNoteSoulActions.value.length" class="projection-action-list">
+              <article v-for="action in projection.relevantNoteSoulActions.value" :key="action.id" class="projection-action-item">
                 <div class="projection-action-top">
-                  <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
-                  <span class="prompt-status">{{ soulActionStatusText(action) }}</span>
+                  <strong>{{ projection.promotionActionLabel(action.actionKind) }}</strong>
+                  <span class="prompt-status">{{ projection.soulActionStatusText(action) }}</span>
                 </div>
                 <div class="projection-action-meta">
                   <span>治理 {{ action.governanceStatus }}</span>
                   <span>执行 {{ action.executionStatus }}</span>
-                  <span v-if="action.sourceReintegrationId">{{ formatSoulActionSourceLabel(action) }}</span>
-                  <span>创建于 {{ formatProjectionTime(action.createdAt) }}</span>
+                  <span v-if="action.sourceReintegrationId">{{ projection.formatSoulActionSourceLabel(action) }}</span>
+                  <span>创建于 {{ projection.formatProjectionTime(action.createdAt) }}</span>
                 </div>
-                <div v-if="action.governanceReason || formatSoulActionOutcomeSummary(action)" class="projection-action-detail-grid">
+                <div v-if="action.governanceReason || projection.formatSoulActionOutcomeSummary(action)" class="projection-action-detail-grid">
                   <div v-if="action.governanceReason" class="reintegration-review-reason">治理理由：{{ action.governanceReason }}</div>
-                  <div v-if="formatSoulActionOutcomeSummary(action)" class="reintegration-review-reason">执行摘要：{{ formatSoulActionOutcomeSummary(action) }}</div>
+                  <div v-if="projection.formatSoulActionOutcomeSummary(action)" class="reintegration-review-reason">执行摘要：{{ projection.formatSoulActionOutcomeSummary(action) }}</div>
                 </div>
               </article>
             </div>
             <PromotionProjectionPanel
-              :event-nodes="noteEventNodes"
-              :continuity-records="noteContinuityRecords"
-              :loading="projectionLoading"
-              :message="projectionMessage"
-              :message-type="projectionMessageType"
-              :format-time="formatProjectionTime"
-              @refresh="() => currentNoteId && loadPromotionProjections(currentNoteId)"
+              :event-nodes="projection.noteEventNodes.value"
+              :continuity-records="projection.noteContinuityRecords.value"
+              :loading="projection.projectionLoading.value"
+              :message="projection.projectionMessage.value"
+              :message-type="projection.projectionMessageType.value"
+              :format-time="projection.formatProjectionTime"
+              @refresh="() => currentNoteId && projection.loadPromotionProjections(currentNoteId)"
             />
           </section>
 
-          <section class="ai-panel">
-            <div class="append-head">
-              <p class="panel-kicker">关联任务</p>
-              <span class="append-hint">基于当前笔记内容发起关联任务，包含 LifeOS 与 OpenClaw 执行路径</span>
-            </div>
-            <div class="worker-form-grid">
-              <div class="worker-field" style="grid-column: 1 / -1">
-                <label>任务指令</label>
-                <textarea v-model="workerInstruction" rows="2" placeholder="输入自然语言指令，例如：搜索相关领域最新进展" :disabled="workerSubmitting"></textarea>
-              </div>
-              <div class="worker-field">
-                <label>结果归档维度</label>
-                <select v-model="workerDimension" :disabled="workerSubmitting">
-                  <option v-for="dimension in selectableDimensions" :key="dimension.value" :value="dimension.value">{{ dimension.label }}</option>
-                </select>
-              </div>
-            </div>
-            <div class="ai-actions">
-              <button @click="handleCreateOpenClawTask" :disabled="workerSubmitting || !workerInstruction.trim()" class="primary-btn secondary">
-                {{ workerSubmitting ? '发起中...' : '执行 OpenClaw 任务' }}
-              </button>
-              <button @click="handleCreateSummarizeTask" :disabled="workerSubmitting" class="primary-btn secondary">
-                {{ workerSubmitting ? '发起中...' : '生成笔记摘要' }}
-              </button>
-              <button @click="handleCreatePersonaSnapshotTask" :disabled="workerSubmitting" class="primary-btn secondary">
-                {{ workerSubmitting ? '发起中...' : '更新人格快照' }}
-              </button>
-            </div>
-            <div v-if="workerMessage" :class="['inline-msg', workerMessageType]">{{ workerMessage }}</div>
-          </section>
+          <!-- Worker Task Panel -->
+          <NoteWorkerPanel
+            :tasks="relatedWorkerTasks"
+            :busy-task-id="workerActionTaskId"
+            :submitting="workerSubmitting"
+            :extracting="extracting"
+            :message="workerMessage"
+            :message-type="workerMessageType"
+            @create-openclaw="handleCreateOpenClawTask"
+            @create-summarize="handleCreateSummarizeTask"
+            @create-persona-snapshot="handleCreatePersonaSnapshotTask"
+            @extract-tasks="handleExtractTasks"
+            @cancel-task="handleCancelRelatedTask"
+            @retry-task="handleRetryRelatedTask"
+            @open-detail="openRelatedWorkerTaskDetail"
+            @open-output="(output) => openRelatedWorkerOutput(output.id)"
+            @filter-change="handleRelatedWorkerFilterChange"
+            @refresh="reloadRelatedWorkerTasks"
+          />
 
-          <section class="ai-panel">
-            <div class="append-head">
-              <p class="panel-kicker">最近关联任务</p>
-              <span class="append-hint">展示由当前笔记发起的最近关联任务</span>
-            </div>
-            <div class="related-worker-toolbar">
-              <select v-model="relatedWorkerFilterStatus" class="related-worker-filter" @change="handleRelatedWorkerFilterChange">
-                <option value="">全部状态</option>
-                <option value="pending">等待执行</option>
-                <option value="running">执行中</option>
-                <option value="succeeded">已完成</option>
-                <option value="failed">失败</option>
-                <option value="cancelled">已取消</option>
-              </select>
-              <button type="button" class="btn-link" @click="reloadRelatedWorkerTasks">刷新</button>
-            </div>
-            <div v-if="relatedWorkerTasks.length" class="related-worker-list">
-              <WorkerTaskCard
-                v-for="task in relatedWorkerTasks"
-                :key="task.id"
-                :task="task"
-                :busy="workerActionTaskId === task.id"
-                @open-detail="openRelatedWorkerTaskDetail"
-                @open-output="(output) => openRelatedWorkerOutput(output.id)"
-                @cancel="handleCancelRelatedTask"
-                @retry="handleRetryRelatedTask"
-              />
-            </div>
-            <div v-else class="empty-worker-tasks">{{ relatedWorkerFilterStatus ? '当前筛选下没有关联任务' : '当前笔记还没有发起过关联任务' }}</div>
-          </section>
-
-          <section class="ai-panel">
-            <div class="append-head">
-              <p class="panel-kicker">行动项提取</p>
-              <span class="append-hint">将当前笔记的行动项提取为 worker task，并在下方关联任务中查看结果</span>
-            </div>
-            <div class="ai-actions">
-              <button @click="handleExtractTasks" :disabled="extracting" class="primary-btn secondary">
-                {{ extracting ? '发起中...' : '提取行动项' }}
-              </button>
-              <span v-if="extracting" class="extract-hint">正在创建 worker task...</span>
-            </div>
-          </section>
           </template>
         </div>
       </div>
@@ -315,16 +205,17 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchReintegrationRecords, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchSoulActions } from '../api/client';
-import { formatSoulActionKindLabel, formatSoulActionOutcomeSummary, formatSoulActionSourceLabel } from '@lifeos/shared';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
-import WorkerTaskCard from './WorkerTaskCard.vue';
+import NoteApprovalCard from './NoteApprovalCard.vue';
+import NoteWorkerPanel from './NoteWorkerPanel.vue';
 import PromotionProjectionPanel from './PromotionProjectionPanel.vue';
 import { isIndexRefreshEvent } from '../composables/useWebSocket';
+import { useNoteProjection } from '../composables/useNoteProjection';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
-import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
+import { workerTaskActionMessage } from '../utils/workerTaskLabels';
 import { getDimensionColor, getDimensionLabel, SELECTABLE_DIMENSIONS } from '../utils/dimensions';
 
 const props = defineProps<{ noteId: string | null }>();
@@ -339,20 +230,11 @@ const extracting = ref(false);
 const workerSubmitting = ref(false);
 const workerMessage = ref('');
 const workerMessageType = ref<'success' | 'error'>('success');
-const workerInstruction = ref('');
-const workerDimension = ref<SelectableDimension>('learning');
 const relatedWorkerTasks = ref<WorkerTask[]>([]);
 const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
 const selectedWorkerTaskId = ref<string | null>(null);
 const personaSnapshot = ref<PersonaSnapshot | null>(null);
-const eventNodes = ref<EventNode[]>([]);
-const continuityRecords = ref<ContinuityRecord[]>([]);
-const projectionSourceRecords = ref<Array<{ id: string; sourceNoteId: string | null; reviewStatus: string }>>([]);
-const noteSoulActions = ref<SoulAction[]>([]);
-const projectionLoading = ref(false);
-const projectionMessage = ref('');
-const projectionMessageType = ref<'success' | 'error'>('success');
 const saving = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
@@ -361,21 +243,18 @@ const saveMsg = ref('');
 const saveMsgType = ref<'success' | 'error'>('success');
 const decryptedContent = ref<string | null>(null);
 
+const projection = useNoteProjection(currentNoteId);
+
 const isApprovalNote = computed(() => {
   return note.value && note.value.approval_status != null && note.value.approval_status !== '';
 });
 
 const renderedContent = computed(() => {
   if (!note.value?.content) return '<p>暂无正文内容。</p>';
-
-  // Use decrypted content if available
   const content = decryptedContent.value || note.value.content;
-
-  // If encrypted but not decrypted, show placeholder
   if (note.value.encrypted && !decryptedContent.value) {
     return '<p class="encrypted-placeholder">🔒 内容已加密，需要解锁后查看</p>';
   }
-
   const html = marked.parse(content) as string;
   return DOMPurify.sanitize(html);
 });
@@ -386,176 +265,40 @@ const statuses = [
   { value: 'done', label: '完成' },
   { value: 'cancelled', label: '取消' },
 ];
-
 const priorities = [
   { value: 'high', label: '高' },
   { value: 'medium', label: '中' },
   { value: 'low', label: '低' },
 ];
-
-const selectableDimensions = SELECTABLE_DIMENSIONS;
-
-const statusLabels: Record<string, string> = {
-  pending: '待办',
-  in_progress: '进行中',
-  done: '完成',
-  cancelled: '取消',
-};
-
-const priorityLabels: Record<string, string> = {
-  high: '高',
-  medium: '中',
-  low: '低',
-};
-
-const typeLabels: Record<string, string> = {
-  task: '任务',
-  schedule: '日程',
-  note: '笔记',
-  record: '记录',
-  milestone: '里程碑',
-  review: '复盘',
-};
-
-const noteProjectionSourceReintegrationIds = computed(() => {
-  if (!currentNoteId.value) return [];
-  const sourceNoteId = currentNoteId.value;
-  const acceptedIds = projectionSourceRecords.value
-    .filter((record) => record.sourceNoteId === sourceNoteId && record.reviewStatus === 'accepted')
-    .map((record) => record.id);
-  const actionIds = noteSoulActions.value
-    .map((action) => action.sourceReintegrationId)
-    .filter((value): value is string => Boolean(value));
-  const eventNodeIds = eventNodes.value.map((eventNode) => eventNode.sourceReintegrationId);
-  const continuityIds = continuityRecords.value.map((continuity) => continuity.sourceReintegrationId);
-  return [...new Set([...acceptedIds, ...actionIds, ...eventNodeIds, ...continuityIds])];
-});
-
-const noteEventNodes = computed(() => {
-  if (!currentNoteId.value) return [];
-  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
-  return eventNodes.value.filter((eventNode) => (
-    eventNode.sourceNoteId === currentNoteId.value
-    || sourceIds.has(eventNode.sourceReintegrationId)
-  ));
-});
-
-const noteContinuityRecords = computed(() => {
-  if (!currentNoteId.value) return [];
-  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
-  return continuityRecords.value.filter((continuity) => (
-    continuity.sourceNoteId === currentNoteId.value
-    || sourceIds.has(continuity.sourceReintegrationId)
-  ));
-});
-
-const relevantNoteSoulActions = computed(() => {
-  if (!currentNoteId.value) return [];
-  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
-  return noteSoulActions.value.filter((action) => {
-    const matchesCurrentNote = action.sourceNoteId === currentNoteId.value;
-    const matchesProjectionSource = action.sourceReintegrationId != null && sourceIds.has(action.sourceReintegrationId);
-    return matchesCurrentNote || matchesProjectionSource;
-  });
-});
-
-const notePendingSoulActions = computed(() => {
-  return relevantNoteSoulActions.value.filter((action) => action.governanceStatus === 'pending_review');
-});
-
-const noteApprovedSoulActions = computed(() => {
-  return relevantNoteSoulActions.value.filter((action) => action.governanceStatus === 'approved');
-});
-
-const noteDispatchedSoulActions = computed(() => {
-  return relevantNoteSoulActions.value.filter((action) => action.executionStatus === 'succeeded');
-});
-
-const hasPromotionProjectionSection = computed(() => {
-  return projectionLoading.value
-    || noteEventNodes.value.length > 0
-    || noteContinuityRecords.value.length > 0
-    || relevantNoteSoulActions.value.length > 0
-    || noteProjectionSourceReintegrationIds.value.length > 0
-    || Boolean(projectionMessage.value);
-});
-
-function formatProjectionTime(ts: string) {
-  return new Date(ts).toLocaleString('zh-CN');
-}
-
-function promotionActionLabel(actionKind: SoulAction['actionKind']) {
-  return formatSoulActionKindLabel(actionKind);
-}
-
-function soulActionStatusText(action: SoulAction) {
-  if (action.executionStatus === 'succeeded') return '已执行';
-  if (action.executionStatus === 'running') return '执行中';
-  if (action.executionStatus === 'failed') return '执行失败';
-  if (action.executionStatus === 'cancelled') return '已取消';
-  if (action.governanceStatus === 'approved') return '待派发';
-  if (action.governanceStatus === 'deferred') return '已延后';
-  if (action.governanceStatus === 'discarded') return '已丢弃';
-  return '待治理';
-}
-
-function doesProjectionArtifactAffectCurrentNote(sourceNoteId: string | null, sourceReintegrationId: string) {
-  if (!currentNoteId.value) return false;
-  if (sourceNoteId === currentNoteId.value) return true;
-
-  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
-  return sourceIds.has(sourceReintegrationId);
-}
-
-function doesSoulActionAffectCurrentNote(action: SoulAction) {
-  if (!currentNoteId.value) return false;
-  if (action.sourceNoteId === currentNoteId.value) return true;
-
-  const sourceIds = new Set(noteProjectionSourceReintegrationIds.value);
-  if (action.sourceReintegrationId != null && sourceIds.has(action.sourceReintegrationId)) {
-    return true;
-  }
-
-  return action.sourceNoteId?.startsWith('reint:')
-    ? sourceIds.has(action.sourceNoteId.slice('reint:'.length))
-    : false;
-}
+const statusLabels: Record<string, string> = { pending: '待办', in_progress: '进行中', done: '完成', cancelled: '取消' };
+const priorityLabels: Record<string, string> = { high: '高', medium: '中', low: '低' };
+const typeLabels: Record<string, string> = { task: '任务', schedule: '日程', note: '笔记', record: '记录', milestone: '里程碑', review: '复盘' };
 
 function dimensionColor(dimension: string) {
   return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
 }
 
+// ── Data Loading ──
+
 async function loadCurrentNote(noteId: string, requestId?: number) {
   const nextNote = await fetchNoteById(noteId) as any;
-  if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) {
-    return null;
-  }
-
+  if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) return null;
   note.value = nextNote;
   decryptedContent.value = null;
-
   if (note.value?.encrypted && note.value.content) {
     try {
       const key = getEncryptionKey();
       const decrypted = await decryptContent(note.value.content, key);
-      if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) {
-        return note.value;
-      }
+      if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) return note.value;
       decryptedContent.value = decrypted;
-    } catch (e) {
-      console.error('Auto-decrypt failed:', e);
-    }
+    } catch (e) { console.error('Auto-decrypt failed:', e); }
   }
-
   return note.value;
 }
 
 async function loadRelatedWorkerTasks(sourceNoteId: string, requestId?: number) {
   try {
-    const tasks = await fetchWorkerTasks(5, {
-      sourceNoteId,
-      status: (relatedWorkerFilterStatus.value || undefined) as any,
-    });
+    const tasks = await fetchWorkerTasks(5, { sourceNoteId, status: (relatedWorkerFilterStatus.value || undefined) as any });
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     relatedWorkerTasks.value = tasks;
   } catch {
@@ -575,358 +318,151 @@ async function loadPersonaSnapshot(sourceNoteId: string, requestId?: number) {
   }
 }
 
-async function loadPromotionProjections(sourceNoteId: string, requestId?: number) {
-  projectionLoading.value = true;
-  projectionMessage.value = '';
-  try {
-    const [reintegrationRecords, soulActions] = await Promise.all([
-      fetchReintegrationRecords({ sourceNoteId }),
-      fetchSoulActions({ sourceNoteId }),
-    ]);
-    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
-    projectionSourceRecords.value = reintegrationRecords.filter((record) => record.sourceNoteId === sourceNoteId);
-    const projectionSourceRecordIds = new Set(projectionSourceRecords.value.map((record) => record.id));
-    noteSoulActions.value = soulActions.filter((action) => (
-      action.sourceNoteId === sourceNoteId
-      || (action.sourceReintegrationId != null && projectionSourceRecordIds.has(action.sourceReintegrationId))
-    ));
-    const sourceReintegrationIds = [...new Set(noteSoulActions.value
-      .map((action) => action.sourceReintegrationId)
-      .filter((value): value is string => Boolean(value)))];
-    const scopedSourceIds = [...new Set([...projectionSourceRecords.value.map((record) => record.id), ...sourceReintegrationIds])];
-    if (!scopedSourceIds.length) {
-      eventNodes.value = [];
-      continuityRecords.value = [];
-      return;
-    }
-
-    const [eventNodeResult, continuityResult] = await Promise.allSettled([
-      fetchEventNodeProjectionList(scopedSourceIds),
-      fetchContinuityProjectionList(scopedSourceIds),
-    ]);
-    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
-
-    const projectionErrors: string[] = [];
-
-    if (eventNodeResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(eventNodeResult.value.filters.sourceReintegrationIds);
-      eventNodes.value = eventNodeResult.value.items.filter((eventNode) => (
-        serverScopedIds.size === 0 || serverScopedIds.has(eventNode.sourceReintegrationId)
-      ));
-    } else {
-      eventNodes.value = [];
-      projectionErrors.push(eventNodeResult.reason?.message || '加载 event nodes 失败');
-    }
-
-    if (continuityResult.status === 'fulfilled') {
-      const serverScopedIds = new Set(continuityResult.value.filters.sourceReintegrationIds);
-      continuityRecords.value = continuityResult.value.items.filter((continuity) => (
-        serverScopedIds.size === 0 || serverScopedIds.has(continuity.sourceReintegrationId)
-      ));
-    } else {
-      continuityRecords.value = [];
-      projectionErrors.push(continuityResult.reason?.message || '加载 continuity records 失败');
-    }
-
-    if (projectionErrors.length) {
-      projectionMessage.value = projectionErrors.join('；');
-      projectionMessageType.value = 'error';
-    }
-  } catch (e: any) {
-    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
-    projectionSourceRecords.value = [];
-    noteSoulActions.value = [];
-    eventNodes.value = [];
-    continuityRecords.value = [];
-    projectionMessage.value = e.message || '加载 promotion projections 失败';
-    projectionMessageType.value = 'error';
-  } finally {
-    if (requestId == null || (requestId === activeNoteRequestId && currentNoteId.value === sourceNoteId)) {
-      projectionLoading.value = false;
-    }
-  }
-}
-
 async function reloadRelatedWorkerTasks() {
   if (!currentNoteId.value) return;
   await loadRelatedWorkerTasks(currentNoteId.value);
 }
 
-async function handleRelatedWorkerFilterChange() {
+async function handleRelatedWorkerFilterChange(status: string) {
+  relatedWorkerFilterStatus.value = status;
   await reloadRelatedWorkerTasks();
 }
 
-watch(() => props.noteId, (id) => {
-  currentNoteId.value = id;
-}, { immediate: true });
+// ── Watchers ──
+
+watch(() => props.noteId, (id) => { currentNoteId.value = id; }, { immediate: true });
 
 watch(currentNoteId, async (id) => {
   const requestId = ++activeNoteRequestId;
   if (!id) {
-    note.value = null;
-    error.value = null;
-    loading.value = false;
-    decryptedContent.value = null;
-    relatedWorkerTasks.value = [];
-    personaSnapshot.value = null;
-    projectionSourceRecords.value = [];
-    noteSoulActions.value = [];
-    eventNodes.value = [];
-    continuityRecords.value = [];
-    projectionLoading.value = false;
-    projectionMessage.value = '';
+    note.value = null; error.value = null; loading.value = false; decryptedContent.value = null;
+    relatedWorkerTasks.value = []; personaSnapshot.value = null;
+    projection.resetProjectionState();
     showDeleteConfirm.value = false;
     return;
   }
-  loading.value = true;
-  error.value = null;
-  workerMessage.value = '';
-  workerInstruction.value = '';
-  workerDimension.value = 'learning';
-  relatedWorkerFilterStatus.value = '';
-  appendText.value = '';
-  saveMsg.value = '';
-  decryptedContent.value = null;
-  showDeleteConfirm.value = false;
+  loading.value = true; error.value = null; workerMessage.value = '';
+  relatedWorkerFilterStatus.value = ''; appendText.value = ''; saveMsg.value = '';
+  decryptedContent.value = null; showDeleteConfirm.value = false;
   try {
     const loadedNote = await loadCurrentNote(id, requestId);
     if (!loadedNote || requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
-    workerInstruction.value = '';
     await Promise.all([
       loadRelatedWorkerTasks(id, requestId),
       loadPersonaSnapshot(id, requestId),
-      loadPromotionProjections(id, requestId),
+      projection.loadPromotionProjections(id, requestId, activeNoteRequestId),
     ]);
-
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
   } catch (e) {
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
     error.value = e as Error;
   } finally {
-    if (requestId === activeNoteRequestId && currentNoteId.value === id) {
-      loading.value = false;
-    }
+    if (requestId === activeNoteRequestId && currentNoteId.value === id) loading.value = false;
   }
 }, { immediate: true });
+
+// ── Handlers ──
 
 async function handleUpdateStatus(status: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try {
-    await updateNote(currentNoteId.value, { status });
-    note.value = { ...note.value, status };
-    showMsg('状态已更新', 'success');
-  } catch (e: any) {
-    showMsg(e.message || '更新失败', 'error');
-  } finally {
-    saving.value = false;
-  }
+  try { await updateNote(currentNoteId.value, { status }); note.value = { ...note.value, status }; showMsg('状态已更新', 'success'); }
+  catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
+  finally { saving.value = false; }
 }
 
 async function handleUpdatePriority(priority: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try {
-    await updateNote(currentNoteId.value, { priority });
-    note.value = { ...note.value, priority };
-    showMsg('优先级已更新', 'success');
-  } catch (e: any) {
-    showMsg(e.message || '更新失败', 'error');
-  } finally {
-    saving.value = false;
-  }
+  try { await updateNote(currentNoteId.value, { priority }); note.value = { ...note.value, priority }; showMsg('优先级已更新', 'success'); }
+  catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
+  finally { saving.value = false; }
 }
 
 async function handleAppend() {
   if (!currentNoteId.value || !appendText.value.trim()) return;
   saving.value = true;
-  try {
-    await appendNoteApi(currentNoteId.value, appendText.value.trim());
-    appendText.value = '';
-    showMsg('备注已添加', 'success');
-    note.value = await fetchNoteById(currentNoteId.value);
-  } catch (e: any) {
-    showMsg(e.message || '添加失败', 'error');
-  } finally {
-    saving.value = false;
-  }
+  try { await appendNoteApi(currentNoteId.value, appendText.value.trim()); appendText.value = ''; showMsg('备注已添加', 'success'); note.value = await fetchNoteById(currentNoteId.value); }
+  catch (e: any) { showMsg(e.message || '添加失败', 'error'); }
+  finally { saving.value = false; }
 }
 
 async function handleExtractTasks() {
   if (!currentNoteId.value) return;
-  extracting.value = true;
-  workerMessage.value = '';
-  try {
-    const task = await extractTasks(currentNoteId.value);
-    await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskActionMessage('created', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '行动项提取任务创建失败';
-    workerMessageType.value = 'error';
-  } finally {
-    extracting.value = false;
-  }
+  extracting.value = true; workerMessage.value = '';
+  try { const task = await extractTasks(currentNoteId.value); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '行动项提取任务创建失败'; workerMessageType.value = 'error'; }
+  finally { extracting.value = false; }
 }
 
-async function handleCreateOpenClawTask() {
+async function handleCreateOpenClawTask(payload: { instruction: string; dimension: SelectableDimension }) {
   if (!currentNoteId.value || !note.value) return;
-  workerSubmitting.value = true;
-  workerMessage.value = '';
-  try {
-    const task = await createWorkerTask({
-      taskType: 'openclaw_task',
-      sourceNoteId: currentNoteId.value,
-      input: {
-        instruction: workerInstruction.value.trim(),
-        outputDimension: workerDimension.value,
-      },
-    });
-    await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskActionMessage('created', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '关联任务创建失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerSubmitting.value = false;
-  }
+  workerSubmitting.value = true; workerMessage.value = '';
+  try { const task = await createWorkerTask({ taskType: 'openclaw_task', sourceNoteId: currentNoteId.value, input: { instruction: payload.instruction, outputDimension: payload.dimension } }); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '关联任务创建失败'; workerMessageType.value = 'error'; }
+  finally { workerSubmitting.value = false; }
 }
 
 async function handleCreateSummarizeTask() {
   if (!currentNoteId.value || !note.value) return;
-  workerSubmitting.value = true;
-  workerMessage.value = '';
-  try {
-    const task = await createWorkerTask({
-      taskType: 'summarize_note',
-      sourceNoteId: currentNoteId.value,
-      input: {
-        noteId: currentNoteId.value,
-      },
-    });
-    await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskActionMessage('created', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '摘要任务创建失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerSubmitting.value = false;
-  }
+  workerSubmitting.value = true; workerMessage.value = '';
+  try { const task = await createWorkerTask({ taskType: 'summarize_note', sourceNoteId: currentNoteId.value, input: { noteId: currentNoteId.value } }); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '摘要任务创建失败'; workerMessageType.value = 'error'; }
+  finally { workerSubmitting.value = false; }
 }
 
 async function handleCreatePersonaSnapshotTask() {
   if (!currentNoteId.value || !note.value) return;
-  workerSubmitting.value = true;
-  workerMessage.value = '';
-  try {
-    const task = await createWorkerTask({
-      taskType: 'update_persona_snapshot',
-      sourceNoteId: currentNoteId.value,
-      input: {
-        noteId: currentNoteId.value,
-      },
-    });
-    await Promise.all([
-      loadRelatedWorkerTasks(currentNoteId.value),
-      loadPersonaSnapshot(currentNoteId.value),
-    ]);
-    workerMessage.value = workerTaskActionMessage('created', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '人格快照任务创建失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerSubmitting.value = false;
-  }
+  workerSubmitting.value = true; workerMessage.value = '';
+  try { const task = await createWorkerTask({ taskType: 'update_persona_snapshot', sourceNoteId: currentNoteId.value, input: { noteId: currentNoteId.value } }); await Promise.all([loadRelatedWorkerTasks(currentNoteId.value), loadPersonaSnapshot(currentNoteId.value)]); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '人格快照任务创建失败'; workerMessageType.value = 'error'; }
+  finally { workerSubmitting.value = false; }
 }
 
 async function handleRetryRelatedTask(taskId: string) {
   if (!currentNoteId.value) return;
-  workerActionTaskId.value = taskId;
-  workerMessage.value = '';
-  try {
-    const task = await retryWorkerTask(taskId);
-    await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskActionMessage('retried', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '任务重试失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerActionTaskId.value = null;
-  }
+  workerActionTaskId.value = taskId; workerMessage.value = '';
+  try { const task = await retryWorkerTask(taskId); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('retried', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '任务重试失败'; workerMessageType.value = 'error'; }
+  finally { workerActionTaskId.value = null; }
 }
 
 async function handleCancelRelatedTask(taskId: string) {
   if (!currentNoteId.value) return;
-  workerActionTaskId.value = taskId;
-  workerMessage.value = '';
-  try {
-    const task = await cancelWorkerTask(taskId);
-    await loadRelatedWorkerTasks(currentNoteId.value);
-    workerMessage.value = workerTaskActionMessage('cancelled', task);
-    workerMessageType.value = 'success';
-  } catch (e: any) {
-    workerMessage.value = e.message || '任务取消失败';
-    workerMessageType.value = 'error';
-  } finally {
-    workerActionTaskId.value = null;
-  }
+  workerActionTaskId.value = taskId; workerMessage.value = '';
+  try { const task = await cancelWorkerTask(taskId); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('cancelled', task); workerMessageType.value = 'success'; }
+  catch (e: any) { workerMessage.value = e.message || '任务取消失败'; workerMessageType.value = 'error'; }
+  finally { workerActionTaskId.value = null; }
 }
 
 async function handleApprove() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try {
-    await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' });
-    note.value = { ...note.value, approval_status: 'approved', status: 'done' };
-    showMsg('审批已批准', 'success');
-  } catch (e: any) {
-    showMsg(e.message || '操作失败', 'error');
-  } finally {
-    saving.value = false;
-  }
+  try { await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' }); note.value = { ...note.value, approval_status: 'approved', status: 'done' }; showMsg('审批已批准', 'success'); }
+  catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
+  finally { saving.value = false; }
 }
 
 async function handleReject() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try {
-    await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' });
-    note.value = { ...note.value, approval_status: 'rejected', status: 'done' };
-    showMsg('审批已拒绝', 'success');
-  } catch (e: any) {
-    showMsg(e.message || '操作失败', 'error');
-  } finally {
-    saving.value = false;
-  }
+  try { await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' }); note.value = { ...note.value, approval_status: 'rejected', status: 'done' }; showMsg('审批已拒绝', 'success'); }
+  catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
+  finally { saving.value = false; }
 }
 
 async function handleDelete() {
   if (!currentNoteId.value || !note.value || deleting.value) return;
   deleting.value = true;
-  try {
-    await deleteNoteApi(currentNoteId.value);
-    showDeleteConfirm.value = false;
-    showMsg('笔记已删除', 'success');
-    emit('deleted');
-    emit('close');
-  } catch (e: any) {
-    showMsg(e.message || '删除失败', 'error');
-  } finally {
-    deleting.value = false;
-  }
+  try { await deleteNoteApi(currentNoteId.value); showDeleteConfirm.value = false; showMsg('笔记已删除', 'success'); emit('deleted'); emit('close'); }
+  catch (e: any) { showMsg(e.message || '删除失败', 'error'); }
+  finally { deleting.value = false; }
 }
 
-function openRelatedWorkerOutput(noteId: string) {
-  currentNoteId.value = noteId;
-}
+function openRelatedWorkerOutput(noteId: string) { currentNoteId.value = noteId; }
+function openRelatedWorkerTaskDetail(taskId: string) { selectedWorkerTaskId.value = taskId; }
 
-function openRelatedWorkerTaskDetail(taskId: string) {
-  selectedWorkerTaskId.value = taskId;
-}
+// ── WebSocket ──
 
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<WsEvent>).detail;
@@ -934,892 +470,109 @@ function handleWsUpdate(event: Event) {
   if (wsEvent.type === 'note-worker-tasks-updated') {
     if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
     void loadRelatedWorkerTasks(currentNoteId.value);
-    if (wsEvent.data.task.taskType === 'update_persona_snapshot') {
-      void loadPersonaSnapshot(currentNoteId.value);
-    }
+    if (wsEvent.data.task.taskType === 'update_persona_snapshot') void loadPersonaSnapshot(currentNoteId.value);
     return;
   }
-  if (wsEvent.type === 'note-updated') {
-    if (wsEvent.data.noteId !== currentNoteId.value) return;
-    void loadCurrentNote(currentNoteId.value);
-    return;
-  }
-  if (wsEvent.type === 'note-deleted') {
-    if (wsEvent.data.noteId !== currentNoteId.value) return;
-    emit('deleted');
-    emit('close');
-    return;
-  }
+  if (wsEvent.type === 'note-updated') { if (wsEvent.data.noteId !== currentNoteId.value) return; void loadCurrentNote(currentNoteId.value); return; }
+  if (wsEvent.type === 'note-deleted') { if (wsEvent.data.noteId !== currentNoteId.value) return; emit('deleted'); emit('close'); return; }
   if (wsEvent.type === 'event-node-updated') {
-    if (!doesProjectionArtifactAffectCurrentNote(
-      wsEvent.data.eventNode.sourceNoteId,
-      wsEvent.data.eventNode.sourceReintegrationId,
-    )) return;
-    void loadPromotionProjections(currentNoteId.value);
-    return;
+    if (!projection.doesProjectionArtifactAffectCurrentNote(wsEvent.data.eventNode.sourceNoteId, wsEvent.data.eventNode.sourceReintegrationId)) return;
+    void projection.loadPromotionProjections(currentNoteId.value); return;
   }
   if (wsEvent.type === 'continuity-record-updated') {
-    if (!doesProjectionArtifactAffectCurrentNote(
-      wsEvent.data.continuityRecord.sourceNoteId,
-      wsEvent.data.continuityRecord.sourceReintegrationId,
-    )) return;
-    void loadPromotionProjections(currentNoteId.value);
-    return;
+    if (!projection.doesProjectionArtifactAffectCurrentNote(wsEvent.data.continuityRecord.sourceNoteId, wsEvent.data.continuityRecord.sourceReintegrationId)) return;
+    void projection.loadPromotionProjections(currentNoteId.value); return;
   }
-  if (wsEvent.type === 'reintegration-record-updated') {
-    if (wsEvent.data.sourceNoteId !== currentNoteId.value) return;
-    void loadPromotionProjections(currentNoteId.value);
-    return;
-  }
-  if (wsEvent.type === 'soul-action-updated') {
-    if (!doesSoulActionAffectCurrentNote(wsEvent.data)) return;
-    void loadPromotionProjections(currentNoteId.value);
-    return;
-  }
-  if (isIndexRefreshEvent(wsEvent)) {
-    void loadRelatedWorkerTasks(currentNoteId.value);
-  }
+  if (wsEvent.type === 'reintegration-record-updated') { if (wsEvent.data.sourceNoteId !== currentNoteId.value) return; void projection.loadPromotionProjections(currentNoteId.value); return; }
+  if (wsEvent.type === 'soul-action-updated') { if (!projection.doesSoulActionAffectCurrentNote(wsEvent.data)) return; void projection.loadPromotionProjections(currentNoteId.value); return; }
+  if (isIndexRefreshEvent(wsEvent)) void loadRelatedWorkerTasks(currentNoteId.value);
 }
 
-onMounted(() => {
-  document.addEventListener('ws-update', handleWsUpdate);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('ws-update', handleWsUpdate);
-});
+onMounted(() => { document.addEventListener('ws-update', handleWsUpdate); });
+onUnmounted(() => { document.removeEventListener('ws-update', handleWsUpdate); });
 
 function showMsg(msg: string, type: 'success' | 'error') {
-  saveMsg.value = msg;
-  saveMsgType.value = type;
-  setTimeout(() => {
-    saveMsg.value = '';
-  }, 2500);
+  saveMsg.value = msg; saveMsgType.value = type;
+  setTimeout(() => { saveMsg.value = ''; }, 2500);
 }
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(4, 11, 20, 0.62);
-  backdrop-filter: blur(12px);
-  z-index: 1000;
-}
-
-.modal-card {
-  position: relative;
-  width: min(980px, 100%);
-  max-height: 90vh;
-  overflow-y: auto;
-  padding: 24px;
-  border: 1px solid color-mix(in srgb, var(--dimension-color) 22%, var(--border));
-  border-radius: 30px;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--dimension-color) 8%, transparent), transparent 26%),
-    color-mix(in srgb, var(--surface-strong) 95%, transparent);
-  box-shadow: 0 40px 80px -42px var(--shadow-strong);
-}
-
-.close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  color: var(--text-muted);
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.state-card {
-  padding: 24px;
-  border-radius: 20px;
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-}
-
-.error-state {
-  color: var(--danger);
-}
-
-.note-content {
-  display: grid;
-  gap: 18px;
-}
-
-.note-hero,
-.control-panel,
-.append-section,
-.body-content,
-.ai-panel,
-.danger-section {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-}
-
-.note-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 0.8fr);
-  gap: 18px;
-  padding: 22px;
-  border-radius: 24px;
-}
-
-.hero-kicker,
-.panel-kicker {
-  margin: 0 0 6px;
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.hero-copy h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 1.5rem + 1vw, 2.6rem);
-  line-height: 1.05;
-}
-
-.hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.meta-pill,
-.tag,
-.task-priority,
-.task-due {
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 0.74rem;
-}
-
-.meta-pill {
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-}
-
-.meta-pill.dimension {
-  background: color-mix(in srgb, var(--dimension-color) 14%, transparent);
-  color: var(--dimension-color);
-}
-
-.status-pending {
-  color: var(--signal);
-}
-
-.status-in_progress {
-  color: var(--warn);
-}
-
-.status-done {
-  color: var(--ok);
-}
-
-.status-cancelled {
-  color: var(--text-muted);
-}
-
-.priority-high {
-  color: var(--danger);
-}
-
-.priority-medium {
-  color: var(--warn);
-}
-
-.priority-low {
-  color: var(--accent);
-}
-
-.hero-facts {
-  display: grid;
-  gap: 12px;
-}
-
-.fact {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--surface-muted) 86%, transparent);
-}
-
-.fact-label {
-  font-size: 0.74rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag {
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-}
-
-.control-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.control-panel,
-.append-section,
-.body-content,
-.ai-panel,
-.danger-section {
-  padding: 20px;
-  border-radius: 22px;
-}
-
-.btn-group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-btn,
-.primary-btn,
-.danger-btn {
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-muted) 86%, transparent);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.action-btn.active,
-.primary-btn {
-  border-color: color-mix(in srgb, var(--dimension-color) 28%, var(--border));
-  background: color-mix(in srgb, var(--dimension-color) 12%, transparent);
-  color: var(--dimension-color);
-}
-
-.action-btn:disabled,
-.primary-btn:disabled,
-.danger-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.append-head,
-.body-head,
-.ai-actions,
-.append-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.append-hint,
-.extract-hint {
-  color: var(--text-muted);
-  font-size: 0.84rem;
-}
-
-.snapshot-card {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--border));
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-}
-
-.snapshot-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.snapshot-summary {
-  margin: 0;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.snapshot-preview {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.projection-panel-shell :deep(.projection-card) {
-  border: none;
-  padding: 0;
-  background: transparent;
-}
-
-.projection-panel-shell :deep(.reintegration-head) {
-  display: none;
-}
-
-.projection-note-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.projection-action-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.projection-action-list {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.projection-action-item {
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-muted) 88%, transparent);
-  display: grid;
-  gap: 8px;
-}
-
-.projection-action-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.projection-action-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  color: var(--text-muted);
-  font-size: 0.84rem;
-}
-
-.projection-action-detail-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.append-input {
-  width: 100%;
-  margin-top: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
-  color: var(--text);
-  resize: vertical;
-}
-
-.append-actions {
-  margin-top: 12px;
-}
-
-.save-msg {
-  font-size: 0.84rem;
-}
-
-.save-msg.success {
-  color: var(--ok);
-}
-
-.save-msg.error {
-  color: var(--danger);
-}
-
-.inline-msg {
-  margin-top: 12px;
-  font-size: 0.84rem;
-}
-
-.inline-msg.success {
-  color: var(--ok);
-}
-
-.inline-msg.error {
-  color: var(--danger);
-}
-
-.worker-form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.worker-field {
-  display: grid;
-  gap: 6px;
-}
-
-.worker-field label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.worker-field input,
-.worker-field select {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
-  color: var(--text);
-}
-
-.related-worker-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 8px;
-  margin-bottom: 10px;
-}
-
-.related-worker-filter {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.related-worker-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.related-worker-item {
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-  display: grid;
-  gap: 6px;
-}
-
-.related-worker-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.related-worker-status {
-  font-size: 12px;
-}
-
-.related-worker-meta-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.related-worker-pill {
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--text-muted) 20%, var(--border));
-  background: color-mix(in srgb, var(--surface-muted) 50%, transparent);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-family: monospace;
-}
-
-.related-worker-meta,
-.related-worker-summary,
-.related-worker-params,
-.related-worker-error {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.related-worker-error {
-  color: var(--danger);
-}
-
-.related-worker-output {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.related-worker-output-item {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: none;
-  cursor: pointer;
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-  color: var(--ok);
-}
-
-.related-worker-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 6px;
-}
-
-.related-worker-action {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--card-bg);
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--signal);
-}
-
-.related-worker-action.danger {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
-}
-
-.related-worker-action:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.empty-worker-tasks {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.markdown-body {
-  color: var(--text-secondary);
-  line-height: 1.75;
-}
-
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3) {
-  color: var(--text);
-}
-
-.markdown-body :deep(pre) {
-  overflow-x: auto;
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(8, 17, 28, 0.9);
-  color: #e2edf8;
-}
-
-.markdown-body :deep(code) {
-  font-family: "SFMono-Regular", Consolas, monospace;
-}
-
-.primary-btn.secondary {
-  color: var(--signal);
-  border-color: color-mix(in srgb, var(--signal) 26%, var(--border));
-  background: color-mix(in srgb, var(--signal-soft) 78%, transparent);
-}
-
-.danger-section {
-  border-color: color-mix(in srgb, var(--danger) 24%, var(--border));
-  background: color-mix(in srgb, var(--danger) 4%, var(--surface));
-}
-
-.danger-btn {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-}
-
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(4, 11, 20, 0.6);
-  backdrop-filter: blur(8px);
-}
-
-.confirm-card {
-  padding: 28px;
-  border: 1px solid var(--border-strong);
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
-  box-shadow: 0 32px 64px -28px var(--shadow-strong);
-  width: min(380px, 90vw);
-  display: grid;
-  gap: 14px;
-}
-
-.confirm-card h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.confirm-card p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.confirm-note {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.confirm-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.btn-cancel,
-.btn-confirm-danger {
-  padding: 8px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn-cancel {
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-}
-
-.btn-confirm-danger {
-  background: color-mix(in srgb, var(--danger) 14%, transparent);
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
-}
-
-.btn-cancel:disabled,
-.btn-confirm-danger:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.extract-result {
-  margin-top: 14px;
-  display: grid;
-  gap: 12px;
-}
-
-.extract-result h4 {
-  margin: 0;
-}
-
-.task-list {
-  display: grid;
-  gap: 10px;
-}
-
-.task-item {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: var(--surface-muted);
-}
-
-.task-title {
-  font-weight: 600;
-}
-
-.task-due {
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  color: var(--warn);
-}
-
-.task-priority.pri-high {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-}
-
-.task-priority.pri-medium {
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  color: var(--warn);
-}
-
-.task-priority.pri-low {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-}
-
-@media (max-width: 900px) {
-  .note-hero,
-  .control-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
+.modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4, 11, 20, 0.62); backdrop-filter: blur(12px); z-index: 1000; }
+.modal-card { position: relative; width: min(980px, 100%); max-height: 90vh; overflow-y: auto; padding: 24px; border: 1px solid color-mix(in srgb, var(--dimension-color) 22%, var(--border)); border-radius: 30px; background: linear-gradient(145deg, color-mix(in srgb, var(--dimension-color) 8%, transparent), transparent 26%), color-mix(in srgb, var(--surface-strong) 95%, transparent); box-shadow: 0 40px 80px -42px var(--shadow-strong); }
+.close-btn { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+.state-card { padding: 24px; border-radius: 20px; background: var(--surface-muted); color: var(--text-secondary); }
+.error-state { color: var(--danger); }
+.note-content { display: grid; gap: 18px; }
+
+.note-hero, .control-panel, .append-section, .body-content, .ai-panel, .danger-section {
+  border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 92%, transparent); padding: 20px; border-radius: 22px;
+}
+.note-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 0.8fr); gap: 18px; padding: 22px; border-radius: 24px; }
+.hero-kicker, .panel-kicker { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
+.hero-copy h2 { margin: 0; font-size: clamp(1.8rem, 1.5rem + 1vw, 2.6rem); line-height: 1.05; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.meta-pill, .tag { padding: 5px 10px; border-radius: 999px; font-size: 0.74rem; }
+.meta-pill { background: var(--surface-muted); color: var(--text-secondary); }
+.meta-pill.dimension { background: color-mix(in srgb, var(--dimension-color) 14%, transparent); color: var(--dimension-color); }
+.status-pending { color: var(--signal); } .status-in_progress { color: var(--warn); } .status-done { color: var(--ok); } .status-cancelled { color: var(--text-muted); }
+.priority-high { color: var(--danger); } .priority-medium { color: var(--warn); } .priority-low { color: var(--accent); }
+.hero-facts { display: grid; gap: 12px; }
+.fact { display: grid; gap: 6px; padding: 14px 16px; border-radius: 18px; background: color-mix(in srgb, var(--surface-muted) 86%, transparent); }
+.fact-label { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { background: var(--surface-muted); color: var(--text-secondary); }
+.control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.action-btn, .primary-btn, .danger-btn { min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--surface-muted) 86%, transparent); color: var(--text-secondary); cursor: pointer; }
+.action-btn.active, .primary-btn { border-color: color-mix(in srgb, var(--dimension-color) 28%, var(--border)); background: color-mix(in srgb, var(--dimension-color) 12%, transparent); color: var(--dimension-color); }
+.action-btn:disabled, .primary-btn:disabled, .danger-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.append-head, .body-head, .append-actions { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.append-hint { color: var(--text-muted); font-size: 0.84rem; }
+
+.snapshot-card { display: grid; gap: 10px; margin-top: 10px; padding: 16px 18px; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--signal) 16%, var(--border)); background: color-mix(in srgb, var(--surface) 94%, transparent); }
+.snapshot-meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.snapshot-summary { margin: 0; color: var(--text-primary); font-weight: 600; }
+.snapshot-preview { margin: 0; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap; }
+
+.projection-panel-shell :deep(.projection-card) { border: none; padding: 0; background: transparent; }
+.projection-panel-shell :deep(.reintegration-head) { display: none; }
+.projection-note-meta { display: flex; align-items: center; gap: 8px; }
+.projection-action-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.projection-action-list { display: grid; gap: 10px; margin-bottom: 14px; }
+.projection-action-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface-muted) 88%, transparent); display: grid; gap: 8px; }
+.projection-action-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.projection-action-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--text-muted); font-size: 0.84rem; }
+.projection-action-detail-grid { display: grid; gap: 8px; }
+
+.append-input { width: 100%; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--surface-strong) 94%, transparent); color: var(--text); resize: vertical; }
+.append-actions { margin-top: 12px; }
+.save-msg { font-size: 0.84rem; } .save-msg.success { color: var(--ok); } .save-msg.error { color: var(--danger); }
+
+.danger-section { border-color: color-mix(in srgb, var(--danger) 24%, var(--border)); background: color-mix(in srgb, var(--danger) 4%, var(--surface)); }
+.danger-btn { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, var(--border)); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+.markdown-body { color: var(--text-secondary); line-height: 1.75; }
+.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { color: var(--text); }
+.markdown-body :deep(pre) { overflow-x: auto; padding: 14px; border-radius: 14px; background: rgba(8, 17, 28, 0.9); color: #e2edf8; }
+.markdown-body :deep(code) { font-family: "SFMono-Regular", Consolas, monospace; }
+
+.confirm-overlay { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; background: rgba(4, 11, 20, 0.6); backdrop-filter: blur(8px); }
+.confirm-card { padding: 28px; border: 1px solid var(--border-strong); border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 96%, transparent); box-shadow: 0 32px 64px -28px var(--shadow-strong); width: min(380px, 90vw); display: grid; gap: 14px; }
+.confirm-card h3 { margin: 0; font-size: 18px; }
+.confirm-card p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.confirm-note { font-weight: 600; color: var(--text); }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.btn-cancel, .btn-confirm-danger { padding: 8px 18px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.btn-cancel { background: var(--surface-muted); color: var(--text-secondary); }
+.btn-confirm-danger { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 28%, var(--border)); }
+.btn-cancel:disabled, .btn-confirm-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 900px) { .note-hero, .control-grid { grid-template-columns: 1fr; } }
 @media (max-width: 720px) {
-  .modal-overlay {
-    padding: 0;
-    align-items: stretch;
-  }
-
-  .modal-card {
-    width: 100%;
-    max-height: 100vh;
-    padding: 18px;
-    padding-top: 60px;
-    border-radius: 0;
-    border: none;
-  }
-
-  .close-btn {
-    top: 12px;
-    right: 12px;
-    width: 44px;
-    height: 44px;
-    z-index: 10;
-  }
-
-  .control-panel,
-  .append-section,
-  .body-content,
-  .ai-panel,
-  .danger-section,
-  .note-hero {
-    padding: 16px;
-    border-radius: 20px;
-  }
+  .modal-overlay { padding: 0; align-items: stretch; }
+  .modal-card { width: 100%; max-height: 100vh; padding: 18px; padding-top: 60px; border-radius: 0; border: none; }
+  .close-btn { top: 12px; right: 12px; width: 44px; height: 44px; z-index: 10; }
+  .control-panel, .append-section, .body-content, .ai-panel, .danger-section, .note-hero { padding: 16px; border-radius: 20px; }
 }
-
-/* Approval Card Styles */
-.approval-card {
-  display: grid;
-  gap: 18px;
-  padding: 24px;
-  border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--warn) 8%, var(--surface));
-}
-
-.approval-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.approval-icon {
-  font-size: 1.5rem;
-}
-
-.approval-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.approval-details {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--surface-muted);
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.detail-label {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.risk-critical {
-  color: var(--danger);
-}
-
-.risk-high {
-  color: var(--warn);
-}
-
-.approval-content {
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--surface);
-}
-
-.approval-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-approve,
-.btn-reject {
-  flex: 1;
-  min-height: 44px;
-  padding: 12px 20px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.btn-approve {
-  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
-  color: var(--ok);
-  border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
-}
-
-.btn-approve:hover {
-  background: color-mix(in srgb, var(--ok) 20%, var(--surface));
-}
-
-.btn-reject {
-  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
-}
-
-.btn-reject:hover {
-  background: color-mix(in srgb, var(--danger) 20%, var(--surface));
-}
-
-.approval-result {
-  padding: 14px 20px;
-  border-radius: 16px;
-  background: var(--surface-muted);
-  color: var(--text-secondary);
-  text-align: center;
-  font-weight: 600;
-}
-
 </style>
