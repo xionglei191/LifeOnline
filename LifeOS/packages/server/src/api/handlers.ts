@@ -12,16 +12,16 @@ import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSched
 import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../soul/soulActions.js';
 import { normalizeSoulActionSourceFilters } from '../soul/types.js';
 import { dispatchApprovedSoulAction } from '../soul/soulActionDispatcher.js';
-import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord } from '../soul/reintegrationReview.js';
+import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord, getReintegrationNextActionSummary } from '../soul/reintegrationReview.js';
 import { planPromotionSoulActions } from '../soul/reintegrationPromotionPlanner.js';
-import { listEventNodes, type EventNode } from '../soul/eventNodes.js';
-import { listContinuityRecords, type ContinuityRecord } from '../soul/continuityRecords.js';
+import { listEventNodes, getEventNodeBySourceReintegrationId, type EventNode } from '../soul/eventNodes.js';
+import { listContinuityRecords, getContinuityRecordBySourceReintegrationId, type ContinuityRecord } from '../soul/continuityRecords.js';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../ai/providerConfigService.js';
 import { listAiSuggestions } from '../ai/suggestions.js';
 import { getPersonaSnapshotBySourceNoteId } from '../soul/personaSnapshots.js';
-import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse, PersonaSnapshotResponse } from '@lifeos/shared';
-import { isSupportedWorkerName } from '@lifeos/shared';
+import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, PromptRecord, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, UpdateNoteRequest, UpdateNoteResponse, CreateNoteRequest, CreateNoteResponse, SearchResult, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse, PersonaSnapshotResponse, ReintegrationRecord } from '@lifeos/shared';
+import { buildProjectionExplanationSummary, getProjectionContinuitySummary, getReintegrationOutcomeDisplaySummary, getSoulActionPromotionSummary, isSupportedWorkerName, type SoulActionDispatchExecutionSummary } from '@lifeos/shared';
 import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../utils/date.js';
 import { buildNoteId } from '../indexer/parser.js';
 
@@ -543,7 +543,7 @@ export async function listSoulActionsHandler(
     const normalizedSourceFilters = normalizeSoulActionSourceFilters(filters, soulActions);
 
     const response: ListSoulActionsResponse = {
-      soulActions,
+      soulActions: soulActions.map((soulAction) => attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)).filter((soulAction): soulAction is NonNullable<ReturnType<typeof attachSoulActionExecutionSummaryAndPromotionSummary>> => !!soulAction),
       filters: {
         ...filters,
         ...normalizedSourceFilters,
@@ -567,7 +567,7 @@ export async function getSoulActionHandler(
       res.status(404).json({ error: 'Soul action not found' });
       return;
     }
-    const response: SoulActionResponse = { soulAction };
+    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
     res.json(response);
   } catch (error) {
     console.error('Get soul action error:', error);
@@ -579,24 +579,157 @@ function getGovernanceReason(body: any): string | null {
   return typeof body?.reason === 'string' && body.reason.trim() ? body.reason.trim() : null;
 }
 
-function broadcastSoulActionUpdate(soulAction: ReturnType<typeof getSoulAction> | null | undefined): void {
-  if (!soulAction) return;
-  broadcastUpdate({ type: 'soul-action-updated', data: soulAction });
+function getPersistedSoulActionExecutionSummary(soulAction: ReturnType<typeof getSoulAction> | null | undefined): SoulActionDispatchExecutionSummary | null {
+  if (!soulAction) {
+    return null;
+  }
+
+  if (soulAction.workerTaskId) {
+    return {
+      objectType: 'worker_task',
+      objectId: soulAction.workerTaskId,
+      operation: soulAction.executionStatus === 'pending' ? 'enqueued' : null,
+      summary: soulAction.resultSummary,
+    };
+  }
+
+  if (soulAction.actionKind === 'create_event_node' || soulAction.actionKind === 'promote_event_node') {
+    const eventNode = getEventNodeBySourceReintegrationId(soulAction.sourceReintegrationId ?? '');
+    if (eventNode?.promotionSoulActionId === soulAction.id) {
+      return {
+        objectType: 'event_node',
+        objectId: eventNode.id,
+        operation: soulAction.resultSummary?.startsWith('已更新') ? 'updated' : 'created',
+        summary: soulAction.resultSummary,
+      };
+    }
+  }
+
+  if (soulAction.actionKind === 'promote_continuity_record') {
+    const continuityRecord = getContinuityRecordBySourceReintegrationId(soulAction.sourceReintegrationId ?? '');
+    if (continuityRecord?.promotionSoulActionId === soulAction.id) {
+      return {
+        objectType: 'continuity_record',
+        objectId: continuityRecord.id,
+        operation: soulAction.resultSummary?.startsWith('已更新') ? 'updated' : 'created',
+        summary: soulAction.resultSummary,
+      };
+    }
+  }
+
+  return null;
 }
 
-function broadcastReintegrationRecordUpdate(record: ReturnType<typeof getReintegrationRecord> | null | undefined): void {
+function attachSoulActionExecutionSummary(soulAction: ReturnType<typeof getSoulAction> | null | undefined) {
+  if (!soulAction) {
+    return soulAction;
+  }
+
+  return {
+    ...soulAction,
+    executionSummary: getPersistedSoulActionExecutionSummary(soulAction),
+  };
+}
+
+function attachSoulActionExecutionSummaryAndPromotionSummary(soulAction: ReturnType<typeof getSoulAction> | null | undefined) {
+  const withExecutionSummary = attachSoulActionExecutionSummary(soulAction);
+  if (!withExecutionSummary?.sourceReintegrationId) {
+    return withExecutionSummary;
+  }
+  const reintegrationRecord = getReintegrationRecord(withExecutionSummary.sourceReintegrationId);
+  return {
+    ...withExecutionSummary,
+    promotionSummary: getSoulActionPromotionSummary(withExecutionSummary, reintegrationRecord),
+  };
+}
+
+function buildPlannedSoulActionResponse(soulActions: ReturnType<typeof listSoulActions>) {
+  return soulActions
+    .map((soulAction) => attachSoulActionExecutionSummaryAndPromotionSummary(soulAction))
+    .filter((soulAction): soulAction is NonNullable<ReturnType<typeof attachSoulActionExecutionSummaryAndPromotionSummary>> => !!soulAction);
+}
+
+function attachReintegrationRecordDisplaySummary(
+  record: ReturnType<typeof getReintegrationRecord> | null | undefined,
+  soulActions?: ReturnType<typeof listSoulActions>,
+) {
+  if (!record) {
+    return record;
+  }
+
+  const responseSoulActions = soulActions
+    ? buildPlannedSoulActionResponse(soulActions)
+    : record.reviewStatus === 'accepted'
+      ? buildPlannedSoulActionResponse(listSoulActions({ sourceReintegrationId: record.id }))
+      : [];
+  const nextActionSummary = getReintegrationNextActionSummary(record);
+  return {
+    ...record,
+    nextActionSummary,
+    displaySummary: getReintegrationOutcomeDisplaySummary({ soulActions: responseSoulActions, nextActionSummary }, record),
+  };
+}
+
+function buildReintegrationPlanningResponse(
+  record: ReintegrationRecord,
+  soulActions: ReturnType<typeof listSoulActions>,
+): Pick<AcceptReintegrationRecordResponse, 'reintegrationRecord' | 'soulActions' | 'nextActionSummary' | 'displaySummary'> {
+  const responseSoulActions = buildPlannedSoulActionResponse(soulActions);
+  const responseRecord = attachReintegrationRecordDisplaySummary(record, soulActions) ?? record;
+  return {
+    reintegrationRecord: responseRecord,
+    soulActions: responseSoulActions,
+    nextActionSummary: responseRecord.nextActionSummary ?? null,
+    displaySummary: responseRecord.displaySummary,
+  };
+}
+
+function broadcastSoulActionUpdate(soulAction: ReturnType<typeof getSoulAction> | null | undefined): void {
+  if (!soulAction) return;
+  broadcastUpdate({ type: 'soul-action-updated', data: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! });
+}
+
+function broadcastReintegrationRecordUpdate(
+  record: ReturnType<typeof getReintegrationRecord> | null | undefined,
+  soulActions?: ReturnType<typeof listSoulActions>,
+): void {
   if (!record) return;
-  broadcastUpdate({ type: 'reintegration-record-updated', data: record });
+  broadcastUpdate({ type: 'reintegration-record-updated', data: attachReintegrationRecordDisplaySummary(record, soulActions)! });
+}
+
+function attachEventNodeProjectionSummary(eventNode: EventNode | null | undefined) {
+  if (!eventNode) {
+    return eventNode;
+  }
+
+  return {
+    ...eventNode,
+    explanationSummary: buildProjectionExplanationSummary(eventNode),
+  };
+}
+
+function attachContinuityRecordProjectionSummary(continuityRecord: ContinuityRecord | null | undefined) {
+  if (!continuityRecord) {
+    return continuityRecord;
+  }
+
+  return {
+    ...continuityRecord,
+    continuitySummary: getProjectionContinuitySummary(continuityRecord),
+    explanationSummary: buildProjectionExplanationSummary(continuityRecord),
+  };
 }
 
 function broadcastEventNodeUpdate(eventNode: EventNode | null | undefined): void {
-  if (!eventNode) return;
-  broadcastUpdate({ type: 'event-node-updated', data: { eventNode } });
+  const responseEventNode = attachEventNodeProjectionSummary(eventNode);
+  if (!responseEventNode) return;
+  broadcastUpdate({ type: 'event-node-updated', data: { eventNode: responseEventNode } });
 }
 
 function broadcastContinuityRecordUpdate(continuityRecord: ContinuityRecord | null | undefined): void {
-  if (!continuityRecord) return;
-  broadcastUpdate({ type: 'continuity-record-updated', data: { continuityRecord } });
+  const responseContinuityRecord = attachContinuityRecordProjectionSummary(continuityRecord);
+  if (!responseContinuityRecord) return;
+  broadcastUpdate({ type: 'continuity-record-updated', data: { continuityRecord: responseContinuityRecord } });
 }
 
 export async function approveSoulActionHandler(
@@ -610,7 +743,7 @@ export async function approveSoulActionHandler(
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction };
+    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -628,7 +761,7 @@ export async function deferSoulActionHandler(
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction };
+    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -646,7 +779,7 @@ export async function discardSoulActionHandler(
       return;
     }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction };
+    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -670,10 +803,16 @@ export async function dispatchSoulActionHandler(
 
     const soulAction = getSoulAction(result.soulActionId);
     const task = result.workerTaskId ? getWorkerTask(result.workerTaskId) : null;
+    const responseSoulAction = attachSoulActionExecutionSummaryAndPromotionSummary(soulAction);
+    const responseResult: DispatchSoulActionResponse['result'] = {
+      ...result,
+      reason: responseSoulAction?.resultSummary ?? task?.error ?? result.reason,
+      executionSummary: responseSoulAction?.executionSummary ?? result.executionSummary ?? null,
+    };
     broadcastSoulActionUpdate(soulAction);
     broadcastEventNodeUpdate(result.eventNode);
     broadcastContinuityRecordUpdate(result.continuityRecord);
-    const response: DispatchSoulActionResponse = { result, soulAction, task };
+    const response: DispatchSoulActionResponse = { result: responseResult, soulAction: responseSoulAction ?? null, task };
     res.status(202).json(response);
   } catch (error) {
     console.error('Dispatch soul action error:', error);
@@ -691,7 +830,7 @@ export async function listReintegrationRecordsHandler(
       ? req.query.sourceNoteId.trim()
       : undefined;
     const response: ListReintegrationRecordsResponse = {
-      reintegrationRecords: listReintegrationRecords({ reviewStatus, sourceNoteId }),
+      reintegrationRecords: listReintegrationRecords({ reviewStatus, sourceNoteId }).map((record) => attachReintegrationRecordDisplaySummary(record)).filter((record): record is NonNullable<ReturnType<typeof attachReintegrationRecordDisplaySummary>> => !!record),
       filters: {
         reviewStatus,
         sourceNoteId,
@@ -714,9 +853,15 @@ export async function acceptReintegrationRecordHandler(
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
-    broadcastReintegrationRecordUpdate(result.reintegrationRecord);
+    broadcastReintegrationRecordUpdate(result.reintegrationRecord, result.soulActions);
     result.soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
-    const response: AcceptReintegrationRecordResponse = result;
+    const planningResponse = buildReintegrationPlanningResponse(result.reintegrationRecord, result.soulActions);
+    const response: AcceptReintegrationRecordResponse = {
+      reintegrationRecord: planningResponse.reintegrationRecord,
+      soulActions: planningResponse.soulActions,
+      nextActionSummary: planningResponse.nextActionSummary,
+      displaySummary: planningResponse.displaySummary,
+    };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -733,8 +878,9 @@ export async function rejectReintegrationRecordHandler(
       res.status(404).json({ error: 'Reintegration record not found' });
       return;
     }
+    const responseRecord = attachReintegrationRecordDisplaySummary(record);
     broadcastReintegrationRecordUpdate(record);
-    const response: RejectReintegrationRecordResponse = { reintegrationRecord: record };
+    const response: RejectReintegrationRecordResponse = { reintegrationRecord: responseRecord ?? record };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -752,9 +898,15 @@ export async function planPromotionsHandler(
       return;
     }
     const soulActions = planPromotionSoulActions(record);
-    broadcastReintegrationRecordUpdate(record);
+    const planningResponse = buildReintegrationPlanningResponse(record, soulActions);
+    broadcastReintegrationRecordUpdate(record, soulActions);
     soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
-    const response: PlanReintegrationPromotionsResponse = { soulActions };
+    const response: PlanReintegrationPromotionsResponse = {
+      reintegrationRecord: planningResponse.reintegrationRecord,
+      soulActions: planningResponse.soulActions,
+      nextActionSummary: planningResponse.nextActionSummary,
+      displaySummary: planningResponse.displaySummary,
+    };
     res.json(response);
   } catch (error: any) {
     res.status(400).json({ error: error?.message || String(error) });
@@ -778,7 +930,9 @@ export async function listEventNodesHandler(
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const response: ListEventNodesResponse = {
-      eventNodes: listEventNodes(sourceReintegrationIds),
+      eventNodes: listEventNodes(sourceReintegrationIds)
+        .map((eventNode) => attachEventNodeProjectionSummary(eventNode))
+        .filter((eventNode): eventNode is NonNullable<ReturnType<typeof attachEventNodeProjectionSummary>> => !!eventNode),
       filters: {
         sourceReintegrationIds,
       },
@@ -797,7 +951,9 @@ export async function listContinuityRecordsHandler(
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const response: ListContinuityRecordsResponse = {
-      continuityRecords: listContinuityRecords(sourceReintegrationIds),
+      continuityRecords: listContinuityRecords(sourceReintegrationIds)
+        .map((continuityRecord) => attachContinuityRecordProjectionSummary(continuityRecord))
+        .filter((continuityRecord): continuityRecord is NonNullable<ReturnType<typeof attachContinuityRecordProjectionSummary>> => !!continuityRecord),
       filters: {
         sourceReintegrationIds,
       },

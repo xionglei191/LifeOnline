@@ -5,6 +5,8 @@ import path from 'path';
 import { WebSocket } from 'ws';
 import { fileURLToPath } from 'url';
 import {
+  getReintegrationNextActionSummary,
+  getReintegrationOutcomeDisplaySummary,
   type AcceptReintegrationRecordResponse,
   type DispatchSoulActionResponse,
   type ListReintegrationRecordsResponse,
@@ -184,6 +186,15 @@ test('reintegration list API supports source-note scoping for main-path projecti
     assert.equal(scoped.reintegrationRecords.length, 1);
     assert.equal(scoped.reintegrationRecords[0]?.workerTaskId, 'api-filter-note-1');
     assert.equal(scoped.reintegrationRecords[0]?.sourceNoteId, 'note-filter-1');
+    assert.equal(scoped.reintegrationRecords[0]?.displaySummary?.plannedActionCount, 0);
+    assert.equal(scoped.reintegrationRecords[0]?.displaySummary?.nextActionCreatedCount, null);
+    assert.deepEqual(
+      scoped.reintegrationRecords[0]?.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: [],
+        nextActionSummary: scoped.reintegrationRecords[0]?.nextActionSummary ?? null,
+      }, scoped.reintegrationRecords[0]!),
+    );
 
     const acceptedScoped = await api<ListReintegrationRecordsResponse>(
       baseUrl,
@@ -192,6 +203,13 @@ test('reintegration list API supports source-note scoping for main-path projecti
     assert.deepEqual(acceptedScoped.filters, { reviewStatus: 'accepted', sourceNoteId: 'note-filter-1' });
     assert.equal(acceptedScoped.reintegrationRecords.length, 1);
     assert.equal(acceptedScoped.reintegrationRecords[0]?.workerTaskId, 'api-filter-note-1');
+    assert.deepEqual(
+      acceptedScoped.reintegrationRecords[0]?.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: [],
+        nextActionSummary: acceptedScoped.reintegrationRecords[0]?.nextActionSummary ?? null,
+      }, acceptedScoped.reintegrationRecords[0]!),
+    );
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
@@ -620,7 +638,16 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       target: 'derived_outputs',
       strength: 'medium',
       summary: 'api accept summary',
-      evidence: { source: 'api-test' },
+      evidence: {
+        source: 'api-test',
+        extractTaskCreated: 2,
+        nextActionCandidate: {
+          title: '整理周报素材',
+          priority: 'high',
+          due: '2026-03-22',
+          outputNoteId: 'task-note-1',
+        },
+      },
       now: '2026-03-21T10:00:00.000Z',
     });
 
@@ -628,6 +655,7 @@ test('reintegration accept API returns reviewed record and planned soul actions'
     const record = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-accept');
     assert.ok(record);
     assert.equal(record?.reviewStatus, 'pending_review');
+    assert.deepEqual(record?.nextActionSummary, getReintegrationNextActionSummary(record!));
 
     const accepted = await api<AcceptReintegrationRecordResponse>(
       baseUrl,
@@ -640,7 +668,22 @@ test('reintegration accept API returns reviewed record and planned soul actions'
 
     assert.equal(accepted.reintegrationRecord.id, record!.id);
     assert.equal(accepted.reintegrationRecord.reviewStatus, 'accepted');
+    assert.deepEqual(accepted.nextActionSummary, getReintegrationNextActionSummary(accepted.reintegrationRecord));
+    assert.deepEqual(accepted.displaySummary, getReintegrationOutcomeDisplaySummary(accepted, accepted.reintegrationRecord));
+    assert.equal(accepted.displaySummary.plannedActionCount, 2);
+    assert.equal(accepted.displaySummary.nextActionCreatedCount, 2);
+    assert.equal(accepted.displaySummary.nextActionText, '整理周报素材（high · due 2026-03-22）');
+    assert.equal(accepted.displaySummary.hasNextActionEvidence, true);
+    assert.equal(accepted.nextActionSummary?.createdCount, 2);
+    assert.equal(accepted.nextActionSummary?.candidateTitle, '整理周报素材');
+    assert.equal(accepted.nextActionSummary?.candidatePriority, 'high');
+    assert.equal(accepted.nextActionSummary?.candidateDue, '2026-03-22');
+    assert.equal(accepted.nextActionSummary?.candidateOutputNoteId, 'task-note-1');
     assert.equal(accepted.soulActions.length, 2);
+    assert.ok(accepted.soulActions.every((action) => action.promotionSummary?.sourceSummary === 'api accept summary'));
+    assert.ok(accepted.soulActions.every((action) => action.promotionSummary?.primaryReason === 'accept from api test'));
+    assert.ok(accepted.soulActions.every((action) => action.promotionSummary?.rationale));
+    assert.ok(accepted.soulActions.every((action) => action.promotionSummary?.reviewBacked === true));
     assert.deepEqual(
       accepted.soulActions.map((action) => action.actionKind).sort(),
       ['promote_continuity_record', 'promote_event_node'],
@@ -656,6 +699,9 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       listedByReintegration.soulActions.map((action) => action.id).sort(),
       accepted.soulActions.map((action) => action.id).sort(),
     );
+    assert.ok(listedByReintegration.soulActions.every((action) => action.promotionSummary?.sourceSummary === 'api accept summary'));
+    assert.ok(listedByReintegration.soulActions.every((action) => action.promotionSummary?.primaryReason === 'accept from api test'));
+    assert.ok(listedByReintegration.soulActions.every((action) => action.promotionSummary?.rationale));
     assert.equal(listedByReintegration.filters.sourceReintegrationId, record!.id);
 
     const acceptedRecords = await api<ListReintegrationRecordsResponse>(
@@ -669,10 +715,27 @@ test('reintegration accept API returns reviewed record and planned soul actions'
     const acceptedFollowUp = acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id);
     const pendingFollowUp = pendingRecords.reintegrationRecords.find((item) => item.id === record!.id);
 
+    assert.deepEqual(accepted.reintegrationRecord.nextActionSummary ?? null, getReintegrationNextActionSummary(accepted.reintegrationRecord));
+    assert.deepEqual(accepted.nextActionSummary, accepted.reintegrationRecord.nextActionSummary);
+    assert.deepEqual(accepted.displaySummary, accepted.reintegrationRecord.displaySummary);
+    assert.deepEqual(
+      accepted.reintegrationRecord.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: accepted.soulActions,
+        nextActionSummary: accepted.reintegrationRecord.nextActionSummary ?? null,
+      }, accepted.reintegrationRecord),
+    );
     assert.ok(acceptedFollowUp);
     assert.equal(acceptedFollowUp?.id, accepted.reintegrationRecord.id);
     assert.equal(acceptedFollowUp?.reviewStatus, accepted.reintegrationRecord.reviewStatus);
     assert.equal(acceptedFollowUp?.reviewedAt, accepted.reintegrationRecord.reviewedAt);
+    assert.deepEqual(
+      acceptedFollowUp?.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: accepted.soulActions,
+        nextActionSummary: acceptedFollowUp?.nextActionSummary ?? null,
+      }, acceptedFollowUp!),
+    );
     assert.equal(pendingFollowUp, undefined);
 
     const planned = await api<PlanReintegrationPromotionsResponse>(
@@ -680,6 +743,27 @@ test('reintegration accept API returns reviewed record and planned soul actions'
       `/api/reintegration-records/${encodeURIComponent(record!.id)}/plan-promotions`,
       { method: 'POST' },
     );
+    assert.deepEqual(planned.reintegrationRecord.nextActionSummary ?? null, getReintegrationNextActionSummary(planned.reintegrationRecord));
+    assert.deepEqual(planned.nextActionSummary, planned.reintegrationRecord.nextActionSummary);
+    assert.deepEqual(planned.displaySummary, planned.reintegrationRecord.displaySummary);
+    assert.deepEqual(
+      planned.reintegrationRecord.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: planned.soulActions,
+        nextActionSummary: planned.reintegrationRecord.nextActionSummary ?? null,
+      }, planned.reintegrationRecord),
+    );
+    assert.deepEqual(planned.nextActionSummary, getReintegrationNextActionSummary(record!));
+    assert.deepEqual(planned.displaySummary, getReintegrationOutcomeDisplaySummary(planned, record!));
+    assert.equal(planned.displaySummary.plannedActionCount, 2);
+    assert.equal(planned.displaySummary.nextActionCreatedCount, 2);
+    assert.equal(planned.displaySummary.nextActionText, '整理周报素材（high · due 2026-03-22）');
+    assert.equal(planned.displaySummary.hasNextActionEvidence, true);
+    assert.equal(planned.nextActionSummary?.createdCount, 2);
+    assert.equal(planned.nextActionSummary?.candidateTitle, '整理周报素材');
+    assert.equal(planned.nextActionSummary?.candidatePriority, 'high');
+    assert.equal(planned.nextActionSummary?.candidateDue, '2026-03-22');
+    assert.equal(planned.nextActionSummary?.candidateOutputNoteId, 'task-note-1');
     assert.equal(planned.soulActions.length, 2);
     assert.deepEqual(
       planned.soulActions.map((action) => action.id).sort(),
@@ -745,6 +829,14 @@ test('reintegration reject API returns reviewed record and filtered follow-up li
     assert.equal(rejected.reintegrationRecord.reviewStatus, 'rejected');
     assert.equal(rejected.reintegrationRecord.reviewReason, 'reject from api test');
     assert.ok(rejected.reintegrationRecord.reviewedAt);
+    assert.deepEqual(rejected.reintegrationRecord.nextActionSummary ?? null, getReintegrationNextActionSummary(rejected.reintegrationRecord));
+    assert.deepEqual(
+      rejected.reintegrationRecord.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: [],
+        nextActionSummary: rejected.reintegrationRecord.nextActionSummary ?? null,
+      }, rejected.reintegrationRecord),
+    );
 
     const rejectedRecords = await api<ListReintegrationRecordsResponse>(
       baseUrl,
@@ -762,7 +854,130 @@ test('reintegration reject API returns reviewed record and filtered follow-up li
     assert.equal(rejectedFollowUp?.reviewStatus, rejected.reintegrationRecord.reviewStatus);
     assert.equal(rejectedFollowUp?.reviewReason, rejected.reintegrationRecord.reviewReason);
     assert.equal(rejectedFollowUp?.reviewedAt, rejected.reintegrationRecord.reviewedAt);
+    assert.deepEqual(
+      rejectedFollowUp?.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: [],
+        nextActionSummary: rejectedFollowUp?.nextActionSummary ?? null,
+      }, rejectedFollowUp!),
+    );
     assert.equal(pendingFollowUp, undefined);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('reintegration review APIs keep terminal review decisions immutable once accepted or rejected', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-review-finality-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-review-finality-accepted',
+      sourceNoteId: 'note-api-pr6-review-finality-accepted',
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api review finality accepted summary',
+      evidence: { source: 'api-review-finality-test' },
+      now: '2026-03-23T10:00:00.000Z',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-review-finality-rejected',
+      sourceNoteId: 'note-api-pr6-review-finality-rejected',
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'failed',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api review finality rejected summary',
+      evidence: { source: 'api-review-finality-test' },
+      now: '2026-03-23T10:05:00.000Z',
+    });
+
+    const listed = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const acceptedRecord = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-review-finality-accepted');
+    const rejectedRecord = listed.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-review-finality-rejected');
+    assert.ok(acceptedRecord);
+    assert.ok(rejectedRecord);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(acceptedRecord!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept finality via api' }),
+      },
+    );
+    assert.equal(accepted.reintegrationRecord.reviewStatus, 'accepted');
+    assert.equal(accepted.reintegrationRecord.reviewReason, 'accept finality via api');
+
+    await assert.rejects(
+      api<RejectReintegrationRecordResponse>(
+        baseUrl,
+        `/api/reintegration-records/${encodeURIComponent(acceptedRecord!.id)}/reject`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'should fail after accept' }),
+        },
+      ),
+      /Only pending_review reintegration records can be marked as rejected/,
+    );
+
+    const rejected = await api<RejectReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(rejectedRecord!.id)}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'reject finality via api' }),
+      },
+    );
+    assert.equal(rejected.reintegrationRecord.reviewStatus, 'rejected');
+    assert.equal(rejected.reintegrationRecord.reviewReason, 'reject finality via api');
+
+    await assert.rejects(
+      api<AcceptReintegrationRecordResponse>(
+        baseUrl,
+        `/api/reintegration-records/${encodeURIComponent(rejectedRecord!.id)}/accept`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'should fail after reject' }),
+        },
+      ),
+      /Only pending_review reintegration records can be marked as accepted/,
+    );
+
+    const acceptedSnapshot = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records?reviewStatus=accepted');
+    const rejectedSnapshot = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records?reviewStatus=rejected');
+    const persistedAccepted = acceptedSnapshot.reintegrationRecords.find((item) => item.id === acceptedRecord!.id);
+    const persistedRejected = rejectedSnapshot.reintegrationRecords.find((item) => item.id === rejectedRecord!.id);
+    assert.equal(persistedAccepted?.reviewReason, 'accept finality via api');
+    assert.equal(persistedAccepted?.reviewedAt, accepted.reintegrationRecord.reviewedAt);
+    assert.equal(persistedRejected?.reviewReason, 'reject finality via api');
+    assert.equal(persistedRejected?.reviewedAt, rejected.reintegrationRecord.reviewedAt);
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
@@ -831,6 +1046,14 @@ test('reintegration reject emits reintegration-record-updated websocket event al
     assert.equal(wsEvent.data.reviewStatus, 'rejected');
     assert.equal(wsEvent.data.reviewReason, rejected.reintegrationRecord.reviewReason);
     assert.equal(wsEvent.data.reviewedAt, rejected.reintegrationRecord.reviewedAt);
+    assert.deepEqual(wsEvent.data.nextActionSummary ?? null, getReintegrationNextActionSummary(wsEvent.data));
+    assert.deepEqual(
+      wsEvent.data.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: [],
+        nextActionSummary: wsEvent.data.nextActionSummary ?? null,
+      }, wsEvent.data),
+    );
 
     const rejectedRecords = await api<ListReintegrationRecordsResponse>(
       baseUrl,
@@ -1475,6 +1698,18 @@ test('reintegration accept emits reintegration-record-updated websocket event al
     assert.equal(recordEvent.data.reviewStatus, accepted.reintegrationRecord.reviewStatus);
     assert.equal(recordEvent.data.reviewReason, accepted.reintegrationRecord.reviewReason);
     assert.equal(recordEvent.data.reviewedAt, accepted.reintegrationRecord.reviewedAt);
+    assert.deepEqual(recordEvent.data.nextActionSummary ?? null, getReintegrationNextActionSummary(recordEvent.data));
+    assert.deepEqual(recordEvent.data.nextActionSummary, accepted.nextActionSummary);
+    assert.deepEqual(recordEvent.data.displaySummary, accepted.displaySummary);
+    assert.deepEqual(recordEvent.data.nextActionSummary, accepted.reintegrationRecord.nextActionSummary);
+    assert.deepEqual(recordEvent.data.displaySummary, accepted.reintegrationRecord.displaySummary);
+    assert.deepEqual(
+      recordEvent.data.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: accepted.soulActions,
+        nextActionSummary: recordEvent.data.nextActionSummary ?? null,
+      }, recordEvent.data),
+    );
     assert.equal(accepted.soulActions.length, 2);
     assert.deepEqual(
       [...seenActionIds].sort(),
@@ -1495,9 +1730,20 @@ test('reintegration accept emits reintegration-record-updated websocket event al
       acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.id,
       accepted.reintegrationRecord.id,
     );
+    assert.deepEqual(
+      acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.nextActionSummary,
+      accepted.reintegrationRecord.nextActionSummary,
+    );
     assert.equal(
       acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.reviewedAt,
       recordEvent.data.reviewedAt,
+    );
+    assert.deepEqual(
+      acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: accepted.soulActions,
+        nextActionSummary: acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)?.nextActionSummary ?? null,
+      }, acceptedRecords.reintegrationRecords.find((item) => item.id === record!.id)!),
     );
     assert.equal(
       pendingRecords.reintegrationRecords.find((item) => item.id === record!.id),
@@ -1596,6 +1842,18 @@ test('reintegration manual planning emits reintegration-record-updated websocket
     assert.equal(recordEvent.data.reviewStatus, record!.reviewStatus);
     assert.equal(recordEvent.data.reviewReason, record!.reviewReason);
     assert.equal(recordEvent.data.reviewedAt, record!.reviewedAt);
+    assert.deepEqual(recordEvent.data.nextActionSummary ?? null, getReintegrationNextActionSummary(recordEvent.data));
+    assert.deepEqual(recordEvent.data.nextActionSummary, planned.nextActionSummary);
+    assert.deepEqual(recordEvent.data.displaySummary, planned.displaySummary);
+    assert.deepEqual(recordEvent.data.nextActionSummary, planned.reintegrationRecord.nextActionSummary);
+    assert.deepEqual(recordEvent.data.displaySummary, planned.reintegrationRecord.displaySummary);
+    assert.deepEqual(
+      recordEvent.data.displaySummary,
+      getReintegrationOutcomeDisplaySummary({
+        soulActions: planned.soulActions,
+        nextActionSummary: recordEvent.data.nextActionSummary ?? null,
+      }, recordEvent.data),
+    );
     assert.deepEqual(
       [...seenActionIds].sort(),
       planned.soulActions.map((action) => action.id).sort(),
@@ -1798,6 +2056,9 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(firstDispatched.task?.taskType, 'extract_tasks');
     assert.equal(firstDispatched.task?.worker, 'lifeos');
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(firstDispatched.task!.status));
+    assert.equal(firstDispatched.result.executionSummary?.objectType, 'worker_task');
+    assert.equal(firstDispatched.result.executionSummary?.objectId, firstDispatched.task?.id ?? null);
+    assert.equal(firstDispatched.result.reason, firstDispatched.soulAction?.resultSummary ?? firstDispatched.task?.error ?? 'approved soul action dispatched through worker host');
 
     const firstTaskEvent = await firstTaskEventPromise;
     const firstNoteTaskEvent = await firstNoteTaskEventPromise;
@@ -1840,6 +2101,9 @@ test('dispatch response worker task stays aligned with websocket and follow-up w
     assert.equal(secondDispatched.task?.taskType, 'update_persona_snapshot');
     assert.equal(secondDispatched.task?.worker, 'lifeos');
     assert.ok(['pending', 'running', 'succeeded', 'failed'].includes(secondDispatched.task!.status));
+    assert.equal(secondDispatched.result.executionSummary?.objectType, 'worker_task');
+    assert.equal(secondDispatched.result.executionSummary?.objectId, secondDispatched.task?.id ?? null);
+    assert.equal(secondDispatched.result.reason, secondDispatched.soulAction?.resultSummary ?? secondDispatched.task?.error ?? 'approved soul action dispatched through worker host');
 
     const secondTaskEvent = await secondTaskEventPromise;
     const secondNoteTaskEvent = await secondNoteTaskEventPromise;
@@ -2226,6 +2490,9 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
 
     assert.ok(firstDispatch.task);
     assert.ok(firstDispatch.result.workerTaskId);
+    assert.equal(firstDispatch.result.executionSummary?.objectType, 'worker_task');
+    assert.equal(firstDispatch.result.executionSummary?.objectId, firstDispatch.task?.id ?? null);
+    assert.equal(firstDispatch.result.reason, firstDispatch.soulAction?.resultSummary ?? firstDispatch.task?.error ?? 'approved soul action dispatched through worker host');
     assert.equal(firstDispatch.task.id, firstDispatch.result.workerTaskId);
     assert.equal(firstDispatch.task.id, firstTaskEvent.data.id);
     assert.equal(firstDispatch.task.sourceNoteId, firstTaskEvent.data.sourceNoteId);
@@ -2284,6 +2551,9 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
 
     assert.ok(secondDispatch.task);
     assert.ok(secondDispatch.result.workerTaskId);
+    assert.equal(secondDispatch.result.executionSummary?.objectType, 'worker_task');
+    assert.equal(secondDispatch.result.executionSummary?.objectId, secondDispatch.task?.id ?? null);
+    assert.equal(secondDispatch.result.reason, secondDispatch.soulAction?.resultSummary ?? secondDispatch.task?.error ?? 'approved soul action dispatched through worker host');
     assert.equal(secondDispatch.task.id, secondDispatch.result.workerTaskId);
     assert.equal(secondDispatch.task.id, secondTaskEvent.data.id);
     assert.equal(secondDispatch.task.sourceNoteId, secondTaskEvent.data.sourceNoteId);
@@ -2309,6 +2579,128 @@ test('mixed worker-host dispatch response tasks stay aligned with websocket even
     if (socket && socket.readyState !== WebSocket.CLOSED) {
       socket.terminate();
     }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('task-extraction reintegration accept API returns a review-backed create_event_node follow-up and dispatches an event projection', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-task-extraction-followup-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-task-extraction-followup',
+      sourceNoteId: 'note-api-task-extraction-followup',
+      soulActionId: null,
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'task_extraction_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'task_record',
+      strength: 'medium',
+      summary: 'extract-task follow-up summary',
+      evidence: {
+        source: 'api-task-extraction-followup-test',
+        extractTaskCreated: 2,
+        nextActionCandidate: {
+          title: '整理周报素材',
+          priority: 'high',
+          due: '2026-03-22',
+          outputNoteId: 'task-note-1',
+        },
+      },
+      now: '2026-03-22T09:30:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-task-extraction-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept task-extraction follow-up event' }),
+      },
+    );
+
+    assert.deepEqual(accepted.nextActionSummary, getReintegrationNextActionSummary(accepted.reintegrationRecord));
+    assert.deepEqual(accepted.displaySummary, getReintegrationOutcomeDisplaySummary(accepted, accepted.reintegrationRecord));
+    assert.equal(accepted.displaySummary.plannedActionCount, 1);
+    assert.equal(accepted.displaySummary.nextActionCreatedCount, 2);
+    assert.equal(accepted.displaySummary.nextActionText, '整理周报素材（high · due 2026-03-22）');
+    assert.equal(accepted.displaySummary.hasNextActionEvidence, true);
+    assert.equal(accepted.nextActionSummary?.createdCount, 2);
+    assert.equal(accepted.nextActionSummary?.candidateTitle, '整理周报素材');
+    assert.equal(accepted.soulActions.length, 1);
+    assert.equal(accepted.soulActions[0]?.actionKind, 'create_event_node');
+    assert.equal(accepted.soulActions[0]?.sourceReintegrationId, record!.id);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(accepted.soulActions[0]!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve task-extraction follow-up event' }),
+      },
+    );
+
+    const dispatched = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(accepted.soulActions[0]!.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.equal(dispatched.result.dispatched, true);
+    assert.equal(dispatched.soulAction?.actionKind, 'create_event_node');
+    assert.equal(dispatched.soulAction?.resultSummary, dispatched.result.reason);
+    assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'event_node');
+    assert.equal(dispatched.soulAction?.executionSummary?.operation, 'created');
+    assert.equal(dispatched.soulAction?.executionSummary?.summary, dispatched.result.reason);
+    assert.equal(dispatched.result.executionSummary?.objectType, 'event_node');
+    assert.equal(dispatched.result.executionSummary?.operation, 'created');
+    assert.equal(dispatched.result.executionSummary?.summary, dispatched.result.reason);
+
+    const listedEventNodes = await api<{ eventNodes: Array<{
+      sourceReintegrationId: string;
+      promotionSoulActionId: string | null;
+      eventKind: string;
+      title: string;
+      summary: string;
+    }>; filters: { sourceReintegrationIds?: string[] } }>(
+      baseUrl,
+      `/api/event-nodes?sourceReintegrationIds=${encodeURIComponent(record!.id)}`,
+    );
+    const eventNode = listedEventNodes.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
+
+    assert.deepEqual(listedEventNodes.filters.sourceReintegrationIds, [record!.id]);
+    assert.ok(eventNode);
+    assert.equal(eventNode?.promotionSoulActionId, accepted.soulActions[0]!.id);
+    assert.equal(eventNode?.eventKind, 'milestone_report');
+    assert.equal(eventNode?.title, '整理周报素材');
+    assert.equal(eventNode?.summary, record!.summary);
+  } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
     await env.cleanup();
@@ -2412,6 +2804,9 @@ test('event-node promotion dispatch writes follow-up event-node list aligned wit
     assert.equal(filteredAction?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
     assert.equal(filteredAction?.governanceStatus, dispatched.soulAction?.governanceStatus);
     assert.equal(filteredAction?.executionStatus, dispatched.soulAction?.executionStatus);
+    assert.equal(filteredAction?.executionSummary?.objectType, 'event_node');
+    assert.equal(filteredAction?.executionSummary?.operation, 'created');
+    assert.equal(filteredAction?.executionSummary?.summary, dispatched.result.reason);
     assert.ok(eventNode);
     assert.equal(eventNode?.promotionSoulActionId, filteredAction?.id);
     assert.equal(eventNode?.sourceReintegrationId, record!.id);
@@ -2534,6 +2929,9 @@ test('continuity promotion dispatch writes follow-up continuity-record list alig
     assert.equal(filteredAction?.sourceReintegrationId, dispatched.soulAction?.sourceReintegrationId);
     assert.equal(filteredAction?.governanceStatus, dispatched.soulAction?.governanceStatus);
     assert.equal(filteredAction?.executionStatus, dispatched.soulAction?.executionStatus);
+    assert.equal(filteredAction?.executionSummary?.objectType, 'continuity_record');
+    assert.equal(filteredAction?.executionSummary?.operation, 'created');
+    assert.equal(filteredAction?.executionSummary?.summary, dispatched.result.reason);
     assert.ok(continuity);
     assert.equal(continuity?.promotionSoulActionId, filteredAction?.id);
     assert.equal(continuity?.sourceReintegrationId, record!.id);
@@ -2716,6 +3114,9 @@ test('promotion dispatch response stays aligned with local-only execution result
     assert.equal(dispatched.result.workerTaskId, null);
     assert.equal(dispatched.task, null);
     assert.match(dispatched.result.reason, /continuity record/);
+    assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'continuity_record');
+    assert.equal(dispatched.soulAction?.executionSummary?.operation, 'created');
+    assert.equal(dispatched.soulAction?.executionSummary?.summary, dispatched.result.reason);
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
@@ -2733,6 +3134,9 @@ test('promotion dispatch response stays aligned with local-only execution result
     assert.equal(refreshed?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.equal(refreshed?.workerTaskId, null);
     assert.equal(refreshed?.resultSummary, dispatched.result.reason);
+    assert.equal(refreshed?.executionSummary?.objectType, 'continuity_record');
+    assert.equal(refreshed?.executionSummary?.operation, 'created');
+    assert.equal(refreshed?.executionSummary?.summary, dispatched.result.reason);
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
@@ -2819,6 +3223,9 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     assert.equal(dispatched.result.workerTaskId, null);
     assert.equal(dispatched.task, null);
     assert.match(dispatched.result.reason, /event node/);
+    assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'event_node');
+    assert.equal(dispatched.soulAction?.executionSummary?.operation, 'created');
+    assert.equal(dispatched.soulAction?.executionSummary?.summary, dispatched.result.reason);
 
     const listedAfterDispatch = await api<ListSoulActionsResponse>(
       baseUrl,
@@ -2836,6 +3243,212 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     assert.equal(refreshed?.executionStatus, dispatched.soulAction?.executionStatus);
     assert.equal(refreshed?.workerTaskId, null);
     assert.equal(refreshed?.resultSummary, dispatched.result.reason);
+    assert.equal(refreshed?.executionSummary?.objectType, 'event_node');
+    assert.equal(refreshed?.executionSummary?.operation, 'created');
+    assert.equal(refreshed?.executionSummary?.summary, dispatched.result.reason);
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('continuity promotion websocket event stays aligned with follow-up continuity-record list projection summaries', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-continuity-ws-followup-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-continuity-ws-followup',
+      sourceNoteId: 'note-api-pr6-continuity-ws-followup',
+      soulActionId: null,
+      taskType: 'daily_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'daily_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api continuity websocket follow-up summary',
+      evidence: { source: 'api-continuity-ws-followup-test' },
+      now: '2026-03-22T10:10:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-continuity-ws-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for continuity websocket api test' }),
+      },
+    );
+
+    const action = accepted.soulActions.find((item) => item.actionKind === 'promote_continuity_record');
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for continuity websocket api test' }),
+      },
+    );
+
+    const socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    try {
+      const wsEventPromise = waitForWebSocketEvent<Extract<WsEvent, { type: 'continuity-record-updated' }>>(
+        socket,
+        (event) => event.type === 'continuity-record-updated' && event.data.continuityRecord.sourceReintegrationId === record!.id,
+      );
+
+      const dispatched = await api<DispatchSoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+      );
+
+      const wsEvent = await wsEventPromise;
+      const listedContinuity = await api<ListContinuityRecordsResponse>(
+        baseUrl,
+        `/api/continuity-records?sourceReintegrationIds=${encodeURIComponent(record!.id)}`,
+      );
+      const continuity = listedContinuity.continuityRecords.find((item) => item.sourceReintegrationId === record!.id);
+
+      assert.ok(continuity);
+      assert.equal(wsEvent.data.continuityRecord.sourceReintegrationId, record!.id);
+      assert.equal(wsEvent.data.continuityRecord.promotionSoulActionId, action!.id);
+      assert.deepEqual(wsEvent.data.continuityRecord, continuity);
+      assert.deepEqual(wsEvent.data.continuityRecord.continuitySummary, continuity?.continuitySummary);
+      assert.deepEqual(wsEvent.data.continuityRecord.explanationSummary, continuity?.explanationSummary);
+      assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'continuity_record');
+      assert.equal(dispatched.soulAction?.executionSummary?.objectId, continuity?.id ?? null);
+    } finally {
+      socket.close();
+    }
+  } finally {
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
+test('event-node promotion websocket event stays aligned with follow-up event-node list projection summaries', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-event-ws-followup-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    initDatabase();
+    upsertReintegrationRecord({
+      workerTaskId: 'api-pr6-event-ws-followup',
+      sourceNoteId: 'note-api-pr6-event-ws-followup',
+      soulActionId: null,
+      taskType: 'weekly_report',
+      terminalStatus: 'succeeded',
+      signalKind: 'weekly_report_reintegration',
+      reviewStatus: 'pending_review',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'api event websocket follow-up summary',
+      evidence: { source: 'api-event-ws-followup-test' },
+      now: '2026-03-22T10:20:00.000Z',
+    });
+
+    const listedRecords = await api<ListReintegrationRecordsResponse>(baseUrl, '/api/reintegration-records');
+    const record = listedRecords.reintegrationRecords.find((item) => item.workerTaskId === 'api-pr6-event-ws-followup');
+    assert.ok(record);
+
+    const accepted = await api<AcceptReintegrationRecordResponse>(
+      baseUrl,
+      `/api/reintegration-records/${encodeURIComponent(record!.id)}/accept`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'accept for event websocket api test' }),
+      },
+    );
+
+    const action = accepted.soulActions.find((item) => item.actionKind === 'promote_event_node') ?? accepted.soulActions.find((item) => item.actionKind === 'create_event_node');
+    assert.ok(action);
+
+    await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action!.id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'approve for event websocket api test' }),
+      },
+    );
+
+    const socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    try {
+      const wsEventPromise = waitForWebSocketEvent<Extract<WsEvent, { type: 'event-node-updated' }>>(
+        socket,
+        (event) => event.type === 'event-node-updated' && event.data.eventNode.sourceReintegrationId === record!.id,
+      );
+
+      const dispatched = await api<DispatchSoulActionResponse>(
+        baseUrl,
+        `/api/soul-actions/${encodeURIComponent(action!.id)}/dispatch`,
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+      );
+
+      const wsEvent = await wsEventPromise;
+      const listedEvents = await api<ListEventNodesResponse>(
+        baseUrl,
+        `/api/event-nodes?sourceReintegrationIds=${encodeURIComponent(record!.id)}`,
+      );
+      const eventNode = listedEvents.eventNodes.find((item) => item.sourceReintegrationId === record!.id);
+
+      assert.ok(eventNode);
+      assert.equal(wsEvent.data.eventNode.sourceReintegrationId, record!.id);
+      assert.equal(wsEvent.data.eventNode.promotionSoulActionId, action!.id);
+      assert.deepEqual(wsEvent.data.eventNode, eventNode);
+      assert.deepEqual(wsEvent.data.eventNode.explanationSummary, eventNode?.explanationSummary);
+      assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'event_node');
+      assert.equal(dispatched.soulAction?.executionSummary?.objectId, eventNode?.id ?? null);
+    } finally {
+      socket.close();
+    }
   } finally {
     await stopServer();
     await fs.writeFile(configFile, originalConfig);
@@ -3819,6 +4432,99 @@ test('sequential approve websocket updates stay aligned with grouped follow-up f
   }
 });
 
+test('worker-task terminal updates emit soul-action-updated websocket events aligned with persisted lifecycle state', async () => {
+  const env = await createTestEnv('lifeos-reintegration-api-worker-soul-action-ws-');
+  const configFile = env.configPath;
+  const originalConfig = await fs.readFile(configFile, 'utf-8');
+  let socket: WebSocket | null = null;
+
+  try {
+    await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
+    await startServer();
+
+    const baseUrl = `http://127.0.0.1:${env.port}`;
+    await waitFor(async () => {
+      try {
+        await api(baseUrl, '/api/config');
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    socket = await openWebSocket(`ws://127.0.0.1:${env.port}/ws`);
+
+    initDatabase();
+    const sourceNoteId = 'note-api-worker-soul-action-ws';
+    const action = createOrReuseSoulAction({
+      sourceNoteId,
+      actionKind: 'update_persona_snapshot',
+      governanceStatus: 'approved',
+      executionStatus: 'not_dispatched',
+      now: '2026-03-23T10:00:00.000Z',
+      governanceReason: 'approved for worker/soul-action websocket sync test',
+    });
+
+    const terminalSoulActionEventPromise = waitForWebSocketEvent<SoulActionWsEvent>(
+      socket,
+      (event) => event.type === 'soul-action-updated'
+        && event.data.id === action.id
+        && ['succeeded', 'failed', 'cancelled'].includes(event.data.executionStatus),
+    );
+    const terminalTaskEventPromise = waitForWebSocketEvent<WorkerTaskWsEvent>(
+      socket,
+      (event) => event.type === 'worker-task-updated'
+        && ['succeeded', 'failed', 'cancelled'].includes(event.data.status)
+        && event.data.sourceNoteId === sourceNoteId
+        && event.data.taskType === 'update_persona_snapshot',
+    );
+
+    const dispatchResponse = await api<DispatchSoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}/dispatch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({}),
+      },
+    );
+
+    assert.ok(dispatchResponse.task);
+    assert.equal(dispatchResponse.soulAction?.id, action.id);
+    assert.equal(dispatchResponse.task?.sourceNoteId, sourceNoteId);
+
+    const [terminalSoulActionEvent, terminalTaskEvent] = await Promise.all([
+      terminalSoulActionEventPromise,
+      terminalTaskEventPromise,
+    ]);
+
+    const persistedActionResponse = await api<SoulActionResponse>(
+      baseUrl,
+      `/api/soul-actions/${encodeURIComponent(action.id)}`,
+    );
+    const persistedAction = persistedActionResponse.soulAction;
+
+    assert.equal(terminalSoulActionEvent.data.id, action.id);
+    assert.equal(terminalSoulActionEvent.data.sourceNoteId, sourceNoteId);
+    assert.equal(terminalSoulActionEvent.data.workerTaskId, dispatchResponse.task!.id);
+    assert.equal(terminalSoulActionEvent.data.executionStatus, persistedAction.executionStatus);
+    assert.equal(terminalSoulActionEvent.data.resultSummary ?? null, persistedAction.resultSummary ?? null);
+    assert.equal(terminalSoulActionEvent.data.error ?? null, persistedAction.error ?? null);
+    assert.equal(terminalSoulActionEvent.data.executionSummary?.objectType, persistedAction.executionSummary?.objectType ?? null);
+    assert.equal(terminalSoulActionEvent.data.executionSummary?.objectId, persistedAction.executionSummary?.objectId ?? null);
+    assert.equal(terminalSoulActionEvent.data.executionSummary?.operation, persistedAction.executionSummary?.operation ?? null);
+    assert.equal(terminalSoulActionEvent.data.executionStatus, terminalTaskEvent.data.status === 'cancelled' ? 'cancelled' : terminalTaskEvent.data.status);
+    assert.equal(terminalSoulActionEvent.data.resultSummary ?? null, terminalTaskEvent.data.resultSummary ?? null);
+    assert.equal(terminalSoulActionEvent.data.error ?? null, terminalTaskEvent.data.error ?? null);
+  } finally {
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      socket.terminate();
+    }
+    await stopServer();
+    await fs.writeFile(configFile, originalConfig);
+    await env.cleanup();
+  }
+});
+
 test('dispatch websocket updates stay aligned with follow-up filtered lists for grouped settings refresh', async () => {
   const env = await createTestEnv('lifeos-reintegration-api-ws-filter-followup-');
   const configFile = env.configPath;
@@ -4047,6 +4753,9 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
     assert.equal(wsEvent.data.sourceReintegrationId, record!.id);
     assert.equal(wsEvent.data.sourceReintegrationId, dispatchResponse.soulAction.sourceReintegrationId);
     assert.equal(wsEvent.data.governanceStatus, dispatchResponse.soulAction.governanceStatus);
+    assert.equal(wsEvent.data.executionSummary?.objectType, dispatchResponse.soulAction.executionSummary?.objectType ?? null);
+    assert.equal(wsEvent.data.executionSummary?.objectId, dispatchResponse.soulAction.executionSummary?.objectId ?? null);
+    assert.equal(wsEvent.data.executionSummary?.operation, dispatchResponse.soulAction.executionSummary?.operation ?? null);
     assert.equal(filteredAfterDispatch.filters.sourceReintegrationId, record!.id);
     assert.equal(filteredAfterDispatch.filters.governanceStatus, 'approved');
     assert.equal(filteredAfterDispatch.filters.executionStatus, dispatchResponse.soulAction.executionStatus);
@@ -4055,6 +4764,9 @@ test('soul-action dispatch emits soul-action-updated websocket event for setting
     assert.equal(filteredAction?.sourceReintegrationId, dispatchResponse.soulAction.sourceReintegrationId);
     assert.equal(filteredAction?.governanceStatus, dispatchResponse.soulAction.governanceStatus);
     assert.equal(filteredAction?.executionStatus, dispatchResponse.soulAction.executionStatus);
+    assert.equal(filteredAction?.executionSummary?.objectType, dispatchResponse.soulAction.executionSummary?.objectType ?? null);
+    assert.equal(filteredAction?.executionSummary?.objectId, dispatchResponse.soulAction.executionSummary?.objectId ?? null);
+    assert.equal(filteredAction?.executionSummary?.operation, dispatchResponse.soulAction.executionSummary?.operation ?? null);
     assert.ok(['pending', 'running', 'succeeded'].includes(wsEvent.data.executionStatus));
   } finally {
     if (socket && socket.readyState !== WebSocket.CLOSED) {
