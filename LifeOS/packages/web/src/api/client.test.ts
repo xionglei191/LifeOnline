@@ -1,5 +1,51 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ContinuityRecord, EventNode, CreateNoteRequest, CreateNoteResponse, UpdateNoteResponse, SearchResult, Config, UpdateConfigResponse, IndexStatus, IndexErrorEventData, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskSchedule, WorkerTask, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, ReintegrationRecord, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, SoulAction, DispatchSoulActionResponse, PersonaSnapshot, DeleteTaskScheduleResponse, TaskScheduleResponse, WorkerTaskListFilters, ListReintegrationRecordsResponse, ListSoulActionsResponse } from '@lifeos/shared';
+import {
+  getProjectionContinuitySummary,
+  getProjectionExplanationSummary,
+  formatProjectionContinuityDetails,
+  formatProjectionContinuitySummary,
+  formatProjectionExplanationDetails,
+  formatProjectionExplanationSummary,
+  formatSoulActionPromotionSummary,
+  formatReintegrationSignalKindLabel,
+  formatReintegrationStrengthLabel,
+  formatReintegrationTargetLabel,
+  getAcceptReintegrationMessage,
+  getAcceptReintegrationMessageFromDisplaySummary,
+  getPlanReintegrationMessage,
+  type ContinuityRecord,
+  type EventNode,
+  type CreateNoteRequest,
+  type CreateNoteResponse,
+  type UpdateNoteResponse,
+  type SearchResult,
+  type Config,
+  type UpdateConfigResponse,
+  type IndexStatus,
+  type IndexErrorEventData,
+  type ScheduleHealth,
+  type StatsTrendPoint,
+  type StatsRadarPoint,
+  type StatsMonthlyPoint,
+  type StatsTagPoint,
+  type TaskSchedule,
+  type WorkerTask,
+  type PromptRecord,
+  type AiProviderSettings,
+  type TestAiProviderConnectionResponse,
+  type ReintegrationRecord,
+  type AcceptReintegrationRecordResponse,
+  type RejectReintegrationRecordResponse,
+  type SoulAction,
+  type DispatchSoulActionResponse,
+  type PersonaSnapshot,
+  type DeleteTaskScheduleResponse,
+  type TaskScheduleResponse,
+  type WorkerTaskListFilters,
+  type ListReintegrationRecordsResponse,
+  type ListSoulActionsResponse,
+  getSoulActionGovernanceMessage,
+} from '@lifeos/shared';
 import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActionList, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTaskList, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecordList, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
 
 describe('api client promotion projections', () => {
@@ -67,7 +113,16 @@ describe('api client promotion projections', () => {
         threshold: 'high',
         status: 'active',
         evidence: { source: 'client-test' },
-        explanation: { reason: 'projection' },
+        explanation: {
+          whyHighThreshold: 'review-backed PR6 promotion',
+          whyNow: 'Promote the next action from review',
+          reviewBacked: true,
+        },
+        explanationSummary: {
+          primaryReason: 'Promote the next action from review',
+          rationale: 'review-backed PR6 promotion',
+          reviewBacked: true,
+        },
         occurredAt: '2026-03-22T10:00:00.000Z',
         createdAt: '2026-03-22T10:00:00.000Z',
         updatedAt: '2026-03-22T10:00:00.000Z',
@@ -79,7 +134,15 @@ describe('api client promotion projections', () => {
       json: async () => ({ eventNodes, filters: { sourceReintegrationIds: ['reint:test'] } }),
     }));
 
-    await expect(fetchEventNodes(['reint:test'])).resolves.toEqual(eventNodes);
+    const result = await fetchEventNodes(['reint:test']);
+    expect(result).toEqual(eventNodes);
+    expect(result[0]?.explanationSummary).toEqual(getProjectionExplanationSummary(result[0]!));
+    expect(formatProjectionExplanationSummary(result[0]!)).toBe('Promote the next action from review · review-backed PR6 promotion · review-backed');
+    expect(formatProjectionExplanationDetails(result[0]!)).toEqual([
+      '主要原因：Promote the next action from review',
+      '提升理由：review-backed PR6 promotion',
+      '治理依据：review-backed',
+    ]);
     expect(fetch).toHaveBeenCalledWith('/api/event-nodes?sourceReintegrationIds=reint%3Atest');
   });
 
@@ -95,9 +158,25 @@ describe('api client promotion projections', () => {
         target: 'derived_outputs',
         strength: 'medium',
         summary: 'daily rhythm continuity summary',
-        continuity: { trend: 'stable' },
+        continuity: {
+          anchor: 'after weekly review',
+          scope: 'derived outputs',
+        },
+        continuitySummary: {
+          anchor: 'after weekly review',
+          scope: 'derived outputs',
+        },
         evidence: { source: 'client-test' },
-        explanation: { reason: 'projection' },
+        explanation: {
+          whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+          whyReviewBacked: 'accepted reintegration record',
+          reviewBacked: true,
+        },
+        explanationSummary: {
+          primaryReason: 'accepted reintegration record',
+          rationale: 'PR6 continuity promotion',
+          reviewBacked: true,
+        },
         recordedAt: '2026-03-22T10:05:00.000Z',
         createdAt: '2026-03-22T10:05:00.000Z',
         updatedAt: '2026-03-22T10:05:00.000Z',
@@ -109,7 +188,21 @@ describe('api client promotion projections', () => {
       json: async () => ({ continuityRecords, filters: { sourceReintegrationIds: ['reint:test'] } }),
     }));
 
-    await expect(fetchContinuityRecords(['reint:test'])).resolves.toEqual(continuityRecords);
+    const result = await fetchContinuityRecords(['reint:test']);
+    expect(result).toEqual(continuityRecords);
+    expect(result[0]?.continuitySummary).toEqual(getProjectionContinuitySummary(result[0]!));
+    expect(result[0]?.explanationSummary).toEqual(getProjectionExplanationSummary(result[0]!));
+    expect(formatProjectionContinuitySummary(result[0]!)).toBe('after weekly review · scope derived outputs');
+    expect(formatProjectionContinuityDetails(result[0]!)).toEqual([
+      '锚点：after weekly review',
+      '范围：derived outputs',
+    ]);
+    expect(formatProjectionExplanationSummary(result[0]!)).toBe('accepted reintegration record · PR6 continuity promotion · review-backed');
+    expect(formatProjectionExplanationDetails(result[0]!)).toEqual([
+      '主要原因：accepted reintegration record',
+      '提升理由：PR6 continuity promotion',
+      '治理依据：review-backed',
+    ]);
     expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
   });
 
@@ -190,7 +283,16 @@ describe('api client promotion projections', () => {
         threshold: 'high',
         status: 'active',
         evidence: { source: 'client-test' },
-        explanation: { reason: 'projection' },
+        explanation: {
+          whyHighThreshold: 'review-backed PR6 promotion',
+          whyNow: 'Promote the next action from review',
+          reviewBacked: true,
+        },
+        explanationSummary: {
+          primaryReason: 'Promote the next action from review',
+          rationale: 'review-backed PR6 promotion',
+          reviewBacked: true,
+        },
         occurredAt: '2026-03-22T10:00:00.000Z',
         createdAt: '2026-03-22T10:00:00.000Z',
         updatedAt: '2026-03-22T10:00:00.000Z',
@@ -202,10 +304,12 @@ describe('api client promotion projections', () => {
       json: async () => ({ eventNodes, filters: { sourceReintegrationIds: [' reint:test ', 'reint:test', 'reint:second '] } }),
     }));
 
-    await expect(fetchEventNodeProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
+    const result = await fetchEventNodeProjectionList([' reint:test ', '', 'reint:test ']);
+    expect(result).toEqual({
       items: eventNodes,
       filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] },
     });
+    expect(result.items[0]?.explanationSummary).toEqual(getProjectionExplanationSummary(result.items[0]!));
     expect(fetch).toHaveBeenCalledWith('/api/event-nodes?sourceReintegrationIds=reint%3Atest');
   });
 
@@ -221,9 +325,25 @@ describe('api client promotion projections', () => {
         target: 'derived_outputs',
         strength: 'medium',
         summary: 'daily rhythm continuity summary',
-        continuity: { rhythm: 'steady' },
+        continuity: {
+          anchor: 'after weekly review',
+          scope: 'derived outputs',
+        },
+        continuitySummary: {
+          anchor: 'after weekly review',
+          scope: 'derived outputs',
+        },
         evidence: { source: 'client-test' },
-        explanation: { reason: 'projection' },
+        explanation: {
+          whyNotOrdinaryArtifact: 'PR6 continuity promotion',
+          whyReviewBacked: 'accepted reintegration record',
+          reviewBacked: true,
+        },
+        explanationSummary: {
+          primaryReason: 'accepted reintegration record',
+          rationale: 'PR6 continuity promotion',
+          reviewBacked: true,
+        },
         recordedAt: '2026-03-22T10:00:00.000Z',
         createdAt: '2026-03-22T10:00:00.000Z',
         updatedAt: '2026-03-22T10:00:00.000Z',
@@ -235,10 +355,13 @@ describe('api client promotion projections', () => {
       json: async () => ({ continuityRecords, filters: { sourceReintegrationIds: [' reint:test ', 'reint:test', 'reint:second '] } }),
     }));
 
-    await expect(fetchContinuityProjectionList([' reint:test ', '', 'reint:test '])).resolves.toEqual({
+    const result = await fetchContinuityProjectionList([' reint:test ', '', 'reint:test ']);
+    expect(result).toEqual({
       items: continuityRecords,
       filters: { sourceReintegrationIds: ['reint:test', 'reint:second'] },
     });
+    expect(result.items[0]?.continuitySummary).toEqual(getProjectionContinuitySummary(result.items[0]!));
+    expect(result.items[0]?.explanationSummary).toEqual(getProjectionExplanationSummary(result.items[0]!));
     expect(fetch).toHaveBeenCalledWith('/api/continuity-records?sourceReintegrationIds=reint%3Atest');
   });
 
@@ -346,6 +469,14 @@ describe('api client promotion projections', () => {
       strength: 'medium',
       summary: 'canonical reintegration record',
       evidence: { source: 'client-test' },
+      nextActionSummary: null,
+      displaySummary: {
+        plannedActionCount: 0,
+        nextActionCreatedCount: null,
+        nextActionText: null,
+        hasNextActionEvidence: false,
+        noPlanReason: 'no_outcome_signal',
+      },
       reviewReason: null,
       createdAt: '2026-03-22T10:08:00.000Z',
       updatedAt: '2026-03-22T10:08:00.000Z',
@@ -370,6 +501,7 @@ describe('api client promotion projections', () => {
         sourceNoteId: 'note-1.md',
       },
     });
+    await expect(fetchReintegrationRecords({ sourceNoteId: 'note-1.md' })).resolves.toEqual([reintegrationRecord]);
     expect(fetch).toHaveBeenCalledWith('/api/reintegration-records?sourceNoteId=note-1.md');
   });
 
@@ -395,9 +527,15 @@ describe('api client promotion projections', () => {
     const dispatchResponse: DispatchSoulActionResponse = {
       result: {
         dispatched: true,
-        reason: 'queued',
+        reason: 'persona snapshot synced',
         soulActionId: soulAction.id,
         workerTaskId: 'worker-task-1',
+        executionSummary: {
+          objectType: 'worker_task',
+          objectId: 'worker-task-1',
+          operation: null,
+          summary: 'persona snapshot synced',
+        },
       },
       soulAction: { ...soulAction, governanceStatus: 'approved', executionStatus: 'succeeded', workerTaskId: 'worker-task-1' },
       task: {
@@ -414,6 +552,8 @@ describe('api client promotion projections', () => {
         error: null,
         sourceNoteId: 'note-1',
       },
+      eventNode: null,
+      continuityRecord: null,
     };
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ soulActions: [soulAction], filters: { governanceStatus: 'pending_review' } }) })
@@ -428,6 +568,9 @@ describe('api client promotion projections', () => {
     await expect(approveSoulAction('soul-action-1', { reason: 'approve it' })).resolves.toEqual({ ...soulAction, governanceStatus: 'approved' });
     await expect(deferSoulAction('soul-action-1', { reason: 'wait a bit' })).resolves.toEqual({ ...soulAction, governanceStatus: 'deferred' });
     await expect(discardSoulAction('soul-action-1', { reason: 'drop it' })).resolves.toEqual({ ...soulAction, governanceStatus: 'discarded' });
+    expect(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'approved')).toBe('提升 Event Node 已批准');
+    expect(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'deferred')).toBe('提升 Event Node 已延后');
+    expect(getSoulActionGovernanceMessage({ actionKind: 'promote_event_node' }, 'discarded')).toBe('提升 Event Node 已丢弃');
     await expect(dispatchSoulAction('soul-action-1')).resolves.toEqual(dispatchResponse);
   });
 
@@ -462,6 +605,14 @@ describe('api client promotion projections', () => {
       strength: 'medium',
       summary: 'Daily report reintegration summary',
       evidence: { source: 'client-test' },
+      nextActionSummary: null,
+      displaySummary: {
+        plannedActionCount: 0,
+        nextActionCreatedCount: null,
+        nextActionText: null,
+        hasNextActionEvidence: false,
+        noPlanReason: 'no_outcome_signal',
+      },
       reviewReason: null,
       createdAt: '2026-03-22T10:00:00.000Z',
       updatedAt: '2026-03-22T10:00:00.000Z',
@@ -475,6 +626,13 @@ describe('api client promotion projections', () => {
       governanceStatus: 'pending_review',
       executionStatus: 'not_dispatched',
       governanceReason: 'promotion planned',
+      promotionSummary: {
+        sourceSummary: 'Daily report reintegration summary',
+        primaryReason: 'accepted reintegration record',
+        rationale: 'review-backed PR6 promotion',
+        reviewBacked: true,
+        projectionKind: 'event',
+      },
       workerTaskId: null,
       payload: { source: 'client-test' },
       createdAt: '2026-03-22T10:05:00.000Z',
@@ -486,22 +644,163 @@ describe('api client promotion projections', () => {
       resultSummary: null,
     };
     const accepted: AcceptReintegrationRecordResponse = {
-      reintegrationRecord: { ...reintegrationRecord, reviewStatus: 'accepted', reviewReason: 'looks good', reviewedAt: '2026-03-22T10:06:00.000Z' },
+      reintegrationRecord: {
+        ...reintegrationRecord,
+        reviewStatus: 'accepted',
+        reviewReason: 'looks good',
+        reviewedAt: '2026-03-22T10:06:00.000Z',
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        displaySummary: {
+          plannedActionCount: 1,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: null,
+        },
+      },
       soulActions: [plannedSoulAction],
+      nextActionSummary: {
+        createdCount: 2,
+        candidateTitle: '整理周报素材',
+        candidatePriority: 'high',
+        candidateDue: '2026-03-22',
+        candidateOutputNoteId: 'task-note-1',
+      },
+      displaySummary: {
+        plannedActionCount: 1,
+        nextActionCreatedCount: 2,
+        nextActionText: '整理周报素材（high · due 2026-03-22）',
+        hasNextActionEvidence: true,
+        noPlanReason: null,
+      },
     };
     const rejected: RejectReintegrationRecordResponse = {
-      reintegrationRecord: { ...reintegrationRecord, reviewStatus: 'rejected', reviewReason: 'not useful', reviewedAt: '2026-03-22T10:07:00.000Z' },
+      reintegrationRecord: {
+        ...reintegrationRecord,
+        reviewStatus: 'rejected',
+        reviewReason: 'not useful',
+        reviewedAt: '2026-03-22T10:07:00.000Z',
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        displaySummary: {
+          plannedActionCount: 0,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: 'next_action_evidence_only',
+        },
+      },
     };
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ reintegrationRecords: [reintegrationRecord], filters: { reviewStatus: 'pending_review' } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => accepted })
       .mockResolvedValueOnce({ ok: true, json: async () => rejected })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ soulActions: [plannedSoulAction] }) }));
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        reintegrationRecord: {
+          ...reintegrationRecord,
+          nextActionSummary: {
+            createdCount: 2,
+            candidateTitle: '整理周报素材',
+            candidatePriority: 'high',
+            candidateDue: '2026-03-22',
+            candidateOutputNoteId: 'task-note-1',
+          },
+          displaySummary: {
+            plannedActionCount: 1,
+            nextActionCreatedCount: 2,
+            nextActionText: '整理周报素材（high · due 2026-03-22）',
+            hasNextActionEvidence: true,
+            noPlanReason: null,
+          },
+        },
+        soulActions: [plannedSoulAction],
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        displaySummary: {
+          plannedActionCount: 1,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: null,
+        },
+      }) }));
 
     await expect(fetchReintegrationRecords({ reviewStatus: 'pending_review' })).resolves.toEqual([reintegrationRecord]);
     await expect(acceptReintegrationRecord('reint:worker-task-1', { reason: 'looks good' })).resolves.toEqual(accepted);
+    expect(accepted.reintegrationRecord.nextActionSummary?.candidateTitle).toBe('整理周报素材');
+    expect(accepted.reintegrationRecord.displaySummary).toEqual({
+      plannedActionCount: 1,
+      nextActionCreatedCount: 2,
+      nextActionText: '整理周报素材（high · due 2026-03-22）',
+      hasNextActionEvidence: true,
+      noPlanReason: null,
+    });
     await expect(rejectReintegrationRecord('reint:worker-task-1', { reason: 'not useful' })).resolves.toEqual(rejected);
-    await expect(planReintegrationPromotions('reint:worker-task-1')).resolves.toEqual([plannedSoulAction]);
+    const plannedResponse = await planReintegrationPromotions('reint:worker-task-1');
+    expect(plannedResponse).toEqual({
+      reintegrationRecord: {
+        ...reintegrationRecord,
+        nextActionSummary: {
+          createdCount: 2,
+          candidateTitle: '整理周报素材',
+          candidatePriority: 'high',
+          candidateDue: '2026-03-22',
+          candidateOutputNoteId: 'task-note-1',
+        },
+        displaySummary: {
+          plannedActionCount: 1,
+          nextActionCreatedCount: 2,
+          nextActionText: '整理周报素材（high · due 2026-03-22）',
+          hasNextActionEvidence: true,
+          noPlanReason: null,
+        },
+      },
+      soulActions: [plannedSoulAction],
+      nextActionSummary: {
+        createdCount: 2,
+        candidateTitle: '整理周报素材',
+        candidatePriority: 'high',
+        candidateDue: '2026-03-22',
+        candidateOutputNoteId: 'task-note-1',
+      },
+      displaySummary: {
+        plannedActionCount: 1,
+        nextActionCreatedCount: 2,
+        nextActionText: '整理周报素材（high · due 2026-03-22）',
+        hasNextActionEvidence: true,
+        noPlanReason: null,
+      },
+    });
+    expect(plannedResponse.reintegrationRecord.nextActionSummary?.candidateTitle).toBe('整理周报素材');
+    expect(getAcceptReintegrationMessage(accepted, accepted.reintegrationRecord)).toBe('已接受并自动规划 1 条候选动作');
+    expect(formatSoulActionPromotionSummary(plannedSoulAction)).toBe('投射 EventNode · review-backed · Daily report reintegration summary · accepted reintegration record · review-backed PR6 promotion');
+    expect(getAcceptReintegrationMessageFromDisplaySummary({
+      plannedActionCount: 0,
+      nextActionCreatedCount: 2,
+      nextActionText: '整理周报素材（high · due 2026-03-22）',
+      hasNextActionEvidence: true,
+      noPlanReason: 'next_action_evidence_only',
+    })).toBe('已接受，但已有 next-action evidence，但尚未形成可规划动作 · 已记录 next-action evidence：整理周报素材（high · due 2026-03-22）');
+    expect(getPlanReintegrationMessage({ soulActions: [plannedSoulAction], nextActionSummary: accepted.nextActionSummary }, reintegrationRecord)).toBe('已规划 1 条候选动作 · 下一步候选：整理周报素材（high · due 2026-03-22）');
+    expect(formatReintegrationSignalKindLabel(reintegrationRecord)).toBe('日报回流');
+    expect(formatReintegrationStrengthLabel(reintegrationRecord)).toBe('中');
+    expect(formatReintegrationTargetLabel(reintegrationRecord)).toBe('派生产物');
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/reintegration-records?reviewStatus=pending_review');
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/reintegration-records/reint%3Aworker-task-1/accept', {
       method: 'POST',
@@ -526,7 +825,7 @@ describe('api client promotion projections', () => {
       soulActionId: null,
       taskType: 'extract_tasks',
       terminalStatus: 'succeeded',
-      signalKind: 'candidate_task',
+      signalKind: 'task_extraction_reintegration',
       reviewStatus: 'accepted',
       target: 'task_record',
       strength: 'medium',

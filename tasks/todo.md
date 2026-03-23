@@ -1,34 +1,36 @@
-# 当前轮：promotion projection websocket 事实源继续收口
+# 当前轮：promotion dispatch response 事实源继续收口
 
 ## 进展
 - [x] 补齐本轮必读主线文件：`README.md`、`CLAUDE.md`、`vision/00-权威基线`、`vision/01-当前进度`、相关 `vision/02-历史草案`、`tasks/todo.md`。
-- [x] 复查当前 dirty working tree，并继续沿用与联合认知体主线直接相关的 server/reintegration 文件：
-  - 继续沿用：`LifeOS/packages/server/src/api/handlers.ts`、`LifeOS/packages/server/src/soul/*`、相关 `LifeOS/packages/server/test/*`
+- [x] 复查当前 dirty working tree，并继续沿用与联合认知体主线直接相关的 server/reintegration/shared 文件：
+  - 继续沿用：`LifeOS/packages/server/src/api/handlers.ts`、`LifeOS/packages/shared/src/types.ts`、相关 `LifeOS/packages/server/test/*`
   - 本轮不碰：`lifeonline-claude-worker-v2.sh`、新增 vision 文稿、`vision/book/assets/images/`、以及 grouped governance / web 侧上一轮未收束区域
-- [x] 在 promotion dispatch / projection read-model 链路中确认新的事实源缺口：
-  - `/api/event-nodes` 与 `/api/continuity-records` list handler 会补齐 `explanationSummary / continuitySummary`
-  - 但 dispatch 成功后的 websocket `event-node-updated` / `continuity-record-updated` 仍直接广播底层对象，缺少同一层 projection summary 装配
-  - 这让“刚 dispatch 完收到的 websocket 对象”和“随后 list API 读到的对象”存在字段面不一致，仍是 read-model 双轨
-- [x] 在 `LifeOS/packages/server/src/api/handlers.ts` 收口该分叉：
-  - 新增 `attachEventNodeProjectionSummary(...)` 与 `attachContinuityRecordProjectionSummary(...)`
-  - 让 websocket 广播与 list API 共同复用同一套 projection summary 装配逻辑
-  - 保持 event/continuity 持久化与 dispatch 执行逻辑不变，只统一 server-side read-model 输出
-- [x] 在 `LifeOS/packages/server/test/reintegrationApi.test.ts` 补强 focused websocket 断言，锁定：
-  - continuity promotion dispatch 的 `continuity-record-updated` websocket 必须与 follow-up continuity list 返回对象完全对齐
-  - event-node promotion dispatch 的 `event-node-updated` websocket 必须与 follow-up event-node list 返回对象完全对齐
-  - websocket payload 内新增的 `explanationSummary / continuitySummary` 必须来自同一 read-model 投射层，而不是另一路手拼
+- [x] 在 promotion dispatch response / websocket / follow-up list 三条可见性路径中确认新的 contract gap：
+  - 上轮已把 websocket 与 list 的 projection summary 收口到同一路径
+  - 但 dispatch API 自身仍只返回 `executionSummary`，没有把已创建的 `eventNode / continuityRecord` projection 对象直接回给调用方
+  - 这让 promotion dispatch 成功后依然存在第三条“只给摘要不给对象”的响应路径，前端若想拿到 projection 详情仍需额外等 websocket 或再查 list
+- [x] 在 `LifeOS/packages/shared/src/types.ts` 与 `LifeOS/packages/server/src/api/handlers.ts` 收口该缺口：
+  - 扩展 `DispatchSoulActionResponse`，显式返回 `eventNode` / `continuityRecord`
+  - dispatch handler 直接复用与 websocket/list 相同的 projection summary helper，保证 response 返回的是同一 read-model 对象
+  - worker-host 路径仍保持 `eventNode = null`、`continuityRecord = null`，不改变既有行为边界
+- [x] 在 `LifeOS/packages/server/test/reintegrationApi.test.ts` 与 `LifeOS/packages/web/src/api/client.test.ts` 补强 focused 断言，锁定：
+  - continuity promotion dispatch response 必须直接携带投射后的 continuity record，并与 websocket/list 保持一致
+  - event-node promotion dispatch response 必须直接携带投射后的 event node，并与 websocket/list 保持一致
+  - web client 对扩展后的 shared dispatch contract 继续按原样透传
 
 ## 结果
-- promotion dispatch 之后的 websocket 与 follow-up list 现在共享同一 projection summary 装配点，避免 event/continuity 对象在“刚广播”和“稍后读取”之间出现字段漂移。
-- 这次推进的是 PR6 promotion projection 的 server/web/shared 可见性一致性，属于联合认知体对象层 read-model 收口，而不是表层 UI polish。
+- promotion dispatch response / websocket / follow-up list 现在共用同一套 projection 对象事实源，避免 promotion 成功后调用方只能先拿摘要、再靠第二次读取补对象详情。
+- 这次推进的是 PR6 promotion projection 的 contract 收口，直接增强联合认知体对象层 API 可见性，而不是表层 UI polish。
 
 ## 验证
-- [x] `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts --test-name-pattern "continuity promotion websocket event stays aligned with follow-up continuity-record list projection summaries|event-node promotion websocket event stays aligned with follow-up event-node list projection summaries|continuity promotion dispatch writes follow-up continuity-record list aligned with soul-action source record|event-node promotion dispatch writes follow-up event-node list aligned with soul-action source record"`
-  - 结果：通过（新增 websocket 对齐用例通过；目标相关 continuity/event projection 用例通过）
+- [x] `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/server" exec node --import tsx --test test/reintegrationApi.test.ts --test-name-pattern "promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|event-node promotion dispatch response stays aligned with local-only execution results and follow-up soul-action list|continuity promotion websocket event stays aligned with follow-up continuity-record list projection summaries|event-node promotion websocket event stays aligned with follow-up event-node list projection summaries"`
+  - 结果：通过（promotion dispatch response 与 websocket/list 对齐用例通过）
+- [x] `pnpm --dir "/home/xionglei/LifeOnline/LifeOS/packages/web" exec vitest run src/api/client.test.ts`
+  - 结果：通过（40 tests passed）
 
 ## 下一步建议
-- 检查 promotion dispatch response 本身是否也应直接携带 event-node / continuity-record projection 对象，而不只返回 `executionSummary`；若存在 response 与 websocket/list 的第三套可见性路径，可继续收口。
-- 或转向 `feedbackReintegration` / `continuityIntegrator` 与 rejected review 交界处，检查被拒绝回流是否仍能通过残余 sourceReintegrationId 读取到不应暴露的 promotion projection。
+- 继续检查 accept / reject / plan / dispatch 四条 response 是否都已统一走单一 projection helper；若 reintegration record、soul action、promotion object 仍有分散装配点，可继续下沉。
+- 或转向 rejected review 与 promotion projection 的边界，确认被拒绝回流不会经由 response/list/websocket 任一路径泄漏已存在的 event/continuity 投射对象。
 
 ---
-最近更新：2026-03-23 23:20 Asia/Shanghai
+最近更新：2026-03-23 23:31 Asia/Shanghai

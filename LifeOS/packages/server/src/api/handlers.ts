@@ -809,10 +809,18 @@ export async function dispatchSoulActionHandler(
       reason: responseSoulAction?.resultSummary ?? task?.error ?? result.reason,
       executionSummary: responseSoulAction?.executionSummary ?? result.executionSummary ?? null,
     };
+    const responseEventNode = attachEventNodeProjectionSummary(result.eventNode) ?? null;
+    const responseContinuityRecord = attachContinuityRecordProjectionSummary(result.continuityRecord) ?? null;
     broadcastSoulActionUpdate(soulAction);
     broadcastEventNodeUpdate(result.eventNode);
     broadcastContinuityRecordUpdate(result.continuityRecord);
-    const response: DispatchSoulActionResponse = { result: responseResult, soulAction: responseSoulAction ?? null, task };
+    const response: DispatchSoulActionResponse = {
+      result: responseResult,
+      soulAction: responseSoulAction ?? null,
+      task,
+      eventNode: responseEventNode,
+      continuityRecord: responseContinuityRecord,
+    };
     res.status(202).json(response);
   } catch (error) {
     console.error('Dispatch soul action error:', error);

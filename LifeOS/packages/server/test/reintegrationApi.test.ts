@@ -5,6 +5,8 @@ import path from 'path';
 import { WebSocket } from 'ws';
 import { fileURLToPath } from 'url';
 import {
+  getProjectionContinuitySummary,
+  getProjectionExplanationSummary,
   getReintegrationNextActionSummary,
   getReintegrationOutcomeDisplaySummary,
   type AcceptReintegrationRecordResponse,
@@ -3114,6 +3116,12 @@ test('promotion dispatch response stays aligned with local-only execution result
     assert.equal(dispatched.result.workerTaskId, null);
     assert.equal(dispatched.task, null);
     assert.match(dispatched.result.reason, /continuity record/);
+    assert.ok(dispatched.continuityRecord);
+    assert.equal(dispatched.eventNode, null);
+    assert.equal(dispatched.continuityRecord?.sourceReintegrationId, record!.id);
+    assert.equal(dispatched.continuityRecord?.promotionSoulActionId, action!.id);
+    assert.deepEqual(dispatched.continuityRecord?.continuitySummary, getProjectionContinuitySummary(dispatched.continuityRecord!));
+    assert.deepEqual(dispatched.continuityRecord?.explanationSummary, getProjectionExplanationSummary(dispatched.continuityRecord!));
     assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'continuity_record');
     assert.equal(dispatched.soulAction?.executionSummary?.operation, 'created');
     assert.equal(dispatched.soulAction?.executionSummary?.summary, dispatched.result.reason);
@@ -3223,6 +3231,11 @@ test('event-node promotion dispatch response stays aligned with local-only execu
     assert.equal(dispatched.result.workerTaskId, null);
     assert.equal(dispatched.task, null);
     assert.match(dispatched.result.reason, /event node/);
+    assert.ok(dispatched.eventNode);
+    assert.equal(dispatched.continuityRecord, null);
+    assert.equal(dispatched.eventNode?.sourceReintegrationId, record!.id);
+    assert.equal(dispatched.eventNode?.promotionSoulActionId, action!.id);
+    assert.deepEqual(dispatched.eventNode?.explanationSummary, getProjectionExplanationSummary(dispatched.eventNode!));
     assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'event_node');
     assert.equal(dispatched.soulAction?.executionSummary?.operation, 'created');
     assert.equal(dispatched.soulAction?.executionSummary?.summary, dispatched.result.reason);
@@ -3340,6 +3353,8 @@ test('continuity promotion websocket event stays aligned with follow-up continui
       assert.ok(continuity);
       assert.equal(wsEvent.data.continuityRecord.sourceReintegrationId, record!.id);
       assert.equal(wsEvent.data.continuityRecord.promotionSoulActionId, action!.id);
+      assert.deepEqual(dispatched.continuityRecord, wsEvent.data.continuityRecord);
+      assert.deepEqual(dispatched.continuityRecord, continuity);
       assert.deepEqual(wsEvent.data.continuityRecord, continuity);
       assert.deepEqual(wsEvent.data.continuityRecord.continuitySummary, continuity?.continuitySummary);
       assert.deepEqual(wsEvent.data.continuityRecord.explanationSummary, continuity?.explanationSummary);
@@ -3442,6 +3457,8 @@ test('event-node promotion websocket event stays aligned with follow-up event-no
       assert.ok(eventNode);
       assert.equal(wsEvent.data.eventNode.sourceReintegrationId, record!.id);
       assert.equal(wsEvent.data.eventNode.promotionSoulActionId, action!.id);
+      assert.deepEqual(dispatched.eventNode, wsEvent.data.eventNode);
+      assert.deepEqual(dispatched.eventNode, eventNode);
       assert.deepEqual(wsEvent.data.eventNode, eventNode);
       assert.deepEqual(wsEvent.data.eventNode.explanationSummary, eventNode?.explanationSummary);
       assert.equal(dispatched.soulAction?.executionSummary?.objectType, 'event_node');
