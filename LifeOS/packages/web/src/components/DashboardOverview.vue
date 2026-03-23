@@ -20,9 +20,9 @@
             <span class="metric-meta">需要你立即处理的任务队列</span>
           </article>
           <article class="metric-tile">
-            <span class="metric-label">系统健康</span>
-            <strong>{{ averageHealth }}</strong>
-            <span class="metric-meta">八维度平均生命信号</span>
+            <span class="metric-label">平均完成率</span>
+            <strong>{{ averageHealth }}%</strong>
+            <span class="metric-meta">八维度平均完成进度</span>
           </article>
           <article class="metric-tile">
             <span class="metric-label">本周重点</span>
@@ -30,9 +30,9 @@
             <span class="metric-meta">持续追踪的高权重事项</span>
           </article>
           <article class="metric-tile">
-            <span class="metric-label">失衡维度</span>
-            <strong>{{ lowestDimensionLabel }}</strong>
-            <span class="metric-meta">优先补齐的系统短板</span>
+            <span class="metric-label">最高积压维度</span>
+            <strong>{{ topBacklogDimensionLabel }}</strong>
+            <span class="metric-meta">当前 open work 最多的维度</span>
           </article>
         </div>
 
@@ -148,10 +148,9 @@ const topAttentionDimensionLabel = computed(() => {
   return getDimensionLabel(attentionRankedStats.value[0].dimension);
 });
 
-const lowestDimensionLabel = computed(() => {
-  if (!rankedStats.value.length) return '无';
-  const lowest = rankedStats.value[rankedStats.value.length - 1];
-  return getDimensionLabel(lowest.dimension);
+const topBacklogDimensionLabel = computed(() => {
+  if (!attentionRankedStats.value.length) return '无';
+  return getDimensionLabel(attentionRankedStats.value[0].dimension);
 });
 
 async function handleRefresh() {

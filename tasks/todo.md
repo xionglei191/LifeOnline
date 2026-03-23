@@ -1,13 +1,13 @@
-# 当前轮：Dashboard signal band fact projection 收口
+# 当前轮：Dashboard metric fact-source naming 收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/components/DashboardOverview.vue` 的 hero signal band 仍只展示维度名和裸 `health_score` 数字，和刚收口的 `DimensionHealth` 一样，主路径无法直接判断分数语义，也看不到该维度的 open-work / 完成进度，属于新的 contract-to-UI 投射缺口。
-- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.vue` 把 signal chip 改成明确展示 `完成率 xx%`，并补上 `活跃 x 项 · 完成 done/total`，让 hero summary、signal band、dimension matrix 三处对同一维度事实表达保持一致。
-- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.test.ts` 增加 focused 回归，锁定 signal band 会渲染 completion-rate 标签和 progress facts。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DashboardOverview.test.ts src/components/DimensionHealth.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/DashboardOverview.vue` 顶部 metric tiles 仍有事实源命名漂移：`系统健康` 实际展示的是平均完成率，`失衡维度` 实际取的是 open-work 最高维度的对立概念，属于新的事实表达错误。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.vue` 将其改为 `平均完成率` / `八维度平均完成进度`，以及 `最高积压维度` / `当前 open work 最多的维度`，让 tile 文案与底层计算逻辑一致。
+- [x] 在 `LifeOS/packages/web/src/components/DashboardOverview.test.ts` 增加 focused 回归，锁定这些 metric tiles 会渲染正确命名和数值，并防止旧的漂移文案回归。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DashboardOverview.test.ts`。
 
 ## 结果
-- Dashboard 顶部 signal band 现在不再只暴露语义不明的分数，而是直接解释为完成率并附带 open-work / completion facts。
-- hero、signal band、dimension matrix 对 `DimensionStat` 的主路径表达进一步对齐，降低了用户对同一指标的误读风险。
+- Dashboard hero metrics 现在不再把平均完成率误称为“系统健康”，也不再把最高积压维度误写成抽象“失衡维度”。
+- 顶部 summary、metric tiles、signal band、dimension matrix 对同一维度统计的命名进一步收口到一致事实源。
 
 ---
