@@ -3,7 +3,7 @@
     <div class="page-shell">
       <section class="hero-panel">
         <div class="hero-copy">
-          <p class="eyebrow">Life Tracks</p>
+          <p class="eyebrow">生命轨迹</p>
           <h2>把分散的人生事件拉回<span>同一条时间坐标</span>。</h2>
           <p class="hero-summary">
             当前窗口覆盖 {{ spanDays }} 天，共检索到 {{ totalNotes }} 条事件记录，
@@ -32,7 +32,7 @@
 
       <section class="controls-panel">
         <div class="controls-copy">
-          <p class="eyebrow">Time Window</p>
+          <p class="eyebrow">观测窗口</p>
           <h3>调整观测窗口</h3>
         </div>
 

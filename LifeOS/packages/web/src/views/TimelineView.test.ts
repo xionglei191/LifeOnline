@@ -50,8 +50,12 @@ describe('TimelineView', () => {
     const dateInputs = wrapper.findAll('input[type="date"]');
     expect((dateInputs[0].element as HTMLInputElement).value).toBe('2026-03-01');
     expect((dateInputs[1].element as HTMLInputElement).value).toBe('2026-03-31');
+    expect(wrapper.text()).toContain('生命轨迹');
+    expect(wrapper.text()).toContain('观测窗口');
     expect(wrapper.text()).toContain('生活');
     expect(wrapper.find('.hero-summary').text()).toContain('31 天');
+    expect(wrapper.text()).not.toContain('Life Tracks');
+    expect(wrapper.text()).not.toContain('Time Window');
     expect(load).toHaveBeenCalledWith('2026-03-01', '2026-03-31');
 
     vi.useRealTimers();

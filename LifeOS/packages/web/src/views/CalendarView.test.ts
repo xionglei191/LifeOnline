@@ -59,7 +59,9 @@ describe('CalendarView', () => {
 
     await flushPromises();
 
+    expect(wrapper.text()).toContain('月历视图');
     expect(wrapper.text()).toContain('2026年3月');
+    expect(wrapper.text()).not.toContain('Calendar Surface');
     expect(load).toHaveBeenCalledWith(2026, 3);
 
     vi.useRealTimers();
@@ -101,6 +103,10 @@ describe('CalendarView', () => {
     await flushPromises();
 
     const titles = wrapper.findAll('.note-title').map((node) => node.text());
+    expect(wrapper.text()).toContain('当日记录');
+    expect(wrapper.text()).toContain('2 条');
+    expect(wrapper.text()).not.toContain('Daily Records');
+    expect(wrapper.text()).not.toContain('entries');
     expect(titles).toEqual(['Alpha title', 'Zeta title']);
   });
 

@@ -2,7 +2,7 @@
   <div class="calendar-view">
     <section class="hero-panel">
       <div class="hero-copy">
-        <p class="eyebrow">Calendar Surface</p>
+        <p class="eyebrow">月历视图</p>
         <h2>把事件密度、活跃日期和<span>日常节律</span>放回日历坐标。</h2>
       </div>
       <div class="controls">
@@ -24,10 +24,10 @@
       <section v-if="selectedDay" class="day-notes">
         <div class="day-head">
           <div>
-            <p class="day-kicker">Daily Records</p>
+            <p class="day-kicker">当日记录</p>
             <h3>{{ selectedDay }}</h3>
           </div>
-          <span class="day-count">{{ getDayNotes(selectedDay).length }} entries</span>
+          <span class="day-count">{{ getDayNotes(selectedDay).length }} 条</span>
         </div>
 
         <div class="note-list">
