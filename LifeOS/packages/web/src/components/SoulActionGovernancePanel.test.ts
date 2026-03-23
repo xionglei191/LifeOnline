@@ -114,8 +114,17 @@ describe('SoulActionGovernancePanel', () => {
 
     expect(wrapper.text()).toContain('Reintegration record-ready');
     expect(wrapper.text()).toContain('Source note: note-1');
+    expect(wrapper.text()).toContain('最近更新 2026/03/21');
     expect(wrapper.text()).not.toContain('note-ready-1');
     expect(wrapper.text()).not.toContain('note-ready-2');
+  });
+
+  it('renders the latest activity label and timestamp from grouped activity metadata', () => {
+    const wrapper = mountPanel('dispatch_ready_only', {
+      formatTime: (ts: string) => `fmt:${ts}`,
+    });
+
+    expect(wrapper.text()).toContain('最近更新 fmt:2026-03-21T10:02:00.000Z');
   });
 
   it('renders only pending groups with synced label and stats in pending_only mode', () => {

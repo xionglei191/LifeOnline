@@ -94,6 +94,7 @@
           <span v-if="group.reintegrationRecord?.sourceNoteId">Source note: {{ group.reintegrationRecord.sourceNoteId }}</span>
           <span v-if="group.reintegrationRecord">Signal: {{ group.reintegrationRecord.signalKind }}</span>
           <span v-if="group.reintegrationRecord">Review: {{ reintegrationStatusText(group.reintegrationRecord.reviewStatus) }}</span>
+          <span v-if="group.latestActivityAt">{{ group.latestActivityLabel }} {{ formatTime(group.latestActivityAt) }}</span>
         </div>
 
         <div v-if="!collapsedGroupIds.includes(group.groupKey)" class="soul-action-group-actions">

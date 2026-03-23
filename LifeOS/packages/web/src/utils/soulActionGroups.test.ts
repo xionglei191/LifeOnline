@@ -129,14 +129,27 @@ describe('soulActionGroups', () => {
     expect(groups[0]?.actions).toHaveLength(2);
   });
 
-  it('sorts groups by reintegration record recency when available', () => {
-    const groups = buildSoulActionGroups(soulActions, reintegrationRecords, 'all');
+  it('sorts groups by latest action activity instead of reintegration created time', () => {
+    const groups = buildSoulActionGroups([
+      ...soulActions,
+      createSoulAction({
+        id: 'mixed-finished',
+        sourceNoteId: 'note-mixed-3',
+        sourceReintegrationId: 'record-mixed',
+        createdAt: '2026-03-20T10:03:00.000Z',
+        governanceStatus: 'approved',
+        executionStatus: 'succeeded',
+        finishedAt: '2026-03-21T10:05:00.000Z',
+      }),
+    ], reintegrationRecords, 'all');
 
     expect(groups.map((group) => group.groupKey)).toEqual([
-      'record-ready',
       'record-mixed',
+      'record-ready',
       'record-dispatched',
     ]);
+    expect(groups[0]?.latestActivityLabel).toBe('最近完成');
+    expect(groups[0]?.latestActivityAt).toBe('2026-03-21T10:05:00.000Z');
   });
 
   it('falls back to sourceNoteId grouping for non-promotion soul actions', () => {

@@ -687,6 +687,12 @@ describe('SettingsView soul action governance wiring', () => {
     expect(panel.props('quickFilterStats')).toBe('2 / 2 分组命中');
     expect(panel.props('groupCount')).toBe(2);
     expect(panel.props('groups')).toHaveLength(2);
+    const groups = panel.props('groups') as Array<{ groupKey: string; latestActivityAt: string; latestActivityLabel: string }>;
+    expect(groups[0]).toMatchObject({
+      groupKey: 'record-ready',
+      latestActivityAt: '2026-03-21T10:02:00.000Z',
+      latestActivityLabel: '最近更新',
+    });
     expect(panel.props('summary')).toEqual({
       pendingReview: 1,
       approved: 2,

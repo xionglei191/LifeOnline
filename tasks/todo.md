@@ -1,13 +1,17 @@
-# 当前轮：Note preview priority/recency facts 收口
+# 当前轮：Soul Action Governance 分组最近活跃事实收口
 
 ## 进展
-- [x] 识别 `LifeOS/packages/web/src/components/NotePreview.vue` 虽然已经展示 due / priority 的一部分事实，但 single-note preview 缺少 `priority`，multi-note preview 缺少 `updated`，导致 timeline hover / picker 两条主路径对同一 shared `Note` facts 投射仍不一致。
-- [x] 在 `LifeOS/packages/web/src/components/NotePreview.vue` 补上 single-note preview 的 priority 与 updated，以及 multi-note preview 的 updated，让 hover preview 也能直接暴露紧急度和最近更新时间。
-- [x] 在 `LifeOS/packages/web/src/components/NotePreview.test.ts` 增加 focused 回归，锁定 preview 会渲染 priority / due / updated facts。
-- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/NotePreview.test.ts src/components/TimelineTrack.test.ts`。
+- [x] 识别 `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 已有 grouped governance / quick filter / batch actions，但组级别仍缺少“最近活跃 / 最近动作”事实，用户难以判断哪组刚变化、该优先处理哪组。
+- [x] 在 `LifeOS/packages/web/src/utils/soulActionGroups.ts` 为每个分组补充 `latestActivityAt` / `latestActivityLabel`，按 action 级最近活动（finished/started/discarded/deferred/approved/updated/created）计算，并改为按最近活跃排序，而不是仅按 reintegration 创建时间排序。
+- [x] 在 `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` 的组级 meta 区显式展示“最近创建/最近更新/最近批准/最近完成”等时间事实，帮助用户快速判断优先级。
+- [x] 在 `LifeOS/packages/web/src/utils/soulActionGroups.test.ts`、`src/components/SoulActionGovernancePanel.test.ts`、`src/views/SettingsView.test.ts` 增加 focused 回归，锁定最新活跃排序、组级事实渲染，以及父视图向 panel 透传的 grouped props。
+- [x] 跑 focused 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/utils/soulActionGroups.test.ts src/components/SoulActionGovernancePanel.test.ts src/views/SettingsView.test.ts`。
 
 ## 结果
-- 时间线主路径的 hover preview 和 picker 现在对 note priority / recency 的事实表达更一致。
-- 用户在 timeline 上无需进入 detail，也能更快判断哪条记录更紧急、哪条最近刚更新。
+- grouped governance 现在不只展示“有几条待治理/可派发”，还直接告诉用户这组最近发生了什么、是什么时候发生的。
+- settings 页分组顺序会优先把最近刚批准/刚完成/刚更新的治理组放到前面，更贴近实际处理优先级。
+
+## 下一步建议
+- 如果这轮测试通过，下一步可继续补一个轻量组级排序提示（例如“按最近活跃排序”）或把最近活跃事实同步投射到 Reintegration Review，减少两块面板的信息落差。
 
 ---

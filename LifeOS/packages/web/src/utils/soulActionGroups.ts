@@ -8,10 +8,22 @@ export interface SoulActionGroup {
   reintegrationRecord: ReintegrationRecord | null;
   pendingCount: number;
   dispatchReadyCount: number;
+  latestActivityAt: string;
+  latestActivityLabel: string;
 }
 
 function getSoulActionGroupKey(action: SoulAction): string {
   return action.sourceReintegrationId || action.sourceNoteId;
+}
+
+function getSoulActionLatestActivity(action: SoulAction): { at: string; label: string } {
+  if (action.finishedAt) return { at: action.finishedAt, label: '最近完成' };
+  if (action.startedAt) return { at: action.startedAt, label: '最近开始执行' };
+  if (action.discardedAt) return { at: action.discardedAt, label: '最近丢弃' };
+  if (action.deferredAt) return { at: action.deferredAt, label: '最近延后' };
+  if (action.approvedAt) return { at: action.approvedAt, label: '最近批准' };
+  if (action.updatedAt) return { at: action.updatedAt, label: '最近更新' };
+  return { at: action.createdAt, label: '最近创建' };
 }
 
 export function getSoulActionGroupQuickFilterLabel(filter: SoulActionGroupQuickFilter): string {
@@ -50,11 +62,19 @@ export function buildSoulActionGroups(
     });
   }
 
-  const groups = Array.from(grouped.values()).map((group) => ({
-    ...group,
-    pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
-    dispatchReadyCount: group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched').length,
-  }));
+  const groups = Array.from(grouped.values()).map((group) => {
+    const latestActionActivity = group.actions
+      .map((action) => ({ action, activity: getSoulActionLatestActivity(action) }))
+      .sort((left, right) => right.activity.at.localeCompare(left.activity.at))[0];
+
+    return {
+      ...group,
+      pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
+      dispatchReadyCount: group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched').length,
+      latestActivityAt: latestActionActivity?.activity.at || group.reintegrationRecord?.updatedAt || group.reintegrationRecord?.createdAt || '',
+      latestActivityLabel: latestActionActivity?.activity.label || '最近创建',
+    };
+  });
 
   const filteredGroups = quickFilter === 'pending_only'
     ? groups.filter((group) => group.pendingCount > 0)
@@ -63,9 +83,16 @@ export function buildSoulActionGroups(
       : groups;
 
   return filteredGroups.sort((left, right) => {
-    const leftTime = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
-    const rightTime = right.reintegrationRecord?.createdAt || right.actions[0]?.createdAt || '';
-    return rightTime.localeCompare(leftTime);
+    const rightPrimary = right.latestActivityAt || right.reintegrationRecord?.updatedAt || right.reintegrationRecord?.createdAt || '';
+    const leftPrimary = left.latestActivityAt || left.reintegrationRecord?.updatedAt || left.reintegrationRecord?.createdAt || '';
+    const activityCompare = rightPrimary.localeCompare(leftPrimary);
+    if (activityCompare !== 0) {
+      return activityCompare;
+    }
+
+    const rightFallback = right.reintegrationRecord?.createdAt || right.actions[0]?.createdAt || '';
+    const leftFallback = left.reintegrationRecord?.createdAt || left.actions[0]?.createdAt || '';
+    return rightFallback.localeCompare(leftFallback);
   });
 }
 
