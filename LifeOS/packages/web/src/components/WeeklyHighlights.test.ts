@@ -48,6 +48,25 @@ describe('WeeklyHighlights', () => {
     expect(wrapper.find('.dimension').attributes('style')).toContain('var(--dim-life)');
   });
 
+  it('renders shared priority and due facts on highlight cards', () => {
+    const wrapper = mount(WeeklyHighlights, {
+      props: {
+        highlights: [
+          createNote({
+            id: 'highlight-priority',
+            priority: 'high',
+            due: '2026-03-25',
+            status: 'in_progress',
+          }),
+        ],
+      },
+    });
+
+    expect(wrapper.text()).toContain('高优先级');
+    expect(wrapper.text()).toContain('截止 03/25');
+    expect(wrapper.text()).toContain('推进中');
+  });
+
   it('orders same-day highlights by visible shared titles', () => {
     const wrapper = mount(WeeklyHighlights, {
       props: {

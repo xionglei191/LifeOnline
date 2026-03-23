@@ -25,6 +25,8 @@
               {{ dimensionLabel(item.dimension) }}
             </span>
             <span class="status" :class="`status-${item.status}`">{{ statusLabel(item.status) }}</span>
+            <span v-if="item.priority" class="priority" :class="`priority-${item.priority}`">{{ priorityLabel(item.priority) }}</span>
+            <span v-if="item.due" class="due">截止 {{ formatDue(item.due) }}</span>
           </div>
         </div>
       </li>
@@ -58,12 +60,20 @@ const statuses: Record<string, string> = {
   cancelled: '已取消',
 };
 
+const priorities: Record<string, string> = {
+  low: '低优先级',
+  medium: '中优先级',
+  high: '高优先级',
+};
+
 const dimensionLabel = (dim: Note['dimension']) => getDimensionLabel(dim);
 const dimensionColor = (dim: Note['dimension']) => getDimensionColor(dim);
 const statusLabel = (status: string) => statuses[status] || status;
+const priorityLabel = (priority: string) => priorities[priority] || priority;
 
 const formatDay = (date: string) => date.slice(8, 10);
 const formatMonth = (date: string) => `${date.slice(5, 7)}月`;
+const formatDue = (due: string) => due.slice(5, 10).replace('-', '/');
 </script>
 
 <style scoped>
@@ -186,7 +196,9 @@ const formatMonth = (date: string) => `${date.slice(5, 7)}月`;
 }
 
 .dimension,
-.status {
+.status,
+.priority,
+.due {
   padding: 5px 10px;
   border-radius: 999px;
 }
@@ -199,6 +211,16 @@ const formatMonth = (date: string) => `${date.slice(5, 7)}月`;
 .status {
   background: var(--surface-muted);
   color: var(--text-secondary);
+}
+
+.priority {
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  color: var(--accent);
+}
+
+.due {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--warn);
 }
 
 .status-pending {
