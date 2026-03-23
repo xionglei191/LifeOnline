@@ -518,7 +518,8 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('八维度平均完成进度');
     expect(wrapper.text()).toContain('最高积压维度');
     expect(wrapper.text()).toContain('成长');
-    expect(wrapper.text()).toContain('当前 open work 最多的维度');
+    expect(wrapper.text()).toContain('当前待处理工作最多的维度');
+    expect(wrapper.text()).not.toContain('当前 open work 最多的维度');
     expect(wrapper.text()).not.toContain('系统健康');
     expect(wrapper.text()).not.toContain('失衡维度');
   });

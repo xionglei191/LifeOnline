@@ -32,7 +32,7 @@
           <article class="metric-tile">
             <span class="metric-label">最高积压维度</span>
             <strong>{{ topBacklogDimensionLabel }}</strong>
-            <span class="metric-meta">当前 open work 最多的维度</span>
+            <span class="metric-meta">当前待处理工作最多的维度</span>
           </article>
         </div>
 
