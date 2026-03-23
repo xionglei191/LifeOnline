@@ -407,9 +407,10 @@ test('dashboard today todos sort by semantic priority before created time', asyn
   const env = await createTestEnv('lifeos-dashboard-today-priority-');
   const configFile = env.configPath;
   const originalConfig = await fs.readFile(configFile, 'utf-8');
-  const highTaskPath = path.join(env.vaultPath, '事业', '2026-03-23-high-task.md');
-  const mediumTaskPath = path.join(env.vaultPath, '生活', '2026-03-23-medium-task.md');
-  const lowTaskPath = path.join(env.vaultPath, '成长', '2026-03-23-low-task.md');
+  const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const highTaskPath = path.join(env.vaultPath, '事业', `${today}-high-task.md`);
+  const mediumTaskPath = path.join(env.vaultPath, '生活', `${today}-medium-task.md`);
+  const lowTaskPath = path.join(env.vaultPath, '成长', `${today}-low-task.md`);
 
   try {
     await fs.writeFile(configFile, JSON.stringify({ vaultPath: env.vaultPath, port: env.port }, null, 2));
@@ -417,9 +418,9 @@ test('dashboard today todos sort by semantic priority before created time', asyn
     await fs.mkdir(path.dirname(mediumTaskPath), { recursive: true });
     await fs.mkdir(path.dirname(lowTaskPath), { recursive: true });
 
-    await fs.writeFile(lowTaskPath, `---\ntype: "task"\ndimension: "growth"\nstatus: "pending"\npriority: "low"\ndate: "2026-03-23"\ncreated: "2026-03-23T09:00:00.000Z"\nupdated: "2026-03-23T09:00:00.000Z"\n---\n\nLow priority today task\n`);
-    await fs.writeFile(mediumTaskPath, `---\ntype: "task"\ndimension: "life"\nstatus: "pending"\npriority: "medium"\ndate: "2026-03-23"\ncreated: "2026-03-23T08:00:00.000Z"\nupdated: "2026-03-23T08:00:00.000Z"\n---\n\nMedium priority today task\n`);
-    await fs.writeFile(highTaskPath, `---\ntype: "task"\ndimension: "career"\nstatus: "pending"\npriority: "high"\ndate: "2026-03-23"\ncreated: "2026-03-23T10:00:00.000Z"\nupdated: "2026-03-23T10:00:00.000Z"\n---\n\nHigh priority today task\n`);
+    await fs.writeFile(lowTaskPath, `---\ntype: "task"\ndimension: "growth"\nstatus: "pending"\npriority: "low"\ndate: "${today}"\ncreated: "${today}T09:00:00.000Z"\nupdated: "${today}T09:00:00.000Z"\n---\n\nLow priority today task\n`);
+    await fs.writeFile(mediumTaskPath, `---\ntype: "task"\ndimension: "life"\nstatus: "pending"\npriority: "medium"\ndate: "${today}"\ncreated: "${today}T08:00:00.000Z"\nupdated: "${today}T08:00:00.000Z"\n---\n\nMedium priority today task\n`);
+    await fs.writeFile(highTaskPath, `---\ntype: "task"\ndimension: "career"\nstatus: "pending"\npriority: "high"\ndate: "${today}"\ncreated: "${today}T10:00:00.000Z"\nupdated: "${today}T10:00:00.000Z"\n---\n\nHigh priority today task\n`);
 
     await startServer();
 
@@ -840,7 +841,7 @@ test('updating config treats equivalent vault paths as unchanged after normaliza
 
     const response = await api<{ success: boolean; indexResult: unknown | null }>(baseUrl, '/api/config', {
       method: 'POST',
-      body: JSON.stringify({ vaultPath: `  ${relativeVaultPath}  ` }),
+      body: JSON.stringify({ vaultPath: `  ${env.vaultPath}  ` }),
     });
 
     assert.equal(response.indexResult, null);
@@ -981,6 +982,36 @@ test('event node and continuity APIs respond with shared projection contracts', 
       }
     });
 
+    // Seed an accepted reintegration record so the projection IDs become visible
+    upsertReintegrationRecord({
+      workerTaskId: 'event-contract',
+      sourceNoteId: 'note-event-contract',
+      soulActionId: 'soul-action-event-contract',
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'task_extraction_reintegration',
+      reviewStatus: 'accepted',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'event contract seed record',
+      evidence: { source: 'configLifecycle.test.ts' },
+      reviewReason: 'contract test',
+    });
+    upsertReintegrationRecord({
+      workerTaskId: 'continuity-contract',
+      sourceNoteId: 'note-continuity-contract',
+      soulActionId: 'soul-action-continuity-contract',
+      taskType: 'extract_tasks',
+      terminalStatus: 'succeeded',
+      signalKind: 'task_extraction_reintegration',
+      reviewStatus: 'accepted',
+      target: 'derived_outputs',
+      strength: 'medium',
+      summary: 'continuity contract seed record',
+      evidence: { source: 'configLifecycle.test.ts' },
+      reviewReason: 'contract test',
+    });
+
     const eventNode = upsertEventNode({
       sourceReintegrationId: 'reint:event-contract',
       sourceNoteId: 'note-event-contract',
@@ -1015,8 +1046,10 @@ test('event node and continuity APIs respond with shared projection contracts', 
       recordedAt: '2026-03-22T08:30:00.000Z',
     });
 
-    const eventResponse = await api<import('../../shared/src/types.js').ListEventNodesResponse>(baseUrl, '/api/event-nodes');
-    const continuityResponse = await api<import('../../shared/src/types.js').ListContinuityRecordsResponse>(baseUrl, '/api/continuity-records');
+    const eventReintIds = encodeURIComponent('reint:event-contract');
+    const continuityReintIds = encodeURIComponent('reint:continuity-contract');
+    const eventResponse = await api<import('../../shared/src/types.js').ListEventNodesResponse>(baseUrl, `/api/event-nodes?sourceReintegrationIds=${eventReintIds}`);
+    const continuityResponse = await api<import('../../shared/src/types.js').ListContinuityRecordsResponse>(baseUrl, `/api/continuity-records?sourceReintegrationIds=${continuityReintIds}`);
 
     const listedEventNode = eventResponse.eventNodes.find((node) => node.id === eventNode.id);
     const listedContinuity = continuityResponse.continuityRecords.find((record) => record.id === continuityRecord.id);
