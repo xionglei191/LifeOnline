@@ -22,7 +22,7 @@
           <article class="metric-tile">
             <span class="metric-label">平均完成率</span>
             <strong>{{ averageHealth }}%</strong>
-            <span class="metric-meta">八维度平均完成进度</span>
+            <span class="metric-meta">{{ averageHealthMeta }}</span>
           </article>
           <article class="metric-tile">
             <span class="metric-label">本周重点</span>
@@ -133,6 +133,10 @@ const averageHealth = computed(() => {
   const stats = dashboardDimensionStats.value;
   if (!stats.length) return 0;
   return Math.round(stats.reduce((sum, item) => sum + item.health_score, 0) / stats.length);
+});
+
+const averageHealthMeta = computed(() => {
+  return `当前 ${dashboardDimensionStats.value.length} 个维度的平均完成进度`;
 });
 
 const totalOpenItems = computed(() => {

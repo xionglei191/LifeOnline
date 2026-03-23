@@ -514,12 +514,60 @@ describe('DashboardOverview', () => {
 
     expect(wrapper.text()).toContain('平均完成率');
     expect(wrapper.text()).toContain('65%');
-    expect(wrapper.text()).toContain('八维度平均完成进度');
+    expect(wrapper.text()).toContain('当前 2 个维度的平均完成进度');
+    expect(wrapper.text()).not.toContain('八维度平均完成进度');
     expect(wrapper.text()).toContain('最高积压维度');
     expect(wrapper.text()).toContain('成长');
     expect(wrapper.text()).toContain('当前 open work 最多的维度');
     expect(wrapper.text()).not.toContain('系统健康');
     expect(wrapper.text()).not.toContain('失衡维度');
+  });
+
+  it('keeps the average completion copy aligned with the visible dashboard stat set', async () => {
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref({
+        ...dashboardData,
+        inboxCount: 4,
+        dimensionStats: [
+          { dimension: 'life', total: 6, pending: 0, in_progress: 0, done: 6, health_score: 88 },
+          { dimension: 'growth', total: 5, pending: 2, in_progress: 2, done: 1, health_score: 42 },
+          { dimension: '_inbox', total: 4, pending: 4, in_progress: 0, done: 0, health_score: 0 },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      load: vi.fn(),
+    });
+    apiMocks.fetchScheduleHealth.mockResolvedValue(scheduleHealth);
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          TodayTodos: true,
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('平均完成率');
+    expect(wrapper.text()).toContain('65%');
+    expect(wrapper.text()).toContain('当前 2 个维度的平均完成进度');
+    expect(wrapper.text()).not.toContain('当前 3 个维度的平均完成进度');
+    expect(wrapper.text()).not.toContain('八维度平均完成进度');
+    expect(wrapper.find('.hero-summary').text()).not.toContain('_Inbox');
   });
 
   it('keeps the dashboard hero metrics scoped to the eight canonical dimensions even when _inbox stats exist', async () => {
