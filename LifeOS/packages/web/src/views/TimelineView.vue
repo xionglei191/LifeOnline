@@ -82,6 +82,7 @@ const selectedNoteId = ref<string | null>(null);
 
 watch([startDate, endDate], ([start, end], [prevStart, prevEnd]) => {
   if (start === prevStart && end === prevEnd) return;
+  selectedNoteId.value = null;
   load(start, end);
 }, { immediate: true });
 

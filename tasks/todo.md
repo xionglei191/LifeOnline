@@ -1,16 +1,16 @@
-# 当前轮：Calendar month transition detail-state 收口
+# 当前轮：Timeline window transition detail-state 收口
 
 ## 进展
-- [x] 识别新的主路径行为缺口：`LifeOS/packages/web/src/views/CalendarView.vue` 在月份窗口切换时会继续保留旧 `selectedNoteId`，导致 calendar 主路径可能在新月份下仍打开上个月详情，出现月视图与详情面板错位。
-- [x] 在 `LifeOS/packages/web/src/views/CalendarView.vue` 的月份 watcher 中补齐最小状态收敛：当 `year/month` 变化时先清空当前选中的 note，再加载新的月份数据。
-- [x] 在 `LifeOS/packages/web/src/views/CalendarView.test.ts` 增加 focused 回归，锁定月份切换后旧详情会关闭，不再跨月份残留。
-- [x] 跑受影响 web 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/CalendarView.test.ts`。
+- [x] 识别新的主路径行为缺口：`LifeOS/packages/web/src/views/TimelineView.vue` 在时间窗口切换时会继续保留旧 `selectedNoteId`，导致 timeline 主路径可能在新窗口下仍打开旧详情，出现轨道窗口与详情面板错位。
+- [x] 在 `LifeOS/packages/web/src/views/TimelineView.vue` 的窗口 watcher 中补齐最小状态收敛：当 `startDate/endDate` 变化时先清空当前选中的 note，再加载新的窗口数据。
+- [x] 在 `LifeOS/packages/web/src/views/TimelineView.test.ts` 增加 focused 回归，锁定时间窗口变化后旧详情会关闭，不再跨窗口残留。
+- [x] 跑受影响 web 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/views/TimelineView.test.ts`。
 
 ## 结果
-- calendar 主路径在月份切换时不再残留旧详情面板，月视图与详情面板重新回到同一时间窗口。
-- 这继续补的是 route/window 驱动页面里的真实状态一致性缺口，不是对称补测试。
+- timeline 主路径在时间窗口切换时不再残留旧详情面板，轨道窗口与详情面板重新保持同一时间范围。
+- 这继续补的是窗口驱动页面里的真实状态一致性缺口，不是同类测试平移。
 
 ## 下一步建议
-- 下一轮优先继续排查 timeline window refresh / dashboard entry path 等其它窗口驱动页面，尤其看详情面板是否会跨窗口残留旧 selection。
+- 下一轮优先换到新的 contract/UI 投射缺口，优先看 dashboard 或 stats 主路径上是否还有 shared/server canonical facts 被局部重算、漏投射或跨面板错位的地方。
 
 ---

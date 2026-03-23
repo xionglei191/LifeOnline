@@ -93,6 +93,43 @@ describe('TimelineView', () => {
     expect(wrapper.text()).not.toContain('items');
   });
 
+  it('clears the selected note when the window changes', async () => {
+    const load = vi.fn();
+    composableMocks.useTimeline.mockReturnValue({
+      data: ref(timelineData),
+      loading: ref(false),
+      error: ref(null),
+      load,
+    });
+
+    const wrapper = mount(TimelineView, {
+      global: {
+        stubs: {
+          TimelineTrack: {
+            emits: ['selectNote'],
+            template: '<button class="timeline-track-stub" @click="$emit(\'selectNote\', \'note-1\')"></button>',
+          },
+          NoteDetail: {
+            props: ['noteId'],
+            template: '<div class="note-detail-stub">{{ noteId ?? "none" }}</div>',
+          },
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    await wrapper.get('.timeline-track-stub').trigger('click');
+    expect(wrapper.find('.note-detail-stub').text()).toBe('note-1');
+
+    const dateInputs = wrapper.findAll('input[type="date"]');
+    await dateInputs[0].setValue('2026-03-05');
+    await flushPromises();
+
+    expect(wrapper.find('.note-detail-stub').text()).toBe('none');
+  });
+
   it('reloads the timeline when the window changes instead of pinning the initial mount state', async () => {
     const load = vi.fn();
     composableMocks.useTimeline.mockReturnValue({
