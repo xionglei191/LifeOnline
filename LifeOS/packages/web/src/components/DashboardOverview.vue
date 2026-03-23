@@ -116,28 +116,32 @@ const scheduleHealth = ref<ScheduleHealth | null>(null);
 const scheduleHealthError = ref<Error | null>(null);
 let activeScheduleHealthRequestId = 0;
 
+const dashboardDimensionStats = computed(() => {
+  return (data.value?.dimensionStats ?? []).filter((item) => item.dimension !== '_inbox');
+});
+
 const attentionRankedStats = computed(() => {
-  return [...(data.value?.dimensionStats ?? [])]
+  return [...dashboardDimensionStats.value]
     .sort((left, right) => (right.pending + right.in_progress) - (left.pending + left.in_progress));
 });
 
 const rankedStats = computed(() => {
-  return [...(data.value?.dimensionStats ?? [])].sort((a, b) => b.health_score - a.health_score);
+  return [...dashboardDimensionStats.value].sort((a, b) => b.health_score - a.health_score);
 });
 
 const averageHealth = computed(() => {
-  const stats = data.value?.dimensionStats ?? [];
+  const stats = dashboardDimensionStats.value;
   if (!stats.length) return 0;
   return Math.round(stats.reduce((sum, item) => sum + item.health_score, 0) / stats.length);
 });
 
 const totalOpenItems = computed(() => {
-  const stats = data.value?.dimensionStats ?? [];
+  const stats = dashboardDimensionStats.value;
   return stats.reduce((sum, item) => sum + item.pending + item.in_progress, 0);
 });
 
 const completionRate = computed(() => {
-  const stats = data.value?.dimensionStats ?? [];
+  const stats = dashboardDimensionStats.value;
   const done = stats.reduce((sum, item) => sum + item.done, 0);
   const total = stats.reduce((sum, item) => sum + item.total, 0);
   return total ? Math.round((done / total) * 100) : 0;

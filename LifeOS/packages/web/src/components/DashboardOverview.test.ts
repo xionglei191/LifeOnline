@@ -522,6 +522,54 @@ describe('DashboardOverview', () => {
     expect(wrapper.text()).not.toContain('失衡维度');
   });
 
+  it('keeps the dashboard hero metrics scoped to the eight canonical dimensions even when _inbox stats exist', async () => {
+    composableMocks.useDashboard.mockReturnValue({
+      data: ref({
+        ...dashboardData,
+        inboxCount: 4,
+        dimensionStats: [
+          ...dashboardData.dimensionStats,
+          { dimension: '_inbox', total: 4, pending: 4, in_progress: 0, done: 0, health_score: 0 },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      load: vi.fn(),
+    });
+    apiMocks.fetchScheduleHealth.mockResolvedValue(scheduleHealth);
+
+    const wrapper = mount(DashboardOverview, {
+      global: {
+        stubs: {
+          TodayTodos: true,
+          WeeklyHighlights: true,
+          DimensionHealth: true,
+          AISuggestions: true,
+          NoteDetail: true,
+          StateDisplay: {
+            props: ['type', 'message'],
+            template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
+          },
+          RouterLink: true,
+        },
+        mocks: {
+          $router: { push: vi.fn() },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('平均完成率');
+    expect(wrapper.text()).toContain('65%');
+    expect(wrapper.text()).toContain('生活 是当前最需要投入的维度');
+    expect(wrapper.text()).toContain('最高积压维度');
+    expect(wrapper.text()).toContain('生活');
+    expect(wrapper.findAll('.signal-chip')).toHaveLength(2);
+    expect(wrapper.find('.signal-band').text()).not.toContain('_Inbox');
+    expect(wrapper.find('.hero-summary').text()).not.toContain('_Inbox');
+  });
+
   it('renders dimension labels and colors from shared helpers on main dashboard paths', async () => {
     composableMocks.useDashboard.mockReturnValue({
       data: ref(dashboardData),
