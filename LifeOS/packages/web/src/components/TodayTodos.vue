@@ -35,6 +35,7 @@
 
           <div class="meta">
             <span class="dimension">{{ dimensionLabel(todo.dimension) }}</span>
+            <span v-if="todo.updated" class="updated">更新 {{ formatUpdated(todo.updated) }}</span>
             <span v-if="todo.due" class="due">截止 {{ formatDue(todo.due) }}</span>
             <span class="status">{{ statusLabel(todo.status) }}</span>
           </div>
@@ -117,6 +118,12 @@ const priorityColor = (priority: string) => priorityColors[priority] || 'var(--s
 const statusLabel = (status: string) => statuses[status] || status;
 
 const formatDue = (due: string) => due.slice(5);
+const formatUpdated = (updated: string) => new Date(updated).toLocaleString('zh-CN', {
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 async function handleToggle(todo: Note) {
   if (syncingTodoIds.value.includes(todo.id)) {
@@ -281,10 +288,15 @@ async function handleToggle(todo: Note) {
 
 .dimension,
 .due,
+.updated,
 .status {
   padding: 4px 9px;
   border-radius: 999px;
   background: var(--surface-muted);
+}
+
+.updated {
+  color: var(--text-muted);
 }
 
 @media (max-width: 720px) {

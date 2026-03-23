@@ -82,6 +82,17 @@ describe('TodayTodos', () => {
     expect(titles).toEqual(['Alpha title', 'Zeta title']);
   });
 
+  it('renders shared updated timestamps so todo recency is visible on the dashboard path', () => {
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [createTodo({ updated: '2026-03-23T11:45:00.000Z' })],
+      },
+    });
+
+    expect(wrapper.find('.updated').exists()).toBe(true);
+    expect(wrapper.text()).toMatch(/更新 .*03\/23.*11:45|更新 .*3\/23.*11:45|更新 .*03\/23.*19:45|更新 .*3\/23.*19:45/);
+  });
+
   it('prevents duplicate toggles while the same todo is still syncing', async () => {
     const pendingUpdate = deferred<void>();
     apiMocks.updateNote.mockReturnValueOnce(pendingUpdate.promise);
