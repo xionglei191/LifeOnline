@@ -72,6 +72,7 @@ const selectedNoteId = ref<string | null>(null);
 
 watch([year, month], ([nextYear, nextMonth], [prevYear, prevMonth]) => {
   if (nextYear === prevYear && nextMonth === prevMonth) return;
+  selectedNoteId.value = null;
   load(nextYear, nextMonth);
 }, { immediate: true });
 

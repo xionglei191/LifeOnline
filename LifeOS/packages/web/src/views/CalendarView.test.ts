@@ -147,6 +147,43 @@ describe('CalendarView', () => {
     expect(wrapper.text()).not.toContain('encrypted body');
   });
 
+  it('clears the selected note when the month window changes', async () => {
+    const load = vi.fn();
+    composableMocks.useCalendar.mockReturnValue({
+      data: ref(calendarData),
+      loading: ref(false),
+      error: ref(null),
+      selectedDay: ref('2026-03-12'),
+      load,
+    });
+
+    const wrapper = mount(CalendarView, {
+      global: {
+        stubs: {
+          CalendarGrid: {
+            emits: ['selectDay', 'selectNote'],
+            template: '<button class="calendar-grid-stub" @click="$emit(\'selectNote\', \'note-1\')"></button>',
+          },
+          NoteDetail: {
+            props: ['noteId'],
+            template: '<div class="note-detail-stub">{{ noteId ?? "none" }}</div>',
+          },
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    await wrapper.get('.calendar-grid-stub').trigger('click');
+    expect(wrapper.find('.note-detail-stub').text()).toBe('note-1');
+
+    await wrapper.get('button:last-of-type').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.note-detail-stub').text()).toBe('none');
+  });
+
   it('reloads the calendar when the month window changes instead of pinning the initial mount state', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-31T23:30:00'));
