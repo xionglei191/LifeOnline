@@ -2,10 +2,10 @@
   <section class="panel">
     <div class="panel-head">
       <div>
-        <p class="panel-kicker">Execution Queue</p>
+        <p class="panel-kicker">今日执行队列</p>
         <h3>今日任务队列</h3>
       </div>
-      <span class="panel-badge">{{ orderedTodos.length }} items</span>
+      <span class="panel-badge">{{ orderedTodos.length }} 项</span>
     </div>
 
     <div v-if="orderedTodos.length === 0" class="empty">今天的任务队列为空，可以把精力留给长期目标。</div>

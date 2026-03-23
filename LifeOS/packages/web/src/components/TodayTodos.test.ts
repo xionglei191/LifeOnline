@@ -57,6 +57,22 @@ describe('TodayTodos', () => {
     vi.clearAllMocks();
   });
 
+  it('localizes the dashboard todo header copy and badge counts', () => {
+    const wrapper = mount(TodayTodos, {
+      props: {
+        todos: [
+          createTodo({ id: 'todo-1' }),
+          createTodo({ id: 'todo-2', file_name: 'todo-2.md', title: 'Todo 2' }),
+        ],
+      },
+    });
+
+    expect(wrapper.text()).toContain('今日执行队列');
+    expect(wrapper.text()).toContain('2 项');
+    expect(wrapper.text()).not.toContain('Execution Queue');
+    expect(wrapper.text()).not.toContain('items');
+  });
+
   it('prefers shared note titles over file names on the dashboard todo path', () => {
     const wrapper = mount(TodayTodos, {
       props: {
