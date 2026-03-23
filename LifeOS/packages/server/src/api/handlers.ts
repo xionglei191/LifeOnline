@@ -931,16 +931,28 @@ function getSourceReintegrationIds(query: unknown): string[] | undefined {
   return ids.length ? ids : undefined;
 }
 
+function filterVisibleProjectionReintegrationIds(sourceReintegrationIds: string[] | undefined): string[] | undefined {
+  if (!sourceReintegrationIds?.length) {
+    return sourceReintegrationIds;
+  }
+
+  const visibleIds = sourceReintegrationIds.filter((id) => getReintegrationRecord(id)?.reviewStatus === 'accepted');
+  return visibleIds.length ? visibleIds : [];
+}
+
 export async function listEventNodesHandler(
   req: Request<Record<string, never>, ApiResponse<ListEventNodesResponse>, Record<string, never>, { sourceReintegrationIds?: string }>,
   res: Response<ApiResponse<ListEventNodesResponse>>,
 ): Promise<void> {
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
+    const visibleSourceReintegrationIds = filterVisibleProjectionReintegrationIds(sourceReintegrationIds);
     const response: ListEventNodesResponse = {
-      eventNodes: listEventNodes(sourceReintegrationIds)
-        .map((eventNode) => attachEventNodeProjectionSummary(eventNode))
-        .filter((eventNode): eventNode is NonNullable<ReturnType<typeof attachEventNodeProjectionSummary>> => !!eventNode),
+      eventNodes: visibleSourceReintegrationIds?.length === 0
+        ? []
+        : listEventNodes(visibleSourceReintegrationIds)
+            .map((eventNode) => attachEventNodeProjectionSummary(eventNode))
+            .filter((eventNode): eventNode is NonNullable<ReturnType<typeof attachEventNodeProjectionSummary>> => !!eventNode),
       filters: {
         sourceReintegrationIds,
       },
@@ -958,10 +970,13 @@ export async function listContinuityRecordsHandler(
 ): Promise<void> {
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
+    const visibleSourceReintegrationIds = filterVisibleProjectionReintegrationIds(sourceReintegrationIds);
     const response: ListContinuityRecordsResponse = {
-      continuityRecords: listContinuityRecords(sourceReintegrationIds)
-        .map((continuityRecord) => attachContinuityRecordProjectionSummary(continuityRecord))
-        .filter((continuityRecord): continuityRecord is NonNullable<ReturnType<typeof attachContinuityRecordProjectionSummary>> => !!continuityRecord),
+      continuityRecords: visibleSourceReintegrationIds?.length === 0
+        ? []
+        : listContinuityRecords(visibleSourceReintegrationIds)
+            .map((continuityRecord) => attachContinuityRecordProjectionSummary(continuityRecord))
+            .filter((continuityRecord): continuityRecord is NonNullable<ReturnType<typeof attachContinuityRecordProjectionSummary>> => !!continuityRecord),
       filters: {
         sourceReintegrationIds,
       },
