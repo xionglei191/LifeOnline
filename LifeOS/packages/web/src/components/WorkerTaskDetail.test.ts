@@ -81,10 +81,12 @@ describe('WorkerTaskDetail', () => {
     await flushPromises();
 
     const pills = Array.from(document.body.querySelectorAll('.detail-pill')).map((pill) => pill.textContent?.trim() || '');
+    expect(document.body.textContent).toContain('任务详情');
     expect(pills).toContain('LifeOS');
     expect(pills).toContain('人格快照更新');
     expect(pills).not.toContain('lifeos');
     expect(pills).not.toContain('update_persona_snapshot');
+    expect(document.body.textContent).not.toContain('Worker Task');
 
     wrapper.unmount();
   });
@@ -300,7 +302,7 @@ describe('WorkerTaskDetail', () => {
     });
 
     await flushPromises();
-    const sourceButton = Array.from(document.body.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'source source…e.md');
+    const sourceButton = Array.from(document.body.querySelectorAll('button')).find((button) => button.textContent?.trim() === '来源 source…e.md');
     expect(sourceButton).toBeTruthy();
     (sourceButton as HTMLButtonElement).click();
     await flushPromises();
@@ -382,6 +384,7 @@ describe('WorkerTaskDetail', () => {
     expect(facts).toContain('来源 Source Note');
     expect(document.body.textContent).toContain('结构化结果');
     expect(document.body.textContent).toContain('First task');
+    expect(document.body.textContent).toContain('来源 2025-0…1.md');
 
     wrapper.unmount();
   });

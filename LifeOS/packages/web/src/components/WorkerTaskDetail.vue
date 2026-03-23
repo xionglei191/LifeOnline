@@ -9,7 +9,7 @@
         <div v-else-if="task" class="detail-body">
           <div class="detail-header">
             <div>
-              <p class="detail-kicker">Worker Task</p>
+              <p class="detail-kicker">任务详情</p>
               <h3>{{ workerTaskTypeLabel(task.taskType) }}</h3>
             </div>
             <span class="detail-status" :class="`status-${task.status}`">{{ workerTaskStatusLabel(task.status) }}</span>
@@ -25,7 +25,7 @@
               class="detail-pill action-pill"
               @click="openSourceNote(task.sourceNoteId)"
             >
-              source {{ shortId(task.sourceNoteId) }}
+              来源 {{ shortId(task.sourceNoteId) }}
             </button>
           </div>
 
