@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import type { Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
@@ -33,8 +33,13 @@ function createNote(overrides: Partial<Note> = {}): Note {
 }
 
 describe('NotePreview', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
   afterEach(() => {
     document.body.innerHTML = '';
+    sessionStorage.clear();
   });
 
   it('prefers shared note titles in the single-note preview path', () => {
@@ -76,6 +81,58 @@ describe('NotePreview', () => {
     expect(document.body.textContent).toContain('高');
     expect(document.body.textContent).toContain('截止 2026-03-24');
     expect(document.body.textContent).toMatch(/更新 .*03\/23.*11:45|更新 .*3\/23.*11:45|更新 .*03\/23.*19:45|更新 .*3\/23.*19:45/);
+
+    wrapper.unmount();
+  });
+
+  it('hides protected content in the single-note preview path', () => {
+    sessionStorage.setItem('privacyMode', '1');
+
+    const wrapper = mount(NotePreview, {
+      props: {
+        note: createNote({
+          content: 'top secret preview content',
+          privacy: 'private',
+          encrypted: false,
+        }),
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toContain('🔒 当前内容受隐私保护，预览已隐藏');
+    expect(document.body.textContent).not.toContain('top secret preview content');
+
+    wrapper.unmount();
+  });
+
+  it('hides encrypted content in multi-note previews', () => {
+    const wrapper = mount(NotePreview, {
+      props: {
+        notes: [
+          createNote({ id: 'preview-a', title: 'Alpha title', encrypted: true, content: 'encrypted body' }),
+          createNote({ id: 'preview-b', title: 'Beta title', content: 'public body', privacy: 'public' }),
+        ],
+        visible: true,
+        pos: { x: 24, y: 24 },
+      },
+      global: {
+        stubs: {
+          Teleport: false,
+        },
+      },
+      attachTo: document.body,
+    });
+
+    expect(document.body.textContent).toContain('🔒 内容已加密，预览已隐藏');
+    expect(document.body.textContent).not.toContain('encrypted body');
+    expect(document.body.textContent).toContain('public body');
 
     wrapper.unmount();
   });

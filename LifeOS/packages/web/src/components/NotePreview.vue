@@ -17,7 +17,7 @@
             <span class="preview-status" :class="'status-' + displayNotes[0].status">{{ statusLabels[displayNotes[0].status] }}</span>
           </div>
           <h4 class="preview-title">{{ displayNotes[0].title || displayNotes[0].file_name.replace('.md', '') }}</h4>
-          <p v-if="displayNotes[0].content" class="preview-body">{{ truncate(displayNotes[0].content, 160) }}</p>
+          <p v-if="previewBody(displayNotes[0])" class="preview-body">{{ previewBody(displayNotes[0]) }}</p>
           <div class="preview-footer">
             <span class="preview-date">{{ displayNotes[0].date?.slice(0, 10) }}</span>
             <span v-if="displayNotes[0].updated" class="preview-updated">更新 {{ formatUpdated(displayNotes[0].updated) }}</span>
@@ -37,7 +37,7 @@
                 <span class="multi-status-dot" :class="'dot-' + n.status"></span>
                 <span class="multi-title">{{ n.title || n.file_name.replace('.md', '') }}</span>
               </div>
-              <p v-if="n.content" class="multi-content">{{ truncate(n.content, 80) }}</p>
+              <p v-if="previewBody(n)" class="multi-content">{{ previewBody(n, 80) }}</p>
               <div class="multi-meta">
                 <span class="multi-type">{{ typeLabels[n.type] }}</span>
                 <span v-if="n.priority" class="multi-priority" :class="'pri-' + n.priority">{{ priorityLabels[n.priority] }}</span>
@@ -107,6 +107,19 @@ function dimensionColor(dimension: Note['dimension']) {
 function truncate(text: string, len: number) {
   const clean = text.replace(/^#+\s*/gm, '').replace(/\*\*/g, '').replace(/\n+/g, ' ').trim();
   return clean.length > len ? clean.slice(0, len) + '…' : clean;
+}
+
+function previewBody(note: Note, len = 160) {
+  if (note.encrypted) {
+    return '🔒 内容已加密，预览已隐藏';
+  }
+  if (note.privacy === 'private' || note.privacy === 'sensitive') {
+    return '🔒 当前内容受隐私保护，预览已隐藏';
+  }
+  if (!note.content) {
+    return '';
+  }
+  return truncate(note.content, len);
 }
 
 function formatUpdated(updated: string) {
