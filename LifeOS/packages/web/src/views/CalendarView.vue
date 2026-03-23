@@ -41,7 +41,7 @@
               <span class="note-status-dot" :class="'dot-' + note.status"></span>
               <span class="note-title">{{ note.title || note.file_name.replace('.md', '') }}</span>
             </div>
-            <p v-if="note.content" class="note-content">{{ truncateContent(note.content, 100) }}</p>
+            <p v-if="noteBodyPreview(note)" class="note-content">{{ noteBodyPreview(note) }}</p>
             <div class="note-meta">
               <span class="note-type">{{ getTypeLabel(note.type) }}</span>
               <span v-if="note.priority" class="note-priority" :class="'pri-' + note.priority">{{ getPriorityLabel(note.priority) }}</span>
@@ -109,6 +109,19 @@ async function handleDeleted() {
 function getDayNotes(date: string) {
   const notes = data.value?.days.find((d) => d.date === date)?.notes || [];
   return sortCalendarNotes(notes);
+}
+
+function noteBodyPreview(note: { content?: string; privacy?: string; encrypted?: boolean }) {
+  if (note.encrypted) {
+    return '🔒 内容已加密，预览已隐藏';
+  }
+  if (note.privacy === 'private' || note.privacy === 'sensitive') {
+    return '🔒 当前内容受隐私保护，预览已隐藏';
+  }
+  if (!note.content) {
+    return '';
+  }
+  return truncateContent(note.content, 100);
 }
 
 function truncateContent(text: string, len: number) {

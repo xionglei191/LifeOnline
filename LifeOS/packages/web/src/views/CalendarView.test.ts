@@ -104,6 +104,49 @@ describe('CalendarView', () => {
     expect(titles).toEqual(['Alpha title', 'Zeta title']);
   });
 
+  it('hides protected content in selected-day detail cards while keeping public content visible', async () => {
+    const load = vi.fn();
+    composableMocks.useCalendar.mockReturnValue({
+      data: ref({
+        year: 2026,
+        month: 3,
+        days: [
+          {
+            date: '2026-03-12',
+            count: 3,
+            notes: [
+              { id: 'note-private', file_name: 'private.md', type: 'note', status: 'pending', title: 'Private note', content: 'private body', privacy: 'private', encrypted: false },
+              { id: 'note-encrypted', file_name: 'encrypted.md', type: 'note', status: 'pending', title: 'Encrypted note', content: 'encrypted body', privacy: 'public', encrypted: true },
+              { id: 'note-public', file_name: 'public.md', type: 'note', status: 'pending', title: 'Public note', content: 'public body', privacy: 'public', encrypted: false },
+            ],
+          },
+        ],
+      }),
+      loading: ref(false),
+      error: ref(null),
+      selectedDay: ref('2026-03-12'),
+      load,
+    });
+
+    const wrapper = mount(CalendarView, {
+      global: {
+        stubs: {
+          CalendarGrid: true,
+          NoteDetail: true,
+          StateDisplay: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('🔒 当前内容受隐私保护，预览已隐藏');
+    expect(wrapper.text()).toContain('🔒 内容已加密，预览已隐藏');
+    expect(wrapper.text()).toContain('public body');
+    expect(wrapper.text()).not.toContain('private body');
+    expect(wrapper.text()).not.toContain('encrypted body');
+  });
+
   it('reloads the calendar when the month window changes instead of pinning the initial mount state', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-31T23:30:00'));
