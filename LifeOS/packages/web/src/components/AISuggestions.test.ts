@@ -128,6 +128,22 @@ describe('AISuggestions', () => {
     wrapper.unmount();
   });
 
+  it('renders suggestion timestamps so dashboard insight cards expose recency directly', async () => {
+    apiMocks.fetchAISuggestions.mockResolvedValue([
+      createSuggestion({
+        id: 'suggestion-time',
+        title: '最近刚更新的洞察',
+        createdAt: '2026-03-23T11:45:00.000Z',
+      }),
+    ]);
+
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('最近刚更新的洞察');
+    expect(wrapper.find('.insight-time').text()).toMatch(/03\/23.*11:45|3\/23.*11:45|03\/23.*19:45|3\/23.*19:45/);
+  });
+
   it('auto-loads suggestions on mount so the dashboard shows insights immediately', async () => {
     apiMocks.fetchAISuggestions.mockResolvedValue([
       createSuggestion({ id: 'suggestion-auto', type: 'goal', title: '开场即有洞察' }),

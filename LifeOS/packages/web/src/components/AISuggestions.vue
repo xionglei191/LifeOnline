@@ -19,7 +19,10 @@
         <div class="insight-body">
           <div class="insight-top">
             <span class="insight-type">{{ typeLabels[s.type] }}</span>
-            <span v-if="s.dimension" class="insight-dimension">{{ getDimensionLabel(s.dimension) }}</span>
+            <div class="insight-meta">
+              <span v-if="s.dimension" class="insight-dimension">{{ getDimensionLabel(s.dimension) }}</span>
+              <span class="insight-time">{{ formatSuggestionTime(s.createdAt) }}</span>
+            </div>
           </div>
           <h4>{{ s.title }}</h4>
           <p>{{ s.content }}</p>
@@ -57,6 +60,15 @@ const typeLabels: Record<string, string> = {
   goal: '目标推进',
   reminder: '提醒',
 };
+
+function formatSuggestionTime(value: string) {
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 async function handleRefresh() {
   const requestId = ++activeRequestId;
@@ -201,8 +213,17 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
+.insight-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .insight-type,
-.insight-dimension {
+.insight-dimension,
+.insight-time {
   font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
