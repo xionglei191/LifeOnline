@@ -33,6 +33,19 @@ function createNote(overrides: Partial<Note> = {}): Note {
 }
 
 describe('WeeklyHighlights', () => {
+  it('localizes the weekly highlight header copy and badge', () => {
+    const wrapper = mount(WeeklyHighlights, {
+      props: {
+        highlights: [createNote()],
+      },
+    });
+
+    expect(wrapper.text()).toContain('本周重点');
+    expect(wrapper.text()).toContain('周节律');
+    expect(wrapper.text()).not.toContain('Priority Watch');
+    expect(wrapper.text()).not.toContain('Week Pulse');
+  });
+
   it('renders dimension labels and colors from shared helpers', () => {
     const wrapper = mount(WeeklyHighlights, {
       props: {

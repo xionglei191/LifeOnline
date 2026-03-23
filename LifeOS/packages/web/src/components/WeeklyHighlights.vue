@@ -2,10 +2,10 @@
   <section class="panel">
     <div class="panel-head">
       <div>
-        <p class="panel-kicker">Priority Watch</p>
+        <p class="panel-kicker">本周重点</p>
         <h3>本周重点追踪</h3>
       </div>
-      <span class="panel-badge">Week Pulse</span>
+      <span class="panel-badge">周节律</span>
     </div>
 
     <div v-if="orderedHighlights.length === 0" class="empty">本周没有特别需要盯住的重点事项。</div>
