@@ -134,7 +134,7 @@ function buildReintegrationPlanningResponse(
     reintegrationRecord: responseRecord,
     soulActions: responseSoulActions,
     nextActionSummary: responseRecord.nextActionSummary ?? null,
-    displaySummary: responseRecord.displaySummary,
+    displaySummary: responseRecord.displaySummary!,
   };
 }
 

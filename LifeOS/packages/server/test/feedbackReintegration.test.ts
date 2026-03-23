@@ -325,6 +325,7 @@ test('getPromotionSourceForReintegration keeps reintegration identity for soul a
 
 test('shared reintegration outcome display summary and messages stay aligned for planned next actions', () => {
   const reintegrationRecord = {
+    signalKind: 'task_extraction_reintegration' as const,
     evidence: {
       extractTaskCreated: 2,
       nextActionCandidate: {

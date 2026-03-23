@@ -133,7 +133,3 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
   };
 }
 
-// ── Legacy compat alias (will be removed) ──────────────
-/** @deprecated Use triggerCognitiveAnalysisAfterIndex instead */
-export const triggerPersonaSnapshotAfterIndex = triggerCognitiveAnalysisAfterIndex;
-export type PostIndexPersonaTriggerResult = PostIndexTriggerResult;

@@ -1,4 +1,4 @@
-import type { ActionOutcomePacket, ExtractTaskReintegrationEvidenceItem, ReintegrationEvidenceSummary, ReintegrationOutcomeSummary, ReintegrationSummaryContext as SharedReintegrationSummaryContext, WorkerTask } from '@lifeos/shared';
+import type { ActionOutcomePacket, ExtractTaskReintegrationEvidenceItem, ReintegrationEvidenceSummary, ReintegrationOutcomeSummary, ReintegrationSummaryContext as SharedReintegrationSummaryContext, SoulActionKind, WorkerTask } from '@lifeos/shared';
 import {
   getReintegrationOutcomeSummary as getSharedReintegrationOutcomeSummary,
   getSuggestedSoulActionKindsForReintegrationSignal,
@@ -7,6 +7,7 @@ import {
 } from '@lifeos/shared';
 import type { ReintegrationRecordInput, ReintegrationRecordEvidence } from '@lifeos/shared';
 import type { SupportedReintegrationTaskType } from '../workers/feedbackReintegration.js';
+import type { ContinuityIntegrationResult } from '../workers/continuityIntegrator.js';
 import type { PersonaSnapshot } from './personaSnapshots.js';
 import type { ReintegrationRecord } from './reintegrationRecords.js';
 

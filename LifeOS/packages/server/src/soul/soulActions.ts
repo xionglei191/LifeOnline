@@ -107,9 +107,9 @@ function getPersistedSoulActionExecutionSummary(soulAction: SoulAction | null | 
   return null;
 }
 
-export function attachSoulActionExecutionSummary(soulAction: SoulAction | null | undefined): SoulAction | null {
+export function attachSoulActionExecutionSummary(soulAction: SoulAction | null | undefined): (SoulAction & { executionSummary: SoulActionDispatchExecutionSummary | null }) | null {
   if (!soulAction) {
-    return soulAction;
+    return null;
   }
 
   return {
