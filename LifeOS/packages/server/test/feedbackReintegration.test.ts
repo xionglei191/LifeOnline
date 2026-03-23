@@ -398,6 +398,9 @@ test('createReintegrationRecordInput centralizes record assembly for terminal ta
       resultSummary: '已更新人格快照：更稳定推进。',
       error: null,
       outputNotePaths: [],
+      extractTaskCreated: null,
+      extractTaskItems: [],
+      nextActionCandidate: null,
       personaSnapshotId: 'persona-123',
       personaSnapshotSummary: '长期主义与稳定节奏',
       personaContentPreview: '长期主义与稳定节奏',
@@ -421,11 +424,28 @@ test('createReintegrationRecordInput keeps persona evidence nullable when absent
   assert.equal(recordInput.evidence.personaContentPreview, null);
 });
 
-test('createReintegrationRecordInput allows callers to drop stale persona evidence from another worker task', () => {
+test('createReintegrationRecordInput keeps extract task evidence and recommended next action for next-step planning', () => {
   const task = buildTerminalTask('extract_tasks', {
     id: 'task-record-input-extract',
     sourceNoteId: 'note-record-input',
     resultSummary: '已提取行动项',
+    result: {
+      title: '行动项提取',
+      summary: '已提取 3 个行动项',
+      created: 3,
+      sourceNoteTitle: '源笔记',
+      items: [
+        { title: '高优先任务', dimension: 'career', priority: 'high', due: '2026-03-23', filePath: '/tmp/high.md' },
+        { title: '中优先任务', dimension: 'life', priority: 'medium', due: '2026-03-22', filePath: '/tmp/medium.md' },
+        { title: '低优先任务', dimension: 'growth', priority: 'low', due: null, filePath: '/tmp/low.md' },
+      ],
+    },
+    outputNotePaths: ['/tmp/high.md', '/tmp/medium.md', '/tmp/low.md'],
+    outputNotes: [
+      { id: 'task-note-high', title: '高优先任务', filePath: '/tmp/high.md', fileName: 'high.md' },
+      { id: 'task-note-medium', title: '中优先任务', filePath: '/tmp/medium.md', fileName: 'medium.md' },
+      { id: 'task-note-low', title: '低优先任务', filePath: '/tmp/low.md', fileName: 'low.md' },
+    ],
   });
 
   const recordInput = createReintegrationRecordInput(task, {
@@ -433,6 +453,42 @@ test('createReintegrationRecordInput allows callers to drop stale persona eviden
   });
 
   assert.equal(recordInput.signalKind, 'task_extraction_reintegration');
+  assert.equal(recordInput.target, 'task_record');
+  assert.equal(recordInput.evidence.extractTaskCreated, 3);
+  assert.deepEqual(recordInput.evidence.extractTaskItems, [
+    {
+      title: '高优先任务',
+      dimension: 'career',
+      priority: 'high',
+      due: '2026-03-23',
+      filePath: '/tmp/high.md',
+      outputNoteId: 'task-note-high',
+    },
+    {
+      title: '中优先任务',
+      dimension: 'life',
+      priority: 'medium',
+      due: '2026-03-22',
+      filePath: '/tmp/medium.md',
+      outputNoteId: 'task-note-medium',
+    },
+    {
+      title: '低优先任务',
+      dimension: 'growth',
+      priority: 'low',
+      due: null,
+      filePath: '/tmp/low.md',
+      outputNoteId: 'task-note-low',
+    },
+  ]);
+  assert.deepEqual(recordInput.evidence.nextActionCandidate, {
+    title: '高优先任务',
+    dimension: 'career',
+    priority: 'high',
+    due: '2026-03-23',
+    filePath: '/tmp/high.md',
+    outputNoteId: 'task-note-high',
+  });
   assert.equal(recordInput.evidence.personaSnapshotId, null);
   assert.equal(recordInput.evidence.personaSnapshotSummary, null);
   assert.equal(recordInput.evidence.personaContentPreview, null);
@@ -932,6 +988,8 @@ test('supported task types generate stable reintegration payloads', () => {
       'error',
       'sourceNoteId',
       'outputNotePaths',
+      'extractTaskCreated',
+      'extractTaskItems',
     ]);
     assert.equal(payload.taskId, task.id);
     assert.equal(payload.taskType, taskType);
@@ -977,9 +1035,9 @@ test('continuity integrator returns stable, predictable results', () => {
     taskType: 'extract_tasks',
     status: 'succeeded',
     shouldReintegrate: true,
-    target: 'source_note',
+    target: 'task_record',
     strength: 'medium',
-    summary: 'extract_tasks summary Continuity target: source_note.',
+    summary: 'extract_tasks summary Continuity target: task_record.',
   });
 
   const personaTask = buildTerminalTask('update_persona_snapshot');
@@ -1122,9 +1180,9 @@ test('continuity integrator falls back to output-count summary for succeeded tas
     taskType: 'extract_tasks',
     status: 'succeeded',
     shouldReintegrate: true,
-    target: 'derived_outputs',
+    target: 'task_record',
     strength: 'medium',
-    summary: 'extract_tasks completed with 2 output note(s). Continuity target: derived_outputs.',
+    summary: 'extract_tasks completed with 2 output note(s). Continuity target: task_record.',
   });
 
   const summarizeTask = buildTerminalTask('summarize_note', {

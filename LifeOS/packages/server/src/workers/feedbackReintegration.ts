@@ -1,4 +1,4 @@
-import type { WorkerTask } from '@lifeos/shared';
+import type { ExtractTaskReintegrationEvidenceItem, WorkerTask } from '@lifeos/shared';
 import type { PersonaSnapshot } from '../soul/personaSnapshots.js';
 import type { ReintegrationSignalKind as StoredReintegrationSignalKind } from '../soul/reintegrationRecords.js';
 import type { ContinuityIntegrationResult } from './continuityIntegrator.js';
@@ -26,6 +26,9 @@ export interface ReintegrationRecordEvidence extends Record<string, unknown> {
   resultSummary: string | null;
   error: string | null;
   outputNotePaths: string[];
+  extractTaskCreated: number | null;
+  extractTaskItems: ExtractTaskReintegrationEvidenceItem[];
+  nextActionCandidate: ExtractTaskReintegrationEvidenceItem | null;
   personaSnapshotId: string | null;
   personaSnapshotSummary: string | null;
   personaContentPreview: string | null;
@@ -52,6 +55,8 @@ export interface FeedbackReintegrationPayload {
   error: string | null;
   sourceNoteId: string | null;
   outputNotePaths: string[];
+  extractTaskCreated: number | null;
+  extractTaskItems: ExtractTaskReintegrationEvidenceItem[];
 }
 
 export interface ActionOutcomePacket extends FeedbackReintegrationPayload {}
@@ -83,6 +88,61 @@ export function getReintegrationSignalKind(taskType: SupportedReintegrationTaskT
   }
 }
 
+function getExtractTaskEvidence(task: WorkerTask<'extract_tasks'>): {
+  extractTaskCreated: number | null;
+  extractTaskItems: ExtractTaskReintegrationEvidenceItem[];
+} {
+  const result = task.result;
+  if (!result) {
+    return {
+      extractTaskCreated: null,
+      extractTaskItems: [],
+    };
+  }
+
+  const outputNoteByPath = new Map((task.outputNotes ?? []).map((note) => [note.filePath, note]));
+  return {
+    extractTaskCreated: result.created,
+    extractTaskItems: result.items.map((item) => ({
+      title: item.title,
+      dimension: item.dimension,
+      priority: item.priority,
+      due: item.due ?? null,
+      filePath: item.filePath,
+      outputNoteId: outputNoteByPath.get(item.filePath)?.id ?? null,
+    })),
+  };
+}
+
+function pickNextActionCandidate(items: ExtractTaskReintegrationEvidenceItem[]): ExtractTaskReintegrationEvidenceItem | null {
+  if (!items.length) {
+    return null;
+  }
+
+  const priorityRank = {
+    high: 0,
+    medium: 1,
+    low: 2,
+  } as const;
+
+  return [...items].sort((left, right) => {
+    const priorityCompare = (priorityRank[left.priority as keyof typeof priorityRank] ?? 99)
+      - (priorityRank[right.priority as keyof typeof priorityRank] ?? 99);
+    if (priorityCompare !== 0) {
+      return priorityCompare;
+    }
+
+    const leftDue = left.due ?? '9999-12-31';
+    const rightDue = right.due ?? '9999-12-31';
+    const dueCompare = leftDue.localeCompare(rightDue);
+    if (dueCompare !== 0) {
+      return dueCompare;
+    }
+
+    return left.filePath.localeCompare(right.filePath);
+  })[0] ?? null;
+}
+
 export function createFeedbackReintegrationPayload(task: WorkerTask): FeedbackReintegrationPayload {
   if (!isSupportedReintegrationTaskType(task.taskType)) {
     throw new Error(`Unsupported reintegration task type: ${task.taskType}`);
@@ -92,6 +152,10 @@ export function createFeedbackReintegrationPayload(task: WorkerTask): FeedbackRe
     throw new Error(`Feedback reintegration requires a terminal WorkerTask: ${task.status}`);
   }
 
+  const extractTaskEvidence = task.taskType === 'extract_tasks'
+    ? getExtractTaskEvidence(task)
+    : { extractTaskCreated: null, extractTaskItems: [] };
+
   return {
     taskId: task.id,
     taskType: task.taskType,
@@ -100,6 +164,8 @@ export function createFeedbackReintegrationPayload(task: WorkerTask): FeedbackRe
     error: task.error ?? null,
     sourceNoteId: task.sourceNoteId ?? null,
     outputNotePaths: [...(task.outputNotePaths ?? [])],
+    extractTaskCreated: extractTaskEvidence.extractTaskCreated,
+    extractTaskItems: extractTaskEvidence.extractTaskItems,
   };
 }
 
@@ -110,6 +176,7 @@ export function createReintegrationRecordInput(task: WorkerTask, options: {
   const packet = createFeedbackReintegrationPayload(task);
   const continuity = integrateContinuity(packet);
   const personaSnapshot = options.personaSnapshot ?? null;
+  const nextActionCandidate = pickNextActionCandidate(packet.extractTaskItems);
 
   return {
     workerTaskId: packet.taskId,
@@ -128,6 +195,9 @@ export function createReintegrationRecordInput(task: WorkerTask, options: {
       resultSummary: packet.resultSummary,
       error: packet.error,
       outputNotePaths: packet.outputNotePaths,
+      extractTaskCreated: packet.extractTaskCreated,
+      extractTaskItems: packet.extractTaskItems,
+      nextActionCandidate,
       personaSnapshotId: personaSnapshot?.id ?? null,
       personaSnapshotSummary: personaSnapshot?.summary ?? null,
       personaContentPreview: personaSnapshot?.snapshot.contentPreview ?? null,

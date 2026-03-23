@@ -525,6 +525,15 @@ export interface SoulAction {
   resultSummary: string | null;
 }
 
+export interface ExtractTaskReintegrationEvidenceItem {
+  title: string;
+  dimension: string;
+  priority: string;
+  due?: string | null;
+  filePath: string;
+  outputNoteId: string | null;
+}
+
 export interface ReintegrationRecord {
   id: string;
   workerTaskId: string;

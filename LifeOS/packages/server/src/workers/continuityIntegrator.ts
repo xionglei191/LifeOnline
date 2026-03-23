@@ -16,7 +16,7 @@ export interface ContinuityIntegrationResult {
 const TASK_TYPE_TARGETS: Record<SupportedReintegrationTaskType, ContinuityTarget> = {
   summarize_note: 'source_note',
   classify_inbox: 'derived_outputs',
-  extract_tasks: 'derived_outputs',
+  extract_tasks: 'task_record',
   update_persona_snapshot: 'source_note',
   daily_report: 'derived_outputs',
   weekly_report: 'derived_outputs',
@@ -25,7 +25,11 @@ const TASK_TYPE_TARGETS: Record<SupportedReintegrationTaskType, ContinuityTarget
 
 export function integrateContinuity(packet: ActionOutcomePacket): ContinuityIntegrationResult {
   const shouldReintegrate = packet.status === 'succeeded' && (!!packet.resultSummary || packet.outputNotePaths.length > 0);
-  const target = packet.sourceNoteId ? 'source_note' : TASK_TYPE_TARGETS[packet.taskType];
+  const target = packet.taskType === 'extract_tasks'
+    ? 'task_record'
+    : packet.sourceNoteId
+      ? 'source_note'
+      : TASK_TYPE_TARGETS[packet.taskType];
   const strength: ContinuityStrength = packet.outputNotePaths.length > 0 || packet.status === 'succeeded' ? 'medium' : 'low';
 
   const summary = buildContinuitySummary(packet, target, shouldReintegrate);
