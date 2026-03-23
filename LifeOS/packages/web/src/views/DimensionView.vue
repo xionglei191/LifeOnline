@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDimensionNotes } from '../composables/useDimensionNotes';
 import DimensionStats from '../components/DimensionStats.vue';
@@ -53,6 +53,12 @@ const dimension = computed(() => normalizeRouteDimension(route.params.dimension)
 const { notes, loading, error, filters, filteredNotes, availableTags, stats, load } = useDimensionNotes(dimension);
 
 const selectedNoteId = ref<string | null>(null);
+
+watch(dimension, (nextDimension, previousDimension) => {
+  if (nextDimension !== previousDimension) {
+    selectedNoteId.value = null;
+  }
+});
 
 function handleSelectNote(noteId: string) {
   selectedNoteId.value = noteId;

@@ -40,14 +40,18 @@ function buildWrapper() {
         FilterBar: true,
         NoteList: {
           props: ['notes'],
+          emits: ['selectNote'],
           computed: {
             noteIds() {
               return this.notes.map((note: { id: string }) => note.id).join(',');
             },
           },
-          template: '<div class="note-list-stub">{{ noteIds }}</div>',
+          template: '<button class="note-list-stub" @click="$emit(\'selectNote\', notes[0].id)">{{ noteIds }}</button>',
         },
-        NoteDetail: true,
+        NoteDetail: {
+          props: ['noteId'],
+          template: '<div class="note-detail-stub">{{ noteId ?? "none" }}</div>',
+        },
         StateDisplay: {
           props: ['type', 'message'],
           template: '<div class="state-display-stub" :data-type="type">{{ message }}</div>',
@@ -118,6 +122,29 @@ describe('DimensionView', () => {
 
     expect(wrapper.text()).toContain('dimension unavailable');
     expect(wrapper.find('.state-display-stub').attributes('data-type')).toBe('error');
+  });
+
+  it('clears the selected note when the route dimension changes', async () => {
+    routeState.current!.params.dimension = 'life';
+    apiMocks.fetchNotes
+      .mockResolvedValueOnce([{ id: 'note-life', dimension: 'life', status: 'pending', type: 'note', date: '2026-03-22', file_name: 'life.md' }])
+      .mockResolvedValueOnce([{ id: 'note-growth', dimension: 'growth', status: 'done', type: 'note', date: '2026-03-23', file_name: 'growth.md' }]);
+
+    wrapper = buildWrapper();
+    await flushPromises();
+
+    await wrapper.get('.note-list-stub').trigger('click');
+    await nextTick();
+    expect(wrapper.find('.note-detail-stub').text()).toBe('note-life');
+
+    routeState.current!.params.dimension = 'growth';
+    wrapper.unmount();
+    wrapper = buildWrapper();
+    await nextTick();
+    await flushPromises();
+
+    expect(wrapper.find('.note-detail-stub').text()).toBe('none');
+    expect(wrapper.find('.note-list-stub').text()).toContain('note-growth');
   });
 
   it('reloads notes when the route dimension changes', async () => {
