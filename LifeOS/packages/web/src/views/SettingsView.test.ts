@@ -127,7 +127,43 @@ function createProjectionListResult<T>(items: T[], sourceReintegrationIds: strin
 }
 
 const reintegrationRecords: ReintegrationRecord[] = [
-  createReintegrationRecord({ id: 'record-ready', createdAt: '2026-03-21T10:00:00.000Z', summary: 'ready group' }),
+  createReintegrationRecord({
+    id: 'record-ready',
+    createdAt: '2026-03-21T10:00:00.000Z',
+    summary: 'ready group',
+    taskType: 'extract_tasks',
+    signalKind: 'task_extraction_reintegration',
+    target: 'task_record',
+    evidence: {
+      extractTaskCreated: 2,
+      extractTaskItems: [
+        {
+          title: '整理周报素材',
+          dimension: 'growth',
+          priority: 'high',
+          due: '2026-03-22',
+          filePath: '/vault/growth/2026-03-21-整理周报素材.md',
+          outputNoteId: 'task-note-1',
+        },
+        {
+          title: '补充复盘提纲',
+          dimension: 'growth',
+          priority: 'medium',
+          due: null,
+          filePath: '/vault/growth/2026-03-21-补充复盘提纲.md',
+          outputNoteId: 'task-note-2',
+        },
+      ],
+      nextActionCandidate: {
+        title: '整理周报素材',
+        dimension: 'growth',
+        priority: 'high',
+        due: '2026-03-22',
+        filePath: '/vault/growth/2026-03-21-整理周报素材.md',
+        outputNoteId: 'task-note-1',
+      },
+    },
+  }),
   createReintegrationRecord({ id: 'record-mixed', createdAt: '2026-03-20T10:00:00.000Z', summary: 'mixed group', reviewStatus: 'pending_review' }),
 ];
 
@@ -673,6 +709,28 @@ describe('SettingsView soul action governance wiring', () => {
     expect(wrapper.find('.prompt-list-item.active .prompt-key').text()).toBe('suggest');
   });
 
+  it('renders extract-task next-action evidence in the reintegration control plane', async () => {
+    const wrapper = mountSettingsView();
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('产出行动项 2');
+    expect(wrapper.text()).toContain('下一步候选：整理周报素材（high · due 2026-03-22）');
+
+    const expandButton = wrapper.findAll('button').find((button) => button.text() === '展开详情');
+    expect(expandButton).toBeTruthy();
+    await expandButton!.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Next-action evidence');
+    expect(wrapper.text()).toContain('整理周报素材');
+    expect(wrapper.text()).toContain('补充复盘提纲');
+    expect(wrapper.text()).toContain('task-note-1');
+    expect(wrapper.text()).toContain('task-note-2');
+
+    wrapper.unmount();
+  });
+
   it('passes grouped governance props into the panel after initial load', async () => {
     const wrapper = mountSettingsView();
 
@@ -687,11 +745,17 @@ describe('SettingsView soul action governance wiring', () => {
     expect(panel.props('quickFilterStats')).toBe('2 / 2 分组命中');
     expect(panel.props('groupCount')).toBe(2);
     expect(panel.props('groups')).toHaveLength(2);
-    const groups = panel.props('groups') as Array<{ groupKey: string; latestActivityAt: string; latestActivityLabel: string }>;
+    const groups = panel.props('groups') as Array<{
+      groupKey: string;
+      recentActivityAt: string;
+      recentActivityLabel: string;
+      recentActivityKind: 'reintegration' | 'action';
+    }>;
     expect(groups[0]).toMatchObject({
       groupKey: 'record-ready',
-      latestActivityAt: '2026-03-21T10:02:00.000Z',
-      latestActivityLabel: '最近更新',
+      recentActivityAt: '2026-03-21T10:02:00.000Z',
+      recentActivityLabel: '最近动作',
+      recentActivityKind: 'action',
     });
     expect(panel.props('summary')).toEqual({
       pendingReview: 1,

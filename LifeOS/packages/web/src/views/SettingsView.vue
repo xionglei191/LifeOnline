@@ -379,6 +379,13 @@
             <span v-if="record.reviewedAt">复核于 {{ formatTime(record.reviewedAt) }}</span>
           </div>
 
+          <div v-if="record.taskType === 'extract_tasks' && getReintegrationExtractTaskCount(record) !== null" class="reintegration-next-action-strip">
+            <span class="worker-pill">产出行动项 {{ getReintegrationExtractTaskCount(record) }}</span>
+            <span v-if="getReintegrationNextActionCandidate(record)">
+              下一步候选：{{ formatReintegrationNextActionCandidate(getReintegrationNextActionCandidate(record)) }}
+            </span>
+          </div>
+
           <div class="reintegration-reason-row">
             <input
               v-model="reintegrationReasonDrafts[record.id]"
@@ -415,6 +422,19 @@
           </div>
 
           <div v-if="reintegrationExpandedIds.includes(record.id)" class="reintegration-expanded">
+            <div v-if="record.taskType === 'extract_tasks' && getReintegrationExtractTaskItems(record).length" class="reintegration-evidence-block">
+              <div class="reintegration-section-label">Next-action evidence</div>
+              <div class="reintegration-task-list">
+                <div v-for="item in getReintegrationExtractTaskItems(record)" :key="item.filePath" class="reintegration-task-item">
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <div class="reintegration-action-meta">{{ item.dimension }} · {{ item.priority }}<span v-if="item.due"> · due {{ item.due }}</span></div>
+                  </div>
+                  <div class="reintegration-action-meta">{{ item.outputNoteId || item.filePath }}</div>
+                </div>
+              </div>
+            </div>
+
             <div class="reintegration-evidence-block">
               <div class="reintegration-section-label">Evidence</div>
               <pre>{{ JSON.stringify(record.evidence, null, 2) }}</pre>
@@ -781,7 +801,7 @@ import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.v
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 
-import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskOutputNote, TaskSchedule, PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent, ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, ExtractTaskReintegrationEvidenceItem } from '@lifeos/shared';
 import { workerTaskActionMessage, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket, isIndexRefreshEvent } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -1261,6 +1281,40 @@ function reintegrationStatusClass(status: ReintegrationRecord['reviewStatus']) {
   if (status === 'accepted') return 'overridden';
   if (status === 'rejected') return 'disabled';
   return 'warning';
+}
+
+function getReintegrationExtractTaskItems(record: ReintegrationRecord): ExtractTaskReintegrationEvidenceItem[] {
+  const items = record.evidence && typeof record.evidence === 'object'
+    ? (record.evidence as Record<string, unknown>).extractTaskItems
+    : null;
+  return Array.isArray(items)
+    ? items.filter((item): item is ExtractTaskReintegrationEvidenceItem => !!item && typeof item === 'object' && typeof (item as { filePath?: unknown }).filePath === 'string')
+    : [];
+}
+
+function getReintegrationExtractTaskCount(record: ReintegrationRecord): number | null {
+  const count = record.evidence && typeof record.evidence === 'object'
+    ? (record.evidence as Record<string, unknown>).extractTaskCreated
+    : null;
+  return typeof count === 'number' ? count : null;
+}
+
+function getReintegrationNextActionCandidate(record: ReintegrationRecord): ExtractTaskReintegrationEvidenceItem | null {
+  const candidate = record.evidence && typeof record.evidence === 'object'
+    ? (record.evidence as Record<string, unknown>).nextActionCandidate
+    : null;
+  if (!candidate || typeof candidate !== 'object' || typeof (candidate as { filePath?: unknown }).filePath !== 'string') {
+    return null;
+  }
+  return candidate as ExtractTaskReintegrationEvidenceItem;
+}
+
+function formatReintegrationNextActionCandidate(candidate: ExtractTaskReintegrationEvidenceItem | null): string {
+  if (!candidate) {
+    return '未提供';
+  }
+  const suffix = [candidate.priority, candidate.due ? `due ${candidate.due}` : null].filter(Boolean).join(' · ');
+  return suffix ? `${candidate.title}（${suffix}）` : candidate.title;
 }
 
 function promotionActionLabel(actionKind: SoulAction['actionKind']) {
