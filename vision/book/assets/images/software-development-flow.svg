@@ -1,7 +1,7 @@
 <svg width="1260" height="820" viewBox="0 0 1260 820" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1260" height="820" rx="32" fill="#FBF6EE"/>
   <rect x="40" y="40" width="1180" height="740" rx="28" fill="#FFFDF9" stroke="#E6D8C7" stroke-width="2"/>
-  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 2 · 软件开发流程</text>
+  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 8 · 软件开发流程</text>
   <text x="72" y="156" fill="#241913" font-size="40" font-family="Georgia, serif" font-weight="700">需求 → 架构 → 实现 → 测试 → 发布 → 复盘</text>
   <text x="72" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">开发不是直接开始写代码，而是一段有阶段感、有判断点、有回路的工程过程。</text>
 
@@ -52,4 +52,13 @@
   <text x="114" y="584" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">大模型时代有什么变化？</text>
   <text x="114" y="622" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">变化不在于流程消失，而在于每一步都可以被 AI 深度辅助。</text>
   <text x="114" y="650" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">但人依然要负责判断、组织、取舍和验收。</text>
+
+  <g font-family="Arial, sans-serif" font-size="14" fill="#8A3B12">
+    <text x="100" y="470">AI 帮拆需求</text>
+    <text x="280" y="470">AI 帮画模块</text>
+    <text x="466" y="470">AI 帮写代码</text>
+    <text x="652" y="470">AI 帮补测试</text>
+    <text x="834" y="470">AI 帮写说明</text>
+    <text x="1020" y="470">AI 帮做总结</text>
+  </g>
 </svg>

@@ -1,7 +1,7 @@
 <svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1400" height="900" rx="36" fill="#FBF6EF"/>
   <rect x="44" y="44" width="1312" height="812" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="80" y="116" fill="#7F3415" font-size="24" font-family="Arial, sans-serif" letter-spacing="2">图 3 · LifeOnline 第一阶段控制流程图</text>
+  <text x="80" y="116" fill="#7F3415" font-size="24" font-family="Arial, sans-serif" letter-spacing="2">图 13 · LifeOnline 第一阶段控制流程图</text>
   <text x="80" y="164" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">输入 → 理解 → SoulAction → 治理 → 执行 → 回流 → 连续性</text>
   <text x="80" y="206" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">这不是普通 Web 工具流程，而是联合认知体第一阶段最小但真实的运行骨架。</text>
 
@@ -48,20 +48,20 @@
   <rect x="316" y="574" width="344" height="148" rx="28" fill="#FFF8EF" stroke="#E5D7C6"/>
   <text x="350" y="628" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">回流 Reintegration</text>
   <text x="350" y="664" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">结果被总结、解释、组织</text>
-  <text x="350" y="694" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成 next action / evidence / summary</text>
+  <text x="350" y="694" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成下一步建议 / 依据 / 总结（next action / evidence / summary）</text>
 
   <rect x="760" y="560" width="360" height="164" rx="28" fill="#F7F1E6" stroke="#D5C09C"/>
   <text x="796" y="616" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">连续性 Continuity</text>
   <text x="796" y="652" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">高价值结果进入长期资产</text>
-  <text x="796" y="682" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成 EventNode / ContinuityRecord</text>
+  <text x="796" y="682" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">形成 EventNode 事件记录 / ContinuityRecord 连续性资产</text>
 
   <path d="M1264 428C1264 514 1112 572 660 572" stroke="#B88439" stroke-width="4"/>
   <path d="M672 560L642 572L672 584" stroke="#B88439" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="1106" y="534" fill="#7A5A34" font-size="18" font-family="Arial, sans-serif">Outcome → Reintegration</text>
+  <text x="1106" y="534" fill="#7A5A34" font-size="18" font-family="Arial, sans-serif">Outcome 结果 → Reintegration 回流</text>
 
   <path d="M660 642H740" stroke="#7F3415" stroke-width="4" stroke-linecap="round"/>
   <path d="M728 630L752 642L728 654" stroke="#7F3415" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="662" y="620" fill="#7F3415" font-size="18" font-family="Arial, sans-serif">summary / evidence</text>
+  <text x="662" y="620" fill="#7F3415" font-size="18" font-family="Arial, sans-serif">summary 总结 / evidence 依据</text>
 
   <path d="M930 560C930 484 854 460 828 460" stroke="#66725F" stroke-width="4" stroke-dasharray="10 10"/>
   <path d="M818 472L794 458L822 448" stroke="#66725F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>

@@ -1,0 +1,46 @@
+<svg width="1280" height="900" viewBox="0 0 1280 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="900" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="816" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 2 · 分层架构 Layered Architecture</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">最常用的架构模式：像搭积木一样组织系统</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">每一层只和相邻层通信，修改一层不会破坏其他层——这就是"分层"的价值。</text>
+
+  <!-- Layer 1: Presentation -->
+  <rect x="200" y="260" width="880" height="110" rx="24" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="240" y="310" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">表现层 Presentation Layer</text>
+  <text x="240" y="344" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">用户界面、页面交互、展示逻辑 —— 对应前端（Frontend）</text>
+
+  <!-- Layer 2: Business Logic -->
+  <rect x="200" y="395" width="880" height="110" rx="24" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="240" y="445" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">业务逻辑层 Business Logic Layer</text>
+  <text x="240" y="479" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">规则判断、流程控制、权限检查 —— 系统真正"做决定"的地方</text>
+
+  <!-- Layer 3: Data Access -->
+  <rect x="200" y="530" width="880" height="110" rx="24" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+  <text x="240" y="580" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">数据访问层 Data Access Layer</text>
+  <text x="240" y="614" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">读写数据库、调用外部服务、管理缓存 —— 连接存储与逻辑</text>
+
+  <!-- Layer 4: Data Storage -->
+  <rect x="200" y="665" width="880" height="110" rx="24" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="240" y="715" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">数据存储层 Data Storage Layer</text>
+  <text x="240" y="749" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">数据库、文件系统、长期资产存储 —— 系统的"记忆"</text>
+
+  <!-- Arrows between layers -->
+  <g stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M640 370V383" stroke="#8A3B12"/>
+    <path d="M628 377L640 395L652 377" stroke="#8A3B12"/>
+    <path d="M640 505V518" stroke="#9A6A32"/>
+    <path d="M628 512L640 530L652 512" stroke="#9A6A32"/>
+    <path d="M640 640V653" stroke="#8C6950"/>
+    <path d="M628 647L640 665L652 647" stroke="#8C6950"/>
+  </g>
+
+  <!-- Side annotations -->
+  <text x="1110" y="330" fill="#8A3B12" font-size="16" font-family="Arial, sans-serif">用户能看到</text>
+  <text x="1110" y="470" fill="#9A6A32" font-size="16" font-family="Arial, sans-serif">用户看不到</text>
+  <text x="1110" y="600" fill="#8C6950" font-size="16" font-family="Arial, sans-serif">但不可或缺</text>
+
+  <!-- Bottom insight -->
+  <rect x="100" y="800" width="680" height="44" rx="16" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="130" y="828" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">核心原则：每层只依赖它下面的层，不跳层调用</text>
+</svg>

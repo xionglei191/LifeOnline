@@ -1,1 +1,4 @@
-{"vaultPath": "/tmp/lifeos-ai-suggestions-contract-nodJDr/vault", "port": 5060}
+{
+  "vaultPath": "/home/xionglei/LifeOnline/LifeOS/mock-vault",
+  "port": 3000
+}

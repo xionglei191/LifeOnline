@@ -1,7 +1,7 @@
 <svg width="1360" height="920" viewBox="0 0 1360 920" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1360" height="920" rx="36" fill="#FBF6EF"/>
   <rect x="42" y="42" width="1276" height="836" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 10 · 开发方式对比图</text>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 9 · 开发方式对比图</text>
   <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">传统开发 vs AI 辅助开发</text>
   <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">变化不在于“人没用了”，而在于人的角色从单纯执行者，更明显地转向组织者和判断者。</text>
 

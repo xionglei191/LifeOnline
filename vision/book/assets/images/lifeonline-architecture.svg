@@ -1,7 +1,7 @@
 <svg width="1360" height="900" viewBox="0 0 1360 900" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1360" height="900" rx="36" fill="#FBF6EF"/>
   <rect x="42" y="42" width="1276" height="816" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 9 · LifeOnline 组织架构图</text>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 19 · LifeOnline 组织架构图</text>
   <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">LifeOnline / LifeOS / Vault / OpenClaw / R2 的关系</text>
   <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">关键理解：LifeOS 是第一阶段宿主，不是整个项目本体。</text>
 
@@ -43,4 +43,10 @@
     <path d="M680 396L1144 438" stroke="#A06A47"/>
     <path d="M1146 614L1182 688" stroke="#B88439"/>
   </g>
+
+  <text x="270" y="424" fill="#8A3B12" font-size="16" font-family="Arial, sans-serif">Capture 采集生活流</text>
+  <text x="570" y="386" fill="#9A6A32" font-size="16" font-family="Arial, sans-serif">Control 控制与编排</text>
+  <text x="740" y="424" fill="#66725F" font-size="16" font-family="Arial, sans-serif">Storage 存储内容</text>
+  <text x="920" y="424" fill="#A06A47" font-size="16" font-family="Arial, sans-serif">Execute 执行任务</text>
+  <text x="1062" y="656" fill="#B88439" font-size="16" font-family="Arial, sans-serif">Bridge 桥接备份</text>
 </svg>

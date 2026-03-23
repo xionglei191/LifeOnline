@@ -1,7 +1,7 @@
 <svg width="1280" height="780" viewBox="0 0 1280 780" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1280" height="780" rx="32" fill="#FCF7F0"/>
   <rect x="40" y="40" width="1200" height="700" rx="28" fill="#FFFDF9" stroke="#E7D8C8" stroke-width="2"/>
-  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 1 · 技术基础地图</text>
+  <text x="72" y="110" fill="#7F3415" font-size="22" font-family="Arial, sans-serif" letter-spacing="2">图 4 · 技术基础地图</text>
   <text x="72" y="156" fill="#241913" font-size="40" font-family="Georgia, serif" font-weight="700">前端 Frontend / 后端 Backend / 数据库 Database</text>
   <text x="72" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">给零基础读者建立第一张系统地图：用户看到的是前端，规则跑在后端，记忆落在数据库。</text>
 
@@ -43,4 +43,12 @@
   <text x="116" y="596" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">最简单的一次“保存”会发生什么？</text>
   <text x="116" y="634" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">用户在前端输入 → 前端发请求给后端 → 后端验证并写入数据库</text>
   <text x="116" y="662" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">→ 后端返回结果 → 前端更新界面</text>
+
+  <path d="M830 400H770" stroke="#66725F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M782 412L758 400L782 388" stroke="#66725F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="756" y="434" fill="#66725F" font-size="18" font-family="Arial, sans-serif">返回结果</text>
+
+  <path d="M440 400H358" stroke="#8A3B12" stroke-width="4" stroke-linecap="round"/>
+  <path d="M370 412L346 400L370 388" stroke="#8A3B12" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="348" y="434" fill="#8A3B12" font-size="18" font-family="Arial, sans-serif">展示结果</text>
 </svg>

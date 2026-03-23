@@ -1,0 +1,70 @@
+<svg width="1360" height="820" viewBox="0 0 1360 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1360" height="820" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1276" height="736" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 16 · AI 协作工作流</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">和 AI 协作的正确方式：五步工作流</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">不是"给个需求让 AI 写"，而是一套有结构、有边界、有验证的工作循环。</text>
+
+  <!-- Two rows showing WRONG vs RIGHT -->
+  <!-- WRONG approach -->
+  <rect x="94" y="250" width="1172" height="130" rx="24" fill="#FFF4EC" stroke="#E4C3A7"/>
+  <text x="134" y="290" fill="#8A3B12" font-size="20" font-family="Arial, sans-serif">❌ 错误方式 Wrong Way</text>
+  <text x="134" y="330" fill="#6B5C53" font-size="20" font-family="Arial, sans-serif">"帮我做一个 XXX 系统" → AI 生成一堆代码 → 看起来不错？直接用吧 → 结果系统越来越乱</text>
+  <text x="134" y="360" fill="#B05050" font-size="17" font-family="Arial, sans-serif">问题：没有边界、没有验证、没有主线判断、AI 的错误被默认接受</text>
+
+  <!-- RIGHT approach: 5 steps -->
+  <text x="94" y="430" fill="#5D6A57" font-size="20" font-family="Arial, sans-serif">✅ 正确方式：五步工作流 Correct Five-Step Workflow</text>
+
+  <g>
+    <rect x="94" y="460" width="210" height="160" rx="24" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+    <text x="120" y="510" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">① 想清楚</text>
+    <text x="120" y="540" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Plan / Think</text>
+    <text x="120" y="572" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">拆问题、画流程</text>
+    <text x="120" y="596" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">定边界、明目标</text>
+
+    <rect x="340" y="460" width="210" height="160" rx="24" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+    <text x="366" y="510" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">② 写任务书</text>
+    <text x="366" y="540" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Task Brief</text>
+    <text x="366" y="572" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">目标、禁区</text>
+    <text x="366" y="596" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">成功标准、范围</text>
+
+    <rect x="586" y="460" width="210" height="160" rx="24" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+    <text x="614" y="510" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">③ 让 AI 执行</text>
+    <text x="614" y="540" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">AI Execution</text>
+    <text x="614" y="572" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">在制度内工作</text>
+    <text x="614" y="596" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">有交接物产出</text>
+
+    <rect x="832" y="460" width="210" height="160" rx="24" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+    <text x="866" y="510" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">④ 严格验证</text>
+    <text x="866" y="540" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Verification</text>
+    <text x="866" y="572" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">编译、测试、diff</text>
+    <text x="866" y="596" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">手查关键逻辑</text>
+
+    <rect x="1078" y="460" width="188" height="160" rx="24" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+    <text x="1106" y="510" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">⑤ 复盘</text>
+    <text x="1106" y="540" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Retrospective</text>
+    <text x="1106" y="572" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">推进了哪条主线</text>
+    <text x="1106" y="596" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">下一步接哪里</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M304 540H328" stroke="#8A3B12"/>
+    <path d="M316 528L340 540L316 552" stroke="#8A3B12"/>
+    <path d="M550 540H574" stroke="#9A6A32"/>
+    <path d="M562 528L586 540L562 552" stroke="#9A6A32"/>
+    <path d="M796 540H820" stroke="#8C6950"/>
+    <path d="M808 528L832 540L808 552" stroke="#8C6950"/>
+    <path d="M1042 540H1066" stroke="#66725F"/>
+    <path d="M1054 528L1078 540L1054 552" stroke="#66725F"/>
+  </g>
+
+  <!-- Bottom: key roles -->
+  <rect x="94" y="660" width="560" height="80" rx="20" fill="#EEF2E8" stroke="#B8C1A6"/>
+  <text x="130" y="698" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700">🧑 人负责：主线判断、边界设定、优先级、验收</text>
+  <text x="130" y="722" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Human: Judgment, Boundaries, Priorities, Acceptance</text>
+
+  <rect x="700" y="660" width="560" height="80" rx="20" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="736" y="698" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700">🤖 AI 负责：分析、生成、重构、测试、总结</text>
+  <text x="736" y="722" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">AI: Analysis, Generation, Refactoring, Testing, Summary</text>
+</svg>

@@ -1,31 +1,31 @@
 <svg width="1360" height="940" viewBox="0 0 1360 940" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1360" height="940" rx="36" fill="#FBF6EF"/>
   <rect x="42" y="42" width="1276" height="856" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 12 · P1~P5 优先级图</text>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 15 · P1~P5 优先级图</text>
   <text x="78" y="154" fill="#241913" font-size="44" font-family="Georgia, serif" font-weight="700">为什么要按 P1 ~ P5 来盯主线？</text>
   <text x="78" y="196" fill="#6B5C53" font-size="22" font-family="Arial, sans-serif">因为没有优先级，项目很容易被低价值表层工作带跑。</text>
 
   <g>
     <rect x="104" y="258" width="1152" height="92" rx="24" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
-    <text x="140" y="314" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P1｜SoulAction 治理面</text>
-    <text x="456" y="314" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让动作真正成为可见、可审查、可管理的一等对象</text>
+    <text x="140" y="314" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P1｜核心流程跑通 Core Loop</text>
+    <text x="456" y="314" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">先让主链路能端到端走完，形成最小闭环</text>
 
     <rect x="104" y="370" width="1152" height="92" rx="24" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
-    <text x="140" y="426" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P2｜Detail / Lifecycle</text>
-    <text x="456" y="426" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让单条动作从 source 到 outcome 的生命周期真正可见</text>
+    <text x="140" y="426" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P2｜关键细节完善 Detail &amp; Lifecycle</text>
+    <text x="456" y="426" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">补齐主流程中缺失的状态和边界处理</text>
 
     <rect x="104" y="482" width="1152" height="92" rx="24" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
-    <text x="140" y="538" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P3｜Governance API</text>
-    <text x="456" y="528" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">把 approve / dispatch / defer / discard</text>
-    <text x="456" y="556" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">收成正式治理协议</text>
+    <text x="140" y="538" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P3｜管理接口正式化 Governance API</text>
+    <text x="456" y="528" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">把 审批 Approve / 分发 Dispatch / 延迟 Defer / 放弃 Discard</text>
+    <text x="456" y="556" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让操作规则形成正式协议</text>
 
     <rect x="104" y="594" width="1152" height="92" rx="24" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
-    <text x="140" y="650" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P4｜Outcome / Reintegration</text>
-    <text x="456" y="640" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让结果真正进入回流链，而不是只停在一次性执行结果</text>
+    <text x="140" y="650" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P4｜结果回收和复用 Outcome Reintegration</text>
+    <text x="456" y="640" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让产出能被下一轮使用，不只停在一次性结果</text>
 
     <rect x="104" y="706" width="1152" height="108" rx="24" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
-    <text x="140" y="762" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P5｜Continuity Promotion</text>
-    <text x="456" y="752" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让高价值结果有证据、有审查地进入</text>
-    <text x="456" y="780" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">长期连续性资产</text>
+    <text x="140" y="762" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">P5｜长期资产沉淀 Continuity Promotion</text>
+    <text x="456" y="752" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">让高价值内容有依据、有审查地进入</text>
+    <text x="456" y="780" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">长期积累，跨版本保留</text>
   </g>
 </svg>

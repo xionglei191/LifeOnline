@@ -1,0 +1,41 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 14 · 产品优先级矩阵 Priority Matrix</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">怎么判断"先做什么、后做什么、不做什么"？</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">产品管理最实用的工具之一：二维矩阵，横轴是成本，纵轴是价值。</text>
+
+  <!-- Axes -->
+  <line x1="200" y1="700" x2="1150" y2="700" stroke="#241913" stroke-width="3"/>
+  <line x1="200" y1="700" x2="200" y2="260" stroke="#241913" stroke-width="3"/>
+  <path d="M1138 688L1162 700L1138 712" stroke="#241913" stroke-width="3" fill="none"/>
+  <path d="M188 272L200 248L212 272" stroke="#241913" stroke-width="3" fill="none"/>
+  <text x="620" y="750" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700">实现成本 Cost / Effort →</text>
+  <text x="96" y="490" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700" transform="rotate(-90, 96, 490)">用户价值 Value →</text>
+
+  <!-- Quadrant 1: High Value, Low Cost = DO FIRST -->
+  <rect x="230" y="280" width="400" height="200" rx="20" fill="#EEF2E8" stroke="#AEB28D" stroke-width="2"/>
+  <text x="320" y="340" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">✅ 立刻做</text>
+  <text x="270" y="374" fill="#5D6A57" font-size="18" font-family="Arial, sans-serif">Quick Wins</text>
+  <text x="270" y="410" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">高价值 + 低成本</text>
+  <text x="270" y="440" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">例：修复一个核心流程的关键缺失</text>
+
+  <!-- Quadrant 2: High Value, High Cost = PLAN -->
+  <rect x="680" y="280" width="400" height="200" rx="20" fill="#FFF6EC" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="770" y="340" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">📋 规划后做</text>
+  <text x="720" y="374" fill="#9A6A32" font-size="18" font-family="Arial, sans-serif">Strategic Projects</text>
+  <text x="720" y="410" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">高价值 + 高成本</text>
+  <text x="720" y="440" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">例：重新设计架构以支持新特性</text>
+
+  <!-- Quadrant 3: Low Value, Low Cost = MAYBE -->
+  <rect x="230" y="510" width="400" height="170" rx="20" fill="#F8F4EE" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="320" y="570" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">🤔 可以做</text>
+  <text x="270" y="600" fill="#8C6950" font-size="18" font-family="Arial, sans-serif">Nice to Have</text>
+  <text x="270" y="632" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">低价值 + 低成本，做了不亏但不紧急</text>
+
+  <!-- Quadrant 4: Low Value, High Cost = DON'T -->
+  <rect x="680" y="510" width="400" height="170" rx="20" fill="#FFF4EC" stroke="#E4C3A7" stroke-width="2"/>
+  <text x="770" y="570" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">❌ 不要做</text>
+  <text x="720" y="600" fill="#B05050" font-size="18" font-family="Arial, sans-serif">Money Pit / Trap</text>
+  <text x="720" y="632" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">低价值 + 高成本，是最常见的资源陷阱</text>
+</svg>

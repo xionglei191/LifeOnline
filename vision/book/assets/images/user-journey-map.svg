@@ -1,0 +1,76 @@
+<svg width="1400" height="900" viewBox="0 0 1400 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="900" rx="36" fill="#FBF6EF"/>
+  <rect x="44" y="44" width="1312" height="812" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="80" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 10 · 用户旅程地图 User Journey Map</text>
+  <text x="80" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">做产品前先画这张图：用户从哪来、要去哪</text>
+  <text x="80" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">产品经理最核心的一张图——不是功能列表，而是用户从痛点到满意的完整路径。</text>
+
+  <!-- Journey stages -->
+  <rect x="92" y="270" width="220" height="230" rx="24" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="120" y="316" fill="#8A3B12" font-size="16" font-family="Arial, sans-serif">STAGE 1</text>
+  <text x="120" y="350" fill="#241913" font-size="26" font-family="Georgia, serif" font-weight="700">发现痛点</text>
+  <text x="120" y="378" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">Awareness</text>
+  <text x="120" y="414" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">用户意识到问题</text>
+  <text x="120" y="440" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">想要某种解决方案</text>
+  <text x="120" y="474" fill="#8A3B12" font-size="14" font-family="Arial, sans-serif">🔑 关键：问题定义清楚了吗？</text>
+
+  <rect x="340" y="270" width="220" height="230" rx="24" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="368" y="316" fill="#9A6A32" font-size="16" font-family="Arial, sans-serif">STAGE 2</text>
+  <text x="368" y="350" fill="#241913" font-size="26" font-family="Georgia, serif" font-weight="700">首次接触</text>
+  <text x="368" y="378" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">First Contact</text>
+  <text x="368" y="414" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">用户第一次打开系统</text>
+  <text x="368" y="440" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">能否在 30 秒内理解价值</text>
+  <text x="368" y="474" fill="#9A6A32" font-size="14" font-family="Arial, sans-serif">🔑 关键：核心价值一眼看到了吗？</text>
+
+  <rect x="588" y="270" width="220" height="230" rx="24" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+  <text x="616" y="316" fill="#8C6950" font-size="16" font-family="Arial, sans-serif">STAGE 3</text>
+  <text x="616" y="350" fill="#241913" font-size="26" font-family="Georgia, serif" font-weight="700">核心动作</text>
+  <text x="616" y="378" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">Core Action</text>
+  <text x="616" y="414" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">用户完成最关键的操作</text>
+  <text x="616" y="440" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">输入得到了有意义的反馈</text>
+  <text x="616" y="474" fill="#8C6950" font-size="14" font-family="Arial, sans-serif">🔑 关键：闭环跑通了吗？</text>
+
+  <rect x="836" y="270" width="220" height="230" rx="24" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="864" y="316" fill="#5D6A57" font-size="16" font-family="Arial, sans-serif">STAGE 4</text>
+  <text x="864" y="350" fill="#241913" font-size="26" font-family="Georgia, serif" font-weight="700">产生价值</text>
+  <text x="864" y="378" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">Value Delivered</text>
+  <text x="864" y="414" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">结果被有效利用</text>
+  <text x="864" y="440" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">用户感到痛点被解决</text>
+  <text x="864" y="474" fill="#5D6A57" font-size="14" font-family="Arial, sans-serif">🔑 关键：结果能回流再利用吗？</text>
+
+  <rect x="1084" y="270" width="220" height="230" rx="24" fill="#F7EFE4" stroke="#D6B08A" stroke-width="2.5"/>
+  <text x="1112" y="316" fill="#A06A47" font-size="16" font-family="Arial, sans-serif">STAGE 5</text>
+  <text x="1112" y="350" fill="#241913" font-size="26" font-family="Georgia, serif" font-weight="700">长期留存</text>
+  <text x="1112" y="378" fill="#6B5C53" font-size="15" font-family="Arial, sans-serif">Retention</text>
+  <text x="1112" y="414" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">用户持续使用并积累</text>
+  <text x="1112" y="440" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">系统形成长期价值沉淀</text>
+  <text x="1112" y="474" fill="#A06A47" font-size="14" font-family="Arial, sans-serif">🔑 关键：有连续性资产吗？</text>
+
+  <!-- Arrows -->
+  <g stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M312 385H328" stroke="#8A3B12"/>
+    <path d="M316 373L340 385L316 397" stroke="#8A3B12"/>
+    <path d="M560 385H576" stroke="#9A6A32"/>
+    <path d="M564 373L588 385L564 397" stroke="#9A6A32"/>
+    <path d="M808 385H824" stroke="#8C6950"/>
+    <path d="M812 373L836 385L812 397" stroke="#8C6950"/>
+    <path d="M1056 385H1072" stroke="#66725F"/>
+    <path d="M1060 373L1084 385L1060 397" stroke="#66725F"/>
+  </g>
+
+  <!-- Emotion line -->
+  <text x="92" y="560" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700">用户情绪线 Emotion Line</text>
+  <line x1="92" y1="620" x2="1304" y2="620" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="92" y="610" fill="#B05050" font-size="16" font-family="Arial, sans-serif">😤 困惑</text>
+  <text x="340" y="594" fill="#C08030" font-size="16" font-family="Arial, sans-serif">🤔 好奇</text>
+  <text x="588" y="578" fill="#80A060" font-size="16" font-family="Arial, sans-serif">😊 获得感</text>
+  <text x="836" y="564" fill="#509050" font-size="16" font-family="Arial, sans-serif">😃 满足</text>
+  <text x="1084" y="550" fill="#306080" font-size="16" font-family="Arial, sans-serif">🤝 信任</text>
+  <path d="M150 616C250 608 400 596 550 588C700 580 850 568 1000 560C1100 556 1200 554 1260 554" stroke="#66725F" stroke-width="3" fill="none"/>
+
+  <!-- Bottom insight -->
+  <rect x="92" y="680" width="1212" height="130" rx="24" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="130" y="720" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">产品经理的核心工作：不是画原型，而是设计这条旅程</text>
+  <text x="130" y="756" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">每个阶段都要问三个问题：①用户此刻最需要什么？②系统此刻应该做什么？③什么会让用户放弃？</text>
+  <text x="130" y="786" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">这张图比任何功能列表都重要——它决定了系统的主线是什么。</text>
+</svg>

@@ -1,7 +1,7 @@
 <svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
   <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 8 · 主线判断图</text>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 18 · 主线判断图</text>
   <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">如何判断一个改动是不是在主线上？</text>
   <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">不要只问“做没做事”，而要问：这件事有没有增强系统真正重要的骨架？</text>
 
@@ -29,5 +29,5 @@
 
   <rect x="718" y="640" width="450" height="116" rx="24" fill="#FFF4EC" stroke="#E4C3A7"/>
   <text x="752" y="684" fill="#241913" font-size="24" font-family="Georgia, serif" font-weight="700">如果是表层修补</text>
-  <text x="752" y="722" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">默认降级：除非它暴露出更深层的 contract / fact-source / governance 问题。</text>
+  <text x="752" y="722" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">默认降级：除非它暴露出更深层的接口协议（Contract） / 事实源（Fact Source） / 治理层（Governance）问题。</text>
 </svg>

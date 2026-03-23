@@ -145,8 +145,15 @@ export async function restartWatcher(vaultPath: string): Promise<void> {
 }
 
 if (import.meta.url === new URL(process.argv[1], 'file://').href) {
-  startServer().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+  startServer()
+    .then(() => {
+      // Keep the process alive — Node v25 may exit if no ref'd handles remain
+      const keepalive = setInterval(() => {}, 1 << 30); // ~12 days
+      process.once('SIGINT', () => clearInterval(keepalive));
+      process.once('SIGTERM', () => clearInterval(keepalive));
+    })
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
 }

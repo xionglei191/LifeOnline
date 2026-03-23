@@ -1,0 +1,54 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 21 · 小白起步路线图</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">从零到系统：初学者的 4 步起跑方法</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">不要从页面开始，而要从问题、边界、闭环和主线开始。</text>
+
+  <!-- Step 1 -->
+  <rect x="100" y="260" width="500" height="200" rx="28" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="140" y="310" fill="#8A3B12" font-size="18" font-family="Arial, sans-serif">STEP 1</text>
+  <text x="140" y="350" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">先画图，不要先写代码</text>
+  <text x="140" y="386" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Draw First, Code Later</text>
+  <text x="140" y="420" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">画控制流程图、画组织架构图、画输入输出图</text>
+  <text x="140" y="446" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">让系统轮廓先出现在你的脑海里</text>
+
+  <!-- Step 2 -->
+  <rect x="680" y="260" width="500" height="200" rx="28" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="720" y="310" fill="#9A6A32" font-size="18" font-family="Arial, sans-serif">STEP 2</text>
+  <text x="720" y="350" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">从一个最小问题开始</text>
+  <text x="720" y="386" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Start with the Smallest Real Problem</text>
+  <text x="720" y="420" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">不是从宏大梦想，是从一个真实痛点出发</text>
+  <text x="720" y="446" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">问题越真实，越容易形成最小闭环</text>
+
+  <!-- Step 3 -->
+  <rect x="100" y="520" width="500" height="200" rx="28" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2.5"/>
+  <text x="140" y="570" fill="#8C6950" font-size="18" font-family="Arial, sans-serif">STEP 3</text>
+  <text x="140" y="610" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">跑通最小闭环</text>
+  <text x="140" y="646" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Run the Minimum Viable Loop</text>
+  <text x="140" y="680" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">输入→理解→动作→审查→执行→结果→反馈</text>
+  <text x="140" y="706" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">闭环成立了，系统才算活了</text>
+
+  <!-- Step 4 -->
+  <rect x="680" y="520" width="500" height="200" rx="28" fill="#ECE7DB" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="720" y="570" fill="#5D6A57" font-size="18" font-family="Arial, sans-serif">STEP 4</text>
+  <text x="720" y="610" fill="#241913" font-size="30" font-family="Georgia, serif" font-weight="700">用 AI 加速，但守住主线</text>
+  <text x="720" y="646" fill="#6B5C53" font-size="18" font-family="Arial, sans-serif">Use AI to Accelerate, But Hold the Mainline</text>
+  <text x="720" y="680" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">让 AI 帮你拆问题、写代码、跑测试</text>
+  <text x="720" y="706" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">但主线、边界和验收，仍然由你掌握</text>
+
+  <!-- Arrows -->
+  <g stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M600 360H660" stroke="#8A3B12"/>
+    <path d="M648 348L672 360L648 372" stroke="#8A3B12"/>
+
+    <path d="M350 460V500" stroke="#8C6950"/>
+    <path d="M338 488L350 512L362 488" stroke="#8C6950"/>
+
+    <path d="M600 620H660" stroke="#66725F"/>
+    <path d="M648 608L672 620L648 632" stroke="#66725F"/>
+  </g>
+
+  <rect x="400" y="765" width="480" height="42" rx="16" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="440" y="793" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">每一步都可以找 AI 帮忙，但判断权始终在你手里</text>
+</svg>

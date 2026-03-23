@@ -1,0 +1,43 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1196" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 1 · 页面视角 vs 系统视角</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">冰山模型：你看到的 vs 系统真正需要的</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">软件不只是页面，页面只是冰山露出水面的部分。</text>
+
+  <!-- Water line -->
+  <line x1="100" y1="420" x2="1180" y2="420" stroke="#8CB4D8" stroke-width="3" stroke-dasharray="12 6"/>
+  <text x="1060" y="410" fill="#4A7FAB" font-size="18" font-family="Arial, sans-serif">水面线</text>
+
+  <!-- Above water: what users see -->
+  <rect x="340" y="250" width="600" height="150" rx="24" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="520" y="310" fill="#241913" font-size="32" font-family="Georgia, serif" font-weight="700">页面 Page</text>
+  <text x="480" y="348" fill="#6B5C53" font-size="19" font-family="Arial, sans-serif">按钮、表单、列表、图表、样式</text>
+  <text x="340" y="240" fill="#8A3B12" font-size="16" font-family="Arial, sans-serif">👆 用户直接看到的部分（Above the Surface）</text>
+
+  <!-- Below water: what makes it work -->
+  <rect x="140" y="460" width="260" height="100" rx="20" fill="#E9E1D8" stroke="#B8A897" stroke-width="2"/>
+  <text x="172" y="508" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">数据结构</text>
+  <text x="172" y="536" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Data Structure</text>
+
+  <rect x="440" y="460" width="260" height="100" rx="20" fill="#E5DDD4" stroke="#B8A897" stroke-width="2"/>
+  <text x="476" y="508" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">状态管理</text>
+  <text x="476" y="536" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">State Management</text>
+
+  <rect x="740" y="460" width="260" height="100" rx="20" fill="#E1DCD2" stroke="#B8A897" stroke-width="2"/>
+  <text x="776" y="508" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">规则与权限</text>
+  <text x="776" y="536" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Rules &amp; Permissions</text>
+
+  <rect x="200" y="590" width="340" height="100" rx="20" fill="#DCD6CC" stroke="#B8A897" stroke-width="2"/>
+  <text x="240" y="638" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">流程连接与闭环</text>
+  <text x="240" y="666" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Process Flow &amp; Feedback Loop</text>
+
+  <rect x="580" y="590" width="340" height="100" rx="20" fill="#D8D2C8" stroke="#B8A897" stroke-width="2"/>
+  <text x="620" y="638" fill="#241913" font-size="22" font-family="Georgia, serif" font-weight="700">长期存储与历史</text>
+  <text x="620" y="666" fill="#6B5C53" font-size="16" font-family="Arial, sans-serif">Persistent Storage &amp; History</text>
+
+  <text x="140" y="748" fill="#66725F" font-size="16" font-family="Arial, sans-serif">👇 用户看不见但系统必须依赖的部分（Below the Surface）—— 这才是真正的"软件"</text>
+
+  <rect x="84" y="770" width="460" height="42" rx="16" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="108" y="798" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">没有下层，页面再好看，也只是空壳</text>
+</svg>

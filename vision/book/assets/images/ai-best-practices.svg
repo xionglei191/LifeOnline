@@ -1,7 +1,7 @@
 <svg width="1280" height="840" viewBox="0 0 1280 840" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="1280" height="840" rx="36" fill="#FBF6EF"/>
   <rect x="42" y="42" width="1196" height="756" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
-  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 6 · AI 辅助开发最佳实践</text>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 17 · AI 辅助开发最佳实践</text>
   <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">先想清楚 → 写任务书 → 执行 → 验证 → 复盘</text>
   <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">高质量 AI 开发不是“随便生成”，而是一套有约束、有验证、有反馈回路的工作方式。</text>
 

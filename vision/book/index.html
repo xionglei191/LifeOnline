@@ -14,7 +14,7 @@
         <div class="eyebrow">LIFEONLINE BOOK DRAFT</div>
         <h1>从零开始用大模型开发软件</h1>
         <p class="subtitle">以 <strong>LifeOnline</strong> 为蓝本的入门书稿</p>
-        <p class="subtitle">当前版本已包含 12 张插图、章节摘要、小结与术语表。</p>
+        <p class="subtitle">当前版本已包含 21 张插图、章节摘要、小结与术语表。</p>
       </div>
 
       <div class="directory-actions"><a class="directory-button" href="contents.html">查看正式目录页</a><a class="directory-button" href="chapters/chapter-01.html">从第 1 章开始</a></div>
@@ -63,7 +63,7 @@
         </p>
         <div class="chapter-summary">
           <h3>这本书现在已经具备什么？</h3>
-          <p>它已经不是一篇单纯长文，而是一份包含多章节结构、12 张插图、术语表、章节摘要和项目方法论骨架的在线书稿。</p>
+          <p>它已经不是一篇单纯长文，而是一份包含多章节结构、21 张插图、术语表、章节摘要和项目方法论骨架的在线书稿。</p>
         </div>
       </header>
 
@@ -92,33 +92,6 @@
           <p>过去，很多人把“不会编程”理解成“没有资格参与软件创造”。大模型时代改变了这件事：不会写代码的人，也第一次可能真正参与系统的构思、设计、拆解、验证、组织和迭代。</p>
           <p>但门槛下降，不等于复杂性消失。恰恰相反，越是容易生成代码，越需要理解：什么是系统、什么是工程、什么是边界、什么是治理。</p>
         </div>
-      </section>
-
-      <section class="figure-block">
-        <figure class="figure-card warm">
-          <div class="figure-badge">图 6</div>
-          <h3>AI 辅助开发最佳实践图</h3>
-          <img src="assets/images/ai-best-practices.svg" alt="AI 辅助开发最佳实践图" class="book-figure" />
-          <figcaption>图 6：这张图强调，AI 辅助开发最关键的是流程与制度，而不是单条提示词。</figcaption>
-        </figure>
-      </section>
-
-      <section class="figure-block">
-        <figure class="figure-card deep">
-          <div class="figure-badge">图 11</div>
-          <h3>LifeOnline 第一阶段的五层骨架图</h3>
-          <img src="assets/images/five-layer-skeleton.svg" alt="LifeOnline 第一阶段五层骨架图" class="book-figure" />
-          <figcaption>图 11：这张图把项目真正的主线固定成五层骨架，而不是一堆零散页面。</figcaption>
-        </figure>
-      </section>
-
-      <section class="figure-block">
-        <figure class="figure-card">
-          <div class="figure-badge">图 1</div>
-          <h3>前端 / 后端 / 数据库的关系图</h3>
-          <img src="assets/images/frontend-backend-database.svg" alt="前端、后端和数据库关系图" class="book-figure" />
-          <figcaption>图 1：先给零基础读者建立“系统不是一个页面”的基础地图。</figcaption>
-        </figure>
       </section>
 
       <section class="chapter" id="why-lifeonline">
@@ -193,11 +166,20 @@
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 1</div>
+          <h3>冰山模型：页面视角 vs 系统视角</h3>
+          <img src="assets/images/page-vs-system.svg" alt="页面视角 vs 系统视角" class="book-figure" />
+          <figcaption>图 1：软件不只是页面。页面只是冰山露出水面的部分，真正的系统在水面之下。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="software-engineering">
         <div class="chapter-no">04</div>
         <div class="chapter-body">
-          <h2>什么是软件工程（Software Engineering，软件工程）？</h2>
+          <h2>什么是软件工程（Software Engineering）？</h2>
           <p>很多人以为“会写代码”就等于“会做软件”，其实不是。会写代码，更像是会使用工具；而软件工程，是在组织一整个工程过程。</p>
           <div class="callout">
             <h3>软件工程真正关心什么？</h3>
@@ -218,12 +200,43 @@
             让软件不成为一次性的拼装品，而成为长期可以生长、可以维护、可以协作、可以反复演进的工程。
           </blockquote>
           <p>这也是为什么大模型时代并不会让软件工程消失。AI 可以帮你写很多代码，但它不会自动替你定义边界、自动保证系统长期可维护。人必须承担判断、组织、取舍和治理的角色。</p>
-          <div class="chapter-summary">
+          
+          <h3>架构设计入门：为什么要"分层" Layered Architecture</h3>
+          <p>架构设计听起来很高级，但它的核心思想其实很简单：<strong>把系统按职责分成若干层，每一层只和相邻层打交道。</strong></p>
+          <p>最经典的分层架构（Layered Architecture）把系统分成四层：</p>
+          <ol>
+            <li><strong>表现层（Presentation Layer）</strong>——用户看到的界面，负责展示和交互</li>
+            <li><strong>业务逻辑层（Business Logic Layer）</strong>——系统做判断的地方：规则、权限、流程控制</li>
+            <li><strong>数据访问层（Data Access Layer）</strong>——连接逻辑和存储的桥梁，负责读写数据</li>
+            <li><strong>数据存储层（Data Storage Layer）</strong>——数据库、文件系统、长期资产</li>
+          </ol>
+          <p>分层的最大好处是：<strong>修改一层不会破坏其他层</strong>。比如你换了前端框架，后端逻辑不需要改；你换了数据库，业务逻辑也不受影响。</p>
+          <p>这就是为什么资深工程师总是先"画架构"再"写代码"——好的架构让系统在后续几十次修改中都不会失控。</p>
+          <p>在 AI 时代，架构设计更加重要：因为 AI 生成代码很快，但如果架构不清楚，生成的代码就会到处"耦合（Coupling）"——牵一发而动全身，越改越乱。</p>
+<div class="chapter-summary">
             <h3>本章小结</h3>
             <p>软件工程不是“把代码写出来”，而是保证系统可以被设计、实现、验证、维护和协作地长期生长。</p>
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 2</div>
+          <h3>分层架构 Layered Architecture</h3>
+          <img src="assets/images/layered-architecture.svg" alt="分层架构图" class="book-figure" />
+          <figcaption>图 2：最经典的架构模式——每一层只和相邻层通信，修改一层不会破坏其他层。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 3</div>
+          <h3>写代码 vs 软件工程</h3>
+          <img src="assets/images/code-vs-engineering.svg" alt="写代码 vs 软件工程" class="book-figure" />
+          <figcaption>图 3：写代码关注"这段逻辑怎么实现"，软件工程关注"整个系统怎么组织"。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter-lead-card">
         <div class="lead-chip">Chapter Guide</div>
@@ -254,11 +267,20 @@
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 4</div>
+          <h3>前端 / 后端 / 数据库的关系图</h3>
+          <img src="assets/images/frontend-backend-database.svg" alt="前端、后端和数据库关系图" class="book-figure" />
+          <figcaption>图 4：先给零基础读者建立“系统不是一个页面”的基础地图。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="platform">
         <div class="chapter-no">06</div>
         <div class="chapter-body">
-          <h2>平台（Platform，平台）是什么？</h2>
+          <h2>平台（Platform）是什么？</h2>
           <p>很多人会把“平台”当成一个空泛的大词，但它其实有很明确的意义：平台是能够承载多种能力、多条流程、多类模块的底座。</p>
           <div class="comparison-grid">
             <article>
@@ -296,33 +318,15 @@
           </div>
         </div>
       </section>
-
-      <section class="figure-block">
-        <figure class="figure-card">
-          <div class="figure-badge">图 7</div>
-          <h3>一个想法如何变成系统</h3>
-          <img src="assets/images/idea-to-system.svg" alt="一个想法如何变成系统" class="book-figure" />
-          <figcaption>图 7：这张图强调，起步顺序应该是“定义问题与闭环”，而不是先做页面。</figcaption>
-        </figure>
-      </section>
-
       <section class="figure-block">
         <figure class="figure-card warm">
-          <div class="figure-badge">图 2</div>
-          <h3>软件开发流程图</h3>
-          <img src="assets/images/software-development-flow.svg" alt="软件开发流程图" class="book-figure" />
-          <figcaption>图 2：这张图帮助读者理解“开发不是直接开始写代码”。</figcaption>
-        </figure>
-      </section>
-
-      <section class="figure-block">
-        <figure class="figure-card warm">
-          <div class="figure-badge">图 4</div>
+          <div class="figure-badge">图 5</div>
           <h3>工具 / 产品 / 平台 / 联合认知体的演化图</h3>
           <img src="assets/images/tool-product-platform-cognitive-system.svg" alt="工具、产品、平台与联合认知体演化图" class="book-figure" />
-          <figcaption>图 4：帮助读者理解，复杂系统不是“功能变多”而已，而是组织能力在增强。</figcaption>
+          <figcaption>图 5：帮助读者理解，复杂系统不是“功能变多”而已，而是组织能力在增强。</figcaption>
         </figure>
       </section>
+
 
       <section class="chapter-lead-card">
         <div class="lead-chip">Chapter Guide</div>
@@ -353,15 +357,15 @@
           </div>
         </div>
       </section>
-
       <section class="figure-block">
         <figure class="figure-card">
-          <div class="figure-badge">图 5</div>
+          <div class="figure-badge">图 6</div>
           <h3>大模型在软件开发中的 5 种角色</h3>
           <img src="assets/images/llm-roles.svg" alt="大模型在软件开发中的五种角色图" class="book-figure" />
-          <figcaption>图 5：帮助读者把 AI 放进一组清晰职责里，而不是把它当成模糊的万能魔法。</figcaption>
+          <figcaption>图 6：帮助读者把 AI 放进一组清晰职责里，而不是把它当成模糊的万能魔法。</figcaption>
         </figure>
       </section>
+
 
       <section class="chapter" id="process">
         <div class="chapter-no">08</div>
@@ -387,12 +391,54 @@
             <li>下一步该怎么接</li>
           </ul>
           <p>不会这个，AI 就会把你带到一个看起来很忙、实际上很散的地方。</p>
-          <div class="chapter-summary">
+          
+          <h3>算法不是刷题：初学者需要的两个算法思维</h3>
+          <p>很多人听到"算法"就联想到 LeetCode 刷题。但对于初学者和产品经理来说，最实用的不是排序和搜索，而是两个核心概念：</p>
+
+          <h4>1. 状态机 State Machine</h4>
+          <p>状态机是最直觉的控制模式：一个东西有几种状态，在特定条件下从一种状态转到另一种。</p>
+          <p>比如一个文章的生命周期：<strong>草稿 → 审核中 → 已发布</strong>，或者 <strong>草稿 → 审核中 → 驳回 → 修改后重新提交 → 审核中 → 已发布</strong>。</p>
+          <p>在 LifeOnline 里，SoulAction 的状态就是：<code>pending → approved → dispatched → completed</code>。理解了状态机，你就理解了系统里大部分"流程"的运转方式。</p>
+
+          <h4>2. 队列 Queue</h4>
+          <p>队列就是"排队"：先进先出（FIFO, First In First Out），一个一个处理，不会遗漏。</p>
+          <p>当系统收到的请求比它能处理的速度快时，就需要队列。比如 LifeOnline 的 indexQueue——用户写了一篇笔记，它不是立刻被 AI 处理，而是先进入队列排队，等轮到它再处理。</p>
+          <p>队列的价值是：<strong>让系统在高负载下不崩溃、不遗漏、不乱序</strong>。</p>
+
+          <p>学会这两个概念，你就能理解 80% 的系统内部运转方式——不需要会写算法，但需要理解它们在系统设计中的角色。</p>
+<div class="chapter-summary">
             <h3>本章小结</h3>
             <p>AI 改变的是每个阶段的效率，不是流程本身。人依然要知道现在在哪一阶段、目标是什么、产出是否可靠。</p>
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 7</div>
+          <h3>状态机 + 队列：初学者必懂的两个算法思维</h3>
+          <img src="assets/images/state-machine-queue.svg" alt="状态机和队列" class="book-figure" />
+          <figcaption>图 7：学会状态机和队列，你就能理解 80% 的系统内部运转方式。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 8</div>
+          <h3>软件开发流程图</h3>
+          <img src="assets/images/software-development-flow.svg" alt="软件开发流程图" class="book-figure" />
+          <figcaption>图 8：这张图帮助读者理解“开发不是直接开始写代码”。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 9</div>
+          <h3>传统开发 vs AI 辅助开发</h3>
+          <img src="assets/images/traditional-vs-ai-development.svg" alt="传统开发与 AI 辅助开发对比图" class="book-figure" />
+          <figcaption>图 9：这张图说明，AI 改变的是效率结构，但不会替代系统判断和工程组织。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="beginner">
         <div class="chapter-no">09</div>
@@ -413,17 +459,66 @@
             <li>组织架构图（Architecture Diagram）</li>
           </ul>
           <p>然后再去做最小闭环（Minimum Viable Loop）：不要一开始就做“完整系统”，而是先做一条能跑通、能验证价值、能支撑后续扩展的主路径。</p>
-          <p>对于 LifeOnline 来说，这条主路径就不是“先把所有页面做好看”，而是先跑通：</p>
+          <p>用更通用的说法，任何系统的最小闭环都是：</p>
           <blockquote>
-            输入 → 理解 → SoulAction → Gate / Review / Dispatch → Execution → Outcome → Reintegration → Continuity
+            接收输入（Input） → 理解意图（Understanding） → 产生动作候选（Action Candidate） → 经过检查和审批（Review） → 执行（Execution） → 产出结果（Outcome） → 把结果反馈回系统（Reintegration，回流） → 形成长期积累（Continuity，连续性）
           </blockquote>
-          <p>这就是“系统活起来”的最小骨架。</p>
-          <div class="chapter-summary">
+          <p>对于 LifeOnline 来说，这条闭环更具体地写成：输入 → 理解 → SoulAction（动作候选） → 治理（Governance：审查 / 批准 / 分发） → 执行 → 结果 → 回流 → 连续性。</p>
+          <p>不管你做什么系统，先跑通这样一条闭环，比做十个页面更重要。这就是“系统活起来”的最小骨架。</p>
+          
+          <h3>产品思维入门：先画用户旅程图 User Journey Map</h3>
+          <p>产品经理做项目，不是从功能列表开始，而是从"用户旅程"开始。用户旅程就是：用户从发现问题、到使用系统、到获得价值的完整路径。</p>
+          <p>一张好的用户旅程图至少要回答这些问题：</p>
+          <ul>
+            <li><strong>用户从哪来？</strong>——他为什么会需要这个系统？（痛点分析，Pain Point Analysis）</li>
+            <li><strong>他第一步做什么？</strong>——首次接触系统时能否快速理解价值？</li>
+            <li><strong>核心动作是什么？</strong>——系统的最关键操作成立了吗？</li>
+            <li><strong>结果有用吗？</strong>——产出能不能真正回答用户的问题？</li>
+            <li><strong>会不会再来？</strong>——系统有没有长期留存的价值？</li>
+          </ul>
+          <p>LifeOnline 的用户旅程就是：记录生活输入 → 系统理解并生成动作候选 → 治理审查 → 执行 → 结果回流 → 长期连续性积累。这条旅程就是产品的"主线"。</p>
+<div class="chapter-summary">
             <h3>本章小结</h3>
             <p>对小白来说，最好的起步方式不是追求完整，而是先做出一条可验证、可解释、可延展的最小闭环。</p>
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 10</div>
+          <h3>用户旅程地图 User Journey Map</h3>
+          <img src="assets/images/user-journey-map.svg" alt="用户旅程地图" class="book-figure" />
+          <figcaption>图 10：产品经理最核心的一张图——用户从发现痛点到长期留存的完整路径。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 11</div>
+          <h3>最小闭环 Minimum Viable Loop</h3>
+          <img src="assets/images/minimum-viable-loop.svg" alt="最小闭环流程图" class="book-figure" />
+          <figcaption>图 11：任何系统的生命，都从一条闭环开始。先跑通一条完整但最小的通路。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 12</div>
+          <h3>一个想法如何变成系统</h3>
+          <img src="assets/images/idea-to-system.svg" alt="一个想法如何变成系统" class="book-figure" />
+          <figcaption>图 12：这张图强调，起步顺序应该是“定义问题与闭环”，而不是先做页面。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card deep" id="lifeonline-control-flow">
+          <div class="figure-badge">图 13</div>
+          <h3>LifeOnline 第一阶段控制流程图</h3>
+          <img src="assets/images/lifeonline-control-flow.svg" alt="LifeOnline 第一阶段控制流程图" class="book-figure" />
+          <figcaption>图 13：这是整本书里最关键的项目样本图，后续应继续精修。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter-lead-card">
         <div class="lead-chip">Chapter Guide</div>
@@ -434,7 +529,7 @@
       <section class="chapter" id="management">
         <div class="chapter-no">10</div>
         <div class="chapter-body">
-          <h2>管理方法（Management Methods，管理方法）：为什么做软件不能只靠灵感？</h2>
+          <h2>管理方法（Management Methods）：为什么做软件不能只靠灵感？</h2>
           <p>做软件如果只靠灵感，最常见的结果就是：今天加一个功能，明天补一个界面，后天觉得那里也不错，最后代码越来越多，但系统越来越不清楚。</p>
           <p>所以软件开发必须有管理。最核心的三件事是：</p>
           <ul>
@@ -442,26 +537,56 @@
             <li><strong>阶段（Phase）</strong>：不是所有事情都该现在做</li>
             <li><strong>范围控制（Scope）</strong>：不是所有好想法都该进当前版本</li>
           </ul>
-          <p>LifeOnline 当前用的 P1～P5，就非常适合作为初学者学习“管理感”的例子：</p>
+          <p>比如，你可以把项目用 P1 到 P5 分成五条主线：</p>
           <ul>
-            <li>P1：SoulAction 治理面</li>
-            <li>P2：Detail / Lifecycle</li>
-            <li>P3：Governance API</li>
-            <li>P4：Outcome / Reintegration</li>
-            <li>P5：Continuity Promotion</li>
+            <li><strong>P1：核心流程跑通（Core Loop）</strong> —— 先让主链路能端到端走完</li>
+            <li><strong>P2：关键细节完善（Detail & Lifecycle）</strong> —— 补齐主流程中缺失的状态和边界处理</li>
+            <li><strong>P3：管理接口正式化（Governance API）</strong> —— 让操作规则和审批流形成正式协议</li>
+            <li><strong>P4：结果回收和复用（Outcome Reintegration）</strong> —— 让产出不只是一次性结果，而能被下一轮使用</li>
+            <li><strong>P5：长期资产沉淀（Continuity Promotion）</strong> —— 让高价值内容进入长期积累，跨版本保留</li>
           </ul>
+          <p>LifeOnline 实际使用的就是这种结构：P1 是动作治理面（SoulAction Governance），P2 是生命周期细节（Detail / Lifecycle），P3 是治理协议（Governance API），P4 是结果回流（Outcome / Reintegration），P5 是连续性晋升（Continuity Promotion）。</p>
           <p>你不一定要照抄这五条，但你一定要学会：任何项目都要有一个“主线优先级框架”。没有它，AI 很快就会把你的项目带向低价值的忙碌。</p>
-          <div class="chapter-summary">
+          
+          <h3>产品优先级框架：价值-成本矩阵 Value-Cost Matrix</h3>
+          <p>管理项目最实用的一个工具叫"价值-成本矩阵（Value-Cost Matrix）"。把每件要做的事放进四个象限：</p>
+          <ul>
+            <li><strong>高价值 + 低成本 = 立刻做（Quick Wins）</strong>——核心闭环补全、关键 Bug 修复</li>
+            <li><strong>高价值 + 高成本 = 规划后做（Strategic Projects）</strong>——架构重构、大功能开发</li>
+            <li><strong>低价值 + 低成本 = 可以做（Nice to Have）</strong>——UI 微调、文案优化</li>
+            <li><strong>低价值 + 高成本 = 不要做（Money Pit）</strong>——最常见的资源陷阱</li>
+          </ul>
+          <p>产品经理最重要的能力就是识别"不要做"的事情。AI 时代这件事尤其重要：因为 AI 可以很快帮你做很多事，但如果方向错了，做得越快、浪费越大。</p>
+          <p>每次启动一轮工作前，先把待办事项放进这张矩阵，然后只做左上角（高价值低成本），这就是"用产品思维管理项目"。</p>
+<div class="chapter-summary">
             <h3>本章小结</h3>
             <p>没有优先级，就没有管理；没有管理，项目就会滑向“看起来很忙、其实很散”的状态。AI 越强，主线管理越重要。</p>
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 14</div>
+          <h3>产品优先级矩阵 Priority Matrix</h3>
+          <img src="assets/images/priority-matrix.svg" alt="产品优先级矩阵" class="book-figure" />
+          <figcaption>图 14：用价值-成本矩阵判断先做什么、后做什么、不做什么。</figcaption>
+        </figure>
+      </section>
+
+      <section class="figure-block">
+        <figure class="figure-card warm">
+          <div class="figure-badge">图 15</div>
+          <h3>P1 ~ P5 主线优先级图</h3>
+          <img src="assets/images/p1-p5-priorities.svg" alt="P1 到 P5 主线优先级图" class="book-figure" />
+          <figcaption>图 15：这张图帮助读者理解，项目管理的关键不是任务越多越好，而是优先级越清楚越好。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="best-practices">
         <div class="chapter-no">11</div>
         <div class="chapter-body">
-          <h2>AI 辅助开发的最佳实践（Best Practices，最佳实践）</h2>
+          <h2>AI 辅助开发的最佳实践（Best Practices）</h2>
           <p>如果你真的想在大模型时代高质量地开发软件，下面这些实践比任何单条提示词都重要。</p>
           <ul>
             <li><strong>先想清楚，再让 AI 动手</strong>：先拆问题、画流程、设边界，再进入实现</li>
@@ -482,24 +607,24 @@
           </div>
         </div>
       </section>
-
       <section class="figure-block">
-        <figure class="figure-card deep" id="lifeonline-control-flow">
-          <div class="figure-badge">图 3</div>
-          <h3>LifeOnline 第一阶段控制流程图</h3>
-          <img src="assets/images/lifeonline-control-flow.svg" alt="LifeOnline 第一阶段控制流程图" class="book-figure" />
-          <figcaption>图 3：这是整本书里最关键的项目样本图，后续应继续精修。</figcaption>
+        <figure class="figure-card">
+          <div class="figure-badge">图 16</div>
+          <h3>AI 协作工作流</h3>
+          <img src="assets/images/ai-collaboration-workflow.svg" alt="AI 协作工作流" class="book-figure" />
+          <figcaption>图 16：和 AI 协作的正确方式：想清楚 → 写任务书 → 让 AI 执行 → 验证 → 复盘。</figcaption>
         </figure>
       </section>
 
       <section class="figure-block">
         <figure class="figure-card warm">
-          <div class="figure-badge">图 10</div>
-          <h3>传统开发 vs AI 辅助开发</h3>
-          <img src="assets/images/traditional-vs-ai-development.svg" alt="传统开发与 AI 辅助开发对比图" class="book-figure" />
-          <figcaption>图 10：这张图说明，AI 改变的是效率结构，但不会替代系统判断和工程组织。</figcaption>
+          <div class="figure-badge">图 17</div>
+          <h3>AI 辅助开发最佳实践图</h3>
+          <img src="assets/images/ai-best-practices.svg" alt="AI 辅助开发最佳实践图" class="book-figure" />
+          <figcaption>图 17：这张图强调，AI 辅助开发最关键的是流程与制度，而不是单条提示词。</figcaption>
         </figure>
       </section>
+
 
       <section class="chapter" id="lifeonline-insight">
         <div class="chapter-no">12</div>
@@ -525,24 +650,33 @@
           </div>
         </div>
       </section>
-
       <section class="figure-block">
         <figure class="figure-card">
-          <div class="figure-badge">图 8</div>
+          <div class="figure-badge">图 18</div>
           <h3>如何判断一个改动是不是在主线上</h3>
           <img src="assets/images/mainline-decision.svg" alt="如何判断一个改动是不是在主线上" class="book-figure" />
-          <figcaption>图 8：这张图把“骨架层工作”和“表层修补”区分开来，帮助读者建立项目判断力。</figcaption>
+          <figcaption>图 18：这张图把“骨架层工作”和“表层修补”区分开来，帮助读者建立项目判断力。</figcaption>
         </figure>
       </section>
 
       <section class="figure-block">
         <figure class="figure-card deep">
-          <div class="figure-badge">图 9</div>
+          <div class="figure-badge">图 19</div>
           <h3>LifeOnline 组织架构图</h3>
           <img src="assets/images/lifeonline-architecture.svg" alt="LifeOnline 组织架构图" class="book-figure" />
-          <figcaption>图 9：理解这张图后，读者会更容易明白“宿主”和“项目本体”的区别。</figcaption>
+          <figcaption>图 19：理解这张图后，读者会更容易明白“宿主”和“项目本体”的区别。</figcaption>
         </figure>
       </section>
+
+      <section class="figure-block">
+        <figure class="figure-card deep">
+          <div class="figure-badge">图 20</div>
+          <h3>LifeOnline 第一阶段的五层骨架图</h3>
+          <img src="assets/images/five-layer-skeleton.svg" alt="LifeOnline 第一阶段五层骨架图" class="book-figure" />
+          <figcaption>图 20：这张图把项目真正的主线固定成五层骨架，而不是一堆零散页面。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="next-step">
         <div class="chapter-no">13</div>
@@ -565,12 +699,33 @@
             <li>下一轮如何接上</li>
           </ul>
           <p>当你开始这样思考，你就已经不只是“在学编程”，而是在学做系统。</p>
-          <div class="chapter-summary">
+          
+          <h3>MVP 验证清单：你的系统真的"跑起来了"吗？</h3>
+          <p>产品经理验证一个 MVP（Minimum Viable Product，最小可行产品）是否成立，通常会检查以下清单：</p>
+          <ol>
+            <li>✅ <strong>核心问题可解决</strong>——系统至少能端到端解决用户的一个核心痛点</li>
+            <li>✅ <strong>最小闭环可运行</strong>——输入 → 处理 → 产出 → 反馈的通路是通的</li>
+            <li>✅ <strong>结果可验证</strong>——能看到系统产出了有意义的结果，而不只是跑了一遍代码</li>
+            <li>✅ <strong>不依赖手动介入</strong>——核心流程不需要人手动拼接，系统能自己走</li>
+            <li>✅ <strong>可以被描述</strong>——你能用一句话说清楚"这个系统做了什么"</li>
+            <li>✅ <strong>可以被演示</strong>——你能给别人展示一次完整的使用流程</li>
+          </ol>
+          <p>如果以上 6 条全部满足，恭喜——你的系统已经"活了"。接下来才是扩展、优化和打磨的阶段。</p>
+<div class="chapter-summary">
             <h3>本章小结</h3>
             <p>你下一步最该练的，不只是写代码，而是画图、分层、定义闭环、管理主线，以及和 AI 建立正确协作方式。</p>
           </div>
         </div>
       </section>
+      <section class="figure-block">
+        <figure class="figure-card">
+          <div class="figure-badge">图 21</div>
+          <h3>小白起步路线图</h3>
+          <img src="assets/images/beginner-start-steps.svg" alt="小白起步路线图" class="book-figure" />
+          <figcaption>图 21：从零到系统的 4 步起跑方法：先画图、从小问题开始、跑通闭环、用 AI 加速。</figcaption>
+        </figure>
+      </section>
+
 
       <section class="chapter" id="ending">
         <div class="chapter-no">14</div>
@@ -588,15 +743,6 @@
             <p>这本书想留下的，不是一堆零散技巧，而是一种新的理解：在大模型时代，软件开发的核心是组织系统、治理系统，并和 AI 一起把想法做成可持续生长的工程。</p>
           </div>
         </div>
-      </section>
-
-      <section class="figure-block">
-        <figure class="figure-card warm">
-          <div class="figure-badge">图 12</div>
-          <h3>P1 ~ P5 主线优先级图</h3>
-          <img src="assets/images/p1-p5-priorities.svg" alt="P1 到 P5 主线优先级图" class="book-figure" />
-          <figcaption>图 12：这张图帮助读者理解，项目管理的关键不是任务越多越好，而是优先级越清楚越好。</figcaption>
-        </figure>
       </section>
 
       <section class="chapter-lead-card">

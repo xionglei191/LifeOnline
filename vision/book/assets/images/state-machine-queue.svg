@@ -1,0 +1,83 @@
+<svg width="1360" height="860" viewBox="0 0 1360 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1360" height="860" rx="36" fill="#FBF6EF"/>
+  <rect x="42" y="42" width="1276" height="776" rx="30" fill="#FFFDF8" stroke="#E7D9C9" stroke-width="2"/>
+  <text x="78" y="108" fill="#7F3415" font-size="23" font-family="Arial, sans-serif" letter-spacing="2">图 7 · 初学者必懂的两个算法思维</text>
+  <text x="78" y="154" fill="#241913" font-size="42" font-family="Georgia, serif" font-weight="700">状态机 State Machine + 队列 Queue</text>
+  <text x="78" y="196" fill="#6B5C53" font-size="21" font-family="Arial, sans-serif">算法不只是排序和搜索。对初学者最有用的，是学会"用状态管理流程"和"用队列管理任务"。</text>
+
+  <!-- LEFT: State Machine -->
+  <rect x="78" y="240" width="580" height="520" rx="28" fill="#FFF4EC" stroke="#E4C3A7" stroke-width="2"/>
+  <text x="240" y="290" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">状态机 State Machine</text>
+  <text x="120" y="324" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">事物在不同状态之间转换，每次转换有条件</text>
+
+  <!-- State circles -->
+  <circle cx="220" cy="430" r="45" fill="#FFF1E4" stroke="#E4B07F" stroke-width="2.5"/>
+  <text x="192" y="436" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">草稿</text>
+
+  <circle cx="420" cy="370" r="45" fill="#F8ECDf" stroke="#D8C091" stroke-width="2.5"/>
+  <text x="392" y="376" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">审核</text>
+
+  <circle cx="550" cy="480" r="50" fill="#EEF2E8" stroke="#AEB28D" stroke-width="2.5"/>
+  <text x="520" y="486" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">已发布</text>
+
+  <circle cx="340" cy="560" r="45" fill="#FFF4EC" stroke="#E4C3A7" stroke-width="2.5"/>
+  <text x="312" y="566" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">驳回</text>
+
+  <!-- State transitions -->
+  <g stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M260 415L380 380" stroke="#8A3B12"/>
+    <path d="M370 380L394 370L374 362" stroke="#8A3B12"/>
+    <text x="290" y="382" fill="#8A3B12" font-size="13" font-family="Arial, sans-serif">提交</text>
+
+    <path d="M462 390L510 450" stroke="#66725F"/>
+    <path d="M504 440L520 462L530 442" stroke="#66725F"/>
+    <text x="480" y="412" fill="#66725F" font-size="13" font-family="Arial, sans-serif">通过</text>
+
+    <path d="M400 410L360 530" stroke="#B05050"/>
+    <path d="M350 518L350 542L370 526" stroke="#B05050"/>
+    <text x="340" y="480" fill="#B05050" font-size="13" font-family="Arial, sans-serif">拒绝</text>
+
+    <path d="M300 550L250 460" stroke="#9A6A32" stroke-dasharray="6 4"/>
+    <path d="M254 472L240 448L238 472" stroke="#9A6A32"/>
+    <text x="230" y="520" fill="#9A6A32" font-size="13" font-family="Arial, sans-serif">修改后重新提交</text>
+  </g>
+
+  <text x="120" y="690" fill="#66725F" font-size="16" font-family="Arial, sans-serif">例：SoulAction 的生命周期就是一个状态机</text>
+  <text x="120" y="720" fill="#66725F" font-size="16" font-family="Arial, sans-serif">pending → approved → dispatched → completed</text>
+
+  <!-- RIGHT: Queue -->
+  <rect x="700" y="240" width="580" height="520" rx="28" fill="#EEF2E8" stroke="#B8C1A6" stroke-width="2"/>
+  <text x="890" y="290" fill="#241913" font-size="28" font-family="Georgia, serif" font-weight="700">队列 Queue</text>
+  <text x="740" y="324" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">先进先出，一个一个处理，不会遗漏</text>
+
+  <!-- Queue visualization -->
+  <rect x="760" y="380" width="100" height="60" rx="8" fill="#F8ECDf" stroke="#D8C091" stroke-width="2"/>
+  <text x="782" y="416" fill="#241913" font-size="16" font-family="Georgia, serif" font-weight="700">任务 A</text>
+
+  <rect x="880" y="380" width="100" height="60" rx="8" fill="#F8ECDf" stroke="#D8C091" stroke-width="2"/>
+  <text x="902" y="416" fill="#241913" font-size="16" font-family="Georgia, serif" font-weight="700">任务 B</text>
+
+  <rect x="1000" y="380" width="100" height="60" rx="8" fill="#F8ECDf" stroke="#D8C091" stroke-width="2"/>
+  <text x="1022" y="416" fill="#241913" font-size="16" font-family="Georgia, serif" font-weight="700">任务 C</text>
+
+  <rect x="1120" y="380" width="100" height="60" rx="8" fill="#EFE5DC" stroke="#CDA98E" stroke-width="2"/>
+  <text x="1142" y="416" fill="#241913" font-size="16" font-family="Georgia, serif" font-weight="700">任务 D</text>
+
+  <path d="M730 410H748" stroke="#8A3B12" stroke-width="3" stroke-linecap="round"/>
+  <path d="M738 398L760 410L738 422" stroke="#8A3B12" stroke-width="3" fill="none"/>
+  <text x="728" y="460" fill="#8A3B12" font-size="14" font-family="Arial, sans-serif">入队</text>
+
+  <path d="M1230" y1="410" x2="1248" y2="410" stroke="#66725F" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Queue use cases -->
+  <text x="740" y="520" fill="#241913" font-size="20" font-family="Georgia, serif" font-weight="700">队列的典型应用场景：</text>
+  <text x="740" y="556" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">• 消息队列：用户的操作排队等待处理</text>
+  <text x="740" y="586" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">• 任务队列：AI 分析任务依次排队执行</text>
+  <text x="740" y="616" fill="#6B5C53" font-size="17" font-family="Arial, sans-serif">• 事件队列：系统事件按顺序被消费</text>
+  <text x="740" y="656" fill="#66725F" font-size="16" font-family="Arial, sans-serif">例：LifeOnline 的 indexQueue 就是一个任务队列</text>
+  <text x="740" y="686" fill="#66725F" font-size="16" font-family="Arial, sans-serif">笔记写入后排队等待 AI 索引处理</text>
+
+  <!-- Bottom -->
+  <rect x="78" y="780" width="1204" height="44" rx="16" fill="#FFF6EC" stroke="#E7D9C9"/>
+  <text x="116" y="808" fill="#241913" font-size="18" font-family="Georgia, serif" font-weight="700">学会状态机和队列，你就能理解 80% 的系统内部运转方式。</text>
+</svg>
