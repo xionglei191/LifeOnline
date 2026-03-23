@@ -14,7 +14,7 @@
         :key="stat.dimension"
         class="card"
         :style="{ '--dimension-color': dimensionColor(stat.dimension) }"
-        @click="$router.push(`/dimension/${stat.dimension}`)"
+        @click="$router.push(dimensionRoute(stat.dimension))"
       >
         <div class="card-head">
           <div>
@@ -62,6 +62,7 @@ defineProps<{ stats: DimensionStat[] }>();
 
 const dimensionLabel = (dim: SelectableDimension) => getDimensionLabel(dim);
 const dimensionColor = (dim: SelectableDimension) => getDimensionColor(dim);
+const dimensionRoute = (dim: SelectableDimension) => dim === '_inbox' ? '/inbox' : `/dimension/${dim}`;
 </script>
 
 <style scoped>
