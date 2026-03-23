@@ -41,6 +41,25 @@ describe('DimensionHealth', () => {
     expect(wrapper.text()).toContain('活跃 3 项 · 完成 2/5');
   });
 
+  it('labels the matrix header according to whether inbox is present in the canonical stats', () => {
+    const inboxStats: DimensionStat[] = [
+      { dimension: '_inbox', total: 4, pending: 4, in_progress: 0, done: 0, health_score: 0 },
+      { dimension: 'growth', total: 3, pending: 1, in_progress: 1, done: 1, health_score: 33 },
+    ];
+    const canonicalStats: DimensionStat[] = [
+      { dimension: 'growth', total: 3, pending: 1, in_progress: 1, done: 1, health_score: 33 },
+    ];
+
+    const { wrapper: inboxWrapper } = buildWrapper(inboxStats);
+    const { wrapper: canonicalWrapper } = buildWrapper(canonicalStats);
+
+    expect(inboxWrapper.text()).toContain('生命矩阵与 Inbox 入口');
+    expect(inboxWrapper.text()).not.toContain('8 channels');
+    expect(inboxWrapper.text()).toContain('2 channels');
+    expect(canonicalWrapper.text()).toContain('八维度生命矩阵');
+    expect(canonicalWrapper.text()).toContain('1 channels');
+  });
+
   it('routes the canonical _inbox card to the dedicated inbox path', async () => {
     const stats: DimensionStat[] = [
       { dimension: '_inbox', total: 4, pending: 4, in_progress: 0, done: 0, health_score: 0 },

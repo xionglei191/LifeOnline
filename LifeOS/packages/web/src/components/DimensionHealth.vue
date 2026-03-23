@@ -3,9 +3,9 @@
     <div class="panel-head">
       <div>
         <p class="panel-kicker">Dimension Matrix</p>
-        <h3>八维度生命矩阵</h3>
+        <h3>{{ panelTitle }}</h3>
       </div>
-      <span class="panel-badge">8 channels</span>
+      <span class="panel-badge">{{ stats.length }} channels</span>
     </div>
 
     <div class="grid">
@@ -55,14 +55,16 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { DimensionStat, SelectableDimension } from '@lifeos/shared';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
-defineProps<{ stats: DimensionStat[] }>();
+const props = defineProps<{ stats: DimensionStat[] }>();
 
 const dimensionLabel = (dim: SelectableDimension) => getDimensionLabel(dim);
 const dimensionColor = (dim: SelectableDimension) => getDimensionColor(dim);
 const dimensionRoute = (dim: SelectableDimension) => dim === '_inbox' ? '/inbox' : `/dimension/${dim}`;
+const panelTitle = computed(() => props.stats.some((stat) => stat.dimension === '_inbox') ? '生命矩阵与 Inbox 入口' : '八维度生命矩阵');
 </script>
 
 <style scoped>

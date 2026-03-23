@@ -1,16 +1,16 @@
-# 当前轮：Dashboard inbox dimension route projection 收口
+# 当前轮：Dashboard dimension matrix canonical copy 收口
 
 ## 进展
-- [x] 识别新的 contract-to-UI 投射缺口：`LifeOS/packages/web/src/components/DimensionHealth.vue` 对所有维度都统一跳 `/dimension/${stat.dimension}`，当 shared canonical 维度是 `_inbox` 时会落到 `/dimension/_inbox`，没有投射到产品里已经存在的专用 `/inbox` 路由。
-- [x] 在 `LifeOS/packages/web/src/components/DimensionHealth.vue` 补齐最小路由投射：`_inbox` 卡片改走 `/inbox`，其它维度继续走 `/dimension/:dimension`。
-- [x] 在 `LifeOS/packages/web/src/components/DimensionHealth.test.ts` 增加 focused 回归，锁定 canonical `_inbox` 卡片点击会进入专用 inbox 主路径。
+- [x] 识别新的 contract-to-UI 投射缺口：`LifeOS/packages/web/src/components/DimensionHealth.vue` 已能展示 canonical `_inbox` 卡片，但面板标题仍固定写成“八维度生命矩阵”，badge 也固定写成 “8 channels”，会在包含 inbox 入口的主路径上误表述当前数据集合。
+- [x] 在 `LifeOS/packages/web/src/components/DimensionHealth.vue` 补齐最小文案投射：当 stats 含 `_inbox` 时标题改为“生命矩阵与 Inbox 入口”，badge 改为实际 `stats.length`；无 `_inbox` 时保留“八维度生命矩阵”。
+- [x] 在 `LifeOS/packages/web/src/components/DimensionHealth.test.ts` 增加 focused 回归，锁定含 `_inbox` 与不含 `_inbox` 两种 canonical 集合下的 header/badge 文案都与真实数据集合一致。
 - [x] 跑受影响 web 验证：`pnpm --dir "/home/xionglei/LifeOnline/LifeOS" --filter web test -- src/components/DimensionHealth.test.ts`。
 
 ## 结果
-- dashboard / dimension matrix 现在把 shared canonical `_inbox` 事实正确投射到真实 inbox 主路径，而不是落到不一致的 dimension 参数路径。
-- 这补上的是新的 canonical contract-to-route projection gap，不是同类状态清理的模式平移。
+- dashboard / dimension matrix 现在不仅把 canonical `_inbox` 路由投到正确主路径，也把标题和 badge 文案投射到真实数据集合，不再用“八维度 / 8 channels”误描述包含 inbox 的卡片集。
+- 这补的是新的 canonical fact-to-copy 投射缺口，不是重复做路由或状态清理。
 
 ## 下一步建议
-- 下一轮继续找 canonical fact 到 route / UI 的漏投射，优先看其它 `_inbox`、shared dimension、或 dedicated route 场景是否仍被通用字符串拼接覆盖掉。
+- 下一轮继续找 dashboard / stats 上其它 canonical fact-to-copy gap，优先看 hero 文案、badge、panel title 是否还在用固定文案描述已变成动态集合的数据。
 
 ---
