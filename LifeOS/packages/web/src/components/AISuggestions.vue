@@ -2,7 +2,7 @@
   <section class="panel">
     <div class="panel-head">
       <div>
-        <p class="panel-kicker">AI Insight Stream</p>
+        <p class="panel-kicker">AI 洞察流</p>
         <h3>系统洞察流</h3>
       </div>
       <button @click="handleRefresh" :disabled="loading" class="refresh-btn">

@@ -46,6 +46,19 @@ async function triggerRefreshWhileLoading(wrapper: ReturnType<typeof mount>) {
 }
 
 describe('AISuggestions', () => {
+  it('localizes the dashboard ai insight header copy', async () => {
+    apiMocks.fetchAISuggestions.mockResolvedValue([createSuggestion()]);
+
+    const wrapper = mount(AISuggestions);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('AI 洞察流');
+    expect(wrapper.text()).toContain('系统洞察流');
+    expect(wrapper.text()).not.toContain('AI Insight Stream');
+
+    wrapper.unmount();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     websocketMocks.isIndexRefreshEvent.mockReset();
