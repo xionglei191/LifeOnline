@@ -4,7 +4,7 @@
       <p class="eyebrow">Dimension Channel</p>
       <h2>{{ dimensionLabel }}</h2>
       <p class="summary">
-        当前共有 {{ total }} 条记录，其中 {{ done }} 条已闭环，{{ pending + inProgress }} 条仍在占用注意力。
+        当前共有 {{ total }} 条记录，完成率 {{ healthScore }}%，其中 {{ done }} 条已闭环，{{ pending + inProgress }} 条仍在占用注意力。
       </p>
     </div>
 
@@ -12,8 +12,8 @@
       <div class="health-score">
         <div class="health-ring" :style="{ background: `conic-gradient(${dimensionColor} ${healthScore * 3.6}deg, color-mix(in srgb, var(--surface-muted) 88%, transparent) 0deg)` }">
           <div class="health-core">
-            <strong>{{ healthScore }}</strong>
-            <span>health</span>
+            <strong>{{ healthScore }}%</strong>
+            <span>完成率</span>
           </div>
         </div>
       </div>
