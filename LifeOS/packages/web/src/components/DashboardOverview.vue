@@ -5,7 +5,7 @@
     <div v-else-if="data" class="dashboard-layout">
       <section class="hero-panel">
         <div class="hero-copy">
-          <p class="eyebrow">Life Signals / Today</p>
+          <p class="eyebrow">生命信号 / 今日聚焦</p>
           <h2>今天的重点不是做更多，而是把生命资源投向<span>正确的轨道</span>。</h2>
           <p class="hero-summary">
             当前共有 {{ totalOpenItems }} 项活跃事项，已完成率 {{ completionRate }}%，

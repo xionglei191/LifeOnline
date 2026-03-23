@@ -514,6 +514,8 @@ describe('DashboardOverview', () => {
 
     expect(wrapper.text()).toContain('平均完成率');
     expect(wrapper.text()).toContain('65%');
+    expect(wrapper.text()).toContain('生命信号 / 今日聚焦');
+    expect(wrapper.text()).not.toContain('Life Signals / Today');
     expect(wrapper.text()).toContain('当前 2 个维度的平均完成进度');
     expect(wrapper.text()).not.toContain('八维度平均完成进度');
     expect(wrapper.text()).toContain('最高积压维度');
