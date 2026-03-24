@@ -79,6 +79,9 @@
   - [x] 完成标准：SoulAction 生成时前端弹出 toast 通知
   - [x] 验证：网页开着时触发索引，可收到“新产生了 N 个 SoulAction”的提示
 
+  **[C组 结果复盘]**
+  - **实现过程**：在 `shared/eventTypes.ts` 中新增了 `soul-action-created` 的 WebSocket 事件定义。服务端 `createOrReuseSoulAction` 函数中如果新插入了认知动作，随即通过 `wsServer` `broadcastUpdate` 推送到前端。Web 端增加了全局的 `useNotification.ts` 和 `NotificationToast.vue` 组件，将其挂载到 `App.vue`，实现消息卡片的统一管理和展示。功能运转符合极简卡片 UI 风格。
+
 ---
 
 ### 🟡 D 组 — 灵光APP (LingGuangCatcher)
