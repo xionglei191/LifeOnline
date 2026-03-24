@@ -111,6 +111,18 @@
             android:exported="false"
             android:theme="@style/Theme.LingGuangCatcher" />
 
+        <!-- 治理审批 Activity -->
+        <activity
+            android:name=".ui.GovernanceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
+        <!-- 认知洞察 Activity -->
+        <activity
+            android:name=".ui.InsightsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
         <!-- 数据导出 Activity -->
         <activity
             android:name=".ui.ExportActivity"
@@ -158,6 +170,18 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- 桌面快捷小组件 -->
+        <receiver
+            android:name=".widget.QuickCaptureWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_capture_widget_info" />
+        </receiver>
 
         <!-- FileProvider for sharing log files -->
         <provider

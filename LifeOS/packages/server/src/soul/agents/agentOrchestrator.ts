@@ -1,3 +1,4 @@
+import { performance } from 'perf_hooks';
 import { callClaude, parseJSON } from '../../ai/aiClient.js';
 import type { SoulActionKind } from '../types.js';
 import { getEffectiveAiProviderConfig } from '../../ai/providerConfigService.js';
@@ -104,20 +105,70 @@ export async function analyzeNoteContent(
   }
 
   try {
-    const extraction = await runExtractorAgent(noteId, trimmed, context);
+    let totalTokens = 0;
+
+    // --- Extractor Phase ---
+    const eStart = performance.now();
+    let extraction = await runExtractorAgent(noteId, trimmed, context);
     if (!extraction) {
       throw new Error(`Extractor Agent failed to return data for note ${noteId}`);
     }
+    totalTokens += extraction.tokens;
 
-    const critic = await runCriticAgent(noteId, trimmed, extraction);
+    if (extraction.confidenceScore < 0.6) {
+      logger.warn(`Extractor Agent confidence low (${extraction.confidenceScore}) for note ${noteId}, retrying...`);
+      const retryResult = await runExtractorAgent(noteId, trimmed, context, "你上一次的提取置信度过低，请重新仔细阅读全文，注意不要遗漏深层的客观事实与长线连贯信号！");
+      if (retryResult) {
+        extraction = retryResult;
+        totalTokens += retryResult.tokens;
+      }
+    }
+    const extractorMs = Math.round(performance.now() - eStart);
+
+    // --- Critic Phase ---
+    const cStart = performance.now();
+    let critic = await runCriticAgent(noteId, trimmed, extraction);
     if (!critic) {
       throw new Error(`Critic Agent failed to return data for note ${noteId}`);
     }
+    totalTokens += critic.tokens;
 
-    const planner = await runPlannerAgent(noteId, trimmed, extraction, critic);
+    if (critic.confidenceScore < 0.6) {
+      logger.warn(`Critic Agent confidence low (${critic.confidenceScore}) for note ${noteId}, retrying...`);
+      const retryResult = await runCriticAgent(noteId, trimmed, extraction, "你上一次的批判置信度过低，请尝试从字里行间重新挖掘被隐藏的情绪与可能的自相矛盾之处。");
+      if (retryResult) {
+        critic = retryResult;
+        totalTokens += retryResult.tokens;
+      }
+    }
+    const criticMs = Math.round(performance.now() - cStart);
+
+    // --- Planner Phase ---
+    const pStart = performance.now();
+    let planner = await runPlannerAgent(noteId, trimmed, extraction, critic);
     if (!planner) {
       throw new Error(`Planner Agent failed to return data for note ${noteId}`);
     }
+    totalTokens += planner.tokens;
+
+    if (planner.confidenceScore < 0.6) {
+      logger.warn(`Planner Agent confidence low (${planner.confidenceScore}) for note ${noteId}, retrying...`);
+      const retryResult = await runPlannerAgent(noteId, trimmed, extraction, critic, "你上一次的建议置信度过低，请重新审视上下文和历史灵感，提供更具穿透性的长远战略建议！");
+      if (retryResult) {
+        planner = retryResult;
+        totalTokens += retryResult.tokens;
+      }
+    }
+    const plannerMs = Math.round(performance.now() - pStart);
+
+    // Record performance stats
+    logger.info(`Agent DAG Execution Stats for note ${noteId}`, {
+      extractorMs,
+      criticMs,
+      plannerMs,
+      totalMs: extractorMs + criticMs + plannerMs,
+      totalTokens
+    });
 
     // Merge outputs to form NoteAnalysis
     return {

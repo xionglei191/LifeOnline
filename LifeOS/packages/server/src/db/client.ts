@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { SCHEMA } from './schema.js';
-import { runMigrations } from './migrations.js';
+import { runMigrations, applyVersionedMigrations } from './migrations.js';
 import { initVectorStore } from './vectorStore.js';
 import path from 'path';
 import fs from 'fs';
@@ -45,8 +45,11 @@ export function initDatabase(): void {
   // Apply the central schema template (CREATE TABLE IF NOT EXISTS)
   database.exec(SCHEMA);
 
-  // Run all migrations (additive columns, constraint updates, safe rebuilds)
+  // Run legacy declarative migrations (additive columns, safe rebuilds)
   runMigrations(database);
+
+  // Run ordered versioned schema migrations
+  applyVersionedMigrations(database);
 
   // Initialize vector search extension (non-blocking: failure logs but doesn't crash)
   try {

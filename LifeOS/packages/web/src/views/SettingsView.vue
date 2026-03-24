@@ -142,6 +142,10 @@
     </div>
 
     <div class="settings-card">
+      <AICostPanel />
+    </div>
+
+    <div class="settings-card">
       <h3>AI Prompt 调优中心</h3>
       <p class="hint" style="margin-bottom:16px">在线编辑 Prompt override，保存后立即作用于运行中的 AI 流程。</p>
 
@@ -359,6 +363,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
+import AICostPanel from '../components/AICostPanel.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 import type { PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
 import { useWebSocket } from '../composables/useWebSocket';

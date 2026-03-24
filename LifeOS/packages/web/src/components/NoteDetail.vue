@@ -166,15 +166,56 @@
             <div v-if="loadingCognitiveDetail" class="empty-state">检索认知脉络中...</div>
             <div v-else class="cognitive-lists">
               <div v-if="relatedBrainstormSessions.length" class="cognitive-block">
-                <h5>🧠 心智头脑风暴 (Brainstorms)</h5>
+                <h5>🧠 心智头脑风暴 (Agents)</h5>
+                
+                <div class="agent-tabs">
+                  <button :class="['tab-btn', { active: activeAgentTab === 'extractor' }]" @click="activeAgentTab = 'extractor'">事实提取 (Extractor)</button>
+                  <button :class="['tab-btn', { active: activeAgentTab === 'critic' }]" @click="activeAgentTab = 'critic'">批判与情绪 (Critic)</button>
+                </div>
+
                 <div class="bs-list">
                   <article v-for="bs in relatedBrainstormSessions" :key="bs.id" class="bs-item">
                     <div class="bs-meta">
-                      <span class="meta-pill">{{ bs.status }}</span>
+                      <span class="meta-pill">Session: {{ bs.id.slice(0, 8) }}</span>
                       <span class="meta-pill">{{ new Date(bs.createdAt).toLocaleString() }}</span>
                     </div>
-                    <strong>{{ bs.themes.join('、') || '无主题' }}</strong>
-                    <div v-if="bs.distilledInsights?.length" class="bs-summary">洞察: {{ bs.distilledInsights.join('; ') }}</div>
+
+                    <!-- Extractor Layer -->
+                    <div v-if="activeAgentTab === 'extractor'" class="agent-layer">
+                      <div class="layer-section" v-if="bs.themes?.length">
+                        <h6>核心主题 (Themes)</h6>
+                        <div class="tag-row">
+                          <span v-for="t in bs.themes" :key="t" class="theme-tag">{{ t }}</span>
+                        </div>
+                      </div>
+                      <div class="layer-section" v-if="bs.extractedQuestions?.length">
+                        <h6>提取问题 (Questions)</h6>
+                        <ul class="clean-list">
+                          <li v-for="q in bs.extractedQuestions" :key="q">{{ q }}</li>
+                        </ul>
+                      </div>
+                      <div class="layer-section" v-if="bs.distilledInsights?.length">
+                        <h6>精炼洞察 (Insights)</h6>
+                        <ul class="clean-list insight-list">
+                          <li v-for="i in bs.distilledInsights" :key="i">{{ i }}</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <!-- Critic Layer -->
+                    <div v-if="activeAgentTab === 'critic'" class="agent-layer alert-layer">
+                      <div class="layer-section" v-if="bs.emotionalTone">
+                        <h6>情绪基调 (Tone)</h6>
+                        <span class="emotion-badge">{{ bs.emotionalTone }}</span>
+                      </div>
+                      <div class="layer-section" v-if="bs.ambiguityPoints?.length">
+                        <h6>逻辑破绽与模糊点 (Ambiguity & Flaws)</h6>
+                        <ul class="clean-list warning-list">
+                          <li v-for="p in bs.ambiguityPoints" :key="p">⚠️ {{ p }}</li>
+                        </ul>
+                      </div>
+                    </div>
+
                   </article>
                 </div>
               </div>
@@ -253,6 +294,8 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+
+const activeAgentTab = ref<'extractor' | 'critic'>('extractor');
 import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchBrainstormSessions, fetchSoulActions } from '../api/client';
 import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction, Dimension } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';

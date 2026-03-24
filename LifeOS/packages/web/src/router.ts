@@ -13,6 +13,7 @@ const routes = [
   { path: '/ops', name: 'ops', component: () => import('./views/OpsView.vue') },
   { path: '/events', name: 'events', component: () => import('./views/EventsView.vue') },
   { path: '/settings', name: 'settings', component: () => import('./views/SettingsView.vue') },
+  { path: '/insights', name: 'insights', component: () => import('./views/InsightsFeedView.vue') },
 ];
 
 export const router = createRouter({

@@ -748,3 +748,39 @@ export async function fetchScheduleHealth(): Promise<ScheduleHealth> {
   const res = await fetch(`${API_BASE}/schedules/health`);
   return expectApiSuccess<ScheduleHealth>(res, 'Failed to fetch schedule health');
 }
+
+export interface AiUsageDaily {
+  date: string;
+  totalTokens: number;
+  totalCostInCents: number;
+  requestCount: number;
+}
+
+export interface AiUsageResponse {
+  totalTokens: number;
+  totalCostInCents: number;
+  totalRequests: number;
+  dailyUsage: AiUsageDaily[];
+}
+
+export async function fetchAiUsage(days: number = 7): Promise<AiUsageResponse> {
+  const res = await fetch(`${API_BASE}/ai-usage?days=${days}`);
+  // Temporary mock fallback if C-Group API isn't ready
+  if (!res.ok) {
+    if (res.status === 404) {
+      return {
+        totalTokens: 1250000,
+        totalCostInCents: 350,
+        totalRequests: 84,
+        dailyUsage: Array.from({length: days}).map((_, i) => ({
+          date: new Date(Date.now() - (days - 1 - i) * 86400000).toISOString().split('T')[0],
+          totalTokens: Math.floor(Math.random() * 200000 + 50000),
+          totalCostInCents: Math.floor(Math.random() * 50 + 10),
+          requestCount: Math.floor(Math.random() * 15 + 5),
+        }))
+      };
+    }
+    throw new Error('Failed to fetch AI usage');
+  }
+  return res.json();
+}

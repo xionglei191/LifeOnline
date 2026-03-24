@@ -17,6 +17,9 @@ export { getNotes, getNoteById, searchNotes, createNote, updateNote, appendNote,
 // Views
 export { getDashboard, getTimeline, getCalendar, getPersonaSnapshotHandler, getCognitiveHealthHandler } from './handlers/viewHandlers.js';
 
+// AI Tracking
+export { getAiUsageHandler } from './handlers/aiUsageHandler.js';
+
 // Config & Index
 export { getConfig, updateConfig, triggerIndex, getIndexStatus, getIndexErrors } from './handlers/configHandlers.js';
 

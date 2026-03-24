@@ -71,7 +71,9 @@
       </main>
     </div>
 
-    <CreateNoteFab @created="handleNoteCreated" />
+    <OnboardingGuide />
+    <CommandPalette @action="handleCommandPaletteAction" />
+    <CreateNoteFab ref="createNoteFabRef" @created="handleNoteCreated" />
     <LockScreen v-if="isLocked" />
     <NotificationToast />
 
@@ -93,6 +95,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import SearchBar from './components/SearchBar.vue';
 import CreateNoteFab from './components/CreateNoteFab.vue';
+import CommandPalette from './components/CommandPalette.vue';
+import OnboardingGuide from './components/OnboardingGuide.vue';
 import LockScreen from './components/LockScreen.vue';
 import ErrorBoundary from './components/ErrorBoundary.vue';
 import NotificationToast from './components/NotificationToast.vue';
@@ -108,6 +112,7 @@ const navItems = [
   { to: '/stats', label: '统计', hint: '信号分析', icon: '◈' },
   { to: '/events', label: '事件', hint: '认知时序', icon: '◎' },
   { to: '/governance', label: '治理', hint: '决策审批', icon: '⚖' },
+  { to: '/insights', label: '洞察', hint: '闲思记录', icon: '✧' },
   { to: '/ops', label: '运维', hint: '任务调度', icon: '⚡' },
   { to: '/settings', label: '设置', hint: '系统配置', icon: '⚙' },
 ];
@@ -118,8 +123,16 @@ const { privacyMode, isLocked, togglePrivacyMode, initPrivacy, destroyPrivacy } 
 const { addNotification } = useNotification();
 const indexing = ref(false);
 
+const createNoteFabRef = ref<InstanceType<typeof CreateNoteFab> | null>(null);
+
 function handleNoteCreated() {
   // WebSocket will auto-refresh all views via ws-update event
+}
+
+function handleCommandPaletteAction(actionName: string) {
+  if (actionName === 'create-note' && createNoteFabRef.value) {
+    createNoteFabRef.value.open();
+  }
 }
 
 let soulActionBatchCount = 0;

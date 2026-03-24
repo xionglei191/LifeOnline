@@ -5,7 +5,12 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import com.lingguang.catcher.data.model.SoulAction
+import com.lingguang.catcher.data.model.ReintegrationRecord
 
 class LifeOSService(private val lifeosUrl: String) {
     private val TAG = "LifeOSService"
@@ -41,6 +46,86 @@ class LifeOSService(private val lifeosUrl: String) {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Trigger index error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun getPendingSoulActions(): Result<List<SoulAction>> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/soul-actions?governanceStatus=pending_review"
+            val request = Request.Builder().url(url).get().build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val respBody = response.body?.string() ?: "{}"
+                    val json = JSONObject(respBody)
+                    val actionsArray = json.optJSONArray("soulActions") ?: JSONArray()
+                    val resultList = mutableListOf<SoulAction>()
+                    for (i in 0 until actionsArray.length()) {
+                        resultList.add(SoulAction.fromJson(actionsArray.getJSONObject(i)))
+                    }
+                    Result.success(resultList)
+                } else {
+                    Result.failure(Exception("Get soul actions failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getPendingSoulActions error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun getReintegrationRecords(): Result<List<ReintegrationRecord>> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/reintegration-records"
+            val request = Request.Builder().url(url).get().build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val respBody = response.body?.string() ?: "{}"
+                    val json = JSONObject(respBody)
+                    val recordsArray = json.optJSONArray("reintegrationRecords") ?: JSONArray()
+                    val resultList = mutableListOf<ReintegrationRecord>()
+                    for (i in 0 until recordsArray.length()) {
+                        resultList.add(ReintegrationRecord.fromJson(recordsArray.getJSONObject(i)))
+                    }
+                    Result.success(resultList)
+                } else {
+                    Result.failure(Exception("Get reintegration records failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getReintegrationRecords error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun approveSoulAction(id: String, reason: String? = null): Result<Boolean> {
+        return postSoulActionAction(id, "approve", reason)
+    }
+
+    fun discardSoulAction(id: String, reason: String? = null): Result<Boolean> {
+        return postSoulActionAction(id, "discard", reason)
+    }
+
+    private fun postSoulActionAction(id: String, action: String, reason: String?): Result<Boolean> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/soul-actions/$id/$action"
+            val jsonBody = JSONObject().apply {
+                if (reason != null) put("reason", reason)
+            }
+            val body = jsonBody.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder().url(url).post(body).build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("Action $action failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "postSoulActionAction error: ${e.message}", e)
             Result.failure(e)
         }
     }

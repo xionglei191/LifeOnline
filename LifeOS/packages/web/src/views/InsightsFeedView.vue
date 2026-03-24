@@ -16,24 +16,24 @@
         <article v-for="record in records" :key="record.id" class="insight-card panel">
           <div class="insight-meta">
             <span class="insight-date">{{ new Date(record.createdAt).toLocaleString() }}</span>
-            <span class="insight-badge">{{ formatSourceAction(record.sourceActionKind) }}</span>
+            <span class="insight-badge">{{ formatSourceAction(record.signalKind) }}</span>
           </div>
           
           <div class="insight-content">
-            <h3 class="insight-title">{{ record.title || '系统洞察' }}</h3>
+            <h3 class="insight-title">{{ record.nextActionSummary?.candidateTitle || '深空回响' }}</h3>
             <p class="insight-summary">{{ record.summary }}</p>
             
-            <div v-if="record.distilledInsights && record.distilledInsights.length > 0" class="distilled-list">
+            <div v-if="getDistilledInsights(record).length > 0" class="distilled-list">
               <h4>精炼结论</h4>
               <ul>
-                <li v-for="(insight, idx) in record.distilledInsights" :key="idx">{{ insight }}</li>
+                <li v-for="(insight, idx) in getDistilledInsights(record)" :key="idx">{{ insight }}</li>
               </ul>
             </div>
             
-            <div v-if="record.continuitySignals && record.continuitySignals.length > 0" class="continuity-list">
+            <div v-if="getContinuitySignals(record).length > 0" class="continuity-list">
               <h4>岁月连续性指引</h4>
               <ul>
-                <li v-for="(sig, idx) in record.continuitySignals" :key="idx">{{ sig }}</li>
+                <li v-for="(sig, idx) in getContinuitySignals(record)" :key="idx">{{ sig }}</li>
               </ul>
             </div>
           </div>
@@ -58,6 +58,16 @@ const formatSourceAction = (kind: string) => {
   if (kind === 'promote_continuity_record') return '岁月指引升华';
   if (kind === 'launch_openclaw_task') return '全视野反思';
   return '跨维度联想';
+};
+
+const getDistilledInsights = (record: ReintegrationRecord): string[] => {
+  const arr = record.evidence?.distilledInsights;
+  return Array.isArray(arr) ? arr as string[] : [];
+};
+
+const getContinuitySignals = (record: ReintegrationRecord): string[] => {
+  const arr = record.evidence?.continuitySignals;
+  return Array.isArray(arr) ? arr as string[] : [];
 };
 
 const loadData = async () => {

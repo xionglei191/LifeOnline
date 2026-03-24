@@ -98,6 +98,16 @@ class MainActivity : AppCompatActivity() {
             AnimUtil.enterPage(this)
         }
 
+        binding.btnInsights.setOnClickListener {
+            startActivity(Intent(this, InsightsActivity::class.java))
+            AnimUtil.enterPage(this)
+        }
+
+        binding.btnGovernance.setOnClickListener {
+            startActivity(Intent(this, GovernanceActivity::class.java))
+            AnimUtil.enterPage(this)
+        }
+
         binding.btnBubble.setOnClickListener {
             toggleFloatingBubble()
         }

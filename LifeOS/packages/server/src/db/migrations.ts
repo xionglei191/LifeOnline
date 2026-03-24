@@ -386,3 +386,64 @@ export function runMigrations(database: Database): void {
     'id', 'base_url', 'model', 'api_key', 'enabled', 'updated_at',
   ]);
 }
+
+// ---------------------------------------------------------------------------
+// Ordered Versioned Migrations
+// ---------------------------------------------------------------------------
+
+interface Migration {
+  version: number;
+  up: (db: Database) => void;
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    up: (db) => {
+      // The basic ai_usage table and index.
+      // Note: this might already exist if the DB was freshly created by SCHEMA.
+      // Running it again via IF NOT EXISTS is safe.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_usage (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          endpoint TEXT NOT NULL,
+          input_tokens INTEGER NOT NULL DEFAULT 0,
+          output_tokens INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_usage_date ON ai_usage(date);
+      `);
+      logger.info('Migration v1 applied: ai_usage table verified.');
+    }
+  }
+];
+
+/**
+ * Runs the ordered, versioned migrations.
+ * Each migration is run inside a transaction.
+ */
+export function applyVersionedMigrations(database: Database): void {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS schema_version (
+      version INTEGER PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    )
+  `);
+
+  const row = database.prepare('SELECT MAX(version) as max_v FROM schema_version').get() as { max_v: number | null };
+  const currentVersion = row?.max_v || 0;
+
+  for (const migration of MIGRATIONS.sort((a, b) => a.version - b.version)) {
+    if (migration.version > currentVersion) {
+      logger.info(`Applying database migration version ${migration.version}...`);
+      database.transaction(() => {
+        migration.up(database);
+        database.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(
+          migration.version, new Date().toISOString()
+        );
+      })();
+      logger.info(`Migration version ${migration.version} applied successfully.`);
+    }
+  }
+}
+
