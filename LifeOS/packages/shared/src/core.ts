@@ -40,6 +40,7 @@ export const SUPPORTED_SOUL_ACTION_KINDS = [
   'launch_weekly_report',
   'launch_openclaw_task',
   'ask_followup_question',
+  'persist_continuity_markdown',
 ] as const;
 export type SoulActionKind = typeof SUPPORTED_SOUL_ACTION_KINDS[number];
 export const SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES = ['pending_review', 'approved', 'deferred', 'discarded'] as const;

@@ -7,6 +7,9 @@ import type { ContinuityRecord } from './continuityRecords.js';
 import type { SoulActionCandidate } from './soulActionGenerator.js';
 import type { InterventionGateDecision } from './interventionGate.js';
 import type { SoulAction } from './types.js';
+import { loadConfig } from '../config/configManager.js';
+import { createFile } from '../vault/fileManager.js';
+import path from 'path';
 
 export interface SoulActionDispatchResult {
   dispatched: boolean;
@@ -14,9 +17,9 @@ export interface SoulActionDispatchResult {
   soulActionId: string | null;
   workerTaskId: string | null;
   executionSummary?: {
-    objectType: 'event_node' | 'continuity_record' | 'worker_task' | null;
+    objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | null;
     objectId: string | null;
-    operation: 'created' | 'updated' | 'enqueued' | null;
+    operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | null;
     summary: string | null;
   } | null;
   eventNode?: EventNode | null;
@@ -195,6 +198,76 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
         objectId: soulAction.id,
         operation: 'awaiting_answer',
         summary: soulAction.governanceReason ?? '追问已发出',
+      },
+      eventNode: null,
+      continuityRecord: null,
+    };
+  }
+
+  // persist_continuity_markdown → write Vault file directly, no worker task
+  if (soulAction.actionKind === 'persist_continuity_markdown') {
+    const now = new Date().toISOString();
+    const config = await loadConfig();
+    const dateStr = now.slice(0, 10); // YYYY-MM-DD
+    const insightContent = soulAction.governanceReason ?? '认知洞察';
+
+    // Build the Markdown content
+    const md = [
+      '---',
+      `source_note_id: ${soulAction.sourceNoteId}`,
+      `soul_action_id: ${soulAction.id}`,
+      `created_at: ${now}`,
+      'type: continuity_insight',
+      '---',
+      '',
+      `# 连续性认知记录`,
+      '',
+      insightContent,
+      '',
+      `> 生成时间: ${now}`,
+      `> 来源笔记: ${soulAction.sourceNoteId}`,
+    ].join('\n');
+
+    // Write to Vault: soul/continuity/YYYY-MM-DD-{action-id-suffix}.md
+    const idSuffix = soulAction.id.split(':').pop() ?? soulAction.id.slice(-8);
+    const continuityDir = path.join(config.vaultPath, 'soul', 'continuity');
+    const filePath = path.join(continuityDir, `${dateStr}-${idSuffix}.md`);
+
+    try {
+      await createFile(filePath, md);
+    } catch (e) {
+      // Mark as failed if file write fails
+      getDb().prepare(`
+        UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).run(String(e), now, now, soulAction.id);
+      return {
+        dispatched: false,
+        reason: `Vault 写入失败: ${e}`,
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+        executionSummary: null,
+        eventNode: null,
+        continuityRecord: null,
+      };
+    }
+
+    // Mark as succeeded
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'succeeded', updated_at = ?, started_at = ?, finished_at = ?, result_summary = ?
+      WHERE id = ?
+    `).run(now, now, now, `已写入 ${filePath}`, soulAction.id);
+
+    return {
+      dispatched: true,
+      reason: '连续性认知已持久化到 Vault',
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+      executionSummary: {
+        objectType: 'continuity_markdown',
+        objectId: soulAction.id,
+        operation: 'persisted',
+        summary: `已写入 ${filePath}`,
       },
       eventNode: null,
       continuityRecord: null,

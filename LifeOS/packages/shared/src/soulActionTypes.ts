@@ -14,9 +14,9 @@ export interface SoulActionPromotionSummary {
 }
 
 export interface SoulActionDispatchExecutionSummary {
-  objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | null;
+  objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | null;
   objectId: string | null;
-  operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | null;
+  operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | null;
   summary: string | null;
 }
 
@@ -92,8 +92,9 @@ export function normalizeSoulActionSourceFilters(
   };
 }
 
-export function formatSoulActionKindLabel(actionKind: SoulAction['actionKind'] | 'ask_followup_question'): string {
+export function formatSoulActionKindLabel(actionKind: SoulAction['actionKind'] | 'ask_followup_question' | 'persist_continuity_markdown'): string {
   if (actionKind === 'ask_followup_question') return '提出追问';
+  if (actionKind === 'persist_continuity_markdown') return '持久化连续性洞察';
   if (actionKind === 'extract_tasks') return '提取任务';
   if (actionKind === 'update_persona_snapshot') return '更新 Persona Snapshot';
   if (actionKind === 'create_event_node') return '创建 Event Node';
