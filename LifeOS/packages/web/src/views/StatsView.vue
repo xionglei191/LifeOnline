@@ -139,6 +139,7 @@ function baseAxis() {
 const radarTitle = computed(() => `当前 ${radarDimensionCount.value} 个维度完成率`);
 
 async function loadTrend(data: StatsTrendPoint[]) {
+  data = data.filter((d) => d.day != null);
   const c = charts[0];
   if (!c) return;
   c.setOption({
@@ -180,6 +181,7 @@ async function loadTrend(data: StatsTrendPoint[]) {
 }
 
 async function loadRadar(data: StatsRadarPoint[]) {
+  data = data.filter((d) => d.dimension != null);
   radarDimensionCount.value = data.length;
   const c = charts[1];
   if (!c) return;
@@ -213,6 +215,7 @@ async function loadRadar(data: StatsRadarPoint[]) {
 }
 
 async function loadMonthly(data: StatsMonthlyPoint[]) {
+  data = data.filter((d) => d.month != null);
   const c = charts[2];
   if (!c) return;
   c.setOption({
@@ -246,6 +249,7 @@ async function loadMonthly(data: StatsMonthlyPoint[]) {
 }
 
 async function loadTags(data: StatsTagPoint[]) {
+  data = data.filter((d) => d.tag != null);
   const c = charts[3];
   if (!c) return;
   c.setOption({
