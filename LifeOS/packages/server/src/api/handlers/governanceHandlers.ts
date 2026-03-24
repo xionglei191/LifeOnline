@@ -510,3 +510,36 @@ export async function listContinuityRecordsHandler(
     res.status(500).json({ error: String(error) });
   }
 }
+
+// ── BrainstormSession Handlers ─────────────────────────
+
+export async function listBrainstormSessionsHandler(
+  req: Request<Record<string, never>, any, Record<string, never>, { limit?: string; offset?: string }>,
+  res: Response,
+): Promise<void> {
+  try {
+    const { listBrainstormSessions } = await import('../../soul/brainstormSessions.js');
+    const limit = Math.min(parseInt(req.query.limit ?? '50', 10) || 50, 100);
+    const offset = parseInt(req.query.offset ?? '0', 10) || 0;
+    const result = listBrainstormSessions(limit, offset);
+    res.json(result);
+  } catch (error) {
+    console.error('List brainstorm sessions error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
+export async function getBrainstormSessionHandler(
+  req: Request<{ id: string }>,
+  res: Response,
+): Promise<void> {
+  try {
+    const { getBrainstormSession } = await import('../../soul/brainstormSessions.js');
+    const session = getBrainstormSession(req.params.id);
+    if (!session) { res.status(404).json({ error: 'Brainstorm session not found' }); return; }
+    res.json({ session });
+  } catch (error) {
+    console.error('Get brainstorm session error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}

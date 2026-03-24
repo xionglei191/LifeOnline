@@ -2,6 +2,7 @@ import { getDb } from '../db/client.js';
 import { generateSoulActionCandidates, type SoulActionCandidate } from './soulActionGenerator.js';
 import { evaluateInterventionGate, type GateDecisionType } from './interventionGate.js';
 import { createOrReuseSoulAction } from './soulActions.js';
+import { createOrUpdateBrainstormSession } from './brainstormSessions.js';
 
 interface IndexedNoteSnapshot {
   id: string;
@@ -95,12 +96,37 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
   });
 
   if (candidates.length === 0) {
+    // Still save brainstorm session even with no candidates (the analysis itself is valuable)
+    if (analysis) {
+      try {
+        createOrUpdateBrainstormSession({
+          sourceNoteId: currentNote.id,
+          rawContent: currentNote.content,
+          analysis,
+        });
+      } catch (e) {
+        console.warn('[postIndexPersonaTrigger] Failed to save brainstorm session:', e);
+      }
+    }
     return {
       triggered: false,
       reason: skippedReason ?? '认知分析未产生候选动作',
       soulActionIds: [],
       candidateCount: 0,
     };
+  }
+
+  // Save brainstorm session with full analysis
+  if (analysis) {
+    try {
+      createOrUpdateBrainstormSession({
+        sourceNoteId: currentNote.id,
+        rawContent: currentNote.content,
+        analysis,
+      });
+    } catch (e) {
+      console.warn('[postIndexPersonaTrigger] Failed to save brainstorm session:', e);
+    }
   }
 
   // Evaluate each candidate through the gate

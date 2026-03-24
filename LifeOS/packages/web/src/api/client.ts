@@ -1,4 +1,4 @@
-import { normalizeSoulActionSourceFilters, type ApiErrorResponse, type ApiResponse, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse } from '@lifeos/shared';
+import { normalizeSoulActionSourceFilters, type ApiErrorResponse, type ApiResponse, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse, type BrainstormSession } from '@lifeos/shared';
 
 export type IndexError = IndexErrorEventData;
 
@@ -496,6 +496,20 @@ export async function answerFollowupQuestion(id: string, answer: string): Promis
     throw new Error(data.error || 'Failed to answer followup question');
   }
   return data.soulAction as SoulAction;
+}
+
+export async function fetchBrainstormSessions(limit = 50, offset = 0): Promise<{ sessions: BrainstormSession[]; total: number }> {
+  const res = await fetch(`${API_BASE}/brainstorm-sessions?limit=${limit}&offset=${offset}`);
+  const data = await res.json().catch(() => ({ sessions: [], total: 0 }));
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch brainstorm sessions');
+  return data as { sessions: BrainstormSession[]; total: number };
+}
+
+export async function fetchBrainstormSession(id: string): Promise<BrainstormSession> {
+  const res = await fetch(`${API_BASE}/brainstorm-sessions/${encodeURIComponent(id)}`);
+  const data = await res.json().catch(() => ({} as { session?: BrainstormSession; error?: string }));
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch brainstorm session');
+  return data.session as BrainstormSession;
 }
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {

@@ -22,6 +22,8 @@ import {
   acceptReintegrationRecordHandler, rejectReintegrationRecordHandler,
   planPromotionsHandler,
   listEventNodesHandler, listContinuityRecordsHandler,
+  // Brainstorm Sessions
+  listBrainstormSessionsHandler, getBrainstormSessionHandler,
   // Schedules
   createScheduleHandler, listSchedulesHandler, getScheduleHandler,
   updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler,
@@ -70,6 +72,8 @@ router.post('/reintegration-records/:id/reject', rejectReintegrationRecordHandle
 router.post('/reintegration-records/:id/plan-promotions', planPromotionsHandler);
 router.get('/event-nodes', listEventNodesHandler);
 router.get('/continuity-records', listContinuityRecordsHandler);
+router.get('/brainstorm-sessions', listBrainstormSessionsHandler);
+router.get('/brainstorm-sessions/:id', getBrainstormSessionHandler);
 router.post('/schedules', createScheduleHandler);
 router.get('/schedules/health', scheduleHealthHandler);
 router.get('/schedules', listSchedulesHandler);

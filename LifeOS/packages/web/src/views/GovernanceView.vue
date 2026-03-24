@@ -204,6 +204,43 @@
       :format-time="formatTime"
       @refresh="loadPromotionProjections"
     />
+
+    <!-- Brainstorm Sessions -->
+    <div class="settings-card brainstorm-card">
+      <div class="reintegration-head">
+        <div>
+          <h3>认知分析 (BrainstormSession)</h3>
+          <p class="hint reintegration-subtitle">每次笔记更新后，系统自动提炼的结构化认知快照。</p>
+        </div>
+        <button class="btn-link" @click="loadBrainstormSessions">刷新</button>
+      </div>
+
+      <div v-if="brainstormLoading" class="worker-empty-state">加载中...</div>
+      <div v-else-if="brainstormSessions.length" class="brainstorm-list">
+        <article v-for="session in brainstormSessions" :key="session.id" class="brainstorm-item">
+          <div class="brainstorm-header">
+            <span class="mono hint">{{ session.sourceNoteId }}</span>
+            <span class="worker-pill">{{ session.emotionalTone || '—' }}</span>
+            <span class="worker-pill">可行动 {{ (session.actionability * 100).toFixed(0) }}%</span>
+          </div>
+          <div v-if="session.themes.length" class="brainstorm-tags">
+            <span v-for="t in session.themes" :key="t" class="brainstorm-tag theme">{{ t }}</span>
+          </div>
+          <div v-if="session.distilledInsights.length" class="brainstorm-insights">
+            <span v-for="i in session.distilledInsights" :key="i" class="brainstorm-insight">{{ i }}</span>
+          </div>
+          <div v-if="session.suggestedActionKinds.length" class="brainstorm-tags">
+            <span v-for="a in session.suggestedActionKinds" :key="a" class="brainstorm-tag action">{{ a }}</span>
+          </div>
+          <div v-if="session.continuitySignals.length" class="brainstorm-tags">
+            <span v-for="c in session.continuitySignals" :key="c" class="brainstorm-tag continuity">{{ c }}</span>
+          </div>
+          <div class="brainstorm-preview">{{ session.rawInputPreview.slice(0, 150) }}{{ session.rawInputPreview.length > 150 ? '…' : '' }}</div>
+          <div class="mono hint" style="font-size:11px">{{ formatTime(session.updatedAt) }}</div>
+        </article>
+      </div>
+      <div v-else class="worker-empty-state">暂无认知分析记录。触发方式：新建或修改任意笔记。</div>
+    </div>
   </div>
 </template>
 
@@ -211,8 +248,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList } from '../api/client';
-import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent } from '@lifeos/shared';
+import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions } from '../api/client';
+import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession } from '@lifeos/shared';
 import { formatReintegrationSignalKindLabel, formatReintegrationStrengthLabel, formatReintegrationTargetLabel, formatSoulActionKindLabel, formatSoulActionPromotionSummary, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationExtractTaskItems, getReintegrationOutcomeDetailRows, getReintegrationOutcomeNoPlanReason, getReintegrationOutcomeStripRows, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
 import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket } from '../composables/useWebSocket';
@@ -250,6 +287,10 @@ const continuityRecords = ref<ContinuityRecord[]>([]);
 const projectionLoading = ref(false);
 const projectionMessage = ref('');
 const projectionMessageType = ref<'success' | 'error'>('success');
+
+// ── Brainstorm State ──────────────────────────────────────
+const brainstormSessions = ref<BrainstormSession[]>([]);
+const brainstormLoading = ref(false);
 
 // ── Computed ───────────────────────────────────────────
 const reintegrationStatusSummary = computed(() => {
@@ -352,6 +393,18 @@ async function loadPromotionProjections(options?: { preserveMessage?: boolean })
     }
   } finally {
     projectionLoading.value = false;
+  }
+}
+
+async function loadBrainstormSessions() {
+  brainstormLoading.value = true;
+  try {
+    const result = await fetchBrainstormSessions(30);
+    brainstormSessions.value = result.sessions;
+  } catch (e) {
+    console.warn('Failed to load brainstorm sessions:', e);
+  } finally {
+    brainstormLoading.value = false;
   }
 }
 
@@ -625,6 +678,7 @@ onMounted(async () => {
   await loadReintegrationRecords();
   await loadSoulActions();
   await loadPromotionProjections({ preserveMessage: true });
+  loadBrainstormSessions();
   document.addEventListener('ws-update', handleWsUpdate);
 });
 
@@ -651,6 +705,70 @@ onUnmounted(() => {
 .message { padding: 10px 14px; border-radius: 4px; font-size: 14px; margin-top: 12px; }
 .message.success { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
 .message.error { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+
+/* ─── Brainstorm Panel ─── */
+.brainstorm-card {
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(66% 0.06 200) 22%);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(97% 0.015 200) 8%), var(--card-bg));
+}
+
+.brainstorm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brainstorm-item {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--card-bg) 92%, oklch(96% 0.01 200) 8%);
+  border: 1px solid var(--border);
+}
+
+.brainstorm-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.brainstorm-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.brainstorm-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+}
+
+.brainstorm-tag.theme { background: oklch(95% 0.02 200); color: oklch(40% 0.1 200); }
+.brainstorm-tag.action { background: oklch(95% 0.03 150); color: oklch(40% 0.1 150); }
+.brainstorm-tag.continuity { background: oklch(95% 0.02 280); color: oklch(45% 0.08 280); }
+
+.brainstorm-insights {
+  margin-bottom: 6px;
+}
+
+.brainstorm-insight {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.brainstorm-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
 .btn-worker { padding: 8px 16px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
 .btn-worker:hover:not(:disabled) { background: #337ecc; }
 .btn-worker:disabled { opacity: 0.6; cursor: not-allowed; }

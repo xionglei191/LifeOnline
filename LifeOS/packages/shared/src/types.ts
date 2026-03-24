@@ -20,3 +20,4 @@ export * from './soulActionTypes.js';
 export * from './projectionTypes.js';
 export * from './reintegrationTypes.js';
 export * from './eventTypes.js';
+export * from './brainstormTypes.js';

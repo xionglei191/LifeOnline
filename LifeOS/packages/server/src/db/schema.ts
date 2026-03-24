@@ -148,6 +148,24 @@ export const GATE_DECISION_TABLE_COLUMNS_SQL = `  id INTEGER PRIMARY KEY AUTOINC
 export const GATE_DECISION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_gate_decisions_action_kind ON gate_decisions(action_kind);
 CREATE INDEX IF NOT EXISTS idx_gate_decisions_created_at ON gate_decisions(created_at);`;
 
+export const BRAINSTORM_SESSION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_note_id TEXT NOT NULL,
+  raw_input_preview TEXT NOT NULL,
+  themes_json TEXT NOT NULL DEFAULT '[]',
+  emotional_tone TEXT NOT NULL DEFAULT '',
+  extracted_questions_json TEXT NOT NULL DEFAULT '[]',
+  ambiguity_points_json TEXT NOT NULL DEFAULT '[]',
+  distilled_insights_json TEXT NOT NULL DEFAULT '[]',
+  suggested_action_kinds_json TEXT NOT NULL DEFAULT '[]',
+  actionability REAL NOT NULL DEFAULT 0,
+  continuity_signals_json TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL CHECK(status IN ('parsed', 'distilled')) DEFAULT 'parsed',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
+export const BRAINSTORM_SESSION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_brainstorm_sessions_source_note_id ON brainstorm_sessions(source_note_id);
+CREATE INDEX IF NOT EXISTS idx_brainstorm_sessions_created_at ON brainstorm_sessions(created_at);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -256,4 +274,10 @@ CREATE TABLE IF NOT EXISTS ai_provider_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ai_provider_settings_enabled ON ai_provider_settings(enabled);
+
+CREATE TABLE IF NOT EXISTS brainstorm_sessions (
+${BRAINSTORM_SESSION_TABLE_COLUMNS_SQL}
+);
+
+${BRAINSTORM_SESSION_INDEXES_SQL}
 `;
