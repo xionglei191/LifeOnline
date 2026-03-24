@@ -31,23 +31,23 @@
 
 ### 🟢 B 组 — 治理产品化
 
-- [ ] **P2：SoulAction Detail 页面增强**
-  - 目标：丰富 SoulAction 生命周期详情展示（source → governance → execution → outcome → reintegration）
-  - 关键文件：`packages/web/src/views/SoulActionDetailView.vue`
-  - 完成标准：详情页展示完整生命周期信息
-  - 验证：从治理面板点击可进入详情页，数据完整
+- [x] **P3：治理面板 UX 提升 (GovernanceView 组件拆分)**
+  - 目标：GovernanceView 组件拆分、样式优化，并适配移动端宽度
+  - 关键文件：`packages/web/src/views/GovernanceView.vue`, `packages/web/src/components/`
+  - 完成标准：提取了 ReintegrationReviewPanel 和 BrainstormSessionPanel
+  - 验证：主页面体积大幅减小，组件职责清晰，响应式布局工作正常
 
-- [ ] **P2：追问交互 UI 优化**
+- [x] **P2：SoulAction Detail 页面增强**
+  - 目标：增加 reintegration 卡片与同源 actions 关联展示
+  - 关键文件：`packages/web/src/views/SoulActionDetailView.vue`
+  - 完成标准：详情页展示完整信息
+  - 验证：正确加载展示 source reintegration 卡片和相关 actions 列表
+
+- [x] **P2：追问交互 UI 优化**
   - 目标：优化 `ask_followup_question` 类 SoulAction 的交互体验
   - 关键文件：`packages/web/src/views/GovernanceView.vue`
   - 完成标准：追问类动作有清晰的交互入口和回答体验
   - 验证：页面可交互、POST 请求成功
-
-- [ ] **P3：治理面板 UX 提升**
-  - 目标：GovernanceView 组件拆分、样式优化
-  - 关键文件：`packages/web/src/views/GovernanceView.vue`, `packages/web/src/components/`
-  - 完成标准：主页面体积减小，组件职责清晰
-  - 验证：功能不回归
 
 ---
 

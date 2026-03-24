@@ -12,7 +12,6 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     actionKind: overrides.actionKind ?? 'promote_event_node',
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
-    status: overrides.status ?? overrides.executionStatus ?? 'not_dispatched',
     sourceNoteId: overrides.sourceNoteId,
     sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     promotionSummary: overrides.promotionSummary ?? null,
@@ -73,6 +72,7 @@ function mountPanel(quickFilter: SoulActionGroupQuickFilter, overrides?: Partial
     props: {
       filterStatus: 'pending_review',
       executionFilter: 'not_dispatched',
+      actionKindFilter: '',
       quickFilter,
       quickFilterLabel: getSoulActionGroupQuickFilterLabel(quickFilter),
       quickFilterStats: getSoulActionGroupQuickFilterStats(soulActions, reintegrationRecords, quickFilter),

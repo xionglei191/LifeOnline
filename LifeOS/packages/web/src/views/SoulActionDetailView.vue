@@ -185,6 +185,44 @@
         </div>
       </div>
 
+      <!-- ── Reintegration Card ── -->
+      <div v-if="reintegrationRecord" class="settings-card reintegration-card">
+        <h3>Source Reintegration</h3>
+        <div class="detail-field">
+          <span class="field-label">ID</span>
+          <span class="field-value mono">{{ reintegrationRecord.id }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="field-label">Signal Kind</span>
+          <span class="field-value">{{ formatReintegrationSignalKindLabel(reintegrationRecord) }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="field-label">Review Status</span>
+          <span class="field-value">{{ reintegrationRecord.reviewStatus }}</span>
+        </div>
+        <div class="detail-field" v-if="reintegrationRecord.summary">
+          <span class="field-label">Summary</span>
+          <span class="field-value">{{ reintegrationRecord.summary }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="field-label">Evidence</span>
+          <pre class="evidence-pre">{{ JSON.stringify(reintegrationRecord.evidence, null, 2) }}</pre>
+        </div>
+      </div>
+
+      <!-- ── Related Actions Card ── -->
+      <div v-if="relatedActions.length" class="settings-card related-actions-card">
+        <h3>同源行动项 (Related Actions)</h3>
+        <div class="related-actions-list">
+          <router-link v-for="relAction in relatedActions" :key="relAction.id" :to="`/governance/soul-action/${relAction.id}`" class="related-action-item">
+            <span class="action-kind-badge" :class="getRelatedActionClass(relAction.actionKind)">{{ formatSoulActionKindLabel(relAction.actionKind) }}</span>
+            <span class="governance-badge" :class="`gov-${relAction.governanceStatus}`">{{ GOVERNANCE_LABELS[relAction.governanceStatus] || relAction.governanceStatus }}</span>
+            <span class="execution-badge" :class="`exec-${relAction.executionStatus}`">{{ EXECUTION_LABELS[relAction.executionStatus] || relAction.executionStatus }}</span>
+            <span class="mono hint">{{ relAction.id.replace('soul:', '') }}</span>
+          </router-link>
+        </div>
+      </div>
+
       <!-- ── Operation Message ── -->
       <div v-if="opMessage" class="message" :class="opMessageType">{{ opMessage }}</div>
     </template>
@@ -194,9 +232,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchSoulAction, approveSoulAction, dispatchSoulAction, deferSoulAction, discardSoulAction, answerFollowupQuestion } from '../api/client';
-import { formatSoulActionKindLabel } from '@lifeos/shared';
-import type { SoulAction } from '@lifeos/shared';
+import { fetchSoulAction, approveSoulAction, dispatchSoulAction, deferSoulAction, discardSoulAction, answerFollowupQuestion, fetchReintegrationRecords, fetchSoulActions } from '../api/client';
+import { formatSoulActionKindLabel, formatReintegrationSignalKindLabel } from '@lifeos/shared';
+import type { SoulAction, ReintegrationRecord } from '@lifeos/shared';
 
 const route = useRoute();
 const router = useRouter();
@@ -215,6 +253,15 @@ const kindLabel = computed(() => action.value ? formatSoulActionKindLabel(action
 
 const PROMOTION_KINDS = ['create_event_node', 'promote_event_node', 'promote_continuity_record'];
 const WORKER_KINDS = ['extract_tasks', 'launch_daily_report', 'launch_weekly_report', 'launch_openclaw_task'];
+
+const reintegrationRecord = ref<ReintegrationRecord | null>(null);
+const relatedActions = ref<SoulAction[]>([]);
+
+function getRelatedActionClass(kind: string) {
+  if (PROMOTION_KINDS.includes(kind)) return 'kind-promotion';
+  if (WORKER_KINDS.includes(kind)) return 'kind-worker';
+  return 'kind-default';
+}
 
 const actionKindClass = computed(() => {
   if (!action.value) return '';
@@ -250,11 +297,23 @@ function formatTime(iso: string | null): string {
 
 async function loadAction() {
   loading.value = true;
-  error.value = '';
-  try {
+  error.value = '';  try {
     action.value = await fetchSoulAction(actionId.value);
-  } catch (e: any) {
-    error.value = e.message || '加载失败';
+    reintegrationRecord.value = null;
+    relatedActions.value = [];
+    if (action.value.sourceReintegrationId) {
+      try {
+        const [recs, acts] = await Promise.all([
+          fetchReintegrationRecords({ sourceNoteId: action.value.sourceNoteId }),
+          fetchSoulActions({ sourceReintegrationId: action.value.sourceReintegrationId })
+        ]);
+        reintegrationRecord.value = recs.find(r => r.id === action.value!.sourceReintegrationId) || null;
+        relatedActions.value = acts.filter(a => a.id !== action.value!.id);
+      } catch (err) {
+        console.warn('Failed to load related data:', err);
+      }
+    }
+  } catch (e: any) {    error.value = e.message || '加载失败';
   } finally {
     loading.value = false;
   }
@@ -692,5 +751,63 @@ onMounted(() => loadAction());
 .answer-textarea:focus {
   outline: none;
   border-color: #409eff;
+}
+
+.evidence-pre {
+  margin: 0;
+  padding: 10px;
+  background: var(--meta-bg);
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+}
+
+.related-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.related-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--card-bg) 95%, oklch(98% 0.01 250) 5%);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.related-action-item:hover {
+  background: var(--meta-bg);
+}
+
+.related-action-item .hint {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* ─── Mobile Responsive for DetailView ─── */
+@media (max-width: 640px) {
+  .soul-action-detail-view {
+    padding: 0 16px;
+  }
+  .settings-card {
+    padding: 16px;
+  }
+  .header-top {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .action-buttons {
+    flex-direction: column;
+  }
+  .action-buttons button {
+    width: 100%;
+  }
 }
 </style>

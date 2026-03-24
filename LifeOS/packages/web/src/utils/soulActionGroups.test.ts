@@ -15,7 +15,6 @@ function createSoulAction(overrides: Partial<SoulAction> & Pick<SoulAction, 'id'
     sourceReintegrationId: overrides.sourceReintegrationId ?? null,
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
-    status: overrides.status ?? overrides.executionStatus ?? 'not_dispatched',
     workerTaskId: overrides.workerTaskId ?? null,
     governanceReason: overrides.governanceReason ?? null,
     resultSummary: overrides.resultSummary ?? null,
