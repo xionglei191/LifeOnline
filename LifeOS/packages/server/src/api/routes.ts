@@ -32,11 +32,14 @@ import {
   getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags,
   // Health
   healthHandler,
+  // Vector Search
+  vectorSearchHandler,
 } from './handlers.js';
 
 export const router = Router();
 
 router.get('/health', healthHandler);
+router.get('/vector-search', vectorSearchHandler);
 router.get('/dashboard', getDashboard);
 router.get('/cognitive-health', getCognitiveHealthHandler);
 router.get('/notes', getNotes);

@@ -1,6 +1,7 @@
 <template>
-  <div>
-    <button class="fab" @click="showModal = true">+</button>
+  <div class="fab-container">
+    <VoiceCapture class="voice-fab" @result="handleVoiceResult" @error="handleVoiceError" title="长按语音闪念" />
+    <button class="fab" @click="showModal = true" title="创建新笔记">+</button>
 
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay" @click.self="handleClose">
@@ -52,6 +53,7 @@
 import { ref } from 'vue';
 import { createNote } from '../api/client';
 import { SELECTABLE_DIMENSIONS, DIMENSION_LABELS, type SelectableDimension } from '@lifeos/shared';
+import VoiceCapture from './VoiceCapture.vue';
 
 const emit = defineEmits<{ created: [] }>();
 
@@ -97,7 +99,7 @@ async function handleSubmit() {
   saving.value = true;
   error.value = '';
   try {
-    await createNote(form.value);
+    await createNote(form.value as any);
     emit('created');
     handleClose();
     resetForm();
@@ -116,13 +118,49 @@ function handleClose() {
 function resetForm() {
   form.value = { title: '', dimension: '', type: 'note', priority: 'medium', content: '' };
 }
+
+async function handleVoiceResult(transcript: string) {
+  saving.value = true;
+  error.value = '';
+  try {
+    const snippet = transcript.length > 15 ? transcript.slice(0, 15) + '...' : transcript;
+    await createNote({
+      title: `语音闪念：${snippet}`,
+      content: transcript,
+      dimension: '_inbox',
+      type: 'note',
+      priority: 'medium',
+    });
+    emit('created');
+    // auto-hide error if any existed
+    error.value = '';
+  } catch (e: any) {
+    error.value = e.message || '语音记录创建失败';
+    showModal.value = true;
+  } finally {
+    saving.value = false;
+  }
+}
+
+function handleVoiceError(msg: string) {
+  error.value = msg;
+  showModal.value = true;
+}
 </script>
 
 <style scoped>
-.fab {
+.fab-container {
   position: fixed;
   right: 24px;
   bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  z-index: 40;
+}
+
+.fab {
   width: 62px;
   height: 62px;
   border-radius: 22px;
@@ -144,6 +182,11 @@ function resetForm() {
   transform: translateY(-2px) scale(1.02);
   border-color: color-mix(in srgb, var(--signal) 50%, var(--border));
   box-shadow: 0 30px 54px -26px var(--shadow-strong);
+}
+
+.voice-fab {
+  width: 54px;
+  height: 54px;
 }
 
 .modal-overlay {

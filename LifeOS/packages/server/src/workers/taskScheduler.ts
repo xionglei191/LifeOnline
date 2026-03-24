@@ -231,12 +231,21 @@ export function deleteSchedule(id: string): void {
   logger.info(`deleted schedule ${id}`);
 }
 
+import { runIdleProcessing } from '../soul/idleProcessor.js';
+
 export function initScheduler(): void {
   const schedules = listSchedules().filter(s => s.enabled);
   for (const schedule of schedules) {
     registerCronJob(schedule);
   }
-  logger.info(`loaded ${schedules.length} active schedule(s)`);
+  
+  // Register native system tasks
+  const idleJob = cronSchedule('0 3 * * *', () => {
+    runIdleProcessing().catch(err => logger.error('Idle processing error:', err));
+  });
+  cronJobs.set('system:idle_processor', idleJob);
+  
+  logger.info(`loaded ${schedules.length} active schedule(s) + system:idle_processor`);
 }
 
 export function getScheduleHealth(): ScheduleHealth {

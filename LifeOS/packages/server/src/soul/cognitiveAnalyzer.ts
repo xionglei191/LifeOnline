@@ -2,6 +2,8 @@ import { callClaude, parseJSON } from '../ai/aiClient.js';
 import type { SoulActionKind } from './types.js';
 import { getEffectiveAiProviderConfig } from '../ai/providerConfigService.js';
 import { Logger } from '../utils/logger.js';
+import { runExtractorAgent } from './agents/extractorAgent.js';
+import { runCriticAgent } from './agents/criticAgent.js';
 
 const logger = new Logger('cognitiveAnalyzer');
 
@@ -101,20 +103,25 @@ export async function analyzeNoteContent(
   }
 
   try {
-    // Build optional history prefix
-    const historyParts: string[] = [];
-    if (context?.personaSummary) {
-      historyParts.push(`当前人格快照: ${context.personaSummary}`);
+    const extraction = await runExtractorAgent(noteId, trimmed, context);
+    if (!extraction) {
+      throw new Error(`Extractor Agent failed to return data for note ${noteId}`);
     }
-    if (context?.recentReintegrationSummaries?.length) {
-      historyParts.push(`最近认知整合记录:\n${context.recentReintegrationSummaries.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`);
+
+    const critic = await runCriticAgent(noteId, trimmed, extraction);
+    if (!critic) {
+      throw new Error(`Critic Agent failed to return data for note ${noteId}`);
     }
-    const historyPrefix = historyParts.length
-      ? `[历史认知上下文]\n${historyParts.join('\n')}\n\n`
-      : '';
-    const response = await callClaude(historyPrefix + ANALYSIS_PROMPT + trimmed, 512);
-    const parsed = parseJSON<RawAnalysisResponse>(response);
-    return normalizeAnalysis(parsed);
+
+    // Merge outputs to form NoteAnalysis
+    return {
+      themes: extraction.themes,
+      emotionalTone: critic.emotionalTone,
+      actionability: critic.actionability,
+      suggestedActions: critic.suggestedActions,
+      continuitySignals: extraction.continuitySignals,
+      analyzedAt: new Date().toISOString()
+    };
   } catch (error) {
     logger.warn(`AI analysis failed for note ${noteId}, falling back to rules:`, error);
     return analyzeByRules(trimmed, context?.dimension);

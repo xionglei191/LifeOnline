@@ -72,6 +72,29 @@
     <div v-if="message" :class="['message', messageType]">{{ message }}</div>
 
     <div v-if="loading" class="worker-empty-state">加载中...</div>
+    
+    <!-- Mobile Swipe View replacing standard list when there are pending actions -->
+    <div v-else-if="isMobile && swipeableActions.length" class="mobile-swipe-view">
+      <div class="mobile-swipe-header">
+        <h4>待审批 ({{ swipeableActions.length }})</h4>
+        <p>左右滑动卡片快速治理</p>
+      </div>
+      <SwipeStack
+        :items="swipeableActions"
+        :item-key="(a) => a.id"
+        @approve="handleSwipeApprove"
+        @reject="handleSwipeReject"
+      >
+        <template #card="{ item }">
+          <GovernanceCard :action="item" />
+        </template>
+        <template #empty>
+          <div class="worker-empty-state">暂无待治理卡片</div>
+        </template>
+      </SwipeStack>
+    </div>
+
+    <!-- Standard Desktop Group List -->
     <div v-else-if="groups.length" class="reintegration-list soul-action-group-list">
       <section v-for="group in groups" :key="group.groupKey" class="reintegration-item soul-action-group">
         <div class="reintegration-item-top">
@@ -213,11 +236,14 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { formatSoulActionOutcomeSummary, getPromotionExplanationRows } from '@lifeos/shared';
 import type { ReintegrationRecord, SoulAction } from '@lifeos/shared';
 import type { SoulActionGroup, SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
+import SwipeStack from './SwipeStack.vue';
+import GovernanceCard from './GovernanceCard.vue';
 
-defineProps<{
+const props = defineProps<{
   filterStatus: '' | SoulAction['governanceStatus'];
   executionFilter: '' | SoulAction['executionStatus'];
   actionKindFilter: '' | SoulAction['actionKind'];
@@ -269,9 +295,62 @@ function promotionExplanationRows(action: SoulAction) {
 function isWorkerBackedAction(action: SoulAction): boolean {
   return action.actionKind.startsWith('launch_');
 }
+
+const isMobile = ref(false);
+function checkMobile() {
+  isMobile.value = window.innerWidth <= 768;
+}
+
+const swipeableActions = computed(() => {
+  const actions: SoulAction[] = [];
+  for (const group of props.groups) {
+    actions.push(...group.actions.filter((a: SoulAction) => a.governanceStatus === 'pending_review'));
+  }
+  return actions;
+});
+
+function handleSwipeApprove(action: SoulAction) {
+  emit('approve-action', action);
+}
+
+function handleSwipeReject(action: SoulAction) {
+  emit('discard-action', action);
+}
+
+onMounted(() => {
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
 </script>
 
 <style scoped>
+.mobile-swipe-view {
+  padding: 10px 0 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mobile-swipe-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.mobile-swipe-header h4 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.mobile-swipe-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
 .followup-answer-section {
   margin-top: 10px;
   padding: 12px;

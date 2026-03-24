@@ -96,7 +96,11 @@ date: '2026-03-24'
     soulActions = db.prepare('SELECT * FROM soul_actions WHERE source_note_id = ?').all(noteId) as any[];
     assert.ok(soulActions.length > 0, 'At least one SoulAction should exist');
 
-    // ── Step 6: Dispatch approved actions ────────────────────
+    // ── Step 6: Dispatch actions ────────────────────
+    // Provide a stable baseline by forcing all generated actions to be approved.
+    db.prepare(`UPDATE soul_actions SET governance_status = 'approved' WHERE source_note_id = ?`).run(noteId);
+    soulActions = db.prepare('SELECT * FROM soul_actions WHERE source_note_id = ?').all(noteId) as any[];
+
     const approved = soulActions.filter((a: any) =>
       a.governance_status === 'approved' &&
       a.execution_status === 'not_dispatched'

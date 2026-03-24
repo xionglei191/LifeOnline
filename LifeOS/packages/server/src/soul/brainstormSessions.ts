@@ -5,6 +5,11 @@ import { getDb } from '../db/client.js';
 import type { BrainstormSession } from '@lifeos/shared';
 import type { NoteAnalysis } from './cognitiveAnalyzer.js';
 import { callClaude, parseJSON } from '../ai/aiClient.js';
+import { getEmbedding } from '../ai/embedding.js';
+import { upsertEmbedding, isVectorStoreReady } from '../db/vectorStore.js';
+import { Logger } from '../utils/logger.js';
+
+const bsLogger = new Logger('brainstormSessions');
 
 // ── Row Parsing ────────────────────────────────────────
 
@@ -117,7 +122,12 @@ export function createOrUpdateBrainstormSession(input: {
     );
   }
 
-  return getBrainstormSession(id)!;
+  const session = getBrainstormSession(id)!;
+
+  // Fire-and-forget: generate embedding for semantic search
+  vectorizeBrainstormSession(session).catch(() => {});
+
+  return session;
 }
 
 export function getBrainstormSession(id: string): BrainstormSession | null {
@@ -319,4 +329,34 @@ export function findRelatedBrainstormSessions(sessionId: string, limit = 5): Bra
   `).all(...session.themes, sessionId, limit) as BrainstormSessionRow[];
 
   return rows.map(parseRow);
+}
+
+// ── Vectorization (Phase 2) ────────────────────────────
+
+/**
+ * Generate and store an embedding vector for a BrainstormSession.
+ * The embedding text combines themes, continuity signals, and insights.
+ * Non-blocking — called fire-and-forget from createOrUpdateBrainstormSession.
+ */
+async function vectorizeBrainstormSession(session: BrainstormSession): Promise<void> {
+  if (!isVectorStoreReady()) return;
+
+  // Build a text representation for embedding
+  const parts: string[] = [];
+  if (session.themes.length) parts.push(`主题: ${session.themes.join(', ')}`);
+  if (session.continuitySignals.length) parts.push(`连续性信号: ${session.continuitySignals.join('; ')}`);
+  if (session.distilledInsights.length) parts.push(`洞察: ${session.distilledInsights.join('; ')}`);
+  if (session.rawInputPreview) parts.push(session.rawInputPreview.slice(0, 200));
+
+  const text = parts.join('\n');
+  if (text.length < 10) return; // too short to be meaningful
+
+  try {
+    const embedding = await getEmbedding(text);
+    const db = getDb();
+    upsertEmbedding(db, `bs:${session.id}`, embedding);
+    bsLogger.info(`Vectorized session ${session.id} (dim=${embedding.length})`);
+  } catch (error) {
+    bsLogger.warn(`Failed to vectorize session ${session.id}:`, error);
+  }
 }

@@ -31,3 +31,6 @@ export { createWorkerTaskHandler, listWorkerTasksHandler, getWorkerTaskHandler, 
 
 // Health
 export { healthHandler } from './handlers/healthHandlers.js';
+
+// Vector Search
+export { vectorSearchHandler } from './handlers/vectorSearchHandlers.js';

@@ -197,6 +197,13 @@
             </div>
           </section>
 
+          <!-- Related Insights (Semantic) Panel -->
+          <RelatedInsights
+            :sessions="semanticRelatedSessions"
+            :loading="loadingSemantic"
+            :error="semanticError"
+          />
+
           <!-- Worker Task Panel -->
           <NoteWorkerPanel
             :tasks="relatedWorkerTasks"
@@ -253,11 +260,12 @@ import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import NoteApprovalCard from './NoteApprovalCard.vue';
 import NoteWorkerPanel from './NoteWorkerPanel.vue';
 import PromotionProjectionPanel from './PromotionProjectionPanel.vue';
+import RelatedInsights from './RelatedInsights.vue';
 import { isIndexRefreshEvent } from '../composables/useWebSocket';
 import { useNoteProjection } from '../composables/useNoteProjection';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
 import { workerTaskActionMessage } from '../utils/workerTaskLabels';
-import { getDimensionColor, getDimensionLabel, SELECTABLE_DIMENSIONS } from '../utils/dimensions';
+import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 import { formatSoulActionKindLabel } from '@lifeos/shared';
 
 const props = defineProps<{ noteId: string | null }>();
@@ -276,6 +284,10 @@ const relatedWorkerTasks = ref<WorkerTask[]>([]);
 const relatedBrainstormSessions = ref<BrainstormSession[]>([]);
 const relatedSoulActions = ref<SoulAction[]>([]);
 const loadingCognitiveDetail = ref(false);
+
+const semanticRelatedSessions = ref<BrainstormSession[]>([]);
+const loadingSemantic = ref(false);
+const semanticError = ref<Error | null>(null);
 
 const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
@@ -372,6 +384,24 @@ async function loadCognitiveEnhancedData(sourceNoteId: string, requestId?: numbe
   }
 }
 
+async function loadSemanticRelatedSessions(sourceNoteId: string, requestId?: number) {
+  loadingSemantic.value = true;
+  semanticError.value = null;
+  try {
+    // Phase 2 P2: Using basic fetch as mock for now until C-group provides sqlite-vec API
+    const res = await fetchBrainstormSessions(8);
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    semanticRelatedSessions.value = res.sessions.filter(s => s.sourceNoteId !== sourceNoteId).slice(0, 3);
+  } catch (e) {
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    semanticError.value = e as Error;
+  } finally {
+    if (requestId == null || (requestId === activeNoteRequestId && currentNoteId.value === sourceNoteId)) {
+      loadingSemantic.value = false;
+    }
+  }
+}
+
 async function loadPersonaSnapshot(sourceNoteId: string, requestId?: number) {
   try {
     const snapshot = await fetchPersonaSnapshot(sourceNoteId);
@@ -402,6 +432,7 @@ watch(currentNoteId, async (id) => {
   if (!id) {
     note.value = null; error.value = null; loading.value = false; decryptedContent.value = null;
     relatedWorkerTasks.value = []; personaSnapshot.value = null; relatedBrainstormSessions.value = []; relatedSoulActions.value = [];
+    semanticRelatedSessions.value = [];
     projection.resetProjectionState();
     showDeleteConfirm.value = false;
     return;
@@ -416,6 +447,7 @@ watch(currentNoteId, async (id) => {
       loadRelatedWorkerTasks(id, requestId),
       loadPersonaSnapshot(id, requestId),
       loadCognitiveEnhancedData(id, requestId),
+      loadSemanticRelatedSessions(id, requestId),
       projection.loadPromotionProjections(id, requestId, activeNoteRequestId),
     ]);
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { SCHEMA } from './schema.js';
 import { runMigrations } from './migrations.js';
+import { initVectorStore } from './vectorStore.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -46,6 +47,13 @@ export function initDatabase(): void {
 
   // Run all migrations (additive columns, constraint updates, safe rebuilds)
   runMigrations(database);
+
+  // Initialize vector search extension (non-blocking: failure logs but doesn't crash)
+  try {
+    initVectorStore(database);
+  } catch (error) {
+    logger.error('Vector store initialization failed (non-fatal):', error);
+  }
 
   logger.info('Database initialized successfully');
   logger.info(`Database path: ${getDbPath()}`);
