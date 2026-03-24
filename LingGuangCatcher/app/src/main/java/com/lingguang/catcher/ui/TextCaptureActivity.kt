@@ -137,9 +137,7 @@ class TextCaptureActivity : AppCompatActivity() {
                 Log.d(TAG, "${if (isTextMode) "文本" else "链接"}已加入离线队列: ${entity.id}")
 
                 // 触发 SyncWorker
-                val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-                    .addTag("sync")
-                    .build()
+                val workRequest = SyncWorker.buildWorkRequest()
                 WorkManager.getInstance(applicationContext)
                     .enqueueUniqueWork("sync_queue", ExistingWorkPolicy.REPLACE, workRequest)
 

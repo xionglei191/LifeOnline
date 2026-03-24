@@ -6,6 +6,7 @@ import { parseMarkdownFile } from './parser.js';
 import { Logger } from '../utils/logger.js';
 import { getDb } from '../db/client.js';
 import { deleteEmbedding, isVectorStoreReady } from '../db/vectorStore.js';
+import { syncNoteFts, deleteNoteFts } from '../db/hybridSearch.js';
 import type { IndexResult } from '@lifeos/shared';
 
 const logger = new Logger('indexer');
@@ -85,6 +86,10 @@ function upsertNote(db: any, id: string, filePath: string, fileName: string, fro
   ];
 
   stmt.run(...params);
+
+  // Sync FTS5 index for hybrid search
+  const tags = frontmatter.tags ? JSON.stringify(frontmatter.tags) : '';
+  syncNoteFts(id, title, content, tags);
 }
 
 // Single file index (for file watcher add/change events)
@@ -114,6 +119,11 @@ export async function deleteFileRecord(filePath: string): Promise<void> {
 
   db.prepare('DELETE FROM notes WHERE file_path = ?').run(filePath);
   logger.info(`Deleted record: ${filePath}`);
+
+  // Clean up FTS index
+  if (noteRow) {
+    deleteNoteFts(noteRow.id);
+  }
 
   // Clean up the associated BrainstormSession embedding from vector store
   if (noteRow && isVectorStoreReady()) {

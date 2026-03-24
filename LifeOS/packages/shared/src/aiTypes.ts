@@ -84,3 +84,19 @@ export interface AISuggestion {
 export interface ListAiSuggestionsResponse {
   suggestions: AISuggestion[];
 }
+
+export interface PersonaDimensionPortrait {
+  dimension: string;
+  summary: string;
+  coreDrivers: string[];
+  recurringBottlenecks: string[];
+  generatedAt: string;
+}
+
+export interface GetLongTermMemoryResponse {
+  portrait: PersonaDimensionPortrait;
+}
+
+export interface GetInsightsReportResponse {
+  reportMarkdown: string;
+}

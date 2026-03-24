@@ -24,7 +24,7 @@ export { getAiUsageHandler } from './handlers/aiUsageHandler.js';
 export { getConfig, updateConfig, triggerIndex, getIndexStatus, getIndexErrors } from './handlers/configHandlers.js';
 
 // AI
-export { listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, listAiSuggestionsHandler } from './handlers/aiHandlers.js';
+export { listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, listAiSuggestionsHandler, getLongTermMemoryHandler, getInsightsReportHandler } from './handlers/aiHandlers.js';
 
 // Governance (soul actions + reintegration + projections)
 export { listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, dispatchSoulActionHandler, answerFollowupHandler, listReintegrationRecordsHandler, acceptReintegrationRecordHandler, rejectReintegrationRecordHandler, planPromotionsHandler, listEventNodesHandler, listContinuityRecordsHandler, listBrainstormSessionsHandler, getBrainstormSessionHandler, getBrainstormSessionRelatedHandler } from './handlers/governanceHandlers.js';
@@ -37,3 +37,6 @@ export { healthHandler } from './handlers/healthHandlers.js';
 
 // Vector Search
 export { semanticSearchHandler, vectorSearchHandler } from './handlers/vectorSearchHandlers.js';
+
+// Hybrid Search
+export { searchHandler } from './handlers/searchHandler.js';

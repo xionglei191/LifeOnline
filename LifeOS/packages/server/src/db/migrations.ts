@@ -415,6 +415,29 @@ const MIGRATIONS: Migration[] = [
       `);
       logger.info('Migration v1 applied: ai_usage table verified.');
     }
+  },
+  {
+    version: 2,
+    up: (db) => {
+      // FTS5 full-text search index on notes for hybrid search
+      db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+          note_id UNINDEXED,
+          title,
+          content,
+          tags,
+          content='',
+          tokenize='unicode61'
+        );
+      `);
+      // Populate from existing notes
+      const rows = db.prepare('SELECT id, title, content, tags FROM notes').all() as any[];
+      const insert = db.prepare('INSERT INTO notes_fts(note_id, title, content, tags) VALUES (?, ?, ?, ?)');
+      for (const row of rows) {
+        insert.run(row.id, row.title || '', row.content || '', row.tags || '');
+      }
+      logger.info(`Migration v2 applied: notes_fts created and populated (${rows.length} notes).`);
+    }
   }
 ];
 

@@ -63,3 +63,22 @@ export function getAiUsageReport(days: number = 7): AiUsageRecord[] {
     return [];
   }
 }
+
+/**
+ * Gets the total tokens (input + output) used today.
+ */
+export function getTodayTotalTokens(): number {
+  try {
+    const db = getDb();
+    const date = new Date().toISOString().split('T')[0];
+    const row = db.prepare(`
+      SELECT SUM(input_tokens + output_tokens) as total
+      FROM ai_usage
+      WHERE date = ?
+    `).get(date) as { total: number | null };
+    return row?.total || 0;
+  } catch (error) {
+    logger.error('Failed to get today total tokens:', error);
+    return 0;
+  }
+}

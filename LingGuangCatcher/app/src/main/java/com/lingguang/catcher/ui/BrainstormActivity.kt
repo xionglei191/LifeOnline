@@ -362,8 +362,7 @@ class BrainstormActivity : AppCompatActivity() {
                 database.captureDao().insert(entity)
                 Log.d(TAG, "头脑风暴已加入离线队列: ${entity.id}")
 
-                val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-                    .addTag("sync").build()
+                val workRequest = SyncWorker.buildWorkRequest()
                 WorkManager.getInstance(applicationContext)
                     .enqueueUniqueWork("sync_queue", ExistingWorkPolicy.REPLACE, workRequest)
 

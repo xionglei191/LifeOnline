@@ -2,7 +2,12 @@ package com.lingguang.catcher.worker
 
 import android.content.Context
 import android.util.Log
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
 import com.lingguang.catcher.data.local.AppDatabase
 import com.lingguang.catcher.data.local.ProcessStatus
@@ -357,6 +362,29 @@ class SyncWorker(
                 )
                 Pair(false, false)
             }
+        }
+        }
+    }
+
+    companion object {
+        /**
+         * 统一构建带有指数退避和网络连接约束的同步任务
+         * 针对 P1：极大提高弱网抗压能力，避免无意义重试耗电
+         */
+        fun buildWorkRequest(): OneTimeWorkRequest {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            return OneTimeWorkRequestBuilder<SyncWorker>()
+                .setConstraints(constraints)
+                .setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL,
+                    androidx.work.WorkRequest.MIN_BACKOFF_MILLIS,
+                    java.util.concurrent.TimeUnit.MILLISECONDS
+                )
+                .addTag("sync")
+                .build()
         }
     }
 }

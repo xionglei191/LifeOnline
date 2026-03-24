@@ -277,9 +277,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun triggerSync() {
-        val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-            .addTag("sync")
-            .build()
+        val workRequest = SyncWorker.buildWorkRequest()
         WorkManager.getInstance(this)
             .enqueueUniqueWork(
                 "sync_queue",

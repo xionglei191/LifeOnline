@@ -2,92 +2,127 @@
   <div class="governance-view">
     <h2>治理中心</h2>
 
-    <!-- Reintegration Review -->
-    <ReintegrationReviewPanel
-      :records="reintegrationRecords"
-      :filter-status="reintegrationFilterStatus"
-      :loading="reintegrationLoading"
-      :message="reintegrationMessage"
-      :message-type="reintegrationMessageType"
-      :action-id="reintegrationActionId"
-      :reason-drafts="reintegrationReasonDrafts"
-      :planned-actions="reintegrationPlannedActions"
-      :expanded-ids="reintegrationExpandedIds"
-      :status-summary="reintegrationStatusSummary"
-      :format-time="formatTime"
-      :task-type-label="taskTypeLabel"
-      @update:filterStatus="reintegrationFilterStatus = $event as '' | 'pending_review' | 'accepted' | 'rejected'"
-      @refresh="loadReintegrationRecords"
-      @accept="handleAcceptReintegration"
-      @reject="handleRejectReintegration"
-      @plan="handlePlanReintegration"
-      @toggle-expanded="toggleReintegrationExpanded"
-      @update:reasonDraft="(id, value) => reintegrationReasonDrafts[id] = value"
-    />
+    <nav class="gov-tabs" aria-label="治理中心面板切换">
+      <button
+        :class="['gov-tab', { active: activeTab === 'governance' }]"
+        @click="activeTab = 'governance'"
+      >
+        ⚖ 治理审批
+      </button>
+      <button
+        :class="['gov-tab', { active: activeTab === 'projection' }]"
+        @click="switchTab('projection')"
+      >
+        ◈ 投射分析
+      </button>
+      <button
+        :class="['gov-tab', { active: activeTab === 'insights' }]"
+        @click="switchTab('insights')"
+      >
+        ✧ 智能洞察
+      </button>
+    </nav>
 
-    <!-- Soul Action Governance -->
-    <SoulActionGovernancePanel
-      :filter-status="soulActionFilterStatus"
-      :execution-filter="soulActionExecutionFilter"
-      :action-kind-filter="soulActionActionKindFilter"
-      :quick-filter="soulActionGroupQuickFilter"
-      :quick-filter-label="soulActionGroupQuickFilterLabel"
-      :quick-filter-stats="soulActionGroupQuickFilterStats"
-      :group-count="soulActionGroupCount"
-      :groups="soulActionGroups"
-      :summary="soulActionSummary"
-      :loading="soulActionLoading"
-      :message="soulActionMessage"
-      :message-type="soulActionMessageType"
-      :action-id="soulActionActionId"
-      :group-action-id="soulActionGroupActionId"
-      :group-dispatch-id="soulActionGroupDispatchId"
-      :collapsed-group-ids="soulActionCollapsedGroupIds"
-      :task-type-label="taskTypeLabel"
-      :reintegration-status-text="reintegrationStatusText"
-      :promotion-action-label="promotionActionLabel"
-      :soul-action-status-class="soulActionStatusClass"
-      :soul-action-status-text="soulActionStatusText"
-      :format-time="formatTime"
-      @update:filterStatus="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
-      @update:executionFilter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
-      @update:actionKindFilter="soulActionActionKindFilter = $event as '' | SoulAction['actionKind']"
-      @update:quickFilter="soulActionGroupQuickFilter = $event"
-      @refresh="loadSoulActions"
-      @approve-group="handleApproveSoulActionGroup"
-      @dispatch-group="handleDispatchSoulActionGroup"
-      @toggle-collapsed="toggleSoulActionGroupCollapsed"
-      @approve-action="handleApproveSoulAction"
-      @defer-action="handleDeferSoulAction"
-      @discard-action="handleDiscardSoulAction"
-      @dispatch-action="handleDispatchSoulAction"
-      @answer-followup="handleAnswerFollowup"
-    />
+    <!-- Tab 1: 治理审批 -->
+    <div v-if="activeTab === 'governance'">
+      <ReintegrationReviewPanel
+        :records="reintegrationRecords"
+        :filter-status="reintegrationFilterStatus"
+        :loading="reintegrationLoading"
+        :message="reintegrationMessage"
+        :message-type="reintegrationMessageType"
+        :action-id="reintegrationActionId"
+        :reason-drafts="reintegrationReasonDrafts"
+        :planned-actions="reintegrationPlannedActions"
+        :expanded-ids="reintegrationExpandedIds"
+        :status-summary="reintegrationStatusSummary"
+        :format-time="formatTime"
+        :task-type-label="taskTypeLabel"
+        @update:filterStatus="reintegrationFilterStatus = $event as '' | 'pending_review' | 'accepted' | 'rejected'"
+        @refresh="loadReintegrationRecords"
+        @accept="handleAcceptReintegration"
+        @reject="handleRejectReintegration"
+        @plan="handlePlanReintegration"
+        @toggle-expanded="toggleReintegrationExpanded"
+        @update:reasonDraft="(id, value) => reintegrationReasonDrafts[id] = value"
+      />
 
-    <!-- Projection Panel -->
-    <PromotionProjectionPanel
-      :event-nodes="eventNodes"
-      :continuity-records="continuityRecords"
-      :loading="projectionLoading"
-      :message="projectionMessage"
-      :message-type="projectionMessageType"
-      :format-time="formatTime"
-      @refresh="loadPromotionProjections"
-    />
+      <SoulActionGovernancePanel
+        :filter-status="soulActionFilterStatus"
+        :execution-filter="soulActionExecutionFilter"
+        :action-kind-filter="soulActionActionKindFilter"
+        :quick-filter="soulActionGroupQuickFilter"
+        :quick-filter-label="soulActionGroupQuickFilterLabel"
+        :quick-filter-stats="soulActionGroupQuickFilterStats"
+        :group-count="soulActionGroupCount"
+        :groups="soulActionGroups"
+        :summary="soulActionSummary"
+        :loading="soulActionLoading"
+        :message="soulActionMessage"
+        :message-type="soulActionMessageType"
+        :action-id="soulActionActionId"
+        :group-action-id="soulActionGroupActionId"
+        :group-dispatch-id="soulActionGroupDispatchId"
+        :collapsed-group-ids="soulActionCollapsedGroupIds"
+        :task-type-label="taskTypeLabel"
+        :reintegration-status-text="reintegrationStatusText"
+        :promotion-action-label="promotionActionLabel"
+        :soul-action-status-class="soulActionStatusClass"
+        :soul-action-status-text="soulActionStatusText"
+        :format-time="formatTime"
+        @update:filterStatus="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
+        @update:executionFilter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
+        @update:actionKindFilter="soulActionActionKindFilter = $event as '' | SoulAction['actionKind']"
+        @update:quickFilter="soulActionGroupQuickFilter = $event"
+        @refresh="loadSoulActions"
+        @approve-group="handleApproveSoulActionGroup"
+        @dispatch-group="handleDispatchSoulActionGroup"
+        @toggle-collapsed="toggleSoulActionGroupCollapsed"
+        @approve-action="handleApproveSoulAction"
+        @defer-action="handleDeferSoulAction"
+        @discard-action="handleDiscardSoulAction"
+        @dispatch-action="handleDispatchSoulAction"
+        @answer-followup="handleAnswerFollowup"
+      />
+    </div>
 
-    <!-- Brainstorm Sessions -->
-    <BrainstormSessionPanel
-      :sessions="brainstormSessions"
-      :loading="brainstormLoading"
-      :format-time="formatTime"
-      @refresh="loadBrainstormSessions"
-    />
+    <!-- Tab 2: 投射分析 -->
+    <div v-if="activeTab === 'projection'">
+      <PromotionProjectionPanel
+        :event-nodes="eventNodes"
+        :continuity-records="continuityRecords"
+        :loading="projectionLoading"
+        :message="projectionMessage"
+        :message-type="projectionMessageType"
+        :format-time="formatTime"
+        @refresh="loadPromotionProjections"
+      />
+    </div>
+
+    <!-- Tab 3: 智能洞察 -->
+    <div v-if="activeTab === 'insights'">
+      <BrainstormSessionPanel
+        :sessions="brainstormSessions"
+        :loading="brainstormLoading"
+        :format-time="formatTime"
+        @refresh="loadBrainstormSessions"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { defineAsyncComponent } from 'vue';
+
+type GovTab = 'governance' | 'projection' | 'insights';
+const activeTab = ref<GovTab>('governance');
+
+function switchTab(tab: GovTab) {
+  activeTab.value = tab;
+  if (tab === 'projection' && !eventNodes.value.length && !projectionLoading.value) loadPromotionProjections();
+  if (tab === 'insights' && !brainstormSessions.value.length && !brainstormLoading.value) loadBrainstormSessions();
+}
 const ReintegrationReviewPanel = defineAsyncComponent(() => import('../components/ReintegrationReviewPanel.vue'));
 const SoulActionGovernancePanel = defineAsyncComponent(() => import('../components/SoulActionGovernancePanel.vue'));
 const PromotionProjectionPanel = defineAsyncComponent(() => import('../components/PromotionProjectionPanel.vue'));
@@ -546,10 +581,48 @@ onUnmounted(() => {
   margin-bottom: 20px;
 }
 
+.gov-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.gov-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.gov-tab:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-strong) 50%, transparent);
+}
+
+.gov-tab.active {
+  color: var(--accent-strong);
+  background: var(--surface-strong);
+  box-shadow: 0 2px 8px -2px var(--shadow);
+}
 
 @media (max-width: 640px) {
   .governance-view {
     padding: 0 16px;
+  }
+  .gov-tab {
+    font-size: 0.8rem;
+    padding: 8px 6px;
   }
 }
 </style>

@@ -33,9 +33,19 @@ android {
         buildConfigField("String", "R2_PUBLIC_DOMAIN", "\"${localProps["R2_PUBLIC_DOMAIN"] ?: ""}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "lifeonline"
+            keyAlias = "release"
+            keyPassword = "lifeonline"
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

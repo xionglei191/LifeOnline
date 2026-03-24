@@ -736,3 +736,4 @@ function showMsg(msg: string, type: 'success' | 'error') {
 .sa-kind { font-weight: 600; color: var(--text); font-size: 0.85rem; }
 .sa-time { font-size: 0.75rem; color: var(--text-muted); }
 .sa-bottom { display: flex; gap: 12px; font-size: 0.8rem; color: var(--text-secondary); }
+</style>

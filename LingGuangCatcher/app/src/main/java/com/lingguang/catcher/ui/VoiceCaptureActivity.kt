@@ -49,7 +49,12 @@ class VoiceCaptureActivity : AppCompatActivity() {
     private var isRecording = false
     private var isPaused = false
     private var recordingStartTime = 0L
-    private var pausedDuration = 0L
+    private var pausedDuration: Long = 0
+
+    // 用于平滑录音波形的变量
+    private var smoothedAmplitude: Float = 0f
+
+    // 状态管理
     private var pauseStartTime = 0L
     private var selectedNoteType: VoiceNoteType = VoiceNoteType.getDefault()
     private var durationUpdateJob: kotlinx.coroutines.Job? = null
@@ -281,8 +286,12 @@ class VoiceCaptureActivity : AppCompatActivity() {
                             maxAmplitude = amplitude
                         }
                         // 归一化到 0-1 范围
-                        val normalizedAmplitude = amplitude / 32767f
-                        binding.waveformView.addAmplitude(normalizedAmplitude)
+                        val targetAmplitude = amplitude / 32767f
+                        
+                        // 添加低通滤波 (Low-pass filter) 让波形过度更加顺滑，而不是直接跳跃
+                        smoothedAmplitude += (targetAmplitude - smoothedAmplitude) * 0.4f
+                        
+                        binding.waveformView.addAmplitude(smoothedAmplitude)
                     } catch (e: Exception) {
                         Log.e(TAG, "获取振幅失败: ${e.message}")
                     }
@@ -481,9 +490,7 @@ class VoiceCaptureActivity : AppCompatActivity() {
                 Log.d(TAG, "语音已加入离线队列: ${entity.id}, 音频: ${persistedFile.absolutePath}")
 
                 // 触发 SyncWorker
-                val workRequest = OneTimeWorkRequestBuilder<SyncWorker>()
-                    .addTag("sync")
-                    .build()
+                val workRequest = SyncWorker.buildWorkRequest()
                 WorkManager.getInstance(applicationContext)
                     .enqueueUniqueWork("sync_queue", ExistingWorkPolicy.REPLACE, workRequest)
 

@@ -2,6 +2,7 @@ import { performance } from 'perf_hooks';
 import { callClaude, parseJSON } from '../../ai/aiClient.js';
 import type { SoulActionKind } from '../types.js';
 import { getEffectiveAiProviderConfig } from '../../ai/providerConfigService.js';
+import { getTodayTotalTokens } from '../../ai/usageTracker.js';
 import { Logger } from '../../utils/logger.js';
 import { runExtractorAgent } from './extractorAgent.js';
 import { runCriticAgent } from './criticAgent.js';
@@ -104,7 +105,16 @@ export async function analyzeNoteContent(
     return createEmptyAnalysis();
   }
 
+  const MAX_TOKENS_PER_RUN = 8000;
+  const MAX_TOKENS_PER_DAY = 100000;
+
   try {
+    const todayTokens = getTodayTotalTokens();
+    if (todayTokens >= MAX_TOKENS_PER_DAY) {
+      logger.warn(`Daily token budget exceeded (${todayTokens}/${MAX_TOKENS_PER_DAY}). Falling back to observer mode.`);
+      throw new Error('Daily token budget exceeded');
+    }
+
     let totalTokens = 0;
 
     // --- Extractor Phase ---
@@ -125,9 +135,14 @@ export async function analyzeNoteContent(
     }
     const extractorMs = Math.round(performance.now() - eStart);
 
+    if (totalTokens >= MAX_TOKENS_PER_RUN) {
+      logger.warn(`Run token budget exceeded (${totalTokens}/${MAX_TOKENS_PER_RUN}) after Extractor phase. Aborting DAG.`);
+      throw new Error('Run token budget exceeded');
+    }
+
     // --- Critic Phase ---
     const cStart = performance.now();
-    let critic = await runCriticAgent(noteId, trimmed, extraction);
+    let critic = await runCriticAgent(noteId, trimmed, extraction, context);
     if (!critic) {
       throw new Error(`Critic Agent failed to return data for note ${noteId}`);
     }
@@ -135,13 +150,18 @@ export async function analyzeNoteContent(
 
     if (critic.confidenceScore < 0.6) {
       logger.warn(`Critic Agent confidence low (${critic.confidenceScore}) for note ${noteId}, retrying...`);
-      const retryResult = await runCriticAgent(noteId, trimmed, extraction, "你上一次的批判置信度过低，请尝试从字里行间重新挖掘被隐藏的情绪与可能的自相矛盾之处。");
+      const retryResult = await runCriticAgent(noteId, trimmed, extraction, context, "你上一次的批判置信度过低，请尝试从字里行间重新挖掘被隐藏的情绪、自相矛盾之处，或是与历史认知的冲突。");
       if (retryResult) {
         critic = retryResult;
         totalTokens += retryResult.tokens;
       }
     }
     const criticMs = Math.round(performance.now() - cStart);
+
+    if (totalTokens >= MAX_TOKENS_PER_RUN) {
+      logger.warn(`Run token budget exceeded (${totalTokens}/${MAX_TOKENS_PER_RUN}) after Critic phase. Aborting DAG.`);
+      throw new Error('Run token budget exceeded');
+    }
 
     // --- Planner Phase ---
     const pStart = performance.now();

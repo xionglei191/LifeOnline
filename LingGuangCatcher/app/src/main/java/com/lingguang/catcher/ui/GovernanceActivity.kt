@@ -71,6 +71,28 @@ class GovernanceActivity : AppCompatActivity() {
                     discardAction(action)
                 }
             }
+            
+            override fun onChildDraw(
+                c: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    val itemView = viewHolder.itemView
+                    val width = itemView.width.toFloat()
+                    val alpha = 1.0f - Math.abs(dX) / width
+                    itemView.alpha = alpha.coerceIn(0.2f, 1f)
+                    
+                    val scale = 1.0f - (Math.abs(dX) / width) * 0.1f
+                    itemView.scaleX = scale.coerceIn(0.9f, 1f)
+                    itemView.scaleY = scale.coerceIn(0.9f, 1f)
+                }
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
         })
         itemTouchHelper.attachToRecyclerView(binding.rvGovernance)
     }

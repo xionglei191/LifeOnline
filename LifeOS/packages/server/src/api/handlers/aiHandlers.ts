@@ -5,11 +5,13 @@ import { Request, Response } from 'express';
 import { isValidPromptKey, listPromptRecords, resetPromptOverride, upsertPromptOverride } from '../../ai/promptService.js';
 import { getAiProviderSettings, testAiProviderConnection, upsertAiProviderSettings, validateAiProviderSettings } from '../../ai/providerConfigService.js';
 import { listAiSuggestions } from '../../ai/suggestions.js';
+import { generateLongTermPortrait } from '../../soul/longTermMemory.js';
+import { generateInsightsReport } from '../../soul/insightsReport.js';
 import { Logger } from '../../utils/logger.js';
 
 const logger = new Logger('aiHandlers');
 
-import type { ApiResponse, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse } from '@lifeos/shared';
+import type { ApiResponse, ListAiPromptsResponse, AiPromptResponse, ResetAiPromptResponse, AiProviderSettings, UpdatePromptRequest, UpdateAiProviderSettingsRequest, TestAiProviderConnectionRequest, TestAiProviderConnectionResponse, ListAiSuggestionsResponse, GetLongTermMemoryResponse, GetInsightsReportResponse } from '@lifeos/shared';
 
 export async function listAiPrompts(
   _req: Request<Record<string, never>, ApiResponse<ListAiPromptsResponse>>,
@@ -121,5 +123,45 @@ export async function listAiSuggestionsHandler(
   } catch (error) {
     logger.error('List AI suggestions error:', error);
     res.status(500).json({ error: 'Failed to fetch AI suggestions' });
+  }
+}
+
+export async function getLongTermMemoryHandler(
+  req: Request<Record<string, never>, ApiResponse<GetLongTermMemoryResponse>, any, { dimension?: string }>,
+  res: Response<ApiResponse<GetLongTermMemoryResponse>>,
+): Promise<void> {
+  try {
+    const { dimension } = req.query;
+    if (!dimension || typeof dimension !== 'string') {
+      res.status(400).json({ error: 'Missing or invalid query parameter: dimension' });
+      return;
+    }
+    const portrait = await generateLongTermPortrait(dimension);
+    if (!portrait) {
+      res.status(404).json({ error: `No long term memory found for dimension: ${dimension}` });
+      return;
+    }
+    res.json({ portrait });
+  } catch (error) {
+    logger.error('Get long term memory error:', error);
+    res.status(500).json({ error: 'Failed to generate long term memory' });
+  }
+}
+
+export async function getInsightsReportHandler(
+  req: Request<Record<string, never>, ApiResponse<GetInsightsReportResponse>, any, { timeframeDays?: string }>,
+  res: Response<ApiResponse<GetInsightsReportResponse>>,
+): Promise<void> {
+  try {
+    const { timeframeDays } = req.query;
+    let days = 14;
+    if (timeframeDays && !isNaN(Number(timeframeDays))) {
+      days = Number(timeframeDays);
+    }
+    const reportMarkdown = await generateInsightsReport(days);
+    res.json({ reportMarkdown });
+  } catch (error) {
+    logger.error('Get insights report error:', error);
+    res.status(500).json({ error: 'Failed to generate insights report' });
   }
 }

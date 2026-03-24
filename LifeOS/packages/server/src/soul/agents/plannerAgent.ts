@@ -70,6 +70,9 @@ export async function runPlannerAgent(
     if (criticContext.ambiguityPoints.length > 0) {
       combinedInput += `[发现的逻辑破绽与模糊点]\n${criticContext.ambiguityPoints.map(a => `- ${a}`).join('\n')}\n\n`;
     }
+    if (criticContext.cognitiveConflicts && criticContext.cognitiveConflicts.length > 0) {
+      combinedInput += `[发现的认知冲突（新旧认知不一致）]\n${criticContext.cognitiveConflicts.map(a => `- ${a}`).join('\n')}\n\n`;
+    }
 
     // Vector RAG Logic
     if (isVectorStoreReady()) {

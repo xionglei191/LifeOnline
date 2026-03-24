@@ -12,7 +12,7 @@ import {
   // AI
   listAiPrompts, updateAiPrompt, resetAiPrompt,
   getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler,
-  listAiSuggestionsHandler,
+  listAiSuggestionsHandler, getLongTermMemoryHandler, getInsightsReportHandler,
   // Worker Tasks
   createWorkerTaskHandler, listWorkerTasksHandler, getWorkerTaskHandler,
   retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler,
@@ -37,6 +37,8 @@ import {
   // Vector Search (canonical + backwards-compat alias)
   semanticSearchHandler,
   vectorSearchHandler,
+  // Hybrid Search
+  searchHandler,
 } from './handlers.js';
 
 export const router = Router();
@@ -53,6 +55,7 @@ router.get('/persona-snapshots/:sourceNoteId', getPersonaSnapshotHandler);
 router.get('/timeline', getTimeline);
 router.get('/calendar', getCalendar);
 router.get('/search', searchNotes);
+router.get('/hybrid-search', searchHandler);
 router.get('/config', getConfig);
 router.post('/config', updateConfig);
 router.post('/index', triggerIndex);
@@ -65,6 +68,8 @@ router.get('/ai/provider', getAiProviderHandler);
 router.patch('/ai/provider', updateAiProviderHandler);
 router.post('/ai/provider/test', testAiProviderHandler);
 router.get('/ai/suggestions', listAiSuggestionsHandler);
+router.get('/long-term-memory', getLongTermMemoryHandler);
+router.get('/insights-report', getInsightsReportHandler);
 router.post('/worker-tasks', createWorkerTaskHandler);
 router.delete('/worker-tasks/finished', clearFinishedWorkerTasksHandler);
 router.get('/worker-tasks', listWorkerTasksHandler);
