@@ -66,17 +66,17 @@
 | `launch_openclaw_task` | ✅ | 2026-03-24 新增 |
 | `ask_followup_question` | ✅ | 交互层，用户追问 UI |
 | `persist_continuity_markdown` | ✅ | Vault 写入层 |
-| `sync_continuity_to_r2` | ❌ | R2 基础设施尚未开始 |
+| `sync_continuity_to_r2` | ✅ | R2 冷存储桥接（凭据通过环境变量配置） |
 
 ## 5. 当前明确尚未完成的内容
-- R2 桥接基础设施（`sync_continuity_to_r2`）
 - 完全通用化的 low-risk candidate → gate → dispatch 框架
 - BrainstormSession 深度提炼（distilled 阶段）
+- R2 凭据配置与实际冷存储验证（框架已就绪）
 
 ## 6. 当前主线程优先级
-1. **P1：稳定验证**（确认所有 10 个 actionKind 的完整闭环运行正常）
+1. **P1：稳定验证**（确认所有 11 个 actionKind 的完整闭环运行正常）
 2. **P2：深度提炼**（BrainstormSession distilled 阶段、连续性模式识别增强）
-3. **P3：R2 桥接基础设施**（sync_continuity_to_r2 + 冷存储链路）
+3. **P3：R2 凭据配置与实际验证**（提供环境变量后即可生效）
 
 ## 7. 后续每轮对齐只回答三件事
 - 现在推进的是哪一阶段？

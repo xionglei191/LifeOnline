@@ -9,7 +9,9 @@ import type { InterventionGateDecision } from './interventionGate.js';
 import type { SoulAction } from './types.js';
 import { loadConfig } from '../config/configManager.js';
 import { createFile } from '../vault/fileManager.js';
+import { isR2Configured, uploadToR2 } from '../infra/r2Client.js';
 import path from 'path';
+import fs from 'fs';
 
 export interface SoulActionDispatchResult {
   dispatched: boolean;
@@ -17,9 +19,9 @@ export interface SoulActionDispatchResult {
   soulActionId: string | null;
   workerTaskId: string | null;
   executionSummary?: {
-    objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | null;
+    objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | 'r2_sync' | null;
     objectId: string | null;
-    operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | null;
+    operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | 'synced' | null;
     summary: string | null;
   } | null;
   eventNode?: EventNode | null;
@@ -268,6 +270,103 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
         objectId: soulAction.id,
         operation: 'persisted',
         summary: `已写入 ${filePath}`,
+      },
+      eventNode: null,
+      continuityRecord: null,
+    };
+  }
+
+  // sync_continuity_to_r2 → upload Vault file to R2 cold storage
+  if (soulAction.actionKind === 'sync_continuity_to_r2') {
+    const now = new Date().toISOString();
+
+    if (!isR2Configured()) {
+      getDb().prepare(`
+        UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).run('R2 未配置。请设置环境变量: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME', now, now, soulAction.id);
+      return {
+        dispatched: false,
+        reason: 'R2 未配置，无法同步',
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+        executionSummary: null,
+        eventNode: null,
+        continuityRecord: null,
+      };
+    }
+
+    // Find the Vault file to upload (from governance reason or result summary)
+    const fileHint = soulAction.governanceReason ?? '';
+    const config = await loadConfig();
+    let filePath: string;
+    let fileContent: string;
+
+    // Try to find a continuity file from the hint
+    const continuityDir = path.join(config.vaultPath, 'soul', 'continuity');
+    try {
+      if (fileHint.includes(continuityDir)) {
+        filePath = fileHint.match(new RegExp(`${continuityDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\s]+\\.md`))?.[0] ?? '';
+      } else {
+        // Find the most recent continuity file
+        const files = fs.existsSync(continuityDir) ? fs.readdirSync(continuityDir).filter(f => f.endsWith('.md')).sort().reverse() : [];
+        filePath = files.length > 0 ? path.join(continuityDir, files[0]) : '';
+      }
+
+      if (!filePath || !fs.existsSync(filePath)) {
+        throw new Error('未找到可同步的 continuity 文件');
+      }
+
+      fileContent = fs.readFileSync(filePath, 'utf-8');
+    } catch (e) {
+      getDb().prepare(`
+        UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).run(String(e), now, now, soulAction.id);
+      return {
+        dispatched: false,
+        reason: `文件读取失败: ${e}`,
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+        executionSummary: null,
+        eventNode: null,
+        continuityRecord: null,
+      };
+    }
+
+    // Upload to R2
+    const r2Key = `continuity/${path.basename(filePath)}`;
+    try {
+      await uploadToR2(r2Key, fileContent);
+    } catch (e) {
+      getDb().prepare(`
+        UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).run(String(e), now, now, soulAction.id);
+      return {
+        dispatched: false,
+        reason: `R2 上传失败: ${e}`,
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+        executionSummary: null,
+        eventNode: null,
+        continuityRecord: null,
+      };
+    }
+
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'succeeded', updated_at = ?, started_at = ?, finished_at = ?, result_summary = ?
+      WHERE id = ?
+    `).run(now, now, now, `已同步到 R2: ${r2Key}`, soulAction.id);
+
+    return {
+      dispatched: true,
+      reason: '已同步到 R2 冷存储',
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+      executionSummary: {
+        objectType: 'r2_sync',
+        objectId: soulAction.id,
+        operation: 'synced',
+        summary: `已同步 ${path.basename(filePath)} → R2:${r2Key}`,
       },
       eventNode: null,
       continuityRecord: null,

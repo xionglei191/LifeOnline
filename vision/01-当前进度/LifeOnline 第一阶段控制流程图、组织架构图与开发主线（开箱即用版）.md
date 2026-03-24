@@ -494,7 +494,43 @@ LifeOnline 可以吸收 gstack 在“组织 agent 工作流”上的强项，
 > LifeOnline 第一阶段不是在做一个更漂亮的 LifeOS 控制台，而是在 LifeOS 这个宿主中，把联合认知体的五层骨架做实：认知对象层、动作层、治理层、执行编排层、回流与连续性层；后续所有开发都应优先服务这条主线，而不是继续滑回普通 web 工具项目的表层修补。
 ---
 
-## 十二、当前阶段总结（2026-03-24 更新）
+## 十二、当前阶段总结（2026-03-24 项目经理复盘版）
+
+### 1. 当前总判断
+
+截至 2026-03-24 项目经理复盘，项目已完成四个方向的实质推进：
+
+> **方向 A**：SoulAction 覆盖面从 5 种扩展到 8 种 actionKind。**方向 B**：Web 治理面板增强（actionKind 筛选器、worker-backed badge、BrainstormSession 面板）。**方向 C**：systemd 部署运维闭环建立。**方向 D**：BrainstormSession 认知对象全栈实现，蓝图 5 个认知对象全部拥有代码级锚点。
+
+`src/soul/` 已有 18 个模块文件，schema 含 10 张表，PR1–PR6 全链路均有最小真实落地，部署服务器 246 已有 systemd 自动管理。
+
+### 2. 当前 P1~P5 状态
+
+| 主线 | 状态 | 判断 |
+|---|---|---|
+| P1 SoulAction 治理面 | 已可用 | GovernanceView 含四个面板（含 BrainstormSession），actionKind 筛选器 + 分组批量操作 + WebSocket 实时更新 |
+| P2 Detail / Lifecycle | 地基完整 | 语义层成熟，但缺独立页面 |
+| P3 Governance API | 已落地 | approve / dispatch / defer / discard 分离，审核理由，执行摘要，answerFollowup |
+| P4 Outcome / Reintegration | 已落地 | outcome → summary → evidence → record → promotion 全链路收口 |
+| P5 Continuity Promotion | 最小落地 | review-backed promotion + PromotionProjectionPanel |
+
+### 3. 当前最大风险
+
+1. **技术债务**：`SoulActionKind` 在 server/shared 重复定义、`status` 冗余字段
+2. **产品化缺口**：`ask_followup_question` 后端就绪但缺前端 UI、SoulAction Detail 独立页面未做
+3. **文档对齐**：soul 模块从 2 → 18，需持续保持文档同步
+
+### 4. 下一步方向
+
+1. 修复技术债务（SoulActionKind 统一）
+2. 补全 `ask_followup_question` 前端交互 UI
+3. 推进 SoulAction Detail 独立页面
+4. 评估 `persist_continuity_markdown` Vault 写入路径
+
+### 5. 一句话总结
+
+> SoulAction 覆盖面从 2 → 8 种 actionKind，soul 模块从 2 → 18 个文件，schema 从 7 → 10 张表，蓝图 5 个认知对象全部拥有代码级锚点，部署从 nohup → systemd；PR1–PR6 全链路均有最小真实落地，治理面板从最小功能走向可用产品。
+
 
 ### 1. 当前总判断
 

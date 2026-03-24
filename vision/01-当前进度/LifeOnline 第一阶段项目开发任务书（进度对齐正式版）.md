@@ -520,8 +520,8 @@ PR4 当前完成口径应固定为：
 
 | 阶段 | 当前状态 | 已落地内容 | 剩余关键缺口 | 建议下一步 |
 |---|---|---|---|---|
-| PR1 | 已落地 | `src/soul/` 已有 17 个模块文件，8 种 actionKind 全覆盖（含 `launch_daily_report` / `launch_weekly_report` / `launch_openclaw_task`），完整 CRUD/lifecycle | `SoulActionKind` 在 server/shared 重复定义；`status` 冗余字段 | 统一类型到 shared re-export |
-| PR2 | 已落地（保守口径） | `update_persona_snapshot` / `extract_tasks` 为中心的 `candidate → gate → review/dispatch → execute` 闭环 | `dispatch_now` 实际未处理（死代码）；`ask_followup_question` 未实现 | 决定 `dispatch_now` 策略 |
+| PR1 | 已落地 | `src/soul/` 已有 18 个模块文件（含 `brainstormSessions.ts`），8 种 actionKind 全覆盖，完整 CRUD/lifecycle，schema 含 10 张表 | `SoulActionKind` 在 server/shared 重复定义；`status` 冗余字段 | 统一类型到 shared re-export |
+| PR2 | 已落地（保守口径） | `update_persona_snapshot` / `extract_tasks` 为中心的 `candidate → gate → review/dispatch → execute` 闭环 | `dispatch_now` 实际未处理（死代码）；`ask_followup_question` 后端已有 handler 但缺前端交互 UI | 补全 `ask_followup_question` 前端交互 |
 | PR3 | 已落地（保守口径） | `approve / dispatch / defer / discard` 完整治理面，actionKind 筛选器、分组批量操作、WebSocket 实时更新、worker-backed badge 均已落地 | 缺 SoulAction Detail / Lifecycle 独立视图 | 推进 SoulAction Detail 页 |
 | PR4 | 已落地 | `workerTasks → feedbackReintegration → continuityIntegrator` 真实接线，outcome/summary/evidence/record 已收口 | 尚未进入深层 reintegration | 冻结口径 |
 | PR5 | 已落地（保守口径） | `persona_snapshots` + `reintegration_records`，review-backed persona/intervention reintegration | 仍缺通用 persona/intervention learning | 冻结口径 |
@@ -548,7 +548,7 @@ PR4 当前完成口径应固定为：
 - `LifeOS/packages/server/src/workers/continuityIntegrator.ts`
 - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
 
-### E. 当前已存在的 soul 模块锚点（17 个文件）
+### E. 当前已存在的 soul 模块锚点（18 个文件）
 当前已可确认存在：
 - `LifeOS/packages/server/src/soul/types.ts` — 核心类型
 - `LifeOS/packages/server/src/soul/soulActions.ts` — Store/CRUD
@@ -567,9 +567,11 @@ PR4 当前完成口径应固定为：
 - `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` — PR6 提升执行
 - `LifeOS/packages/server/src/soul/eventNodes.ts` — 事件节点管理
 - `LifeOS/packages/server/src/soul/continuityRecords.ts` — 连续性记录管理
+- `LifeOS/packages/server/src/soul/brainstormSessions.ts` — **BrainstormSession 认知对象管理（新增）**
 
 说明：
-- `src/soul/` 已从最初的 2 个文件发展为 17 个文件的完整模块区；
+- `src/soul/` 已从最初的 2 个文件发展为 18 个文件的完整模块区；
+- 蓝图定义的 5 个认知对象全部拥有代码级锚点；
 - 已覆盖 PR1–PR6 全链路的最小落地；
 - 但仍不应误写成完整产品化治理系统。
 
@@ -651,7 +653,34 @@ PR4 当前完成口径应固定为：
 
 ## 十一、T0 当前总判断
 
-截至本版正式文稿，T0 的主线程判断如下：
+## 十一、T0 当前总判断
+
+截至本版正式文稿（2026-03-24 项目经理复盘版），T0 的主线程判断如下：
+
+1. **总体路线已经清楚。**
+   `vision/` 对第一阶段路线收束已经足够稳定，不需要再重新发明路线。
+
+2. **PR1–PR6 六个阶段全部已有最小真实落地。**
+   PR1 已有 18 个 soul 模块文件、10 张数据表、8 种 actionKind 覆盖；PR2 已有保守 low-risk 闭环；PR3 已有完整治理面；PR4 已有真实 terminal path 接线回流骨架；PR5/PR6 已有 review-backed persona/event/continuity promotion 最小闭环。
+
+3. **蓝图 5 个认知对象全部拥有代码级锚点。**
+   `BrainstormSession` 已于 2026-03-24 完成全栈实现（schema → CRUD → API → Web UI），与认知分析管道集成。`ask_followup_question` 也已有 API handler（`answerFollowupHandler`），后端链路基本就绪。
+
+4. **当前更真实的主线缺口，已从"是否存在"转向"产品化控制面与覆盖面扩展"。**
+   后续快速落地应优先做：技术债务收口（SoulActionKind 重复定义）、`ask_followup_question` 前端交互 UI、SoulAction Detail 独立页面、`persist_continuity_markdown` Vault 写入。
+
+5. **这份文稿可作为后续固定对齐底板。**
+   后续每次推进，只需回答：
+   - 当前推进的是哪一阶段；
+   - 是否满足本文件对该阶段的完成定义；
+   - 是否越过了本文件明确的 out-of-scope 边界。
+
+---
+
+## 十二、一句话收束
+
+> LifeOnline 第一阶段 PR1–PR6 全链路均已有最小真实落地，`src/soul/` 已有 18 个模块文件，schema 含 10 张表，蓝图定义的 5 个认知对象全部拥有代码级锚点。后续主线应优先做技术债务收口、`ask_followup_question` 前端交互 UI 补全、SoulAction Detail 页面，并在保守边界内继续沿 review-backed、可解释、可审计的路径小步演进。
+
 
 1. **总体路线已经清楚。**
    `vision/` 对第一阶段路线收束已经足够稳定，不需要再重新发明路线。
