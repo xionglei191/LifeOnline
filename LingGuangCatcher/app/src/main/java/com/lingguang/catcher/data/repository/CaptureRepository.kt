@@ -133,6 +133,21 @@ class CaptureRepository(private val context: Context? = null) {
         throw IllegalStateException("语音转录失败，请检查 API Key 配置和网络连接")
     }
 
+    /** 对原始转录文本进行智能扩展（加标点、分段） */
+    suspend fun enhanceTranscription(rawText: String): String {
+        try {
+            val aiService = getAIService()
+            val prompt = PromptTemplates.getTranscriptionEnhancePrompt(rawText)
+            val result = aiService.processText(prompt)
+            if (result.success && result.markdown != null) {
+                return result.markdown.trim()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "增强转录文本失败: ${e.message}", e)
+        }
+        return rawText // 如果失败，返回原始文本
+    }
+
     suspend fun processCaptureRecord(record: CaptureRecord): Result<MarkdownDocument> {
         return try {
             val aiService = getAIService()

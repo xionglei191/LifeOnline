@@ -11,6 +11,7 @@ import com.lingguang.catcher.data.model.CaptureType
 import com.lingguang.catcher.data.model.VoiceNoteType
 import com.lingguang.catcher.data.repository.CaptureRepository
 import com.lingguang.catcher.data.repository.ObsidianRepository
+import com.lingguang.catcher.data.api.LifeOSService
 import com.lingguang.catcher.util.NotificationUtil
 import com.lingguang.catcher.util.STTCacheHelper
 import kotlinx.coroutines.async
@@ -157,7 +158,7 @@ class SyncWorker(
 
                     // 先查 STT 缓存
                     val cached = sttCache.getCachedTranscription(audioFile)
-                    val transcription = if (cached != null) {
+                    val rawStt = if (cached != null) {
                         cached
                     } else {
                         Log.d(TAG, "头脑风暴 STT 段落 ${i + 1}: $audioPath")
@@ -166,6 +167,7 @@ class SyncWorker(
                         sttCache.cacheTranscription(audioFile, result)
                         result
                     }
+                    val transcription = repository.enhanceTranscription(rawStt)
 
                     results.add(transcription)
                     // 更新 transcriptions 以便重试时跳过已完成的
@@ -194,7 +196,7 @@ class SyncWorker(
 
                 // 先查 STT 缓存
                 val cached = sttCache.getCachedTranscription(audioFile)
-                rawContent = if (cached != null) {
+                val rawStt = if (cached != null) {
                     cached
                 } else {
                     Log.d(TAG, "开始 STT 转录: $audioPath")
@@ -203,6 +205,9 @@ class SyncWorker(
                     sttCache.cacheTranscription(audioFile, result)
                     result
                 }
+
+                Log.d(TAG, "开始 STT 文本增强...")
+                rawContent = repository.enhanceTranscription(rawStt)
 
                 // 更新 rawContent 到数据库，避免重复 STT
                 captureDao.update(entity.copy(rawContent = rawContent, updatedAt = System.currentTimeMillis()))
@@ -281,6 +286,12 @@ class SyncWorker(
                         )
                     )
                     Log.d(TAG, "处理成功: ${entity.id}")
+
+                    // 触发 LifeOS 索引
+                    val lifeosUrl = com.lingguang.catcher.data.local.AppSettings.getInstance(applicationContext).lifeosUrl
+                    if (lifeosUrl.isNotEmpty()) {
+                        LifeOSService(lifeosUrl).triggerIndex()
+                    }
 
                     // 语音类型成功后清理音频文件
                     if (entity.type == CaptureType.VOICE) {

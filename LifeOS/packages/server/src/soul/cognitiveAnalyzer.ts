@@ -4,6 +4,7 @@ import { getEffectiveAiProviderConfig } from '../ai/providerConfigService.js';
 import { Logger } from '../utils/logger.js';
 import { runExtractorAgent } from './agents/extractorAgent.js';
 import { runCriticAgent } from './agents/criticAgent.js';
+import { runPlannerAgent } from './agents/plannerAgent.js';
 
 const logger = new Logger('cognitiveAnalyzer');
 
@@ -113,12 +114,17 @@ export async function analyzeNoteContent(
       throw new Error(`Critic Agent failed to return data for note ${noteId}`);
     }
 
+    const planner = await runPlannerAgent(noteId, trimmed, extraction, critic);
+    if (!planner) {
+      throw new Error(`Planner Agent failed to return data for note ${noteId}`);
+    }
+
     // Merge outputs to form NoteAnalysis
     return {
       themes: extraction.themes,
       emotionalTone: critic.emotionalTone,
       actionability: critic.actionability,
-      suggestedActions: critic.suggestedActions,
+      suggestedActions: planner.suggestedActions,
       continuitySignals: extraction.continuitySignals,
       analyzedAt: new Date().toISOString()
     };

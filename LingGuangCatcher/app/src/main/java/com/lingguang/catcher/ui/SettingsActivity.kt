@@ -77,6 +77,9 @@ class SettingsActivity : AppCompatActivity() {
         updateVaultPathDisplay()
         binding.etFilenameFormat.setText(settings.filenameFormat)
 
+        // LifeOS 配置
+        binding.etLifeosUrl.setText(settings.lifeosUrl)
+
         // 应用配置
         binding.switchAutoClean.isChecked = settings.autoCleanVoiceText
         binding.switchSmartTag.isChecked = settings.smartTagRecommendation
@@ -152,6 +155,9 @@ class SettingsActivity : AppCompatActivity() {
 
         // Obsidian 配置
         settings.filenameFormat = binding.etFilenameFormat.text.toString()
+
+        // LifeOS 配置
+        settings.lifeosUrl = binding.etLifeosUrl.text.toString()
 
         // 应用配置
         settings.autoCleanVoiceText = binding.switchAutoClean.isChecked

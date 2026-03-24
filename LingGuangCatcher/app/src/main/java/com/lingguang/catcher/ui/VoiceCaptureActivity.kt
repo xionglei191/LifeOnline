@@ -367,12 +367,15 @@ class VoiceCaptureActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                Log.d(TAG, "转录成功，长度: ${transcription.length}")
+                Log.d(TAG, "转录成功，长度: ${transcription.length}. 开始 AI 智能扩展...")
+                binding.tvStatus.text = "正在智能扩展文本..."
+
+                val enhancedTranscription = repository.enhanceTranscription(transcription)
 
                 // 2. 显示转录结果
                 binding.tvStatus.text = "转录完成"
                 binding.cardTranscription.visibility = View.VISIBLE
-                binding.tvTranscription.setText(transcription)
+                binding.tvTranscription.setText(enhancedTranscription)
 
                 // 3. 显示标签选择
                 binding.cardNoteType.visibility = View.VISIBLE

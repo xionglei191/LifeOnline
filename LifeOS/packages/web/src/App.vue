@@ -73,6 +73,7 @@
 
     <CreateNoteFab @created="handleNoteCreated" />
     <LockScreen v-if="isLocked" />
+    <NotificationToast />
 
     <nav class="bottom-nav" aria-label="底部导航">
       <router-link
@@ -94,9 +95,11 @@ import SearchBar from './components/SearchBar.vue';
 import CreateNoteFab from './components/CreateNoteFab.vue';
 import LockScreen from './components/LockScreen.vue';
 import ErrorBoundary from './components/ErrorBoundary.vue';
+import NotificationToast from './components/NotificationToast.vue';
 import { initWebSocket, useWebSocket, isIndexSettledEvent } from './composables/useWebSocket';
 import { useTheme } from './composables/useTheme';
 import { usePrivacy } from './composables/usePrivacy';
+import { useNotification } from './composables/useNotification';
 
 const navItems = [
   { to: '/', label: '仪表盘', hint: '今日聚焦', icon: '⊞' },
@@ -112,11 +115,15 @@ const navItems = [
 const { isConnected } = useWebSocket();
 const { isDark, toggle } = useTheme();
 const { privacyMode, isLocked, togglePrivacyMode, initPrivacy, destroyPrivacy } = usePrivacy();
+const { addNotification } = useNotification();
 const indexing = ref(false);
 
 function handleNoteCreated() {
   // WebSocket will auto-refresh all views via ws-update event
 }
+
+let soulActionBatchCount = 0;
+let soulActionBatchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleWsUpdate(event: Event) {
   const wsEvent = (event as CustomEvent<import('@lifeos/shared').WsEvent>).detail;
@@ -124,6 +131,21 @@ function handleWsUpdate(event: Event) {
     indexing.value = true;
   } else if (isIndexSettledEvent(wsEvent)) {
     indexing.value = false;
+  } else if (wsEvent.type === 'soul-action-created') {
+    const action = wsEvent.data as import('@lifeos/shared').SoulAction;
+    if (action.governanceStatus === 'pending_review') {
+      soulActionBatchCount++;
+      if (soulActionBatchTimer) clearTimeout(soulActionBatchTimer);
+      soulActionBatchTimer = setTimeout(() => {
+        addNotification(
+          '新认知动作',
+          `新产生了 ${soulActionBatchCount} 个治理动作 (SoulActions)，请前往“治理”面板处理。`,
+          'info',
+          6000
+        );
+        soulActionBatchCount = 0;
+      }, 1500);
+    }
   }
 }
 

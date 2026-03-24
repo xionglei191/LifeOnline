@@ -141,6 +141,12 @@
             android:name=".service.FloatingBubbleService"
             android:exported="false" />
 
+        <!-- LifeOS WebSocket 推送服务 -->
+        <service
+            android:name=".service.LifeOSNotificationService"
+            
+            android:exported="false" />
+
         <!-- 快捷设置面板 Tile -->
         <service
             android:name=".service.LingGuangTileService"

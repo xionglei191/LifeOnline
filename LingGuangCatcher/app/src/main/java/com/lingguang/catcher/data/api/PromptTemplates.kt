@@ -11,13 +11,22 @@ object PromptTemplates {
         VoiceNoteType.LEARNING -> getLearningPrompt(text)
         VoiceNoteType.THOUGHT -> getThoughtPrompt(text)
         VoiceNoteType.EXCERPT -> getExcerptPrompt(text)
-        VoiceNoteType.GOAL -> getGoalPrompt(text)
-        VoiceNoteType.QUESTION -> getQuestionPrompt(text)
-        VoiceNoteType.CONTACT -> getContactPrompt(text)
-        VoiceNoteType.LIFE -> getLifePrompt(text)
-        VoiceNoteType.WORK -> getWorkPrompt(text)
         VoiceNoteType.BRAINSTORM -> getBrainstormPrompt(text)
     }
+
+    fun getTranscriptionEnhancePrompt(rawText: String): String = """
+        你是一个语音转写优化助手。请对以下原始语音识别文本进行格式化：
+
+        原始文本：
+        $rawText
+
+        要求：
+        1. 修正中英混合时的明显错别字
+        2. 添加正确的标点符号
+        3. 按照语意进行合理的自然段落划分
+        4. 必须尽可能保留原话的语气、词汇，不要删减或改写，更不要做总结
+        5. 直接输出优化后的全文本，不要任何解释或前言
+    """.trimIndent()
 
     fun getVisionPrompt(voiceNote: String?): String = if (!voiceNote.isNullOrBlank()) {
         """

@@ -16,6 +16,7 @@ import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -24,6 +25,7 @@ import com.lingguang.catcher.data.repository.ObsidianRepository
 import com.lingguang.catcher.data.local.AppDatabase
 import com.lingguang.catcher.data.local.AppSettings
 import com.lingguang.catcher.service.FloatingBubbleService
+import com.lingguang.catcher.service.LifeOSNotificationService
 import com.lingguang.catcher.worker.SyncWorker
 import com.lingguang.catcher.util.FeedbackUtil
 import com.lingguang.catcher.util.PermissionUtil
@@ -62,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         setupNetworkMonitor()
         checkPermissions()
         checkFirstRun()
+        startLifeOSNotificationService()
     }
 
     override fun onResume() {
@@ -333,6 +336,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun startLifeOSNotificationService() {
+        val intent = Intent(this, LifeOSNotificationService::class.java)
+        ContextCompat.startForegroundService(this, intent)
     }
 
     companion object {

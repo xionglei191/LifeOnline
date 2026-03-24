@@ -1,6 +1,6 @@
 // ── WebSocket Event Types ──────────────────────────────
 
-import type { IndexResult, IndexOperation, IndexErrorEventData, Note } from './noteTypes.js';
+import type { IndexResult, IndexOperation, IndexErrorEventData } from './noteTypes.js';
 import type { WorkerTask } from './workerTypes.js';
 import type { SoulAction } from './soulActionTypes.js';
 import type { EventNode, ContinuityRecord } from './projectionTypes.js';
@@ -42,6 +42,7 @@ export type WsEvent =
   | { type: 'note-updated'; data: NoteUpdatedEventData }
   | { type: 'note-created'; data: NoteCreatedEventData }
   | { type: 'note-deleted'; data: NoteDeletedEventData }
+  | { type: 'soul-action-created'; data: SoulAction }
   | { type: 'soul-action-updated'; data: SoulAction }
   | { type: 'reintegration-record-updated'; data: ReintegrationRecord }
   | { type: 'event-node-updated'; data: EventNodeUpdatedEventData }

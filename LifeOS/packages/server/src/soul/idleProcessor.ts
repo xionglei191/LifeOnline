@@ -2,6 +2,7 @@ import { getDb } from '../db/client.js';
 import { callClaude } from '../ai/aiClient.js';
 import { Logger } from '../utils/logger.js';
 import { upsertReintegrationRecord } from './reintegrationRecords.js';
+import { isVectorStoreReady } from '../db/vectorStore.js';
 
 const logger = new Logger('idleProcessor');
 
@@ -28,16 +29,51 @@ export async function runIdleProcessing(): Promise<void> {
   cutoffDate.setDate(cutoffDate.getDate() - IDLE_DAYS);
   const cutoffIso = cutoffDate.toISOString();
 
-  // Find dormant sessions
-  const dormantSessions = db.prepare(`
+  // Find one random dormant session as a seed
+  const seedSession = db.prepare(`
     SELECT * FROM brainstorm_sessions 
     WHERE status = 'distilled' AND updated_at < ? 
-    ORDER BY RANDOM() LIMIT ?
-  `).all(cutoffIso, MAX_SESSIONS) as any[];
+    ORDER BY RANDOM() LIMIT 1
+  `).get(cutoffIso) as any;
 
-  if (dormantSessions.length === 0) {
+  if (!seedSession) {
     logger.info('No dormant BrainstormSessions found for processing.');
     return;
+  }
+
+  const dormantSessions = [seedSession];
+
+  // Try to find similar sessions using Vector Search (RAG)
+  if (isVectorStoreReady()) {
+    try {
+      // Find similar sessions in vector store using the seed's embedding
+      const similarRows = db.prepare(`
+        SELECT id, distance FROM vec_embeddings 
+        WHERE embedding MATCH (SELECT embedding FROM vec_embeddings WHERE id = ?)
+        AND k = 5
+      `).all(`bs:${seedSession.id}`) as { id: string, distance: number }[];
+      
+      for (const row of similarRows) {
+        if (dormantSessions.length >= MAX_SESSIONS) break;
+        const sessionId = row.id.startsWith('bs:') ? row.id.slice(3) : row.id;
+        if (sessionId === seedSession.id) continue;
+        
+        const session = db.prepare('SELECT * FROM brainstorm_sessions WHERE id = ?').get(sessionId) as any;
+        if (session) dormantSessions.push(session);
+      }
+    } catch (err) {
+      logger.warn('Failed to perform vector search for idle processor:', err);
+    }
+  }
+
+  // If not enough similar found, fill with random
+  if (dormantSessions.length < MAX_SESSIONS) {
+    const fillers = db.prepare(`
+      SELECT * FROM brainstorm_sessions 
+      WHERE status = 'distilled' AND id != ? AND updated_at < ?
+      ORDER BY RANDOM() LIMIT ?
+    `).all(seedSession.id, cutoffIso, MAX_SESSIONS - dormantSessions.length) as any[];
+    dormantSessions.push(...fillers);
   }
 
   try {

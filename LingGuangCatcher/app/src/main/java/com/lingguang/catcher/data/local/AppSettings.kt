@@ -99,6 +99,13 @@ class AppSettings private constructor(context: Context) {
         get() = prefs.getString(KEY_FILENAME_FORMAT, "yyyyMMdd_HHmmss") ?: "yyyyMMdd_HHmmss"
         set(value) = prefs.edit().putString(KEY_FILENAME_FORMAT, value).apply()
 
+    // ==================== LifeOS API 配置 ====================
+
+    /** LifeOS API URL */
+    var lifeosUrl: String
+        get() = prefs.getString(KEY_LIFEOS_URL, "http://192.168.31.246:3000") ?: "http://192.168.31.246:3000"
+        set(value) = prefs.edit().putString(KEY_LIFEOS_URL, value).apply()
+
     // ==================== 应用配置 ====================
 
     /** 默认笔记类型 */
@@ -211,6 +218,9 @@ class AppSettings private constructor(context: Context) {
         // Obsidian 配置
         private const val KEY_DEFAULT_FOLDER = "default_folder"
         private const val KEY_FILENAME_FORMAT = "filename_format"
+
+        // LifeOS 配置
+        private const val KEY_LIFEOS_URL = "lifeos_url"
 
         // 应用配置
         private const val KEY_DEFAULT_NOTE_TYPE = "default_note_type"
