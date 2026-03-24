@@ -494,124 +494,39 @@ LifeOnline 可以吸收 gstack 在“组织 agent 工作流”上的强项，
 > LifeOnline 第一阶段不是在做一个更漂亮的 LifeOS 控制台，而是在 LifeOS 这个宿主中，把联合认知体的五层骨架做实：认知对象层、动作层、治理层、执行编排层、回流与连续性层；后续所有开发都应优先服务这条主线，而不是继续滑回普通 web 工具项目的表层修补。
 ---
 
-## 十二、当前阶段总结（2026-03-23）
+## 十二、当前阶段总结（2026-03-24 更新）
 
 ### 1. 当前总判断
 
-截至 2026-03-23，项目已经明显从一段时间里的表层文案/界面收边，重新切回更符合 `vision/` 的主线：
+截至 2026-03-24，项目已完成三个方向的实质推进：
 
-> 把联合认知体内部的 outcome / reintegration / promotion / governance 语义，正式提升为 shared contract，并逐步投射到 API 与 Web 控制面。
+> **方向 A**：SoulAction 覆盖面从 5 种扩展到 8 种 actionKind。**方向 B**：Web 治理面板增强（actionKind 筛选器、worker-backed badge）。**方向 C**：systemd 部署运维闭环建立。
 
-这意味着当前阶段最重要的进展，不是“又修了几个面板”，而是系统正在增强自己的：
-- 自我表达能力
-- 自我消化能力
-- 结果回流能力
-- 治理可见性
+`src/soul/` 已有 17 个模块文件，PR1–PR6 全链路均有最小真实落地，部署服务器 246 已有 systemd 自动管理。
 
-### 2. 当前最明确推进的三条线
+### 2. 当前 P1~P5 状态
 
-#### （1）Outcome / Reintegration 主线明显做实
-当前已明显推进到：
-- `ActionOutcomePacket`
-- `ReintegrationSummaryContext`
-- `ReintegrationEvidenceSummary`
-- `nextActionSummary`
-- packet -> summary -> evidence -> record input 的系统收口
-- shared / API / web 多层对齐
+| 主线 | 状态 | 判断 |
+|---|---|---|
+| P1 SoulAction 治理面 | 已可用 | GovernanceView 含三个面板，actionKind 筛选器 + 分组批量操作 + WebSocket 实时更新 |
+| P2 Detail / Lifecycle | 地基完整 | 语义层成熟，但缺独立页面 |
+| P3 Governance API | 已落地 | approve / dispatch / defer / discard 分离，审核理由，执行摘要 |
+| P4 Outcome / Reintegration | 已落地 | outcome → summary → evidence → record → promotion 全链路收口 |
+| P5 Continuity Promotion | 最小落地 | review-backed promotion + PromotionProjectionPanel |
 
-也就是说，执行结果不再只是几句 `resultSummary`，而开始成为正式可回流、可消费、可投射的中间对象。
+### 3. 当前最大风险
 
-#### （2）Governance / Promotion 语义开始真正可见
-当前已明显推进到：
-- `SoulActionPromotionSummary`
-- projection explanation / continuity summary
-- `EventNode` / `ContinuityRecord` 的 summary 字段
-- API / websocket 直接返回 promotion / projection / next-action 摘要
-- governance panel 开始消费稳定 contract，而不再主要依赖临时字符串解释
+1. **技术债务**：3 个 P0 问题未修（`status` 冗余、`SoulActionKind` 重复、`gate_decisions` 不在 schema 内）
+2. **蓝图覆盖缺口**：`ask_followup_question`、`BrainstormSession` 仍未实现
+3. **文档持续对齐**：soul 模块从 2 → 17，需定期更新文档以保持同步
 
-这说明系统正在把“为什么这条动作存在”“为什么它值得晋升”“它在主路径上的意义是什么”这些信息正式对象化。
+### 4. 下一步方向
 
-#### （3）Web 控制面开始减少自行猜测
-当前已明显推进到：
-- shared contract 往上提
-- API 直接返回稳定摘要字段
-- web 优先消费 shared/server 的正式结构，而不是继续在本地重复派生和临时解包
+1. 修复 P0 技术债务
+2. 评估 `ask_followup_question` 落地路径
+3. 推进 SoulAction Detail 独立页面
 
-这说明系统正在从“后端有语义、前端自己猜”，走向“跨层统一语义”。
+### 5. 一句话总结
 
-### 3. 当前 P1~P5 状态
+> SoulAction 覆盖面从 2 → 8 种 actionKind，soul 模块从 2 → 17 个文件，部署从 nohup → systemd；PR1–PR6 全链路均有最小真实落地，治理面板从最小功能走向可用产品。
 
-#### P1｜SoulAction 治理面
-- 已开始实质推进，但还没有完全成型
-- `SoulActionGovernancePanel`、`soulActionGroups`、`promotionSummary` 等都已进入真实推进状态
-- 当前判断：已从“起势”进入“明确推进”
-
-#### P2｜SoulAction Detail / Lifecycle
-- 语义层明显变厚，但完整 detail/lifecycle 控制面还未真正成型
-- 当前判断：地基在长，但还没有成为完整交付面
-
-#### P3｜Governance API
-- 正在从零散 handler / 返回值走向更正式的治理协议
-- 当前判断：在主线上，且推进质量不错
-
-#### P4｜Outcome / Reintegration
-- 当前最成熟、最扎实的一条主线
-- 当前判断：已形成明显的 shared/API/web 正式收口趋势，是当前阶段主功臣
-
-#### P5｜Continuity Promotion / Evidence 面
-- 证据和摘要层已明显推进，但完整 review/evidence 主面尚未成型
-- 当前判断：正在从规则和 payload 走向可治理的正式系统能力
-
-### 4. 当前最大成就
-
-当前阶段最大的成就应表述为：
-
-> 项目已经成功把联合认知体内部深层语义，从 server 内部局部逻辑，推进为 shared contract，并进一步推进到 API 和 Web 控制面。
-
-这是项目从“内部骨架修补”走向“真正可见、可治理、可持续演进的联合认知运行态”的关键一步。
-
-### 5. 当前最大风险
-
-#### （1）中型收口时间过长的风险
-当前 working tree 改动持续增长，说明系统在进行一波中型整合。风险在于：
-- 如果整合时间过长
-- 就可能重新进入“工作很多、结构很散、迟迟不结算”的状态
-
-#### （2）再次滑回局部面板优化的风险
-虽然当前方向是对的，但 web 侧不少工作仍集中在：
-- `SettingsView`
-- `GovernancePanel`
-- projection/panel 周边
-
-后续必须防止再次滑回局部解释性 UI 优化，而应继续往：
-- SoulAction 总览
-- Detail / Lifecycle
-- Promotion result contract
-- Continuity evidence 面
-这些真正的主控制面推进。
-
-### 6. 当前下一步最值得继续打的点
-
-如果按负责人视角给下一步下任务，最自然的方向是：
-
-#### （1）把 promotion execution result 提升成稳定 contract
-当前 `dispatchApprovedSoulAction(...)` / `executePromotionSoulAction(...)` 的执行结果仍较依赖 `resultSummary` 字符串表达。下一步应优先让系统稳定表达：
-- 更新了哪个 `EventNode` / `ContinuityRecord`
-- 是创建还是更新
-- 执行结果摘要
-- 是否有 artifact / mirror / promotion evidence
-
-这会继续把：
-- P3 Governance API
-- P4 Outcome / Reintegration
-- P5 Continuity Promotion
-三条线接得更实。
-
-#### （2）继续推动 SoulAction 总览 / Detail 成型
-因为当前治理摘要 contract 已开始稳定，后续最自然的方向就是：
-- 把它们真正做成控制面
-- 而不是只停留在局部组件和局部 panel 中
-
-### 7. 当前阶段的一句话总结
-
-> 当前阶段最关键的进展，是系统正在把 outcome / reintegration / promotion / governance 的深层语义，从 server 内部逻辑提升为 shared contract，并开始稳定投射到 API 与 Web 控制面。

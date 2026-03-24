@@ -520,12 +520,12 @@ PR4 当前完成口径应固定为：
 
 | 阶段 | 当前状态 | 已落地内容 | 剩余关键缺口 | 建议下一步 |
 |---|---|---|---|---|
-| PR1 | 部分落地（最小骨架） | `src/soul/` 已存在最小 `SoulAction` 类型/同步模块，`soul_actions` 表与 server-local store 已落地，当前以 `extract_tasks` / `update_persona_snapshot` 为中心形成最小可锚定覆盖 | 缺少更广 action coverage 与完整产品化治理主线 | 冻结保守口径，后续在此基础上推进 PR2 |
-| PR2 | 最小落地（保守口径） | 已形成以 `update_persona_snapshot` 为中心的最小 low-risk closed loop | 仍缺多 action kinds 的通用 candidate / gate / dispatcher 闭环 | 冻结保守口径，按最小闭环已落地对齐 |
-| PR3 | 最小落地（保守口径） | 已有 `soul_actions` 双状态、review queue、approve / dispatch / defer / discard 最小治理面 | 仍缺完整产品化治理控制面与更广 action coverage | 冻结保守口径，按最小治理桥已落地对齐 |
-| PR4 | 已完成最小 skeleton | `workerTasks.ts` 已在真实 terminal path 接线到 `feedbackReintegration.ts` + `continuityIntegrator.ts` + 对应 tests | 尚未进入 persona/event/continuity 深层 reintegration | 冻结口径，不再继续无止境微补强 |
-| PR5 | 最小落地（保守口径） | 已有 `persona_snapshots` + `reintegration_records`，并形成以 `update_persona_snapshot` 为中心的最小 persona/intervention reintegration | 仍缺通用、全量、产品化的 persona/intervention learning | 冻结保守口径，避免写大 |
-| PR6 | 最小落地（保守口径） | 已有 review-backed `event_nodes` / `continuity_records` promotion 最小闭环 | 仍缺通用、高覆盖、产品化的高阈值 continuity/event 系统 | 冻结保守口径，避免写大 |
+| PR1 | 已落地 | `src/soul/` 已有 17 个模块文件，8 种 actionKind 全覆盖（含 `launch_daily_report` / `launch_weekly_report` / `launch_openclaw_task`），完整 CRUD/lifecycle | `SoulActionKind` 在 server/shared 重复定义；`status` 冗余字段 | 统一类型到 shared re-export |
+| PR2 | 已落地（保守口径） | `update_persona_snapshot` / `extract_tasks` 为中心的 `candidate → gate → review/dispatch → execute` 闭环 | `dispatch_now` 实际未处理（死代码）；`ask_followup_question` 未实现 | 决定 `dispatch_now` 策略 |
+| PR3 | 已落地（保守口径） | `approve / dispatch / defer / discard` 完整治理面，actionKind 筛选器、分组批量操作、WebSocket 实时更新、worker-backed badge 均已落地 | 缺 SoulAction Detail / Lifecycle 独立视图 | 推进 SoulAction Detail 页 |
+| PR4 | 已落地 | `workerTasks → feedbackReintegration → continuityIntegrator` 真实接线，outcome/summary/evidence/record 已收口 | 尚未进入深层 reintegration | 冻结口径 |
+| PR5 | 已落地（保守口径） | `persona_snapshots` + `reintegration_records`，review-backed persona/intervention reintegration | 仍缺通用 persona/intervention learning | 冻结口径 |
+| PR6 | 已落地（保守口径） | review-backed `event_nodes` / `continuity_records` promotion 闭环，`promote_event_node` / `promote_continuity_record` / `create_event_node` 均已支持 | 仍缺通用高阈值产品化系统 | 冻结口径 |
 
 ---
 
@@ -548,27 +548,41 @@ PR4 当前完成口径应固定为：
 - `LifeOS/packages/server/src/workers/continuityIntegrator.ts`
 - `LifeOS/packages/server/test/feedbackReintegration.test.ts`
 
-### E. 当前已存在的 soul 模块锚点
+### E. 当前已存在的 soul 模块锚点（17 个文件）
 当前已可确认存在：
-- `LifeOS/packages/server/src/soul/types.ts`
-- `LifeOS/packages/server/src/soul/soulActions.ts`
+- `LifeOS/packages/server/src/soul/types.ts` — 核心类型
+- `LifeOS/packages/server/src/soul/soulActions.ts` — Store/CRUD
+- `LifeOS/packages/server/src/soul/soulActionGenerator.ts` — 动作候选生成
+- `LifeOS/packages/server/src/soul/soulActionDispatcher.ts` — 动作分发
+- `LifeOS/packages/server/src/soul/interventionGate.ts` — 干预闸门
+- `LifeOS/packages/server/src/soul/cognitiveAnalyzer.ts` — AI 认知分析
+- `LifeOS/packages/server/src/soul/gateLearning.ts` — Gate 学习
+- `LifeOS/packages/server/src/soul/personaSnapshots.ts` — Persona 管理
+- `LifeOS/packages/server/src/soul/postIndexPersonaTrigger.ts` — 索引后触发
+- `LifeOS/packages/server/src/soul/reintegrationRecords.ts` — 回流记录
+- `LifeOS/packages/server/src/soul/reintegrationReview.ts` — 回流审核
+- `LifeOS/packages/server/src/soul/reintegrationOutcome.ts` — 回流结果
+- `LifeOS/packages/server/src/soul/reintegrationPromotionPlanner.ts` — 提升规划器
+- `LifeOS/packages/server/src/soul/pr6PromotionRules.ts` — PR6 提升规则
+- `LifeOS/packages/server/src/soul/pr6PromotionExecutor.ts` — PR6 提升执行
+- `LifeOS/packages/server/src/soul/eventNodes.ts` — 事件节点管理
+- `LifeOS/packages/server/src/soul/continuityRecords.ts` — 连续性记录管理
 
 说明：
-- 本组当前是 PR1 的最小已落地骨架；
-- 其范围仅限 `extract_tasks` 映射、worker 生命周期镜像、server-local 持久化；
-- 不应误写成完整 soul 中枢已经成型。
+- `src/soul/` 已从最初的 2 个文件发展为 17 个文件的完整模块区；
+- 已覆盖 PR1–PR6 全链路的最小落地；
+- 但仍不应误写成完整产品化治理系统。
 
-### F. 规划中的 soul 模块扩展目标区
-当前 vision 扩展目标区为：
-- `LifeOS/packages/server/src/soul/soulActionGenerator.ts`
-- `LifeOS/packages/server/src/soul/interventionGate.ts`
-- `LifeOS/packages/server/src/soul/soulActionDispatcher.ts`
-- `LifeOS/packages/server/src/soul/feedbackReintegration.ts`
-- `LifeOS/packages/server/src/soul/continuityIntegrator.ts`
+### F. 治理面 / Web 前端锚点
+- `LifeOS/packages/web/src/views/GovernanceView.vue` — 治理中心主页
+- `LifeOS/packages/web/src/components/SoulActionGovernancePanel.vue` — SoulAction 治理面板
+- `LifeOS/packages/web/src/components/PromotionProjectionPanel.vue` — 提升投射面板
 
-注意：
-- 本组文件中已有一部分按最小范围落地；
-- 但整体仍不应误写成“已全部存在”或“已形成完整治理主线”。
+### G. 部署与运维锚点
+- `services/lifeos-server.service` — 后端 systemd 服务
+- `services/lifeos-web.service` — 前端 systemd 服务
+- `scripts/deploy.sh` — 远程部署（auto-detect systemd）
+- `scripts/install-services.sh` — 首次安装脚本
 ---
 
 ## 九、阶段验证口径（后续统一采用）

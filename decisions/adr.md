@@ -205,3 +205,56 @@ LifeOS 后端新增 3 种 worker task 类型，全部由 LifeOS 直接调用 Cla
 - OpenClaw 仅保留 `openclaw_task`、`summarize_note` 等需要外部 API / 外部工具的任务
 - `classify_inbox`、`daily_report`、`weekly_report` 的定时任务可直接在 LifeOS 设置页创建
 - 所有生成的笔记标记 `source: auto`、`worker: lifeos`，通过既有索引闭环进入 SQLite
+
+---
+
+## ADR-010: SoulAction 覆盖面扩展至 worker-backed 动作
+
+**日期**: 2026-03-24
+**状态**: 已采纳 ✅
+
+### 背景
+蓝图 v1.0 定义了 8 个首批 actionType，其中 `launch_daily_report`、`launch_weekly_report`、`launch_openclaw_task` 属于 worker-backed 动作。此前 SoulAction 仅覆盖 `extract_tasks` 和 `update_persona_snapshot` 两种。
+
+### 决策
+将 3 种 worker-backed 动作正式纳入 SoulAction 治理体系：
+- 在 `SUPPORTED_SOUL_ACTION_KINDS` 中新增 `launch_daily_report` / `launch_weekly_report` / `launch_openclaw_task`
+- 扩展 `deriveSoulActionKindFromWorkerTask` 和 `buildWorkerTaskRequestFromSoulAction` 双向映射
+- 在 `shared/soulActionTypes.ts` 中添加中文标签
+
+### 理由
+- 蓝图 v1.0 明确要求这 3 种动作进入治理体系
+- worker 执行链路已完整支持这 3 种任务类型
+- 纳入后可在 Web 治理面板中统一管理所有动作
+
+### 影响
+- SoulAction 覆盖面从 5 种扩展到 8 种 actionKind
+- Web 治理面板新增 actionKind 筛选器和 worker-backed badge
+- `cognitiveAnalyzer.ts` 中的 `VALID_ACTION_KINDS` 仍为硬编码的 2 种，未自动跟随扩展（有意限制 AI 可建议的范围）
+
+---
+
+## ADR-011: 采用 systemd user services 管理 LifeOS 部署
+
+**日期**: 2026-03-24
+**状态**: 已采纳 ✅
+
+### 背景
+此前部署使用 `nohup` + `pkill` 方式管理进程，存在进程丢失、日志散落、无自动重启等问题。
+
+### 决策
+采用 systemd user services 管理 LifeOS 服务：
+- `lifeos-server.service` — 后端（`pnpm dev`，端口 3000）
+- `lifeos-web.service` — 前端（`pnpm dev --host`，端口 5173）
+
+### 理由
+- systemd 提供进程崩溃自动重启（`Restart=on-failure`）
+- `journalctl` 提供集中式日志管理
+- `loginctl enable-linger` 确保服务在用户登出后持续运行
+- `deploy.sh` 自动检测 systemd 服务，提供 nohup 降级兜底
+
+### 影响
+- 首次部署需执行 `./scripts/install-services.sh`
+- 后续部署使用 `./scripts/deploy.sh --build --restart`
+- 日志通过 `journalctl --user -u lifeos-server -f` 查看
+
