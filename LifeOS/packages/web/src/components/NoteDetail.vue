@@ -270,22 +270,25 @@
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="showDeleteConfirm && note" class="confirm-overlay" @click.self="showDeleteConfirm = false">
-        <div class="confirm-card">
-          <h3>删除笔记</h3>
-          <p>将删除 Vault 中的真实 Markdown 文件，删除后该笔记会从看板中消失。</p>
-          <p class="confirm-note">当前笔记：{{ note.title || note.file_name.replace('.md', '') }}</p>
-          <div class="confirm-actions">
-            <button class="btn-cancel" @click="showDeleteConfirm = false" :disabled="deleting">取消</button>
-            <button class="btn-confirm-danger" @click="handleDelete" :disabled="deleting">
-              {{ deleting ? '删除中...' : '确认删除' }}
-            </button>
-          </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div v-if="showDeleteConfirm && note" class="confirm-overlay" @click.self="showDeleteConfirm = false">
+      <div class="confirm-card">
+        <h3>删除笔记</h3>
+        <p>将删除 Vault 中的真实 Markdown 文件，删除后该笔记会从看板中消失。</p>
+        <p class="confirm-note">当前笔记：{{ note.title || note.file_name.replace('.md', '') }}</p>
+        <div class="confirm-actions">
+          <button class="btn-cancel" @click="showDeleteConfirm = false" :disabled="deleting">取消</button>
+          <button class="btn-confirm-danger" @click="handleDelete" :disabled="deleting">
+            {{ deleting ? '删除中...' : '确认删除' }}
+          </button>
         </div>
       </div>
-    </Teleport>
+    </div>
+  </Teleport>
 
+  <Teleport to="body">
     <WorkerTaskDetail v-if="selectedWorkerTaskId" :task-id="selectedWorkerTaskId" @close="selectedWorkerTaskId = null" />
   </Teleport>
 </template>
