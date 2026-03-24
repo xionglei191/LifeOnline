@@ -14,9 +14,9 @@ export interface SoulActionPromotionSummary {
 }
 
 export interface SoulActionDispatchExecutionSummary {
-  objectType: 'event_node' | 'continuity_record' | 'worker_task' | null;
+  objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | null;
   objectId: string | null;
-  operation: 'created' | 'updated' | 'enqueued' | null;
+  operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | null;
   summary: string | null;
 }
 

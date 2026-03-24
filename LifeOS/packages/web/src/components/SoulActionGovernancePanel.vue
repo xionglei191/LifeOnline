@@ -37,6 +37,7 @@
           <option value="launch_daily_report">生成日报</option>
           <option value="launch_weekly_report">生成周报</option>
           <option value="launch_openclaw_task">执行 OpenClaw</option>
+          <option value="ask_followup_question">提出追问</option>
         </select>
         <button class="btn-link" @click="emit('refresh')">刷新</button>
       </div>

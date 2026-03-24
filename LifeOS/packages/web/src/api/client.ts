@@ -485,6 +485,19 @@ export async function discardSoulAction(id: string, payload: ReintegrationReview
   return data.soulAction as SoulAction;
 }
 
+export async function answerFollowupQuestion(id: string, answer: string): Promise<SoulAction> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/answer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answer }),
+  });
+  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to answer followup question');
+  }
+  return data.soulAction as SoulAction;
+}
+
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}`);
   const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));

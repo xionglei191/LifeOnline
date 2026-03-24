@@ -328,6 +328,60 @@ export async function dispatchSoulActionHandler(
   }
 }
 
+export async function answerFollowupHandler(
+  req: Request<{ id: string }, ApiResponse<SoulActionResponse>, { answer: string }>,
+  res: Response<ApiResponse<SoulActionResponse>>,
+): Promise<void> {
+  try {
+    const answer = req.body?.answer?.trim();
+    if (!answer) { res.status(400).json({ error: 'answer is required' }); return; }
+
+    const soulAction = getSoulAction(req.params.id);
+    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
+    if (soulAction.actionKind !== 'ask_followup_question') {
+      res.status(400).json({ error: 'only ask_followup_question actions can be answered' }); return;
+    }
+    if (soulAction.executionStatus !== 'pending') {
+      res.status(400).json({ error: 'only pending followup questions can be answered' }); return;
+    }
+
+    // Append answer to source note
+    if (soulAction.sourceNoteId) {
+      try {
+        const note = getDb().prepare('SELECT file_path FROM notes WHERE id = ?').get(soulAction.sourceNoteId) as { file_path: string } | undefined;
+        if (note) {
+          const { rewriteMarkdownContent } = await import('../../vault/fileManager.js');
+          const { broadcastUpdate, getIndexQueue } = await import('../../index.js');
+          const timestamp = new Date().toLocaleString('zh-CN');
+          await rewriteMarkdownContent(note.file_path, (content) =>
+            `${content.trimEnd()}\n\n---\n\n**追问回答** (${timestamp})\n\n${answer}\n`
+          );
+          broadcastUpdate({ type: 'note-updated', data: { noteId: soulAction.sourceNoteId } });
+          getIndexQueue()?.enqueue(note.file_path, 'upsert');
+        }
+      } catch (appendError) {
+        console.warn('[answerFollowup] Failed to append to note:', appendError);
+      }
+    }
+
+    // Mark as succeeded
+    const now = new Date().toISOString();
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'succeeded', updated_at = ?, finished_at = ?, result_summary = ?
+      WHERE id = ?
+    `).run(now, now, `用户回答: ${answer.slice(0, 200)}`, soulAction.id);
+
+    const updated = getSoulAction(soulAction.id);
+    broadcastSoulActionUpdate(updated);
+    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(updated)! };
+    res.json(response);
+  } catch (error) {
+    console.error('Answer followup error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}
+
 // ── Reintegration Handlers ─────────────────────────────
 
 export async function listReintegrationRecordsHandler(

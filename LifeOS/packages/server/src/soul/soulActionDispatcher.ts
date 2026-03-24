@@ -177,6 +177,30 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     };
   }
 
+  // ask_followup_question → mark as pending (awaiting user answer), no worker task
+  if (soulAction.actionKind === 'ask_followup_question') {
+    const now = new Date().toISOString();
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'pending', updated_at = ?, started_at = ?
+      WHERE id = ?
+    `).run(now, now, soulAction.id);
+    return {
+      dispatched: true,
+      reason: '追问已发出，等待用户回答',
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+      executionSummary: {
+        objectType: 'followup_question',
+        objectId: soulAction.id,
+        operation: 'awaiting_answer',
+        summary: soulAction.governanceReason ?? '追问已发出',
+      },
+      eventNode: null,
+      continuityRecord: null,
+    };
+  }
+
   const request = buildWorkerTaskRequestFromSoulAction(soulAction);
   const task = createWorkerTask(request);
   await executeWorkerTask(task.id);

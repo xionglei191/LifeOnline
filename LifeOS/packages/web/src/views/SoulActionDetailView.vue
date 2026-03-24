@@ -101,6 +101,23 @@
         </div>
       </div>
 
+      <!-- ── Followup Answer Section ── -->
+      <div class="settings-card followup-card" v-if="action.actionKind === 'ask_followup_question' && action.executionStatus === 'pending'">
+        <h3>💬 系统追问</h3>
+        <div class="followup-question">
+          <p class="field-value">{{ action.governanceReason }}</p>
+        </div>
+        <div class="followup-answer-form">
+          <textarea
+            v-model="followupAnswer"
+            placeholder="在此输入您的回答…"
+            class="answer-textarea"
+            rows="4"
+          ></textarea>
+          <button class="btn-approve" :disabled="operating || !followupAnswer.trim()" @click="handleAnswer">📝 提交回答</button>
+        </div>
+      </div>
+
       <!-- ── Execution Section ── -->
       <div class="settings-card execution-card" v-if="action.executionStatus !== 'not_dispatched' || action.workerTaskId || action.resultSummary || action.error">
         <h3>执行结果</h3>
@@ -177,7 +194,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchSoulAction, approveSoulAction, dispatchSoulAction, deferSoulAction, discardSoulAction } from '../api/client';
+import { fetchSoulAction, approveSoulAction, dispatchSoulAction, deferSoulAction, discardSoulAction, answerFollowupQuestion } from '../api/client';
 import { formatSoulActionKindLabel } from '@lifeos/shared';
 import type { SoulAction } from '@lifeos/shared';
 
@@ -191,6 +208,7 @@ const operating = ref(false);
 const opMessage = ref('');
 const opMessageType = ref<'success' | 'error'>('success');
 const governanceReason = ref('');
+const followupAnswer = ref('');
 
 const actionId = computed(() => route.params.id as string);
 const kindLabel = computed(() => action.value ? formatSoulActionKindLabel(action.value.actionKind) : '');
@@ -300,6 +318,22 @@ async function handleDiscard() {
     governanceReason.value = '';
   } catch (e: any) {
     opMessage.value = e.message || '丢弃失败';
+    opMessageType.value = 'error';
+  } finally {
+    operating.value = false;
+  }
+}
+
+async function handleAnswer() {
+  operating.value = true;
+  opMessage.value = '';
+  try {
+    action.value = await answerFollowupQuestion(actionId.value, followupAnswer.value);
+    opMessage.value = '回答已提交，已追加到源笔记';
+    opMessageType.value = 'success';
+    followupAnswer.value = '';
+  } catch (e: any) {
+    opMessage.value = e.message || '提交回答失败';
     opMessageType.value = 'error';
   } finally {
     operating.value = false;
@@ -621,4 +655,42 @@ onMounted(() => loadAction());
 
 .message.success { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
 .message.error { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+
+/* ─── Followup Answer ─── */
+.followup-card {
+  border: 1px solid color-mix(in oklch, var(--border-color, #e5e7eb) 78%, oklch(66% 0.08 50) 22%);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--card-bg) 92%, oklch(97% 0.02 50) 8%), var(--card-bg));
+}
+
+.followup-question {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--meta-bg) 85%, oklch(95% 0.02 50) 15%);
+  margin-bottom: 14px;
+}
+
+.followup-answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.answer-textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.answer-textarea:focus {
+  outline: none;
+  border-color: #409eff;
+}
 </style>
