@@ -100,6 +100,7 @@ const navItems = [
   { to: '/timeline', label: '时间线', hint: '轨迹回看', icon: '⋯' },
   { to: '/calendar', label: '日历', hint: '月历视图', icon: '▦' },
   { to: '/stats', label: '统计', hint: '信号分析', icon: '◈' },
+  { to: '/events', label: '事件', hint: '认知时序', icon: '◎' },
   { to: '/governance', label: '治理', hint: '决策审批', icon: '⚖' },
   { to: '/ops', label: '运维', hint: '任务调度', icon: '⚡' },
   { to: '/settings', label: '设置', hint: '系统配置', icon: '⚙' },

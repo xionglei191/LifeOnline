@@ -11,6 +11,7 @@ const routes = [
   { path: '/governance', name: 'governance', component: () => import('./views/GovernanceView.vue') },
   { path: '/governance/soul-action/:id', name: 'soul-action-detail', component: () => import('./views/SoulActionDetailView.vue') },
   { path: '/ops', name: 'ops', component: () => import('./views/OpsView.vue') },
+  { path: '/events', name: 'events', component: () => import('./views/EventsView.vue') },
   { path: '/settings', name: 'settings', component: () => import('./views/SettingsView.vue') },
 ];
 

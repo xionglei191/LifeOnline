@@ -1,7 +1,6 @@
 import { callClaude, parseJSON } from '../ai/aiClient.js';
 import type { SoulActionKind } from './types.js';
 import { getEffectiveAiProviderConfig } from '../ai/providerConfigService.js';
-import { extractContinuitySignalsRuleBased } from './continuitySignalEnhanced.js';
 import { Logger } from '../utils/logger.js';
 
 const logger = new Logger('cognitiveAnalyzer');
@@ -85,10 +84,16 @@ const ANALYSIS_PROMPT = `你是一个认知分析引擎，负责理解用户笔�
 
 // ── Core Analysis Function ─────────────────────────────
 
+export interface PersonaAnalysisContext {
+  dimension?: string;
+  personaSummary?: string | null;
+  recentReintegrationSummaries?: string[];
+}
+
 export async function analyzeNoteContent(
   noteId: string,
   content: string,
-  context?: { dimension?: string },
+  context?: PersonaAnalysisContext,
 ): Promise<NoteAnalysis> {
   const trimmed = content.trim();
   if (!trimmed) {
@@ -96,7 +101,18 @@ export async function analyzeNoteContent(
   }
 
   try {
-    const response = await callClaude(ANALYSIS_PROMPT + trimmed, 512);
+    // Build optional history prefix
+    const historyParts: string[] = [];
+    if (context?.personaSummary) {
+      historyParts.push(`当前人格快照: ${context.personaSummary}`);
+    }
+    if (context?.recentReintegrationSummaries?.length) {
+      historyParts.push(`最近认知整合记录:\n${context.recentReintegrationSummaries.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`);
+    }
+    const historyPrefix = historyParts.length
+      ? `[历史认知上下文]\n${historyParts.join('\n')}\n\n`
+      : '';
+    const response = await callClaude(historyPrefix + ANALYSIS_PROMPT + trimmed, 512);
     const parsed = parseJSON<RawAnalysisResponse>(response);
     return normalizeAnalysis(parsed);
   } catch (error) {

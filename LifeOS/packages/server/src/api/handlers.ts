@@ -28,3 +28,6 @@ export { listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler,
 
 // Worker tasks + Schedules + Stats
 export { createWorkerTaskHandler, listWorkerTasksHandler, getWorkerTaskHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags } from './handlers/workerHandlers.js';
+
+// Health
+export { healthHandler } from './handlers/healthHandlers.js';

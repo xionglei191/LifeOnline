@@ -1,5 +1,5 @@
 import type { SoulActionKind } from './types.js';
-import { analyzeNoteContent, type NoteAnalysis, type SuggestedAction } from './cognitiveAnalyzer.js';
+import { analyzeNoteContent, type NoteAnalysis, type SuggestedAction, type PersonaAnalysisContext } from './cognitiveAnalyzer.js';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ export async function generateSoulActionCandidates(input: {
   noteContent: string;
   noteDimension?: string;
   noteType?: string;
+  personaContext?: PersonaAnalysisContext;
 }): Promise<GeneratorResult> {
   const content = input.noteContent.trim();
 
@@ -43,8 +44,11 @@ export async function generateSoulActionCandidates(input: {
     };
   }
 
-  // Run cognitive analysis (AI with rule fallback)
-  const analysis = await analyzeNoteContent(input.noteId, content, { dimension: input.noteDimension });
+  // Run cognitive analysis (AI with rule fallback), passing history context if available
+  const analysis = await analyzeNoteContent(input.noteId, content, {
+    dimension: input.noteDimension,
+    ...input.personaContext,
+  });
 
   if (analysis.suggestedActions.length === 0) {
     return {

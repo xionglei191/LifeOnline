@@ -6,14 +6,13 @@ import matter from 'gray-matter';
 import { getDb } from '../../db/client.js';
 import { broadcastUpdate, getIndexQueue } from '../../index.js';
 import { loadConfig } from '../../config/configManager.js';
-import { generateId } from '../../utils/id.js';
 import { getEffectiveAiProviderConfig } from '../../ai/providerConfigService.js';
-import { Logger } from '../../utils/logger.js';
-
-const logger = new Logger('noteHandlers');
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../../vault/fileManager.js';
 import { getTodayDateString } from '../../utils/date.js';
+import { Logger } from '../../utils/logger.js';
 import type { ApiResponse, Note, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult } from '@lifeos/shared';
+
+const logger = new Logger('noteHandlers');
 
 export function parseNote(row: any): Note {
   const note: any = {
@@ -39,7 +38,7 @@ export async function getNotes(req: Request, res: Response): Promise<void> {
     const notes = db.prepare(query).all(...params);
     res.json(notes.map(parseNote));
   } catch (error) {
-    console.error('Get notes error:', error);
+    logger.error('Get notes error:', error);
     res.status(500).json({ error: 'Failed to fetch notes' });
   }
 }
@@ -52,7 +51,7 @@ export async function getNoteById(req: Request, res: Response): Promise<void> {
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
     res.json(parseNote(note));
   } catch (error) {
-    console.error('Get note by id error:', error);
+    logger.error('Get note by id error:', error);
     res.status(500).json({ error: 'Failed to fetch note' });
   }
 }
@@ -71,7 +70,7 @@ export async function searchNotes(req: Request<Record<string, never>, ApiRespons
     const result: SearchResult = { notes, total: notes.length, query, filters: { q: query } };
     res.json(result);
   } catch (error) {
-    console.error('Search error:', error);
+    logger.error('Search error:', error);
     res.status(500).json({ error: 'Search failed' });
   }
 }
@@ -95,7 +94,7 @@ export async function createNote(req: Request<Record<string, never>, ApiResponse
     getIndexQueue()?.enqueue(filePath, 'upsert');
     res.json({ success: true, filePath });
   } catch (error) {
-    console.error('Create note error:', error);
+    logger.error('Create note error:', error);
     res.status(500).json({ error: String(error) });
   }
 }
@@ -117,7 +116,7 @@ export async function updateNote(req: Request<{ id: string }, ApiResponse<Update
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
   } catch (error) {
-    console.error('Update note error:', error);
+    logger.error('Update note error:', error);
     res.status(500).json({ error: String(error) });
   }
 }
@@ -138,7 +137,7 @@ export async function appendNote(req: Request, res: Response): Promise<void> {
     getIndexQueue()?.enqueue(note.file_path, 'upsert');
     res.json({ success: true });
   } catch (error) {
-    console.error('Append note error:', error);
+    logger.error('Append note error:', error);
     res.status(500).json({ error: String(error) });
   }
 }

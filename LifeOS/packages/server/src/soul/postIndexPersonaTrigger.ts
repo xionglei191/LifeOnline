@@ -3,6 +3,7 @@ import { generateSoulActionCandidates, type SoulActionCandidate } from './soulAc
 import { evaluateInterventionGate, type GateDecisionType } from './interventionGate.js';
 import { createOrReuseSoulAction } from './soulActions.js';
 import { createOrUpdateBrainstormSession, getRecentThemeFrequency, shouldDistill, distillBrainstormSession } from './brainstormSessions.js';
+import { buildPersonaContextForNote } from './personaContext.js';
 import { Logger } from '../utils/logger.js';
 
 const logger = new Logger('postIndexPersonaTrigger');
@@ -89,6 +90,14 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
     };
   }
 
+  // Build persona + reintegration history context for richer analysis
+  let personaCtx = { personaSummary: null as string | null, recentReintegrationSummaries: [] as string[] };
+  try {
+    personaCtx = buildPersonaContextForNote(currentNote.id);
+  } catch (e) {
+    logger.warn('Failed to build persona context:', e);
+  }
+
   // Run through the cognitive pipeline
   const { candidates, analysis, skippedReason } = await generateSoulActionCandidates({
     sourceNoteId: currentNote.id,
@@ -96,6 +105,7 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
     noteContent: currentNote.content,
     noteDimension: currentNote.dimension,
     noteType: currentNote.type,
+    personaContext: personaCtx,
   });
 
   if (candidates.length === 0) {

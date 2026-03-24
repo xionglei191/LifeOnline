@@ -9,111 +9,112 @@
 
 ### 🔴 C 组 — 基础设施与稳定性
 
-#### Sprint 1（已完成 / 进行中）
+#### Sprint 1 ✅ | Sprint 2 ✅
 
-- [ ] **P0：统一 `SoulActionKind` 定义**
-  - 目标：消除 server 和 shared 中 `SoulActionKind` 的重复定义
-  - 关键文件：`packages/shared/src/core.ts`, `packages/shared/src/soulActionTypes.ts`, `packages/server/src/soul/types.ts`
-  - 完成标准：仅在 `@lifeos/shared` 中定义一次，server 端 re-export
-  - 验证：`npx tsc --noEmit` 全量通过
+<details>
+<summary>已完成任务（点击展开）</summary>
 
-- [x] **P3：R2 凭据配置与实际冷存储验证**
-  - 验证：实际 R2 存储桶写入成功 ✅
+- [x] P0：统一 SoulActionKind 定义
+- [x] P3：R2 凭据配置与实际冷存储验证
+- [x] P2：测试覆盖增强
+- [x] P2：部署流水线一键化（`scripts/deploy.sh`）
+- [x] P2：R2 冷存储读回验证 + 清理（`listR2Objects` / `getR2Object`）
+- [x] P3：错误监控与日志结构化（`utils/logger.ts`）
 
-- [ ] **P2：测试覆盖增强**
-  - 目标：为新增的 11 个 actionKind 闭环补充测试
-  - 关键文件：`packages/server/test/`
-  - 完成标准：核心闭环路径有测试锁定
-  - 验证：`npm test` 通过
+</details>
 
-#### Sprint 2（新任务）
+#### Sprint 3（新任务）
 
-- [ ] **P2：部署流水线一键化**
-  - 目标：将 git pull → build → systemctl restart 串成一键脚本，支持回滚
-  - 关键文件：`scripts/deploy.sh`（新建）, `services/lifeos-server.service`
-  - 完成标准：本地执行 `./scripts/deploy.sh` 即可完成远程部署
-  - 验证：在 252 本地执行部署脚本，246 服务正常重启
+- [ ] **P2：WebSocket 心跳与断线重连健壮性**
+  - 目标：确保 WebSocket 连接在网络不稳定时自动重连，避免前端页面状态陈旧
+  - 关键文件：`packages/server/src/websocket/wsServer.ts`, `packages/web/src/composables/useWebSocket.ts`
+  - 完成标准：服务端添加心跳检测（30s ping/pong），客户端添加指数退避重连
+  - 验证：人为断网后 10 秒内自动重连
 
-- [ ] **P2：R2 冷存储读回验证 + 清理**
-  - 目标：实现 R2 对象的列举（ListObjects）和读回（GetObject），清理测试文件
-  - 关键文件：`packages/server/src/infra/r2Client.ts`
-  - 完成标准：新增 `listR2Objects()` 和 `getR2Object()` 函数，确认冷存储内容可读
-  - 验证：能列出 `vault2026` 桶中的对象并读取内容
+- [ ] **P2：索引队列并发控制与错误恢复**
+  - 目标：`indexQueue.ts` 增加并发限制和失败重试机制
+  - 关键文件：`packages/server/src/indexer/indexQueue.ts`, `packages/server/src/indexer/indexer.ts`
+  - 完成标准：索引队列有最大并发数、失败任务有 3 次重试
+  - 验证：编译通过 + 模拟失败文件能被重试
 
-- [ ] **P3：错误监控与日志结构化**
-  - 目标：统一 server 端 `console.log` 为结构化日志（带时间戳和模块标识）
-  - 关键文件：`packages/server/src/utils/`（新建 logger.ts）
-  - 完成标准：`soul/` 和 `workers/` 的日志输出统一为 `[模块名] [级别] 消息` 格式
-  - 验证：编译通过 + 日志可 grep 过滤
+- [ ] **P3：health check API**
+  - 目标：新增 `/api/health` 端点，返回服务状态（DB 连通、R2 配置、WebSocket 数量）
+  - 关键文件：`packages/server/src/api/` (新增 handler)
+  - 完成标准：GET /api/health 返回 JSON 包含各组件状态
+  - 验证：curl 验证可用
 
 ---
 
 ### 🟢 B 组 — 治理产品化
 
-#### Sprint 1（已完成）
+#### Sprint 1 ✅ | Sprint 2 ✅
 
-- [x] **P3：治理面板 UX 提升 (GovernanceView 组件拆分)**
-  - 验证：主页面体积大幅减小 ✅
+<details>
+<summary>已完成任务（点击展开）</summary>
 
-- [x] **P2：SoulAction Detail 页面增强**
-  - 验证：正确加载展示 source reintegration 卡片和相关 actions 列表 ✅
+- [x] P3：治理面板 UX 提升 (GovernanceView 组件拆分)
+- [x] P2：SoulAction Detail 页面增强
+- [x] P2：追问交互 UI 优化
+- [x] P1：Dashboard 主页产品化（`DashboardOverview.vue` 落地）
+- [x] P2：OpsView 运维中心组件拆分（拆分出 `WorkerTaskPanel` 和 `SchedulePanel`）
+- [x] P3：NoteDetail 认知增强展示
 
-- [x] **P2：追问交互 UI 优化**
-  - 验证：页面可交互、POST 请求成功 ✅
+</details>
 
-#### Sprint 2（新任务）
+#### Sprint 3（新任务）
 
-- [ ] **P1：Dashboard 主页产品化**
-  - 目标：当前 DashboardView 仅 8 行 wrapper，需升级为真正的项目首页
-  - 关键文件：`packages/web/src/views/DashboardView.vue`, `packages/web/src/components/DashboardOverview.vue`
-  - 建议内容：今日待办摘要 + 最近认知活动（最新 SoulAction 3 条）+ persona 状态卡片 + 快捷入口
-  - 完成标准：首页有实质信息展示，不再是空壳
-  - 验证：打开 `/` 页面信息完整、数据实时
+- [ ] **P1：全局时序线与事件流展示（Event Stream）**
+  - 目标：将散落的 EventNode 按照时间轴或主题，在前端串联展示为一条生活事件流
+  - 关键文件：`packages/web/src/views/` (新增 EventsView.vue), `packages/server/src/api/`
+  - 完成标准：新增 /events 页面，可以按主轴浏览已入库的 EventNode
+  - 验证：在导航栏加入入口，点击可查看大事件时间线
 
-- [ ] **P2：OpsView 运维中心组件拆分**
-  - 目标：OpsView.vue 28KB / 533 行，需拆分为 WorkerTaskPanel + SchedulePanel
-  - 关键文件：`packages/web/src/views/OpsView.vue`, `packages/web/src/components/`
-  - 完成标准：主页面 < 15KB，功能不回归
-  - 验证：运维中心所有功能可用
+- [ ] **P2：全局搜索页增强**
+  - 目标：搜索结果页不仅仅展示笔记，还可以混合展示命中的 BrainstormSession / 总结
+  - 关键文件：`packages/web/src/views/SearchView.vue`
+  - 完成标准：Search 页面在呈现笔记结果的同时展现相关认知实体的卡片
+  - 验证：搜索一个关键词，既能看到原笔记，又能看到系统做过的对应的洞察
 
-- [ ] **P3：NoteDetail 认知增强展示**
-  - 目标：在 NoteDetail 中展示该笔记触发的 SoulAction 列表和 BrainstormSession
-  - 关键文件：`packages/web/src/components/NoteDetail.vue`
-  - 完成标准：笔记详情中可看到 "该笔记触发了 N 个认知动作" 和对应列表
-  - 验证：从笔记列表点入详情，可看到关联的 SoulAction
+- [ ] **P3：移动端 PWA 与快捷指令支持预研**
+  - 目标：为 Dashboard / 治理面板增加 PWA manifest，支持添加到手机主屏幕
+  - 关键文件：`packages/web/index.html`, `manifest.json`
+  - 完成标准：页面可被识别为 PWA 并安装
+  - 验证：Chrome Lighthouse 检测 PWA 分数达标
 
 ---
 
 ### 🔵 A 组 — 认知深化
 
-#### Sprint 1（已完成）
+#### Sprint 1 ✅ | Sprint 2 ✅
 
-- [x] **P2：BrainstormSession 深度提炼（distilled 阶段）**
-  - 验证：`brainstormSessions.ts` 扩展至 275 行，含 distilledInsights 字段和 AI 提炼逻辑 ✅
+<details>
+<summary>已完成任务（点击展开）</summary>
 
-- [x] **P2：连续性模式识别增强**
-  - 验证：continuitySignals 多模式识别已实现 ✅
+- [x] P2：BrainstormSession 深度提炼（distilled 阶段）
+- [x] P2：连续性模式识别增强
+- [x] P3：Gate 学习机制增强
+- [x] P1：interventionGate 接入 Gate 学习（`adjustConfidenceByHistory` 已串入决策流程）
+- [x] P2：认知分析质量提升（Prompt 调优）
+- [x] P3：BrainstormSession 跨笔记关联
 
-- [x] **P3：Gate 学习机制增强**
-  - 验证：`gateLearning.ts` 227 行，含 `detectGatePatterns()` + `adjustConfidenceByHistory()` ✅
+</details>
 
-#### Sprint 2（新任务）
+#### Sprint 3（新任务）
 
-- [ ] **P1：interventionGate 接入 Gate 学习**
-  - 目标：将 `adjustConfidenceByHistory()` 实际接入 `interventionGate.ts` 的决策流程
-  - 关键文件：`packages/server/src/soul/interventionGate.ts`, `packages/server/src/soul/gateLearning.ts`
-  - 完成标准：Gate 决策时自动查询历史模式，调整置信度并在 reason 中说明依据
-  - 验证：编译通过 + Gate 输出包含 patterns 信息
+- [ ] **P1：Reintegration 深层回流（PR5 深化）**
+  - 目标：reintegration 结果可反向影响后续笔记分析的 persona context
+  - 关键文件：`packages/server/src/soul/reintegrationOutcome.ts`, `packages/server/src/soul/personaSnapshots.ts`
+  - 完成标准：approved reintegration 数据可被 cognitiveAnalyzer 读取并纳入分析上下文
+  - 验证：编译通过 + 有 reintegration 记录的笔记分析结果中体现历史回流
 
-- [ ] **P2：认知分析质量提升（Prompt 调优）**
-  - 目标：优化 cognitiveAnalyzer 的 AI prompt，提升主题提取和连续性识别准确度
-  - 关键文件：`packages/server/src/soul/cognitiveAnalyzer.ts`
-  - 完成标准：分析结果的 themes/continuitySignals 更贴合笔记实际内容
-  - 验证：选取 5 条真实笔记对比分析前后质量
+- [ ] **P2：SoulAction 执行结果反馈闭环**
+  - 目标：SoulAction 执行后的 resultSummary 自动回写 BrainstormSession 的 distilledInsights
+  - 关键文件：`packages/server/src/soul/soulActionDispatcher.ts`, `packages/server/src/soul/brainstormSessions.ts`
+  - 完成标准：已执行 SoulAction 的 outcome 自动丰富对应的 BrainstormSession
+  - 验证：编译通过 + 执行后 BrainstormSession 的 distilledInsights 包含执行结果
 
-- [ ] **P3：BrainstormSession 跨笔记关联**
-  - 目标：当多个笔记的 BrainstormSession 出现相似 themes 时，自动建立关联
-  - 关键文件：`packages/server/src/soul/brainstormSessions.ts`
-  - 完成标准：相似 themes 的 BrainstormSessions 可被查询为一组
-  - 验证：编译通过 + API 可查询关联 sessions
-
+- [ ] **P3：认知对象健康度评估**
+  - 目标：新增 API 统计 5 个认知对象的数据健康度（记录数、新鲜度、覆盖度）
+  - 关键文件：`packages/server/src/soul/` (新增 cognitiveHealth.ts)
+  - 完成标准：API 返回各认知对象的健康指标
+  - 验证：编译通过 + API 可调用

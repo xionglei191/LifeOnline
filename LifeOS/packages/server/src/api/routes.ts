@@ -30,10 +30,13 @@ import {
   scheduleHealthHandler,
   // Stats
   getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags,
+  // Health
+  healthHandler,
 } from './handlers.js';
 
 export const router = Router();
 
+router.get('/health', healthHandler);
 router.get('/dashboard', getDashboard);
 router.get('/notes', getNotes);
 router.get('/notes/:id', getNoteById);

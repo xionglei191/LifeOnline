@@ -173,7 +173,7 @@
                       <span class="meta-pill">{{ bs.status }}</span>
                       <span class="meta-pill">{{ new Date(bs.createdAt).toLocaleString() }}</span>
                     </div>
-                    <strong>{{ bs.topic }}</strong>
+                    <strong>{{ bs.themes.join('、') || '无主题' }}</strong>
                     <div v-if="bs.distilledInsights?.length" class="bs-summary">洞察: {{ bs.distilledInsights.join('; ') }}</div>
                   </article>
                 </div>
@@ -247,7 +247,7 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchBrainstormSessions, fetchSoulActions } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction } from '@lifeos/shared';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction, Dimension } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import NoteApprovalCard from './NoteApprovalCard.vue';
@@ -321,7 +321,7 @@ const priorityLabels: Record<string, string> = { high: '高', medium: '中', low
 const typeLabels: Record<string, string> = { task: '任务', schedule: '日程', note: '笔记', record: '记录', milestone: '里程碑', review: '复盘' };
 
 function dimensionColor(dimension: string) {
-  return getDimensionColor(dimension as typeof SELECTABLE_DIMENSIONS[number]);
+  return getDimensionColor(dimension as Dimension);
 }
 
 // ── Data Loading ──
@@ -464,7 +464,7 @@ async function handleExtractTasks() {
 async function handleCreateOpenClawTask(payload: { instruction: string; dimension: SelectableDimension }) {
   if (!currentNoteId.value || !note.value) return;
   workerSubmitting.value = true; workerMessage.value = '';
-  try { const task = await createWorkerTask({ taskType: 'openclaw_task', sourceNoteId: currentNoteId.value, input: { instruction: payload.instruction, outputDimension: payload.dimension } }); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
+  try { const task = await createWorkerTask({ taskType: 'openclaw_task', sourceNoteId: currentNoteId.value, input: { instruction: payload.instruction, outputDimension: payload.dimension as string } }); await loadRelatedWorkerTasks(currentNoteId.value); workerMessage.value = workerTaskActionMessage('created', task); workerMessageType.value = 'success'; }
   catch (e: any) { workerMessage.value = e.message || '关联任务创建失败'; workerMessageType.value = 'error'; }
   finally { workerSubmitting.value = false; }
 }

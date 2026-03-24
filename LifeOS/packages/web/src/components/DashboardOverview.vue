@@ -90,7 +90,7 @@
           </template>
         </span>
         <span v-if="scheduleHealth.failing > 0" class="sh-detail">
-          {{ scheduleHealth.failingSchedules.map(s => s.label).join('、') }}
+          {{ scheduleHealth.failingSchedules.map((s: any) => s.label).join('、') }}
         </span>
         <span class="sh-action" @click="$router.push('/settings')">前往设置 →</span>
       </section>
@@ -171,7 +171,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useDashboard, doesDashboardNeedRefresh } from '../composables/useDashboard';
-import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
+import { fetchScheduleHealth } from '../api/client';
+import type { ScheduleHealth } from '@lifeos/shared';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 import { fetchSoulActionList, fetchWorkerTasks, fetchPersonaSnapshot } from '../api/client';
 import type { WsEvent, SoulAction, PersonaSnapshot } from '@lifeos/shared';

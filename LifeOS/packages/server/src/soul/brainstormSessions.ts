@@ -134,6 +134,28 @@ export function getBrainstormSessionByNoteId(noteId: string): BrainstormSession 
   return row ? parseRow(row) : null;
 }
 
+/**
+ * Append a single insight string to an existing BrainstormSession's distilledInsights.
+ * Called by soulActionDispatcher to feed execution outcomes back into the session.
+ * No-ops if no session exists for the given id.
+ */
+export function appendInsightToSession(sessionId: string, insight: string): void {
+  const db = getDb();
+  const row = db.prepare('SELECT distilled_insights_json FROM brainstorm_sessions WHERE id = ?').get(sessionId) as { distilled_insights_json: string } | undefined;
+  if (!row) return;
+
+  let insights: string[] = [];
+  try { insights = JSON.parse(row.distilled_insights_json); } catch { /* keep empty */ }
+
+  insights.push(insight);
+  db.prepare(`
+    UPDATE brainstorm_sessions
+    SET distilled_insights_json = ?, updated_at = ?
+    WHERE id = ?
+  `).run(JSON.stringify(insights), new Date().toISOString(), sessionId);
+}
+
+
 export function listBrainstormSessions(limit = 50, offset = 0): { sessions: BrainstormSession[]; total: number } {
   const db = getDb();
   const total = (db.prepare('SELECT COUNT(*) as count FROM brainstorm_sessions').get() as { count: number }).count;

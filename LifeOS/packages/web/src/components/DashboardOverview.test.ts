@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
-import type { DashboardData, ScheduleHealth } from '../api/client';
+import type { DashboardData, ScheduleHealth } from '@lifeos/shared';
 
 const composableMocks = vi.hoisted(() => ({
   useDashboard: vi.fn(),
@@ -74,7 +74,7 @@ describe('DashboardOverview', () => {
         total: 2,
         active: 1,
         failing: 1,
-        failingSchedules: [{ id: 'sched-1', label: '周报同步' }],
+        failingSchedules: [{ id: 'sched-1', label: '周报同步', consecutiveFailures: 1, lastError: 'error' }],
       });
 
     const wrapper = mount(DashboardOverview, {
@@ -161,7 +161,7 @@ describe('DashboardOverview', () => {
       total: 2,
       active: 1,
       failing: 1,
-      failingSchedules: [{ id: 'sched-1', label: '最新周报同步' }],
+      failingSchedules: [{ id: 'sched-1', label: '最新周报同步', consecutiveFailures: 1, lastError: 'timeout' }],
     });
     await refresh.promise;
     await flushPromises();
@@ -195,7 +195,7 @@ describe('DashboardOverview', () => {
         total: 2,
         active: 1,
         failing: 1,
-        failingSchedules: [{ id: 'sched-1', label: '新建笔记后周报同步' }],
+        failingSchedules: [{ id: 'sched-1', label: '新建笔记后周报同步', consecutiveFailures: 1, lastError: 'error' }],
       });
 
     const wrapper = mount(DashboardOverview, {
@@ -248,7 +248,7 @@ describe('DashboardOverview', () => {
         total: 2,
         active: 1,
         failing: 1,
-        failingSchedules: [{ id: 'sched-1', label: '周报同步' }],
+        failingSchedules: [{ id: 'sched-1', label: '周报同步', consecutiveFailures: 1, lastError: 'error' }],
       });
 
     const wrapper = mount(DashboardOverview, {

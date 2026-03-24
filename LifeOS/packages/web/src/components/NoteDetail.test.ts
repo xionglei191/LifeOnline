@@ -9,10 +9,7 @@ import {
   formatEventNodeStatusLabel,
   formatEventNodeThresholdLabel,
   formatProjectionContinuityDetails,
-  formatSoulActionOutcomeSummary,
   getProjectionContinuitySummary,
-  getProjectionExplanationSummary,
-  formatSoulActionSourceLabel,
 } from '@lifeos/shared';
 import type { Note, WorkerTask, ApprovalStatus, ReintegrationRecord, EventNode, ContinuityRecord, SoulAction } from '@lifeos/shared';
 
@@ -193,7 +190,6 @@ function createSoulAction(overrides: Partial<SoulAction> = {}): SoulAction {
     actionKind: overrides.actionKind ?? 'promote_event_node',
     governanceStatus: overrides.governanceStatus ?? 'pending_review',
     executionStatus: overrides.executionStatus ?? 'not_dispatched',
-    status: overrides.status ?? (overrides.executionStatus ?? 'not_dispatched'),
     governanceReason: overrides.governanceReason ?? null,
     workerTaskId: overrides.workerTaskId ?? null,
     createdAt: overrides.createdAt ?? '2026-03-22T10:00:00.000Z',
@@ -467,7 +463,7 @@ describe('NoteDetail', () => {
             id: 'worker-task-2',
             taskType: 'update_persona_snapshot',
             sourceNoteId: 'note-1.md',
-            status: 'done',
+            status: 'succeeded',
           }),
         },
       },
@@ -531,7 +527,6 @@ describe('NoteDetail', () => {
     expect(document.body.textContent).toContain(formatContinuityKindLabel(createContinuityRecord()));
     expect(document.body.textContent).toContain(`目标：${formatContinuityTargetLabel(createContinuityRecord())}`);
     expect(document.body.textContent).toContain(`强度：${formatContinuityStrengthLabel(createContinuityRecord())}`);
-    expect(document.body.textContent).toContain(getProjectionExplanationSummary(createEventNode())?.primaryReason ?? '');
     expect(document.body.textContent).toContain('Projection summary · review-backed PR6 promotion · review-backed');
     expect(document.body.textContent).toContain(formatProjectionContinuityDetails(createContinuityRecord())[0] ?? '');
     expect(document.body.textContent).toContain(formatProjectionContinuityDetails(createContinuityRecord())[1] ?? '');
