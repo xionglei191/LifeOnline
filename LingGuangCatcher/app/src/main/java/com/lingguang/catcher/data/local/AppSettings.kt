@@ -157,6 +157,23 @@ class AppSettings private constructor(context: Context) {
         get() = prefs.getBoolean(KEY_WIFI_ONLY_SYNC, false)
         set(value) = prefs.edit().putBoolean(KEY_WIFI_ONLY_SYNC, value).apply()
 
+    // ==================== 自动化配置 ====================
+
+    /** 全局自动化总开关 */
+    var autoGlobalEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_GLOBAL_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_GLOBAL_ENABLED, value).apply()
+
+    /** 日期日程自动同步开关 */
+    var autoCalendarEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_CALENDAR_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_CALENDAR_ENABLED, value).apply()
+
+    /** 邮件通信自动执行开关 */
+    var autoCommunicationEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_COMMUNICATION_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_COMMUNICATION_ENABLED, value).apply()
+
     // ==================== 辅助方法 ====================
 
     /** 检查 AI 配置是否完整 */
@@ -236,6 +253,11 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_AUTO_RETRY = "auto_retry"
         private const val KEY_MAX_RETRY_COUNT = "max_retry_count"
         private const val KEY_WIFI_ONLY_SYNC = "wifi_only_sync"
+
+        // 自动化配置
+        private const val KEY_AUTO_GLOBAL_ENABLED = "auto_global_enabled"
+        private const val KEY_AUTO_CALENDAR_ENABLED = "auto_calendar_enabled"
+        private const val KEY_AUTO_COMMUNICATION_ENABLED = "auto_communication_enabled"
 
         @Volatile
         private var instance: AppSettings? = null

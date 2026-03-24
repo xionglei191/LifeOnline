@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lingguang.catcher.data.api.LifeOSService
 import com.lingguang.catcher.data.local.AppSettings
+import com.lingguang.catcher.data.model.GovernanceItem
+import com.lingguang.catcher.data.model.PhysicalAction
 import com.lingguang.catcher.data.model.SoulAction
 import com.lingguang.catcher.databinding.ActivityGovernanceBinding
 import com.lingguang.catcher.util.AnimUtil
@@ -100,13 +102,19 @@ class GovernanceActivity : AppCompatActivity() {
     private fun loadPendingActions() {
         binding.swipeRefresh.isRefreshing = true
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                lifeOSService.getPendingSoulActions()
-            }
+            val soulResultAsync = async(Dispatchers.IO) { lifeOSService.getPendingSoulActions() }
+            val physicalResultAsync = async(Dispatchers.IO) { lifeOSService.getPendingPhysicalActions() }
+            
+            val soulResult = soulResultAsync.await()
+            val physicalResult = physicalResultAsync.await()
+
             binding.swipeRefresh.isRefreshing = false
 
-            val list = result.getOrNull()
-            if (list == null) {
+            val list = mutableListOf<GovernanceItem>()
+            soulResult.getOrNull()?.let { list.addAll(it) }
+            physicalResult.getOrNull()?.let { list.addAll(it) }
+
+            if (list.isEmpty() && soulResult.isFailure && physicalResult.isFailure) {
                 FeedbackUtil.showToast(this@GovernanceActivity, "加载审批列表失败")
                 updateUI(emptyList())
             } else {
@@ -115,41 +123,45 @@ class GovernanceActivity : AppCompatActivity() {
         }
     }
 
-    private fun approveAction(action: SoulAction) {
-        // Optimistically remove from list
+    private fun approveAction(action: GovernanceItem) {
         removeFromList(action)
-        FeedbackUtil.showToast(this, "✅ 已批准: ${action.getActionKindLabel()}")
+        FeedbackUtil.showToast(this, "✅ 已批准: ${action.displayTitle}")
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                lifeOSService.approveSoulAction(action.id)
+                if (action.isPhysicalAction()) {
+                    lifeOSService.approvePhysicalAction(action.id)
+                } else {
+                    lifeOSService.approveSoulAction(action.id)
+                }
             }
             if (!result.isSuccess) {
                 FeedbackUtil.showToast(this@GovernanceActivity, "批准提交失败")
-                // Need to reload to restore state
                 loadPendingActions()
             }
         }
     }
 
-    private fun discardAction(action: SoulAction) {
-        // Optimistically remove from list
+    private fun discardAction(action: GovernanceItem) {
         removeFromList(action)
-        FeedbackUtil.showToast(this, "🗑 已拒绝: ${action.getActionKindLabel()}")
+        FeedbackUtil.showToast(this, "🗑 已拒绝: ${action.displayTitle}")
 
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
-                lifeOSService.discardSoulAction(action.id)
+                if (action.isPhysicalAction()) {
+                    lifeOSService.discardPhysicalAction(action.id)
+                } else {
+                    lifeOSService.discardSoulAction(action.id)
+                }
             }
             if (!result.isSuccess) {
                 FeedbackUtil.showToast(this@GovernanceActivity, "拒绝提交失败")
-                // Need to reload to restore state
                 loadPendingActions()
             }
         }
     }
 
-    private fun removeFromList(action: SoulAction) {
+    private fun removeFromList(action: GovernanceItem) {
         val currentList = adapter.currentList.toMutableList()
         currentList.remove(action)
         adapter.submitList(currentList)
@@ -159,7 +171,7 @@ class GovernanceActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUI(actions: List<SoulAction>) {
+    private fun updateUI(actions: List<GovernanceItem>) {
         if (actions.isEmpty()) {
             binding.rvGovernance.visibility = View.GONE
             binding.layoutEmpty.visibility = View.VISIBLE

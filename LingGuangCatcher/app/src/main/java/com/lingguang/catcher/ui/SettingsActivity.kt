@@ -84,6 +84,11 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchAutoClean.isChecked = settings.autoCleanVoiceText
         binding.switchSmartTag.isChecked = settings.smartTagRecommendation
 
+        // 自动化配置
+        binding.switchAutoGlobal.isChecked = settings.autoGlobalEnabled
+        binding.switchAutoCalendar.isChecked = settings.autoCalendarEnabled
+        binding.switchAutoCommunication.isChecked = settings.autoCommunicationEnabled
+
         // 图片配置
         binding.sliderImageQuality.value = settings.imageQuality.toFloat()
         binding.tvImageQuality.text = settings.imageQuality.toString()
@@ -162,6 +167,11 @@ class SettingsActivity : AppCompatActivity() {
         // 应用配置
         settings.autoCleanVoiceText = binding.switchAutoClean.isChecked
         settings.smartTagRecommendation = binding.switchSmartTag.isChecked
+
+        // 自动化配置
+        settings.autoGlobalEnabled = binding.switchAutoGlobal.isChecked
+        settings.autoCalendarEnabled = binding.switchAutoCalendar.isChecked
+        settings.autoCommunicationEnabled = binding.switchAutoCommunication.isChecked
 
         // 图片配置
         settings.imageQuality = binding.sliderImageQuality.value.toInt()

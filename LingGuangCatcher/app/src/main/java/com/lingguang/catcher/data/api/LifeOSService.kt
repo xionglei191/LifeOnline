@@ -11,6 +11,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import com.lingguang.catcher.data.model.SoulAction
 import com.lingguang.catcher.data.model.ReintegrationRecord
+import com.lingguang.catcher.data.model.PhysicalAction
 
 class LifeOSService(private val lifeosUrl: String) {
     private val TAG = "LifeOSService"
@@ -126,6 +127,66 @@ class LifeOSService(private val lifeosUrl: String) {
             }
         } catch (e: Exception) {
             Log.e(TAG, "postSoulActionAction error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun getPendingPhysicalActions(): Result<List<PhysicalAction>> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/physical-actions?status=pending_auth"
+            val request = Request.Builder().url(url).get().build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val respBody = response.body?.string() ?: "{}"
+                    val json = JSONObject(respBody)
+                    val actionsArray = json.optJSONArray("actions") ?: JSONArray()
+                    val resultList = mutableListOf<PhysicalAction>()
+                    for (i in 0 until actionsArray.length()) {
+                        resultList.add(PhysicalAction.fromJson(actionsArray.getJSONObject(i)))
+                    }
+                    Result.success(resultList)
+                } else {
+                    Result.failure(Exception("Get physical actions failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getPendingPhysicalActions error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    fun approvePhysicalAction(id: String, autoApproveNext: Boolean = false): Result<Boolean> {
+        return postPhysicalAction(id, "approve", autoApproveNext)
+    }
+
+    fun discardPhysicalAction(id: String): Result<Boolean> {
+        return postPhysicalAction(id, "reject", false)
+    }
+
+    private fun postPhysicalAction(id: String, action: String, autoApproveNext: Boolean): Result<Boolean> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/physical-actions/${id}/$action"
+            val payload = JSONObject().apply {
+                if (action == "approve" && autoApproveNext) {
+                    put("autoApproveNext", true)
+                }
+            }
+            val body = RequestBody.create(
+                "application/json; charset=utf-8".toMediaTypeOrNull(),
+                payload.toString()
+            )
+            val request = Request.Builder().url(url).post(body).build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("Action $action on PA $id failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "postPhysicalAction error: ${e.message}", e)
             Result.failure(e)
         }
     }

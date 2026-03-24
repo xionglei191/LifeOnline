@@ -40,3 +40,9 @@ export { semanticSearchHandler, vectorSearchHandler } from './handlers/vectorSea
 
 // Hybrid Search
 export { searchHandler } from './handlers/searchHandler.js';
+
+// Physical Actions
+export { listPhysicalActionsHandler, getPhysicalActionHandler, approvePhysicalActionHandler, rejectPhysicalActionHandler } from './handlers/physicalActionHandlers.js';
+
+// Integrations
+export { googleAuthHandler, googleCallbackHandler, googleCalendarEventsHandler, integrationStatusHandler } from './handlers/integrationHandlers.js';

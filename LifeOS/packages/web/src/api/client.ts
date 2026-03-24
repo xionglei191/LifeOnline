@@ -784,3 +784,89 @@ export async function fetchAiUsage(days: number = 7): Promise<AiUsageResponse> {
   }
   return res.json();
 }
+
+// ── PhysicalAction APIs ────────────────────────────────
+import type { PhysicalAction, ListPhysicalActionsResponse, IntegrationStatus, ListIntegrationsResponse } from '@lifeos/shared';
+
+const MOCK_PHYSICAL_ACTIONS: PhysicalAction[] = [
+  {
+    id: 'pa-mock-1', type: 'calendar_event', status: 'pending',
+    sourceSoulActionId: 'sa-001', sourceNoteId: 'note-001',
+    title: '下周二 19:00 壁球场预约', description: 'Planner Agent 建议你预约壁球场以保持运动习惯',
+    payload: { title: '壁球训练', startTime: '2026-03-31T19:00:00', endTime: '2026-03-31T20:00:00', location: '西城体育中心' },
+    approvalPolicy: 'always_ask', autoApproveKey: null,
+    executionLog: null, externalId: null, errorMessage: null,
+    dryRunPreview: '将在 Google Calendar 创建一条"壁球训练"事件，时间：3月31日 19:00-20:00，地点：西城体育中心。此操作可撤销。',
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    approvedAt: null, executedAt: null,
+  },
+  {
+    id: 'pa-mock-2', type: 'send_email', status: 'pending',
+    sourceSoulActionId: 'sa-002', sourceNoteId: 'note-003',
+    title: '发送周报给团队', description: '根据你的 weekly_report 生成结果，建议发送周报摘要',
+    payload: { to: 'team@example.com', subject: 'LifeOS 周报 #12', body: '本周完成了...' },
+    approvalPolicy: 'auto_after_first', autoApproveKey: 'send_email:weekly_report',
+    executionLog: null, externalId: null, errorMessage: null,
+    dryRunPreview: '将向 team@example.com 发送一封主题为"LifeOS 周报 #12"的邮件。首次需要授权，后续同类操作可自动放行。',
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    approvedAt: null, executedAt: null,
+  }
+];
+
+export async function fetchPendingPhysicalActions(): Promise<PhysicalAction[]> {
+  const res = await fetch(`${API_BASE}/physical-actions?status=pending`);
+  if (!res.ok) {
+    if (res.status === 404) return MOCK_PHYSICAL_ACTIONS;
+    throw new Error('Failed to fetch physical actions');
+  }
+  const data: ListPhysicalActionsResponse = await res.json();
+  return data.actions;
+}
+
+export async function approvePhysicalAction(id: string, autoApproveNext: boolean = false): Promise<PhysicalAction> {
+  const res = await fetch(`${API_BASE}/physical-actions/${encodeURIComponent(id)}/approve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoApproveNext }),
+  });
+  if (!res.ok) {
+    if (res.status === 404) {
+      const mock = MOCK_PHYSICAL_ACTIONS.find(a => a.id === id);
+      if (mock) return { ...mock, status: 'approved', approvedAt: new Date().toISOString() };
+    }
+    throw new Error('Failed to approve physical action');
+  }
+  return (await res.json() as { action: PhysicalAction }).action;
+}
+
+export async function rejectPhysicalAction(id: string, reason?: string): Promise<PhysicalAction> {
+  const res = await fetch(`${API_BASE}/physical-actions/${encodeURIComponent(id)}/reject`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    if (res.status === 404) {
+      const mock = MOCK_PHYSICAL_ACTIONS.find(a => a.id === id);
+      if (mock) return { ...mock, status: 'rejected' };
+    }
+    throw new Error('Failed to reject physical action');
+  }
+  return (await res.json() as { action: PhysicalAction }).action;
+}
+
+// ── Integration APIs ───────────────────────────────────
+
+const MOCK_INTEGRATIONS: IntegrationStatus[] = [
+  { provider: 'Google Calendar', connected: false, lastSyncAt: null },
+  { provider: 'Email (SMTP)', connected: false, lastSyncAt: null },
+  { provider: 'Webhook', connected: true, lastSyncAt: new Date().toISOString() },
+];
+
+export async function fetchIntegrations(): Promise<IntegrationStatus[]> {
+  const res = await fetch(`${API_BASE}/integrations`);
+  if (!res.ok) {
+    if (res.status === 404) return MOCK_INTEGRATIONS;
+    throw new Error('Failed to fetch integrations');
+  }
+  const data: ListIntegrationsResponse = await res.json();
+  return data.integrations;
+}

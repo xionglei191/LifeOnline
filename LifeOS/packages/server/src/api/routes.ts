@@ -39,6 +39,12 @@ import {
   vectorSearchHandler,
   // Hybrid Search
   searchHandler,
+  // Physical Actions
+  listPhysicalActionsHandler, getPhysicalActionHandler,
+  approvePhysicalActionHandler, rejectPhysicalActionHandler,
+  // Integrations
+  googleAuthHandler, googleCallbackHandler,
+  googleCalendarEventsHandler, integrationStatusHandler,
 } from './handlers.js';
 
 export const router = Router();
@@ -56,6 +62,18 @@ router.get('/timeline', getTimeline);
 router.get('/calendar', getCalendar);
 router.get('/search', searchNotes);
 router.get('/hybrid-search', searchHandler);
+
+// Physical Actions
+router.get('/physical-actions', listPhysicalActionsHandler);
+router.get('/physical-actions/:id', getPhysicalActionHandler);
+router.post('/physical-actions/:id/approve', approvePhysicalActionHandler);
+router.post('/physical-actions/:id/reject', rejectPhysicalActionHandler);
+
+// Integrations
+router.get('/integrations/status', integrationStatusHandler);
+router.get('/integrations/google/auth', googleAuthHandler);
+router.get('/integrations/google/callback', googleCallbackHandler);
+router.get('/integrations/google/calendar/events', googleCalendarEventsHandler);
 router.get('/config', getConfig);
 router.post('/config', updateConfig);
 router.post('/index', triggerIndex);

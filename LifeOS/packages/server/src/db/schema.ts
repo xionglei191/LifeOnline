@@ -186,6 +186,38 @@ export const AI_USAGE_TABLE_COLUMNS_SQL = `  id INTEGER PRIMARY KEY AUTOINCREMEN
 
 export const AI_USAGE_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_ai_usage_date ON ai_usage(date);`;
 
+export const PHYSICAL_ACTION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK(type IN ('calendar_event', 'send_email', 'webhook_call', 'iot_command')),
+  status TEXT NOT NULL CHECK(status IN ('pending', 'approved', 'rejected', 'executing', 'completed', 'failed')),
+  source_soul_action_id TEXT,
+  source_note_id TEXT,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  payload_json TEXT NOT NULL,
+  approval_policy TEXT NOT NULL DEFAULT 'always_ask' CHECK(approval_policy IN ('always_ask', 'auto_after_first', 'auto_approve')),
+  auto_approve_key TEXT,
+  execution_log TEXT,
+  external_id TEXT,
+  error_message TEXT,
+  dry_run_preview TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  approved_at TEXT,
+  executed_at TEXT`;
+
+export const PHYSICAL_ACTION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_physical_actions_status ON physical_actions(status);
+CREATE INDEX IF NOT EXISTS idx_physical_actions_type ON physical_actions(type);
+CREATE INDEX IF NOT EXISTS idx_physical_actions_created ON physical_actions(created_at);`;
+
+export const INTEGRATION_CREDENTIALS_TABLE_COLUMNS_SQL = `  provider TEXT PRIMARY KEY,
+  access_token TEXT,
+  refresh_token TEXT,
+  token_expiry TEXT,
+  scopes TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,

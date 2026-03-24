@@ -146,6 +146,20 @@
     </div>
 
     <div class="settings-card">
+      <h3>外部集成管理</h3>
+      <p class="hint" style="margin-bottom:16px">管理已授权的外部服务连接，允许 LifeOS 代你执行物理动作。</p>
+      <div class="integration-list">
+        <IntegrationCard
+          v-for="intg in integrations"
+          :key="intg.provider"
+          :integration="intg"
+          @connect="handleConnect"
+          @disconnect="handleDisconnect"
+        />
+      </div>
+    </div>
+
+    <div class="settings-card">
       <h3>AI Prompt 调优中心</h3>
       <p class="hint" style="margin-bottom:16px">在线编辑 Prompt override，保存后立即作用于运行中的 AI 流程。</p>
 
@@ -364,7 +378,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import PrivacyMask from '../components/PrivacyMask.vue';
 import AICostPanel from '../components/AICostPanel.vue';
-import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
+import IntegrationCard from '../components/IntegrationCard.vue';
+import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchIntegrations, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
 import type { PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
 import { useWebSocket } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
@@ -553,12 +568,31 @@ function formatTime(ts: string) { return new Date(ts).toLocaleString('zh-CN', { 
 // ── WebSocket ──────────────────────────────────────────
 function handleWsUpdate(_event: Event) { loadStatus(); }
 
+// ── Integrations ──────────────────────────────────────
+import type { IntegrationStatus } from '@lifeos/shared';
+const integrations = ref<IntegrationStatus[]>([]);
+
+async function loadIntegrations() {
+  try { integrations.value = await fetchIntegrations(); } catch { /* ignore */ }
+}
+
+function handleConnect(provider: string) {
+  // Future: redirect to OAuth flow. For now, placeholder.
+  alert(`即将跳转至 ${provider} 授权页面（OAuth 流程由 C 组后端提供）`);
+}
+
+function handleDisconnect(provider: string) {
+  if (!confirm(`确定断开与 ${provider} 的连接吗？`)) return;
+  integrations.value = integrations.value.map(i => i.provider === provider ? { ...i, connected: false, lastSyncAt: null } : i);
+}
+
 onMounted(async () => {
   try { config.value = await fetchConfig(); vaultPath.value = config.value.vaultPath; }
   catch (e) { message.value = '加载配置失败'; messageType.value = 'error'; }
   await loadStatus();
   await loadPrompts();
   await loadAiProviderSettings();
+  loadIntegrations();
   document.addEventListener('ws-update', handleWsUpdate);
 });
 

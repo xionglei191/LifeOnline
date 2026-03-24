@@ -11,6 +11,8 @@ import { loadConfig } from '../config/configManager.js';
 import { createFile } from '../vault/fileManager.js';
 import { isR2Configured, uploadToR2 } from '../infra/r2Client.js';
 import { appendInsightToSession, getBrainstormSessionByNoteId } from './brainstormSessions.js';
+import { mapSoulActionToPhysicalAction } from './physicalActionMapper.js';
+import { submitPhysicalAction } from '../integrations/executionEngine.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -380,6 +382,49 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       },
       eventNode: null,
       continuityRecord: null,
+    };
+  }
+
+  // dispatch_physical_action → translate via mapper and submit to execution engine
+  if (soulAction.actionKind === 'dispatch_physical_action') {
+    const now = new Date().toISOString();
+    const intent = soulAction.governanceReason || '';
+    
+    const physicalAction = await mapSoulActionToPhysicalAction(intent);
+    
+    if (!physicalAction) {
+      getDb().prepare(`
+        UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
+      `).run('物理动作转换解析失败 (Mapper returned null)', now, now, soulAction.id);
+      
+      return {
+        dispatched: false,
+        reason: '物理动作解析失败，无法提取确切结构',
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+      };
+    }
+
+    // Submit to execution engine
+    const submitted = await submitPhysicalAction(physicalAction.type, physicalAction.payload, soulAction.sourceNoteId ?? undefined);
+
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'succeeded', updated_at = ?, started_at = ?, finished_at = ?, result_summary = ?
+      WHERE id = ?
+    `).run(now, now, now, `物理动作已创建: [${submitted.type}] 状态为 ${submitted.status}`, soulAction.id);
+
+    return {
+      dispatched: true,
+      reason: `已提交物理动作至执行引擎: ${submitted.type}`,
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+      executionSummary: {
+        objectType: null,
+        objectId: submitted.id,
+        operation: null,
+        summary: `触发 ${submitted.type} (${submitted.status})`,
+      },
     };
   }
 

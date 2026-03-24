@@ -453,6 +453,53 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 自动化执行引擎配置 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                style="@style/Widget.App.Card"
+                >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="自动化执行引擎 (Phase 3)"
+                        android:textAppearance="@style/TextAppearance.App.Title.Large"
+                        android:textColor="@color/primary"
+                        android:layout_marginBottom="@dimen/spacing_md" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_global"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="全局最高控制权允许接管"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_calendar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="日历与智能排期介入"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auto_communication"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="外部通信接口（邮件等）"
+                        android:layout_marginBottom="@dimen/spacing_sm" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 图片配置 -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

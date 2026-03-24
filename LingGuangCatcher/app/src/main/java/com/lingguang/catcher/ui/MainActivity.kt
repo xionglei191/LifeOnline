@@ -103,6 +103,11 @@ class MainActivity : AppCompatActivity() {
             AnimUtil.enterPage(this)
         }
 
+        binding.btnCalendar.setOnClickListener {
+            startActivity(Intent(this, CalendarActivity::class.java))
+            AnimUtil.enterPage(this)
+        }
+
         binding.btnGovernance.setOnClickListener {
             startActivity(Intent(this, GovernanceActivity::class.java))
             AnimUtil.enterPage(this)

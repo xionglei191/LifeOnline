@@ -3,13 +3,25 @@ package com.lingguang.catcher.data.model
 import org.json.JSONObject
 
 data class SoulAction(
-    val id: String,
+    override val id: String,
     val actionKind: String,
     val governanceStatus: String,
     val resultSummary: String?,
     val sourceNoteId: String,
     val createdAt: String
-) {
+) : GovernanceItem {
+
+    override val displayTitle: String
+        get() = getActionKindLabel()
+        
+    override val displaySummary: String
+        get() = resultSummary ?: "暂无描述"
+        
+    override val displayBadge: String
+        get() = "认知重塑"
+
+    override fun isPhysicalAction(): Boolean = false
+
     fun getActionKindLabel(): String {
         return when (actionKind) {
             "ask_followup_question" -> "提出追问"

@@ -25,6 +25,21 @@
 
     <!-- Tab 1: 治理审批 -->
     <div v-if="activeTab === 'governance'">
+      <!-- PhysicalAction 授权审批 -->
+      <section v-if="physicalActions.length" class="pa-section">
+        <h3 class="section-title">⚡ 物理动作待授权 <span class="badge">{{ physicalActions.length }}</span></h3>
+        <div class="pa-list">
+          <PhysicalActionCard
+            v-for="pa in physicalActions"
+            :key="pa.id"
+            :action="pa"
+            :acting="paActingId === pa.id"
+            @approve="handleApprovePA"
+            @reject="handleRejectPA"
+          />
+        </div>
+      </section>
+
       <ReintegrationReviewPanel
         :records="reintegrationRecords"
         :filter-status="reintegrationFilterStatus"
@@ -127,8 +142,9 @@ const ReintegrationReviewPanel = defineAsyncComponent(() => import('../component
 const SoulActionGovernancePanel = defineAsyncComponent(() => import('../components/SoulActionGovernancePanel.vue'));
 const PromotionProjectionPanel = defineAsyncComponent(() => import('../components/PromotionProjectionPanel.vue'));
 const BrainstormSessionPanel = defineAsyncComponent(() => import('../components/BrainstormSessionPanel.vue'));
-import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions } from '../api/client';
-import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession } from '@lifeos/shared';
+import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions, fetchPendingPhysicalActions, approvePhysicalAction, rejectPhysicalAction } from '../api/client';
+import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession, PhysicalAction } from '@lifeos/shared';
+import PhysicalActionCard from '../components/PhysicalActionCard.vue';
 import { formatSoulActionKindLabel, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
 import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 import { useWebSocket } from '../composables/useWebSocket';
@@ -170,6 +186,10 @@ const projectionMessageType = ref<'success' | 'error'>('success');
 // ── Brainstorm State ──────────────────────────────────────
 const brainstormSessions = ref<BrainstormSession[]>([]);
 const brainstormLoading = ref(false);
+
+// ── PhysicalAction State ──────────────────────────────────
+const physicalActions = ref<PhysicalAction[]>([]);
+const paActingId = ref<string | null>(null);
 
 // ── Computed ───────────────────────────────────────────
 const reintegrationStatusSummary = computed(() => {
@@ -557,7 +577,32 @@ function handleWsUpdate(event: Event) {
   }
 }
 
+async function loadPhysicalActions() {
+  try {
+    physicalActions.value = await fetchPendingPhysicalActions();
+  } catch { /* silently fail if endpoint not ready */ }
+}
+
+async function handleApprovePA(id: string, autoApproveNext: boolean) {
+  paActingId.value = id;
+  try {
+    await approvePhysicalAction(id, autoApproveNext);
+    physicalActions.value = physicalActions.value.filter(a => a.id !== id);
+  } catch { /* noop */ }
+  paActingId.value = null;
+}
+
+async function handleRejectPA(id: string) {
+  paActingId.value = id;
+  try {
+    await rejectPhysicalAction(id);
+    physicalActions.value = physicalActions.value.filter(a => a.id !== id);
+  } catch { /* noop */ }
+  paActingId.value = null;
+}
+
 onMounted(async () => {
+  loadPhysicalActions();
   await loadReintegrationRecords();
   await loadSoulActions();
   await loadPromotionProjections({ preserveMessage: true });
@@ -614,6 +659,34 @@ onUnmounted(() => {
   color: var(--accent-strong);
   background: var(--surface-strong);
   box-shadow: 0 2px 8px -2px var(--shadow);
+}
+
+.pa-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.pa-list {
+  display: grid;
+  gap: 10px;
 }
 
 @media (max-width: 640px) {

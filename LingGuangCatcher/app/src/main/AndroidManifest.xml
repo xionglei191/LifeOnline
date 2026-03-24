@@ -123,6 +123,12 @@
             android:exported="false"
             android:theme="@style/Theme.LingGuangCatcher" />
 
+        <!-- 日历预览 Activity -->
+        <activity
+            android:name=".ui.CalendarActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LingGuangCatcher" />
+
         <!-- 数据导出 Activity -->
         <activity
             android:name=".ui.ExportActivity"
