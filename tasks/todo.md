@@ -39,19 +39,19 @@
 
 #### Sprint 2（新任务）
 
-- [ ] **P1：向量搜索 API 与语义查询端点**
+- [x] **P1：向量搜索 API 与语义查询端点**
   - 目标：暴露 `/api/semantic-search` 端点，支持文本输入 → embedding → kNN 查询
   - 关键文件：`packages/server/src/api/` (新增 handler), `packages/server/src/db/vectorStore.ts`
   - 完成标准：前端可通过 API 查询语义相关的 BrainstormSession / ContinuityRecord
   - 验证：curl 查询返回语义排序结果
 
-- [ ] **P2：Vault 文件变更实时监听（File Watcher）**
+- [x] **P2：Vault 文件变更实时监听（File Watcher）**
   - 目标：替代定时扫描，使用 `chokidar` 或 `fs.watch` 实时监听 Vault 目录变化
   - 关键文件：`packages/server/src/indexer/` (新增 fileWatcher.ts)
   - 完成标准：Vault 中新增/修改 .md 文件后，3 秒内自动触发索引
   - 验证：手动创建一个 .md 文件，观察日志中自动触发索引
 
-- [ ] **P3：向量存储维护与清理机制**
+- [x] **P3：向量存储维护与清理机制**
   - 目标：当笔记删除/更新时，同步清理或更新对应的 embedding 记录
   - 关键文件：`packages/server/src/db/vectorStore.ts`
   - 完成标准：删除笔记后其 embedding 自动清理
