@@ -6,6 +6,11 @@ import matter from 'gray-matter';
 import { getDb } from '../../db/client.js';
 import { broadcastUpdate, getIndexQueue } from '../../index.js';
 import { loadConfig } from '../../config/configManager.js';
+import { generateId } from '../../utils/id.js';
+import { getEffectiveAiProviderConfig } from '../../ai/providerConfigService.js';
+import { Logger } from '../../utils/logger.js';
+
+const logger = new Logger('noteHandlers');
 import { buildNoteFilePath, createFile, deleteFile, rewriteMarkdownContent, updateFrontmatter } from '../../vault/fileManager.js';
 import { getTodayDateString } from '../../utils/date.js';
 import type { ApiResponse, Note, CreateNoteRequest, CreateNoteResponse, UpdateNoteRequest, UpdateNoteResponse, SearchResult } from '@lifeos/shared';
@@ -149,7 +154,7 @@ export async function deleteNote(req: Request, res: Response): Promise<void> {
     res.json({ success: true });
   } catch (error: any) {
     if (error?.code === 'ENOENT') { res.status(404).json({ error: 'Note file not found' }); return; }
-    console.error('Delete note error:', error);
+    logger.error('Delete note error:', error);
     res.status(500).json({ error: String(error) });
   }
 }

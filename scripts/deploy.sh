@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
 # deploy.sh — 从本机(252)一键部署 LifeOnline 到服务器(246)
-# 用法: ./scripts/deploy.sh [--build] [--restart]
+# 用法: ./scripts/deploy.sh [--build] [--restart] [--rollback]
 #   --build    拉取代码后执行 pnpm install + pnpm build
 #   --restart  重启 LifeOS server + web 前端
+#   --rollback 回滚远程 main 分支到上一个版本 (HEAD~1)
 #   无参数     仅执行 git pull
 # ============================================================
 
@@ -19,24 +20,52 @@ REMOTE_PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr
 
 DO_BUILD=false
 DO_RESTART=false
+DO_ROLLBACK=false
 
 for arg in "$@"; do
   case "$arg" in
-    --build)   DO_BUILD=true ;;
-    --restart) DO_RESTART=true ;;
-    *)         echo "Unknown argument: $arg"; exit 1 ;;
+    --build)    DO_BUILD=true ;;
+    --restart)  DO_RESTART=true ;;
+    --rollback) DO_ROLLBACK=true ;;
+    *)          echo "Unknown argument: $arg"; exit 1 ;;
   esac
 done
 
+# 如果既没有 rollback 也没有只是纯 pull，且我们在本机，执行本地前置类型检查
+if [ "$DO_ROLLBACK" = false ]; then
+  echo "🔍 前置检查: 本地 TypeScript 编译验证..."
+  # 获取脚本所在目录的上上级（LifeOS目录）
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+  LIFEOS_DIR="$(dirname "$SCRIPT_DIR")/LifeOS"
+  
+  if [ -d "$LIFEOS_DIR" ]; then
+    (cd "$LIFEOS_DIR" && npx tsc --noEmit -p packages/server/tsconfig.json) || {
+      echo "❌ 失败: 本地服务端代码编译未通过！请修复后再部署。"
+      exit 1
+    }
+    echo "✅ 编译检查通过。"
+  else
+    echo "⚠️ 未找到本地 LifeOS 目录，跳过编译检查。"
+  fi
+fi
+
 echo "🚀 Deploying LifeOnline to ${REMOTE_HOST}..."
 
-# ---- Step 1: Git Pull ----
+# ---- Step 1: Git Pull / Rollback ----
 echo ""
-echo "📥 Step 1: Pulling latest code from GitHub..."
-ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && git pull origin main"
-echo "✅ Code updated."
+if [ "$DO_ROLLBACK" = true ]; then
+  echo "⏪ Step 1: Rolling back remote repository to HEAD~1..."
+  ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && git reset --hard HEAD~1"
+  echo "✅ Remote repository rolled back."
+  # 强制要求 rollback 时重新 build
+  DO_BUILD=true
+else
+  echo "📥 Step 1: Pulling latest code from GitHub..."
+  ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && git pull origin main"
+  echo "✅ Code updated."
+fi
 
-# ---- Step 2: Build (可选) ----
+# ---- Step 2: Build (可选或强制) ----
 if [ "$DO_BUILD" = true ]; then
   echo ""
   echo "🔨 Step 2: Installing dependencies & building..."
@@ -52,7 +81,7 @@ if [ "$DO_RESTART" = true ]; then
   echo ""
   echo "🔄 Step 3: Restarting LifeOS services..."
 
-  # Check if systemd services are installed
+  # 强制要求使用 systemd services
   if ssh "${REMOTE_USER}@${REMOTE_HOST}" "systemctl --user is-enabled lifeos-server.service 2>/dev/null"; then
     echo "   Using systemd user services..."
     ssh "${REMOTE_USER}@${REMOTE_HOST}" "systemctl --user restart lifeos-server.service"
@@ -62,21 +91,9 @@ if [ "$DO_RESTART" = true ]; then
     echo "   ✅ lifeos-web restarted"
     echo "   📋 Check logs: ssh ${REMOTE_HOST} 'journalctl --user -u lifeos-server -f'"
   else
-    echo "   ⚠️  systemd services not installed. Using fallback (nohup)..."
-    echo "   💡 Run on server: cd ~/LifeOnline && ./scripts/install-services.sh"
-
-    # Fallback: legacy nohup approach
-    echo "   🔸 Restarting backend server..."
-    ssh "${REMOTE_USER}@${REMOTE_HOST}" "pkill -f 'tsx.*watch.*src/index.ts' || true"
-    sleep 1
-    ssh -f "${REMOTE_USER}@${REMOTE_HOST}" "export PATH=${REMOTE_PATH}:\$PATH && cd ${REMOTE_LIFEOS_DIR}/packages/server && nohup pnpm dev > /tmp/lifeos-server.log 2>&1 &"
-    echo "   ✅ Backend restarted. Logs: /tmp/lifeos-server.log"
-
-    echo "   🔸 Restarting frontend (Vite)..."
-    ssh "${REMOTE_USER}@${REMOTE_HOST}" "pkill -f 'vite.*--host' || true; pkill -f 'node.*packages/web' || true"
-    sleep 1
-    ssh -f "${REMOTE_USER}@${REMOTE_HOST}" "export PATH=${REMOTE_PATH}:\$PATH && cd ${REMOTE_LIFEOS_DIR}/packages/web && nohup pnpm dev --host > /tmp/lifeos-web.log 2>&1 &"
-    echo "   ✅ Frontend restarted. Logs: /tmp/lifeos-web.log"
+    echo "   ❌ 错误: 远程服务器未安装 systemd services。"
+    echo "   💡 请先在服务器上运行: cd ~/LifeOnline && ./scripts/install-services.sh"
+    exit 1
   fi
   echo "   🌐 Frontend URL: http://${REMOTE_HOST}:5173/"
 else
@@ -87,4 +104,8 @@ fi
 echo ""
 echo "🎉 Deploy complete!"
 echo "   Remote: ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
-echo "   Branch: main"
+if [ "$DO_ROLLBACK" = true ]; then
+  echo "   Status: Rolled back to HEAD~1"
+else
+  echo "   Branch: main"
+fi

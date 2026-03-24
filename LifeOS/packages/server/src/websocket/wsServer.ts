@@ -1,6 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 import type { WsEvent } from '@lifeos/shared';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('wsServer');
 
 let wss: WebSocketServer | null = null;
 
@@ -47,13 +50,13 @@ export function initWebSocket(server: Server) {
   wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    logger.info('WebSocket client connected');
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+      logger.info('WebSocket client disconnected');
     });
   });
 
-  console.log('WebSocket server initialized');
+  logger.info('WebSocket server initialized');
 }
 
 export function broadcastUpdate(event: WsEvent) {
@@ -62,7 +65,7 @@ export function broadcastUpdate(event: WsEvent) {
   }
   const message = JSON.stringify(event);
   const clientCount = wss.clients.size;
-  console.log(`WebSocket: broadcasting ${event.type} to ${clientCount} client(s)`);
+  logger.info(`WebSocket: broadcasting ${event.type} to ${clientCount} client(s)`);
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);

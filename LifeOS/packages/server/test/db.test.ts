@@ -39,6 +39,47 @@ test('initDatabase creates key tables and columns', async () => {
     assert.deepEqual(columnNames(db, 'continuity_records').includes('source_reintegration_id'), true);
     assert.deepEqual(columnNames(db, 'continuity_records').includes('promotion_soul_action_id'), true);
     assert.deepEqual(columnNames(db, 'ai_prompts').includes('notes'), true);
+
+    // gate_decisions column completeness
+    const gateDecisionCols = columnNames(db, 'gate_decisions');
+    for (const col of ['id', 'action_kind', 'decision', 'created_at']) {
+      assert.equal(gateDecisionCols.includes(col), true, `gate_decisions missing column ${col}`);
+    }
+
+    // brainstorm_sessions column completeness
+    const brainstormCols = columnNames(db, 'brainstorm_sessions');
+    for (const col of ['id', 'source_note_id', 'raw_input_preview', 'themes_json', 'emotional_tone',
+      'extracted_questions_json', 'ambiguity_points_json', 'distilled_insights_json',
+      'suggested_action_kinds_json', 'actionability', 'continuity_signals_json', 'status', 'created_at', 'updated_at']) {
+      assert.equal(brainstormCols.includes(col), true, `brainstorm_sessions missing column ${col}`);
+    }
+
+    // ai_provider_settings column completeness
+    const aiProviderCols = columnNames(db, 'ai_provider_settings');
+    for (const col of ['id', 'base_url', 'model', 'api_key', 'enabled', 'updated_at']) {
+      assert.equal(aiProviderCols.includes(col), true, `ai_provider_settings missing column ${col}`);
+    }
+  } finally {
+    await env.cleanup();
+  }
+});
+
+test('initDatabase creates all 12 tables from a completely empty database', async () => {
+  const env = await createTestEnv('lifeos-db-from-scratch-');
+  try {
+    initDatabase();
+    const db = getDb();
+
+    const expectedTables = [
+      'notes', 'worker_tasks', 'task_schedules', 'soul_actions',
+      'persona_snapshots', 'reintegration_records', 'event_nodes', 'continuity_records',
+      'gate_decisions', 'ai_prompts', 'ai_provider_settings', 'brainstorm_sessions',
+    ];
+    for (const table of expectedTables) {
+      assert.equal(tableExists(db, table), true, `missing table ${table}`);
+      const cols = columnNames(db, table);
+      assert.ok(cols.length > 0, `table ${table} has no columns`);
+    }
   } finally {
     await env.cleanup();
   }

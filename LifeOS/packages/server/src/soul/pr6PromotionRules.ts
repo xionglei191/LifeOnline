@@ -15,18 +15,21 @@ const PR6_SIGNAL_EVENT_KIND: Partial<Record<ReintegrationRecord['signalKind'], E
   persona_snapshot_reintegration: 'persona_shift',
   daily_report_reintegration: 'milestone_report',
   weekly_report_reintegration: 'weekly_reflection',
+  summary_reintegration: 'milestone_report',
 };
 
 const PR6_SIGNAL_EVENT_TITLE: Partial<Record<ReintegrationRecord['signalKind'], string>> = {
   persona_snapshot_reintegration: '人格切换事件',
   daily_report_reintegration: '里程碑事件',
   weekly_report_reintegration: '周回顾事件',
+  summary_reintegration: '阶段总结事件',
 };
 
 const PR6_SIGNAL_CONTINUITY_KIND: Partial<Record<ReintegrationRecord['signalKind'], ContinuityRecordKind>> = {
   persona_snapshot_reintegration: 'persona_direction',
   daily_report_reintegration: 'daily_rhythm',
   weekly_report_reintegration: 'weekly_theme',
+  summary_reintegration: 'weekly_theme',
 };
 
 export function assertAcceptedPromotionReintegration(record: ReintegrationRecord, errorMessage = 'Only accepted reintegration records can plan promotions'): void {

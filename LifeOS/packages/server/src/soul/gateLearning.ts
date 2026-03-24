@@ -1,4 +1,7 @@
 import { getDb } from '../db/client.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('gateLearning');
 
 // ── Types ──────────────────────────────────────────────
 
@@ -11,6 +14,12 @@ export interface GateStats {
   discardCount: number;
   approveRate: number;   // 0-1
   recentApproveRate: number; // 0-1, based on last 10 decisions
+}
+
+export interface GatePattern {
+  patternType: 'time_trend' | 'context_correlation' | 'consecutive_streak';
+  description: string;
+  influence: number; // -0.2 to +0.2
 }
 
 interface GateDecisionRow {
@@ -30,7 +39,7 @@ export function recordGateOutcome(actionKind: string, decision: GateDecisionOutc
       VALUES (?, ?, ?)
     `).run(actionKind, decision, new Date().toISOString());
   } catch (error) {
-    console.warn('[gateLearning] Failed to record gate outcome:', error);
+    logger.warn('Failed to record gate outcome:', error);
   }
 }
 
@@ -92,9 +101,77 @@ export function getGateStats(actionKind: string): GateStats {
       recentApproveRate: recentTotal > 0 ? recentApproveCount / recentTotal : 0,
     };
   } catch (error) {
-    console.warn('[gateLearning] Failed to get gate stats:', error);
+    logger.warn('Failed to get gate stats:', error);
     return { ...DEFAULT_STATS };
   }
+}
+
+// ── Pattern Detection ──────────────────────────────────
+
+export function detectGatePatterns(actionKind: string): GatePattern[] {
+  const patterns: GatePattern[] = [];
+  const stats = getGateStats(actionKind);
+
+  if (stats.totalDecisions < 5) {
+    return patterns;
+  }
+
+  // 1. Time trend (time_trend)
+  // Compare recent approve rate (last 10) against all-time approve rate.
+  if (stats.recentApproveRate > stats.approveRate + 0.2) {
+    patterns.push({
+      patternType: 'time_trend',
+      description: `近期对 ${actionKind} 的接受度显著上升 (${(stats.approveRate * 100).toFixed(0)}% -> ${(stats.recentApproveRate * 100).toFixed(0)}%)`,
+      influence: 0.1,
+    });
+  } else if (stats.recentApproveRate < stats.approveRate - 0.2) {
+    patterns.push({
+      patternType: 'time_trend',
+      description: `近期对 ${actionKind} 的接受度下降显著 (${(stats.approveRate * 100).toFixed(0)}% -> ${(stats.recentApproveRate * 100).toFixed(0)}%)`,
+      influence: -0.1,
+    });
+  }
+
+  // 2. Consecutive streak (consecutive_streak)
+  try {
+    const db = getDb();
+    const recentDecisions = db.prepare(`
+      SELECT decision
+      FROM gate_decisions
+      WHERE action_kind = ?
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).all(actionKind) as Array<{ decision: string }>;
+
+    let streak = 0;
+    let currentDecision = recentDecisions[0]?.decision;
+
+    for (const row of recentDecisions) {
+      if (row.decision === currentDecision) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    if (streak >= 5 && currentDecision === 'approved') {
+      patterns.push({
+        patternType: 'consecutive_streak',
+        description: `连续 ${streak} 次通过了 ${actionKind} 操作，形成稳定放权模式`,
+        influence: 0.15,
+      });
+    } else if (streak >= 3 && currentDecision === 'discarded') {
+      patterns.push({
+        patternType: 'consecutive_streak',
+        description: `连续 ${streak} 次手动丢弃了 ${actionKind} 操作，建议降低置信度`,
+        influence: -0.15,
+      });
+    }
+  } catch (error) {
+    logger.warn('Failed to detect consecutive streaks:', error);
+  }
+
+  return patterns;
 }
 
 // ── Confidence Adjustment ──────────────────────────────
@@ -105,43 +182,48 @@ export function getGateStats(actionKind: string): GateStats {
  * If a particular action kind is frequently approved, boost confidence.
  * If frequently rejected/discarded, reduce it.
  * 
- * This is the "记录优先于放权，但逐步放权" mechanism.
+ * This is the "记录优先于放权，但逐步放权" mechanism, now enhanced with pattern reasoning.
  */
 export function adjustConfidenceByHistory(
   actionKind: string,
   baseConfidence: number,
-): { adjustedConfidence: number; reason: string } {
+): { adjustedConfidence: number; reason: string; patterns: GatePattern[] } {
   const stats = getGateStats(actionKind);
+  const patterns = detectGatePatterns(actionKind);
+  
+  // Calculate total pattern influence
+  const patternInfluence = patterns.reduce((sum, p) => sum + p.influence, 0);
 
   // Not enough history — no adjustment
   if (stats.totalDecisions < 5) {
     return {
       adjustedConfidence: baseConfidence,
       reason: `历史决策不足 (${stats.totalDecisions}/5)，不调整`,
+      patterns: [],
     };
   }
 
-  // High approve rate → boost confidence
+  // Base adjustments from statistical rates
+  let statisticalAdjustment = 0;
+  let statisticalReason = `approve 率 ${(stats.approveRate * 100).toFixed(0)}%，在正常范围内`;
+
   if (stats.recentApproveRate >= 0.8 && stats.approveRate >= 0.7) {
-    const boost = Math.min(0.2, (stats.recentApproveRate - 0.7) * 0.5);
-    return {
-      adjustedConfidence: Math.min(1, baseConfidence + boost),
-      reason: `历史 approve 率 ${(stats.approveRate * 100).toFixed(0)}%，近期 ${(stats.recentApproveRate * 100).toFixed(0)}%，提升置信 +${(boost * 100).toFixed(0)}%`,
-    };
+    statisticalAdjustment = Math.min(0.2, (stats.recentApproveRate - 0.7) * 0.5);
+    statisticalReason = `历史 approve 率 ${(stats.approveRate * 100).toFixed(0)}%，近期 ${(stats.recentApproveRate * 100).toFixed(0)}%，基础置信调整 +${(statisticalAdjustment * 100).toFixed(0)}%`;
+  } else if (stats.discardCount / stats.totalDecisions >= 0.4) {
+    statisticalAdjustment = -Math.min(0.2, (stats.discardCount / stats.totalDecisions - 0.3) * 0.5);
+    statisticalReason = `discard 率 ${((stats.discardCount / stats.totalDecisions) * 100).toFixed(0)}%，基础置信调整 ${(statisticalAdjustment * 100).toFixed(0)}%`;
   }
 
-  // High discard rate → reduce confidence
-  if (stats.discardCount / stats.totalDecisions >= 0.4) {
-    const penalty = Math.min(0.2, (stats.discardCount / stats.totalDecisions - 0.3) * 0.5);
-    return {
-      adjustedConfidence: Math.max(0, baseConfidence - penalty),
-      reason: `discard 率 ${((stats.discardCount / stats.totalDecisions) * 100).toFixed(0)}%，降低置信 -${(penalty * 100).toFixed(0)}%`,
-    };
-  }
+  // Combine statistical and pattern influences
+  const totalAdjustment = statisticalAdjustment + patternInfluence;
+  const clampedAdjustment = Math.max(-0.4, Math.min(0.4, totalAdjustment)); // Cap total adjustment to +/- 40%
+  const finalConfidence = Math.max(0, Math.min(1, baseConfidence + clampedAdjustment));
 
   return {
-    adjustedConfidence: baseConfidence,
-    reason: `approve 率 ${(stats.approveRate * 100).toFixed(0)}%，在正常范围内`,
+    adjustedConfidence: finalConfidence,
+    reason: statisticalReason,
+    patterns,
   };
 }
 

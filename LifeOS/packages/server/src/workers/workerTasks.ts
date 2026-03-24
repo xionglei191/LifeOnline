@@ -33,6 +33,9 @@ import {
 } from '../soul/soulActions.js';
 import { upsertReintegrationRecord } from '../soul/reintegrationRecords.js';
 import { getPersonaSnapshotBySourceNoteId } from '../soul/personaSnapshots.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('workerTasks');
 import { buildOutputNote } from './executors/shared.js';
 
 // ── Executor imports ──
@@ -446,8 +449,8 @@ export function clearFinishedWorkerTasks(): number {
 
 export function startWorkerTaskExecution(taskId: string): void {
   queueMicrotask(() => {
-    executeWorkerTask(taskId).catch((error) => {
-      console.error(`Worker task execution failed: ${taskId}`, error);
+    executeWorkerTask(taskId).catch((error) => { // Record terminal failure
+      logger.error(`Worker task execution failed: ${taskId}`, error);
     });
   });
 }

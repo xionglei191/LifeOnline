@@ -166,6 +166,15 @@ export const BRAINSTORM_SESSION_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
 export const BRAINSTORM_SESSION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_brainstorm_sessions_source_note_id ON brainstorm_sessions(source_note_id);
 CREATE INDEX IF NOT EXISTS idx_brainstorm_sessions_created_at ON brainstorm_sessions(created_at);`;
 
+export const AI_PROVIDER_SETTINGS_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  base_url TEXT NOT NULL,
+  model TEXT NOT NULL,
+  api_key TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL`;
+
+export const AI_PROVIDER_SETTINGS_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_ai_provider_settings_enabled ON ai_provider_settings(enabled);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -265,15 +274,10 @@ CREATE TABLE IF NOT EXISTS ai_prompts (
 CREATE INDEX IF NOT EXISTS idx_ai_prompts_enabled ON ai_prompts(enabled);
 
 CREATE TABLE IF NOT EXISTS ai_provider_settings (
-  id TEXT PRIMARY KEY,
-  base_url TEXT NOT NULL,
-  model TEXT NOT NULL,
-  api_key TEXT,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  updated_at TEXT NOT NULL
+${AI_PROVIDER_SETTINGS_TABLE_COLUMNS_SQL}
 );
 
-CREATE INDEX IF NOT EXISTS idx_ai_provider_settings_enabled ON ai_provider_settings(enabled);
+${AI_PROVIDER_SETTINGS_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS brainstorm_sessions (
 ${BRAINSTORM_SESSION_TABLE_COLUMNS_SQL}

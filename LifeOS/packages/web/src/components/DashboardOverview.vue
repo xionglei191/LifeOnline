@@ -55,6 +55,26 @@
         </div>
       </section>
 
+      <!-- ── Shortcuts ── -->
+      <section class="shortcuts-panel">
+        <button class="shortcut-btn" @click="$router.push('/inbox')">
+          <span class="sc-icon">📥</span>
+          <span class="sc-label">Inbox</span>
+        </button>
+        <button class="shortcut-btn" @click="$router.push('/calendar')">
+          <span class="sc-icon">📅</span>
+          <span class="sc-label">全景日历</span>
+        </button>
+        <button class="shortcut-btn" @click="$router.push('/governance')">
+          <span class="sc-icon">⚖️</span>
+          <span class="sc-label">治理中心</span>
+        </button>
+        <button class="shortcut-btn" @click="$router.push('/ops')">
+          <span class="sc-icon">⚙️</span>
+          <span class="sc-label">运行时控制</span>
+        </button>
+      </section>
+
       <section v-if="data.inboxCount > 0" class="inbox-banner" @click="$router.push('/inbox')">
         <span class="inbox-icon">📥</span>
         <span class="inbox-text">_Inbox 中有 <strong>{{ data.inboxCount }}</strong> 条待整理笔记</span>
@@ -80,6 +100,57 @@
         :message="`定时任务健康状态加载失败：${scheduleHealthError.message}`"
       />
 
+      <!-- ── Cognitive Overview ── -->
+      <section class="cognitive-grid">
+        <!-- Persona Card -->
+        <article class="persona-card settings-card">
+          <div class="card-head">
+            <h3>🎭 人格状态 (Persona)</h3>
+          </div>
+          <div v-if="loadingCognitive && !latestPersonaSnapshot" class="empty-state">同步脉络中...</div>
+          <div v-else-if="latestPersonaSnapshot" class="persona-content">
+            <p class="persona-summary">{{ latestPersonaSnapshot.summary }}</p>
+            <div class="persona-meta">
+              <span class="meta-pill">基于: {{ latestPersonaSnapshot.snapshot.sourceNoteTitle }}</span>
+              <span class="meta-pill">更新于: {{ new Date(latestPersonaSnapshot.updatedAt).toLocaleDateString() }}</span>
+            </div>
+            <p class="persona-preview">{{ latestPersonaSnapshot.snapshot.contentPreview }}</p>
+          </div>
+          <div v-else class="empty-state">
+            暂无人格快照，请在运维中心触发 update_persona_snapshot。
+          </div>
+        </article>
+
+        <!-- Recent Actions -->
+        <article class="recent-actions-card settings-card">
+          <div class="card-head">
+            <h3>🧠 最近认知活动 (SoulActions)</h3>
+            <button class="btn-link" @click="$router.push('/governance')">查看全部</button>
+          </div>
+          <div v-if="loadingCognitive && !recentSoulActions.length" class="empty-state">同步脉络中...</div>
+          <div v-else-if="recentSoulActions.length > 0" class="actions-list">
+            <router-link
+              v-for="action in recentSoulActions"
+              :key="action.id"
+              :to="`/governance/soul-action/${action.id}`"
+              class="action-item"
+            >
+              <div class="action-item-top">
+                <span class="action-kind-badge">{{ formatSoulActionKindLabel(action.actionKind) }}</span>
+                <span class="action-time">{{ new Date(action.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+              </div>
+              <div class="action-item-meta">
+                <span>治理: {{ action.governanceStatus }}</span>
+                <span>执行: {{ action.executionStatus }}</span>
+              </div>
+            </router-link>
+          </div>
+          <div v-else class="empty-state">
+            暂无最近系统自主行为记录。
+          </div>
+        </article>
+      </section>
+
       <section class="mission-grid">
         <div class="mission-column">
           <TodayTodos :todos="data.todayTodos" @selectNote="selectedNoteId = $event" />
@@ -102,7 +173,9 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useDashboard, doesDashboardNeedRefresh } from '../composables/useDashboard';
 import { fetchScheduleHealth, type ScheduleHealth } from '../api/client';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
-import type { WsEvent } from '@lifeos/shared';
+import { fetchSoulActionList, fetchWorkerTasks, fetchPersonaSnapshot } from '../api/client';
+import type { WsEvent, SoulAction, PersonaSnapshot } from '@lifeos/shared';
+import { formatSoulActionKindLabel } from '@lifeos/shared';
 import TodayTodos from './TodayTodos.vue';
 import WeeklyHighlights from './WeeklyHighlights.vue';
 import DimensionHealth from './DimensionHealth.vue';
@@ -111,6 +184,10 @@ import NoteDetail from './NoteDetail.vue';
 import StateDisplay from './StateDisplay.vue';
 
 const { data, loading, error, load } = useDashboard();
+const recentSoulActions = ref<SoulAction[]>([]);
+const latestPersonaSnapshot = ref<PersonaSnapshot | null>(null);
+const loadingCognitive = ref(false);
+
 const selectedNoteId = ref<string | null>(null);
 const scheduleHealth = ref<ScheduleHealth | null>(null);
 const scheduleHealthError = ref<Error | null>(null);
@@ -165,12 +242,42 @@ async function handleRefresh() {
   await Promise.all([
     load(),
     loadScheduleHealth(),
+    loadCognitiveData(),
   ]);
 }
 
 async function handleDeleted() {
   selectedNoteId.value = null;
   await handleRefresh();
+}
+
+async function loadCognitiveData() {
+  loadingCognitive.value = true;
+  try {
+    const actionList = await fetchSoulActionList();
+    if (actionList.items) {
+      recentSoulActions.value = actionList.items.slice(0, 3);
+    }
+    const snapTasks = await fetchWorkerTasks(5, { taskType: 'update_persona_snapshot' });
+    let found = false;
+    for (const t of snapTasks) {
+      if (t.sourceNoteId && t.status === 'succeeded') {
+        try {
+          const snap = await fetchPersonaSnapshot(t.sourceNoteId);
+          if (snap) {
+            latestPersonaSnapshot.value = snap;
+            found = true;
+            break;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    if (!found) latestPersonaSnapshot.value = null;
+  } catch (e) {
+    console.warn('Failed to load cognitive data', e);
+  } finally {
+    loadingCognitive.value = false;
+  }
 }
 
 function handleWsUpdate(event: Event) {
@@ -201,6 +308,7 @@ async function loadScheduleHealth() {
 onMounted(() => {
   load();
   loadScheduleHealth();
+  loadCognitiveData();
   document.addEventListener('ws-update', handleWsUpdate);
 });
 
@@ -508,5 +616,162 @@ onUnmounted(() => {
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+/* ─── Shortcuts ─── */
+.shortcuts-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.shortcut-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.shortcut-btn:hover {
+  background: color-mix(in srgb, var(--surface-strong) 90%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  transform: translateY(-2px);
+}
+.sc-icon {
+  font-size: 1.6rem;
+}
+.sc-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ─── Cognitive Grid ─── */
+.cognitive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.8fr);
+  gap: 20px;
+}
+.settings-card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.card-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+  font-weight: 600;
+}
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: var(--meta-bg);
+  border-radius: 12px;
+}
+
+/* ─── Persona Card ─── */
+.persona-content {
+  display: grid;
+  gap: 12px;
+}
+.persona-summary {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.persona-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.meta-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+.persona-preview {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  background: var(--meta-bg);
+  padding: 12px;
+  border-radius: 12px;
+}
+
+/* ─── Recent Actions Card ─── */
+.actions-list {
+  display: grid;
+  gap: 10px;
+}
+.action-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-muted) 60%, transparent);
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.action-item:hover {
+  background: var(--surface);
+}
+.action-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.action-kind-badge {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.action-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.action-item-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .shortcuts-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cognitive-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

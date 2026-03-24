@@ -2,7 +2,10 @@ import { getDb } from '../db/client.js';
 import { generateSoulActionCandidates, type SoulActionCandidate } from './soulActionGenerator.js';
 import { evaluateInterventionGate, type GateDecisionType } from './interventionGate.js';
 import { createOrReuseSoulAction } from './soulActions.js';
-import { createOrUpdateBrainstormSession, getRecentThemeFrequency } from './brainstormSessions.js';
+import { createOrUpdateBrainstormSession, getRecentThemeFrequency, shouldDistill, distillBrainstormSession } from './brainstormSessions.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('postIndexPersonaTrigger');
 
 interface IndexedNoteSnapshot {
   id: string;
@@ -99,13 +102,19 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
     // Still save brainstorm session even with no candidates (the analysis itself is valuable)
     if (analysis) {
       try {
-        createOrUpdateBrainstormSession({
+        const session = createOrUpdateBrainstormSession({
           sourceNoteId: currentNote.id,
           rawContent: currentNote.content,
           analysis,
         });
+        if (shouldDistill(session)) {
+          // Fire and forget
+          distillBrainstormSession(session.id).catch(e => {
+            logger.warn('async distill failed:', e);
+          });
+        }
       } catch (e) {
-        console.warn('[postIndexPersonaTrigger] Failed to save brainstorm session:', e);
+        logger.warn('Failed to save brainstorm session:', e);
       }
     }
     return {
@@ -119,13 +128,19 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
   // Save brainstorm session with full analysis
   if (analysis) {
     try {
-      createOrUpdateBrainstormSession({
+      const session = createOrUpdateBrainstormSession({
         sourceNoteId: currentNote.id,
         rawContent: currentNote.content,
         analysis,
       });
+      if (shouldDistill(session)) {
+        // Fire and forget
+        distillBrainstormSession(session.id).catch(e => {
+          logger.warn('async distill failed:', e);
+        });
+      }
     } catch (e) {
-      console.warn('[postIndexPersonaTrigger] Failed to save brainstorm session:', e);
+      logger.warn('Failed to save brainstorm session:', e);
     }
   }
 
@@ -150,7 +165,7 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
         });
       }
     } catch (e) {
-      console.warn('[postIndexPersonaTrigger] theme frequency check failed:', e);
+      logger.warn('theme frequency check failed:', e);
     }
   }
 

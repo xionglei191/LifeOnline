@@ -543,3 +543,18 @@ export async function getBrainstormSessionHandler(
     res.status(500).json({ error: String(error) });
   }
 }
+
+export async function getBrainstormSessionRelatedHandler(
+  req: Request<{ id: string }, any, any, { limit?: string }>,
+  res: Response,
+): Promise<void> {
+  try {
+    const { findRelatedBrainstormSessions } = await import('../../soul/brainstormSessions.js');
+    const limit = Math.min(parseInt(req.query.limit ?? '5', 10) || 5, 20);
+    const related = findRelatedBrainstormSessions(req.params.id, limit);
+    res.json({ sessions: related });
+  } catch (error) {
+    console.error('Get related brainstorm sessions error:', error);
+    res.status(500).json({ error: String(error) });
+  }
+}

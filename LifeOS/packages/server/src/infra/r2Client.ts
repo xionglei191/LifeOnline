@@ -7,7 +7,16 @@
  *   R2_SECRET_ACCESS_KEY — R2 API secret access key
  *   R2_BUCKET_NAME      — Target bucket name
  */
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('r2Client');
 
 // ── Configuration Check ────────────────────────────────
 
@@ -69,5 +78,47 @@ export async function uploadToR2(key: string, body: string | Buffer): Promise<vo
     ContentType: key.endsWith('.md') ? 'text/markdown; charset=utf-8' : 'application/octet-stream',
   }));
 
-  console.log(`[R2] Uploaded: ${key} → ${config.bucketName}`);
+  logger.info(`Uploaded: ${key} → ${config.bucketName}`);
+}
+export async function listR2Objects(prefix?: string): Promise<string[]> {
+  const config = getR2Config();
+  if (!config) throw new Error('R2 未配置。');
+
+  const client = getS3Client(config);
+  const response = await client.send(new ListObjectsV2Command({
+    Bucket: config.bucketName,
+    Prefix: prefix,
+  }));
+
+  return (response.Contents?.map(obj => obj.Key).filter((k): k is string => !!k)) || [];
+}
+
+export async function getR2Object(key: string): Promise<string> {
+  const config = getR2Config();
+  if (!config) throw new Error('R2 未配置。');
+
+  const client = getS3Client(config);
+  const response = await client.send(new GetObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+  }));
+
+  if (!response.Body) {
+    throw new Error(`R2 object empty or not found: ${key}`);
+  }
+
+  return response.Body.transformToString('utf-8');
+}
+
+export async function deleteR2Object(key: string): Promise<void> {
+  const config = getR2Config();
+  if (!config) throw new Error('R2 未配置。');
+
+  const client = getS3Client(config);
+  await client.send(new DeleteObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+  }));
+
+  logger.info(`Deleted: ${key} from ${config.bucketName}`);
 }

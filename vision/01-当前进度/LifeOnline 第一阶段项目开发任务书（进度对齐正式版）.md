@@ -520,9 +520,9 @@ PR4 当前完成口径应固定为：
 
 | 阶段 | 当前状态 | 已落地内容 | 剩余关键缺口 | 建议下一步 |
 |---|---|---|---|---|
-| PR1 | 已落地 | `src/soul/` 已有 18 个模块文件（含 `brainstormSessions.ts`），8 种 actionKind 全覆盖，完整 CRUD/lifecycle，schema 含 10 张表 | `SoulActionKind` 在 server/shared 重复定义；`status` 冗余字段 | 统一类型到 shared re-export |
-| PR2 | 已落地（保守口径） | `update_persona_snapshot` / `extract_tasks` 为中心的 `candidate → gate → review/dispatch → execute` 闭环 | `dispatch_now` 实际未处理（死代码）；`ask_followup_question` 后端已有 handler 但缺前端交互 UI | 补全 `ask_followup_question` 前端交互 |
-| PR3 | 已落地（保守口径） | `approve / dispatch / defer / discard` 完整治理面，actionKind 筛选器、分组批量操作、WebSocket 实时更新、worker-backed badge 均已落地 | 缺 SoulAction Detail / Lifecycle 独立视图 | 推进 SoulAction Detail 页 |
+| PR1 | 已落地 | `src/soul/` 已有 18 个模块文件，11 种 actionKind 全覆盖，完整 CRUD/lifecycle，schema 含 12 张表，SoulActionKind 已统一定义 | BrainstormSession distilled 阶段未实现 | 推进 BrainstormSession 深度提炼 |
+| PR2 | 已落地 | `candidate → gate → review/dispatch → execute` 闭环完整，`dispatch_now` 已工作，11 种 actionKind 均有 dispatcher 实现 | 连续性模式识别准确度待提升 | 推进连续性增强 |
+| PR3 | 已落地 | `approve / dispatch / defer / discard` 完整治理面，SoulActionDetailView 独立页面已落地，BrainstormSession 面板已落地 | GovernanceView 44KB 过大需拆分 | GovernanceView 组件拆分 |
 | PR4 | 已落地 | `workerTasks → feedbackReintegration → continuityIntegrator` 真实接线，outcome/summary/evidence/record 已收口 | 尚未进入深层 reintegration | 冻结口径 |
 | PR5 | 已落地（保守口径） | `persona_snapshots` + `reintegration_records`，review-backed persona/intervention reintegration | 仍缺通用 persona/intervention learning | 冻结口径 |
 | PR6 | 已落地（保守口径） | review-backed `event_nodes` / `continuity_records` promotion 闭环，`promote_event_node` / `promote_continuity_record` / `create_event_node` 均已支持 | 仍缺通用高阈值产品化系统 | 冻结口径 |
@@ -679,25 +679,5 @@ PR4 当前完成口径应固定为：
 
 ## 十二、一句话收束
 
-> LifeOnline 第一阶段 PR1–PR6 全链路均已有最小真实落地，`src/soul/` 已有 18 个模块文件，schema 含 10 张表，蓝图定义的 5 个认知对象全部拥有代码级锚点。后续主线应优先做技术债务收口、`ask_followup_question` 前端交互 UI 补全、SoulAction Detail 页面，并在保守边界内继续沿 review-backed、可解释、可审计的路径小步演进。
+> LifeOnline 第一阶段 PR1–PR6 全链路均已有最小真实落地，`src/soul/` 已有 18 个模块文件，schema 含 12 张表，蓝图定义的 5 个认知对象全部拥有代码级锚点。后续主线应优先做技术债务收口、`ask_followup_question` 前端交互 UI 补全、SoulAction Detail 页面，并在保守边界内继续沿 review-backed、可解释、可审计的路径小步演进。
 
-
-1. **总体路线已经清楚。**
-   `vision/` 对第一阶段路线收束已经足够稳定，不需要再重新发明路线。
-
-2. **当前最明确已落地的是四块最小真实锚点：PR1 最小骨架、PR2 最小低风险闭环、PR3 最小治理桥，以及 PR4 最小 skeleton。**
-   PR1 已有最小 `SoulAction` runtime/store 镜像层，PR2 已有保守 low-risk `candidate -> gate -> review/dispatch -> execute` 闭环，PR3 已有最小 review/governance/execution bridge，PR4 已有真实 terminal path 接线的回流骨架；但四者都必须严格限制口径，不能夸大为完整治理系统完成。
-
-3. **当前更真实的主线缺口，已经从“PR2/PR3 是否存在”转向“覆盖面、产品化治理面与后续边界收口”。**
-   既然 PR1–PR4 都已有保守、可锚定的最小落地，后续快速落地应优先做状态收口、边界冻结与小步扩展，而不是继续基于过时口径把 PR2/PR3 视作未开始。
-4. **这份文稿可作为后续固定对齐底板。**
-   后续每次推进，只需回答：
-   - 当前推进的是哪一阶段；
-   - 是否满足本文件对该阶段的完成定义；
-   - 是否越过了本文件明确的 out-of-scope 边界。
-
----
-
-## 十二、一句话收束
-
-> LifeOnline 第一阶段当前已经具备四块最小真实锚点：一是 `src/soul/` 中以 `extract_tasks` 为中心的 PR1 最小 `SoulAction` 镜像骨架，二是以 `update_persona_snapshot` / `extract_tasks` 为中心的 PR2 最小低风险闭环，三是 review queue + approve / dispatch / defer / discard 的 PR3 最小治理执行桥，四是 `workerTasks -> feedbackReintegration -> continuityIntegrator` 这一侧真实接线的保守 PR4 最小回流骨架；后续主线应继续在保守边界内收口状态、冻结口径，并沿 review-backed、可解释、可审计的路径小步推进 PR5 / PR6 之后的演进。

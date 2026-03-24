@@ -23,7 +23,7 @@ import {
   planPromotionsHandler,
   listEventNodesHandler, listContinuityRecordsHandler,
   // Brainstorm Sessions
-  listBrainstormSessionsHandler, getBrainstormSessionHandler,
+  listBrainstormSessionsHandler, getBrainstormSessionHandler, getBrainstormSessionRelatedHandler,
   // Schedules
   createScheduleHandler, listSchedulesHandler, getScheduleHandler,
   updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler,
@@ -74,6 +74,7 @@ router.get('/event-nodes', listEventNodesHandler);
 router.get('/continuity-records', listContinuityRecordsHandler);
 router.get('/brainstorm-sessions', listBrainstormSessionsHandler);
 router.get('/brainstorm-sessions/:id', getBrainstormSessionHandler);
+router.get('/brainstorm-sessions/:id/related', getBrainstormSessionRelatedHandler);
 router.post('/schedules', createScheduleHandler);
 router.get('/schedules/health', scheduleHealthHandler);
 router.get('/schedules', listSchedulesHandler);

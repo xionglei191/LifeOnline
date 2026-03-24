@@ -1,11 +1,11 @@
 # LifeOnline 第一阶段项目进度简表（快速查看版）
 
 > 用途：这一页不是替代正式任务书，而是给日常对齐时快速查看"现在在哪、下一步干什么、哪些话不能说"。
-> 最后更新：2026-03-24
+> 最后更新：2026-03-24（代码级检视后修订版）
 
 ## 1. 当前总判断
 - **总体路线已清楚**：第一阶段继续按 PR1–PR6 推进。
-- **当前已形成从 PR1 到 PR6 的最小可锚定链路**，且 SoulAction 覆盖面已从最初 2 种扩展到 10 种 actionKind。
+- **当前已形成从 PR1 到 PR6 的最小可锚定链路**，且 SoulAction 覆盖面已从最初 2 种扩展到 11 种 actionKind。
 - **蓝图 5 个核心认知对象全部落地**：PersonaState ✅ EventNode ✅ ContinuityRecord ✅ InterventionDecision(gate_decisions) ✅ BrainstormSession ✅
 - **当前不应夸大**：不能把这些最小落地写成完整、通用、全量、产品化的自治治理系统已完成。
 - **部署闭环已建立**：246 服务器已有 systemd 自动管理，从开发到部署有完整链路。
@@ -14,7 +14,7 @@
 
 | 阶段 | 当前状态 | 一句话判断 |
 |---|---|---|
-| PR1｜SoulAction 运行态骨架 | 已落地 | `soul_actions` 表、18 个 soul 模块、10 种 actionKind 覆盖、完整 CRUD + lifecycle 同步 |
+| PR1｜SoulAction 运行态骨架 | 已落地 | `soul_actions` 表、18 个 soul 模块、11 种 actionKind 覆盖、完整 CRUD + lifecycle 同步 |
 | PR2｜低风险闭环 | 已落地（保守口径） | 以 `update_persona_snapshot` / `extract_tasks` 为中心的 `candidate → gate → review → dispatch → execute` 闭环已稳定运行 |
 | PR3｜治理执行桥 | 已落地（保守口径） | `approve / dispatch / defer / discard` 治理面已完整，actionKind 筛选器、分组批量操作、WebSocket 实时更新、SoulAction Detail 页面均已落地 |
 | PR4｜最小回流骨架 | 已落地 | terminal worker task 在真实路径中 best-effort 进入 reintegration hook，outcome/summary/evidence/record 已收口 |
@@ -25,7 +25,6 @@
 
 ### 核心 soul 模块区（18 个文件）
 - `LifeOS/packages/server/src/soul/types.ts` — 核心类型定义
-- `LifeOS/packages/server/src/soul/soulActions.ts` — SoulAction store/CRUD
 - `LifeOS/packages/server/src/soul/soulActionGenerator.ts` — 动作候选生成
 - `LifeOS/packages/server/src/soul/soulActionDispatcher.ts` — 动作分发与 worker bridge
 - `LifeOS/packages/server/src/soul/interventionGate.ts` — 干预闸门

@@ -10,7 +10,7 @@
  * - Destructive DROP TABLE is avoided — data-preserving migrations are used instead.
  */
 
-import type Database from 'better-sqlite3';
+import type { Database } from 'better-sqlite3';
 import {
   WORKER_TASK_TABLE_COLUMNS_SQL,
   WORKER_TASK_INDEXES_SQL,
@@ -26,13 +26,22 @@ import {
   EVENT_NODE_INDEXES_SQL,
   CONTINUITY_RECORD_TABLE_COLUMNS_SQL,
   CONTINUITY_RECORD_INDEXES_SQL,
+  GATE_DECISION_TABLE_COLUMNS_SQL,
+  GATE_DECISION_INDEXES_SQL,
+  BRAINSTORM_SESSION_TABLE_COLUMNS_SQL,
+  BRAINSTORM_SESSION_INDEXES_SQL,
+  AI_PROVIDER_SETTINGS_TABLE_COLUMNS_SQL,
+  AI_PROVIDER_SETTINGS_INDEXES_SQL,
 } from './schema.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('migrations');
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getTableColumns(database: Database.Database, tableName: string): Array<{ name: string }> {
+function getTableColumns(database: Database, tableName: string): Array<{ name: string }> {
   return database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
 }
 
@@ -41,7 +50,7 @@ function hasColumn(columns: Array<{ name: string }>, name: string): boolean {
 }
 
 function addColumnIfMissing(
-  database: Database.Database,
+  database: Database,
   tableName: string,
   columns: Array<{ name: string }>,
   columnName: string,
@@ -49,11 +58,11 @@ function addColumnIfMissing(
 ): void {
   if (!hasColumn(columns, columnName)) {
     database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
-    console.log(`Migration: added ${columnName} column to ${tableName}`);
+    logger.info(`Migration: added ${columnName} column to ${tableName}`);
   }
 }
 
-function getCreateTableSql(database: Database.Database, tableName: string): string {
+function getCreateTableSql(database: Database, tableName: string): string {
   const row = database.prepare(
     "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
   ).get(tableName) as { sql?: string } | undefined;
@@ -94,7 +103,7 @@ ${options.recreateIndexesSql}
  * approach that silently discarded data.
  */
 function safeRebuildTable(
-  database: Database.Database,
+  database: Database,
   tableName: string,
   columnsSQL: string,
   indexesSQL: string,
@@ -124,7 +133,7 @@ function safeRebuildTable(
 // Individual table migrations
 // ---------------------------------------------------------------------------
 
-function ensureTaskTableConstraintOrRebuild(database: Database.Database, options: {
+function ensureTaskTableConstraintOrRebuild(database: Database, options: {
   tableName: 'worker_tasks' | 'task_schedules';
   insertSql: string;
   createTableSql: string;
@@ -138,14 +147,14 @@ function ensureTaskTableConstraintOrRebuild(database: Database.Database, options
   ).get() as { total: number };
 
   if (legacyRows.total > 0) {
-    console.log(options.rebuildingLog);
+    logger.info(options.rebuildingLog!);
     database.exec(rebuildTableWithNormalizedTaskType({
       tableName: options.tableName,
       createTableSql: options.createTableSql,
       selectColumnsSql: options.selectColumnsSql,
       recreateIndexesSql: options.recreateIndexesSql,
     }));
-    console.log(options.rebuiltLog);
+    logger.info(options.rebuiltLog!);
     return;
   }
 
@@ -153,18 +162,18 @@ function ensureTaskTableConstraintOrRebuild(database: Database.Database, options
     database.exec(`INSERT INTO ${options.tableName} ${options.insertSql}`);
     database.exec(`DELETE FROM ${options.tableName} WHERE id = '__migration_test__'`);
   } catch {
-    console.log(options.rebuildingLog);
+    logger.info(options.rebuildingLog!);
     database.exec(rebuildTableWithNormalizedTaskType({
       tableName: options.tableName,
       createTableSql: options.createTableSql,
       selectColumnsSql: options.selectColumnsSql,
       recreateIndexesSql: options.recreateIndexesSql,
     }));
-    console.log(options.rebuiltLog);
+    logger.info(options.rebuiltLog!);
   }
 }
 
-function ensureSoulActionsTable(database: Database.Database): void {
+function ensureSoulActionsTable(database: Database): void {
   const columns = getTableColumns(database, 'soul_actions');
   if (columns.length === 0) {
     database.exec(`CREATE TABLE IF NOT EXISTS soul_actions (\n${SOUL_ACTION_TABLE_COLUMNS_SQL}\n);\n${SOUL_ACTION_INDEXES_SQL}`);
@@ -192,7 +201,7 @@ function ensureSoulActionsTable(database: Database.Database): void {
     return;
   }
 
-  console.log('Migration: rebuilding soul_actions table with latest schema...');
+  logger.info('Migration: rebuilding soul_actions table with latest schema...');
   const executionStatusSelectSql = hasLegacyStatusOnly
     ? `CASE
         WHEN status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled') THEN status
@@ -244,7 +253,7 @@ ${SOUL_ACTION_TABLE_COLUMNS_SQL}
     ALTER TABLE soul_actions_new RENAME TO soul_actions;
     ${SOUL_ACTION_INDEXES_SQL}
   `);
-  console.log('Migration: soul_actions table rebuilt with latest schema');
+  logger.info('Migration: soul_actions table rebuilt with latest schema');
 }
 
 /**
@@ -252,7 +261,7 @@ ${SOUL_ACTION_TABLE_COLUMNS_SQL}
  * Now preserves existing data by migrating common columns to the new schema.
  */
 function ensureTableSafe(
-  database: Database.Database,
+  database: Database,
   tableName: string,
   columnsSQL: string,
   indexesSQL: string,
@@ -274,9 +283,9 @@ function ensureTableSafe(
     return;
   }
 
-  console.log(`Migration: rebuilding ${tableName} table with latest schema (preserving data)...`);
+  logger.info(`Migration: rebuilding ${tableName} table with latest schema (preserving data)...`);
   safeRebuildTable(database, tableName, columnsSQL, indexesSQL, columns);
-  console.log(`Migration: ${tableName} table rebuilt with latest schema`);
+  logger.info(`Migration: ${tableName} table rebuilt with latest schema`);
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +296,8 @@ function ensureTableSafe(
  * Run all migrations against an already-initialized database.
  * Called from initDatabase() after the SCHEMA template has been applied.
  */
-export function runMigrations(database: Database.Database): void {
+export function runMigrations(database: Database): void {
+  database.pragma('foreign_keys = ON');
   // --- Additive column migrations (ALTER TABLE ADD COLUMN) -----------------
 
   const workerTaskCols = getTableColumns(database, 'worker_tasks');
@@ -358,4 +368,21 @@ export function runMigrations(database: Database.Database): void {
     'continuity_kind', 'target', 'strength', 'summary', 'continuity_json', 'evidence_json', 'explanation_json',
     'recorded_at', 'created_at', 'updated_at',
   ], (_columns, createSql) => !createSql.includes("'daily_rhythm'"));
+
+  // --- Migration safety net for tables previously without ensureTableSafe ---
+
+  ensureTableSafe(database, 'gate_decisions', GATE_DECISION_TABLE_COLUMNS_SQL, GATE_DECISION_INDEXES_SQL, [
+    'id', 'action_kind', 'decision', 'created_at',
+  ]);
+
+  ensureTableSafe(database, 'brainstorm_sessions', BRAINSTORM_SESSION_TABLE_COLUMNS_SQL, BRAINSTORM_SESSION_INDEXES_SQL, [
+    'id', 'source_note_id', 'raw_input_preview', 'themes_json', 'emotional_tone',
+    'extracted_questions_json', 'ambiguity_points_json', 'distilled_insights_json',
+    'suggested_action_kinds_json', 'actionability', 'continuity_signals_json',
+    'status', 'created_at', 'updated_at',
+  ], (_columns, createSql) => !createSql.includes("'distilled'"));
+
+  ensureTableSafe(database, 'ai_provider_settings', AI_PROVIDER_SETTINGS_TABLE_COLUMNS_SQL, AI_PROVIDER_SETTINGS_INDEXES_SQL, [
+    'id', 'base_url', 'model', 'api_key', 'enabled', 'updated_at',
+  ]);
 }

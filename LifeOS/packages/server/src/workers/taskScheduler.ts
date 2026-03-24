@@ -9,7 +9,11 @@ import type {
 } from '@lifeos/shared';
 import { getDb } from '../db/client.js';
 import { createWorkerTask, startWorkerTaskExecution, normalizeTaskInput } from './workerTasks.js';
+import { getGateStats } from '../soul/gateLearning.js';
+import { Logger } from '../utils/logger.js';
 import { broadcastUpdate } from '../index.js';
+
+const logger = new Logger('taskScheduler');
 
 interface ScheduleRow {
   id: string;
@@ -116,7 +120,7 @@ function executeTick(scheduleId: string): void {
 
   try {
     const { taskId } = triggerScheduleTask(schedule, { resetFailures: true });
-    console.log(`TaskScheduler: executed schedule "${schedule.label}" → task ${taskId}`);
+    logger.info(`executed schedule "${schedule.label}" → task ${taskId}`);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     const now = new Date().toISOString();
@@ -124,7 +128,7 @@ function executeTick(scheduleId: string): void {
     db.prepare('UPDATE task_schedules SET consecutive_failures = ?, last_error = ?, updated_at = ? WHERE id = ?')
       .run(newFailures, errorMsg, now, scheduleId);
     broadcastScheduleUpdate();
-    console.error(`TaskScheduler: failed to execute schedule "${schedule.label}" (failures: ${newFailures})`, err);
+    logger.error(`failed to execute schedule "${schedule.label}" (failures: ${newFailures})`, err);
   }
 }
 
@@ -136,7 +140,7 @@ export function runScheduleNow(id: string): TaskSchedule {
   const schedule = rowToSchedule(row);
   const { taskId } = triggerScheduleTask(schedule);
 
-  console.log(`TaskScheduler: manual run schedule "${schedule.label}" → task ${taskId}`);
+  logger.info(`manual run schedule "${schedule.label}" → task ${taskId}`);
   return getSchedule(id)!;
 }
 
@@ -159,7 +163,7 @@ export function createSchedule(req: CreateTaskScheduleRequest): TaskSchedule {
   const schedule = getSchedule(id)!;
   registerCronJob(schedule);
   broadcastScheduleUpdate();
-  console.log(`TaskScheduler: created schedule "${schedule.label}" (${schedule.cronExpression})`);
+  logger.info(`created schedule "${schedule.label}" (${schedule.cronExpression})`);
   return schedule;
 }
 
@@ -224,7 +228,7 @@ export function deleteSchedule(id: string): void {
   const db = getDb();
   db.prepare('DELETE FROM task_schedules WHERE id = ?').run(id);
   broadcastScheduleUpdate();
-  console.log(`TaskScheduler: deleted schedule ${id}`);
+  logger.info(`deleted schedule ${id}`);
 }
 
 export function initScheduler(): void {
@@ -232,7 +236,7 @@ export function initScheduler(): void {
   for (const schedule of schedules) {
     registerCronJob(schedule);
   }
-  console.log(`TaskScheduler: loaded ${schedules.length} active schedule(s)`);
+  logger.info(`loaded ${schedules.length} active schedule(s)`);
 }
 
 export function getScheduleHealth(): ScheduleHealth {
@@ -259,5 +263,5 @@ export function stopScheduler(): void {
     job.stop();
   }
   cronJobs.clear();
-  console.log('TaskScheduler: stopped all schedules');
+  logger.info('stopped all schedules');
 }

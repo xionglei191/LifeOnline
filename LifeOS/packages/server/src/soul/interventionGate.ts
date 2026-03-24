@@ -1,5 +1,5 @@
 import type { SoulActionCandidate } from './soulActionGenerator.js';
-import { getGateStats } from './gateLearning.js';
+import { getGateStats, detectGatePatterns, adjustConfidenceByHistory } from './gateLearning.js';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -60,13 +60,22 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
     };
   }
 
-  const confidence = candidate.confidence ?? 0.6;
+  const rawConfidence = candidate.confidence ?? 0.6;
+  const { adjustedConfidence: confidence, reason: adjustReason, patterns } = adjustConfidenceByHistory(
+    candidate.actionKind,
+    rawConfidence
+  );
+
+  const patternTexts = patterns.length > 0 ? ` [模式识别: ${patterns.map(p => p.description).join('; ')}]` : '';
+  const adjText = Math.abs(rawConfidence - confidence) > 0.01
+    ? `(Gate 历史调整: 原 ${(rawConfidence * 100).toFixed(0)}% -> 现 ${(confidence * 100).toFixed(0)}%, 理由: ${adjustReason}${patternTexts})`
+    : '';
 
   // ── Very low confidence → discard
   if (confidence < GATE_CONFIG.discardThreshold) {
     return {
       decision: 'discard',
-      reason: `置信度过低 (${(confidence * 100).toFixed(0)}% < ${GATE_CONFIG.discardThreshold * 100}%)，自动丢弃`,
+      reason: `置信度过低 (${(confidence * 100).toFixed(0)}% < ${GATE_CONFIG.discardThreshold * 100}%)，自动丢弃。${adjText}`,
       confidence,
     };
   }
@@ -75,7 +84,7 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
   if (confidence < GATE_CONFIG.observeOnlyThreshold) {
     return {
       decision: 'observe_only',
-      reason: `置信度较低 (${(confidence * 100).toFixed(0)}% < ${GATE_CONFIG.observeOnlyThreshold * 100}%)，仅观察不入队`,
+      reason: `置信度较低 (${(confidence * 100).toFixed(0)}% < ${GATE_CONFIG.observeOnlyThreshold * 100}%)，仅观察不入队。${adjText}`,
       confidence,
     };
   }
@@ -84,7 +93,7 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
   if (GATE_CONFIG.alwaysReviewKinds.includes(candidate.actionKind)) {
     return {
       decision: 'queue_for_review',
-      reason: `${candidate.actionKind} 是不可逆的高影响操作，必须人工审批`,
+      reason: buildQueueReason(candidate, confidence, `${candidate.actionKind} 是不可逆的高影响操作，必须人工审批。${adjText}`),
       confidence,
     };
   }
@@ -93,12 +102,18 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
   if (confidence >= GATE_CONFIG.autoDispatchMinConfidence
     && GATE_CONFIG.lowCostKinds.includes(candidate.actionKind)) {
     const stats = getGateStats(candidate.actionKind);
+    const patterns = detectGatePatterns(candidate.actionKind);
+    
+    // We can also leverage patterns for auto-dispatch here. For example if there is a strong consecutive discarded streak, we might want to block auto-dispatch.
+    const hasNegativeStreak = patterns.some(p => p.patternType === 'consecutive_streak' && p.influence < 0);
 
     if (stats.totalDecisions >= GATE_CONFIG.autoDispatchMinHistory
-      && stats.recentApproveRate >= GATE_CONFIG.autoDispatchMinApproveRate) {
+      && stats.recentApproveRate >= GATE_CONFIG.autoDispatchMinApproveRate
+      && !hasNegativeStreak) {
+      
       return {
         decision: 'dispatch_now',
-        reason: `高置信 (${(confidence * 100).toFixed(0)}%) + 低成本可逆操作 + 历史 approve 率 ${(stats.recentApproveRate * 100).toFixed(0)}% (${stats.totalDecisions} 次决策)，自动放行`,
+        reason: `高置信 (${(confidence * 100).toFixed(0)}%) + 低成本可逆操作 + 历史 approve 率 ${(stats.recentApproveRate * 100).toFixed(0)}% (${stats.totalDecisions} 次决策)，自动放行。${adjText}`,
         confidence,
       };
     }
@@ -107,14 +122,14 @@ export function evaluateInterventionGate(candidate: SoulActionCandidate | null):
   // ── Default: queue for review
   return {
     decision: 'queue_for_review',
-    reason: buildQueueReason(candidate, confidence),
+    reason: buildQueueReason(candidate, confidence, `需要人工审批。${adjText}`),
     confidence,
   };
 }
 
 // ── Helpers ────────────────────────────────────────────
 
-function buildQueueReason(candidate: SoulActionCandidate, confidence: number): string {
+function buildQueueReason(candidate: SoulActionCandidate, confidence: number, suffix: string): string {
   const parts: string[] = [];
 
   if (candidate.trigger === 'cognitive_analysis') {
@@ -131,5 +146,5 @@ function buildQueueReason(candidate: SoulActionCandidate, confidence: number): s
     parts.push(candidate.analysisReason);
   }
 
-  return parts.join('，') + '，需要人工审批';
+  return parts.join('，') + '，' + suffix;
 }

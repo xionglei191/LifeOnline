@@ -10,6 +10,9 @@ import { FileWatcher } from './watcher/fileWatcher.js';
 import { initWebSocket, closeWebSocket, broadcastUpdate } from './websocket/wsServer.js';
 import { IndexQueue } from './indexer/indexQueue.js';
 import { initScheduler, stopScheduler } from './workers/taskScheduler.js';
+import { Logger } from './utils/logger.js';
+
+const logger = new Logger('server');
 
 const app = express();
 let watcher: FileWatcher | null = null;
@@ -90,7 +93,7 @@ function registerSignalHandlers(): void {
     shutdown()
       .then(() => process.exit(0))
       .catch((error) => {
-        console.error(`Failed to shutdown on ${signal}:`, error);
+        logger.error(`Failed to shutdown on ${signal}:`, error);
         process.exit(1);
       });
   };
@@ -109,11 +112,11 @@ export async function startServer(): Promise<ServerLifecycle> {
 
   const config = await loadConfig();
   await indexVault(config.vaultPath);
-  console.log('Initial indexing complete');
+  logger.info('Initial indexing complete');
 
   const server = await new Promise<Server>((resolve) => {
     const instance = app.listen(config.port, () => {
-      console.log(`Server running on http://localhost:${config.port}`);
+      logger.info(`Server running on http://localhost:${config.port}`);
       resolve(instance);
     });
   });
@@ -153,7 +156,7 @@ if (import.meta.url === new URL(process.argv[1], 'file://').href) {
       process.once('SIGTERM', () => clearInterval(keepalive));
     })
     .catch((error) => {
-      console.error(error);
+      logger.error('Failed to start server:', error);
       process.exit(1);
     });
 }

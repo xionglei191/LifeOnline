@@ -4,6 +4,7 @@
 import { getDb } from '../db/client.js';
 import type { BrainstormSession } from '@lifeos/shared';
 import type { NoteAnalysis } from './cognitiveAnalyzer.js';
+import { callClaude, parseJSON } from '../ai/aiClient.js';
 
 // ── Row Parsing ────────────────────────────────────────
 
@@ -85,7 +86,7 @@ export function createOrUpdateBrainstormSession(input: {
       JSON.stringify([]),  // distilledInsights — future deep analysis
       JSON.stringify(input.analysis.suggestedActions.map(a => a.kind)),
       input.analysis.actionability,
-      JSON.stringify(input.analysis.continuitySignals.map(s => `${s.pattern} (${s.strength})`)),
+      JSON.stringify(input.analysis.continuitySignals.map(s => `[${s.type}] ${s.pattern} (${s.strength})${s.evidence ? ` — ${s.evidence}` : ''}`)),
       'parsed',
       now,
       id,
@@ -109,7 +110,7 @@ export function createOrUpdateBrainstormSession(input: {
       JSON.stringify([]),
       JSON.stringify(input.analysis.suggestedActions.map(a => a.kind)),
       input.analysis.actionability,
-      JSON.stringify(input.analysis.continuitySignals.map(s => `${s.pattern} (${s.strength})`)),
+      JSON.stringify(input.analysis.continuitySignals.map(s => `[${s.type}] ${s.pattern} (${s.strength})${s.evidence ? ` — ${s.evidence}` : ''}`)),
       'parsed',
       now,
       now,
@@ -164,4 +165,136 @@ export function getRecentThemeFrequency(days = 7): Map<string, number> {
     } catch { /* skip malformed */ }
   }
   return freq;
+}
+
+// ── Distill (P1) ───────────────────────────────────────
+
+export function shouldDistill(session: BrainstormSession): boolean {
+  if (session.status !== 'parsed') return false;
+  if (session.rawInputPreview.length < 100) return false;
+  
+  return session.actionability >= 0.4 
+    || session.continuitySignals.length >= 2 
+    || session.themes.length >= 3;
+}
+
+export function listDistillCandidates(limit = 10): BrainstormSession[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT * FROM brainstorm_sessions 
+    WHERE status = 'parsed' 
+    ORDER BY updated_at ASC 
+    LIMIT ?
+  `).all(limit) as BrainstormSessionRow[];
+  
+  return rows.map(parseRow).filter(shouldDistill);
+}
+
+const DISTILL_PROMPT = `你是一个认知提炼引擎，负责对用户的初步「思维风暴」分析结果进行深度认知提炼。
+你将看到用户笔记的原始内容片段，以及初步的认知分析结果。
+请提取高价值的认知洞察（Insight），将其转化为明确的短句。
+
+返回严格的 JSON 格式：
+{
+  "distilledInsights": [
+    {
+      "insight": "提炼出的认知洞察描述，一句话",
+      "category": "direction|pattern|principle|risk",
+      "confidence": 0.0到1.0的数字
+    }
+  ]
+}
+
+规则：
+1. category 只能是以下四种：
+   - "direction": 战略/目标方向的确认或调整
+   - "pattern": 连贯的、跨越时间的模式或习惯
+   - "principle": 提炼出的个人原则或做事方法
+   - "risk": 潜在的长期风险或阻力
+2. 洞察必须是具体、可复用的，不要复述流水账。
+3. 最多提取 3 条核心洞察。如果没有强烈的洞察，返回空数组。
+
+输入：
+`;
+
+interface DistillResponse {
+  distilledInsights?: Array<{
+    insight?: string;
+    category?: string;
+    confidence?: number;
+  }>;
+}
+
+export async function distillBrainstormSession(sessionId: string): Promise<BrainstormSession> {
+  const session = getBrainstormSession(sessionId);
+  if (!session) throw new Error(`BrainstormSession not found: ${sessionId}`);
+  if (session.status !== 'parsed') return session;
+
+  const promptInput = JSON.stringify({
+    rawPreview: session.rawInputPreview,
+    themes: session.themes,
+    questions: session.extractedQuestions,
+    continuitySignals: session.continuitySignals,
+  }, null, 2);
+
+  try {
+    const aiResponse = await callClaude(DISTILL_PROMPT + promptInput, 512);
+    const parsed = parseJSON<DistillResponse>(aiResponse);
+    
+    const validInsights = (parsed.distilledInsights || [])
+      .filter(i => 
+        typeof i.insight === 'string' &&
+        ['direction', 'pattern', 'principle', 'risk'].includes(i.category!) &&
+        typeof i.confidence === 'number' && i.confidence >= 0.5
+      )
+      .map(i => `[${i.category}] ${i.insight} (${(i.confidence! * 100).toFixed(0)}%)`);
+
+    const db = getDb();
+    const now = new Date().toISOString();
+    
+    db.prepare(`
+      UPDATE brainstorm_sessions SET
+        distilled_insights_json = ?,
+        status = ?,
+        updated_at = ?
+      WHERE id = ?
+    `).run(
+      JSON.stringify(validInsights),
+      'distilled',
+      now,
+      sessionId
+    );
+
+    return getBrainstormSession(sessionId)!;
+  } catch (error) {
+    console.warn(`[brainstormSessions] distill failed for ${sessionId}:`, error);
+    // Even on failure, return the parsed session untouched
+    return session;
+  }
+}
+
+// ── Related Sessions (P3) ──────────────────────────────
+
+export function findRelatedBrainstormSessions(sessionId: string, limit = 5): BrainstormSession[] {
+  const session = getBrainstormSession(sessionId);
+  if (!session || session.themes.length === 0) return [];
+
+  const db = getDb();
+  
+  // Create placeholders for the themes array
+  const placeholders = session.themes.map(() => '?').join(', ');
+  
+  // Use json_each to find sessions that share at least one theme
+  // We GROUP BY session ID to order by the number of shared themes (relevance)
+  const rows = db.prepare(`
+    SELECT bs.*, COUNT(t.value) as shared_count
+    FROM brainstorm_sessions bs, json_each(bs.themes_json) t
+    WHERE t.value IN (${placeholders})
+      AND bs.id != ?
+    GROUP BY bs.id
+    ORDER BY shared_count DESC, bs.updated_at DESC
+    LIMIT ?
+  `).all(...session.themes, sessionId, limit) as BrainstormSessionRow[];
+
+  return rows.map(parseRow);
 }

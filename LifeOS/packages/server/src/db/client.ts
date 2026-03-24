@@ -4,6 +4,9 @@ import { runMigrations } from './migrations.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('db');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,8 +47,8 @@ export function initDatabase(): void {
   // Run all migrations (additive columns, constraint updates, safe rebuilds)
   runMigrations(database);
 
-  console.log('Database initialized successfully');
-  console.log('Database path:', getDbPath());
+  logger.info('Database initialized successfully');
+  logger.info(`Database path: ${getDbPath()}`);
 }
 
 export function closeDb(): void {

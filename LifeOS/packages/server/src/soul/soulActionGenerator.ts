@@ -1,6 +1,5 @@
 import type { SoulActionKind } from './types.js';
 import { analyzeNoteContent, type NoteAnalysis, type SuggestedAction } from './cognitiveAnalyzer.js';
-import { adjustConfidenceByHistory } from './gateLearning.js';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -74,23 +73,12 @@ function buildCandidate(
   input: { sourceNoteId: string; noteId: string },
   suggestion: SuggestedAction,
 ): SoulActionCandidate | null {
-  // Apply historical confidence adjustment
-  const { adjustedConfidence, reason: adjustReason } = adjustConfidenceByHistory(
-    suggestion.kind,
-    suggestion.confidence,
-  );
-
-  // Drop candidates below minimum threshold after adjustment
-  if (adjustedConfidence < 0.25) {
-    return null;
-  }
-
   return {
     sourceNoteId: input.sourceNoteId,
     actionKind: suggestion.kind,
     noteId: input.noteId,
     trigger: 'cognitive_analysis',
-    confidence: adjustedConfidence,
-    analysisReason: `${suggestion.reason} (${adjustReason})`,
+    confidence: suggestion.confidence,
+    analysisReason: suggestion.reason,
   };
 }

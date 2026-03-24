@@ -1,10 +1,20 @@
 import chokidar, { type FSWatcher as ChokidarWatcher } from 'chokidar';
 import path from 'path';
+import { EventEmitter } from 'events';
 import { IndexQueue } from '../indexer/indexQueue.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('fileWatcher');
 
 const MAX_RESTARTS = 5;
 
-export class FileWatcher {
+// Helper function to resolve vault path, assuming it's defined elsewhere or needs to be added.
+// For now, we'll keep the original path.resolve logic and add the logger.
+function resolveVaultPath(vaultPath: string): string {
+  return path.resolve(vaultPath);
+}
+
+export class FileWatcher extends EventEmitter {
   private watcher: ChokidarWatcher | null = null;
   private vaultPath: string;
   private queue: IndexQueue;
@@ -12,13 +22,14 @@ export class FileWatcher {
   private restartTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(vaultPath: string, queue: IndexQueue) {
-    this.vaultPath = path.resolve(vaultPath);
+    super();
+    this.vaultPath = resolveVaultPath(vaultPath); // Assuming resolveVaultPath is a function
     this.queue = queue;
   }
 
   start() {
-    console.log(`FileWatcher: resolved vault path = ${this.vaultPath}`);
-    console.log(`FileWatcher: watching directory: ${this.vaultPath}`);
+    logger.info(`resolved vault path = ${this.vaultPath}`);
+    logger.info(`watching directory: ${this.vaultPath}`);
 
     // Watch the directory, not a glob pattern
     this.watcher = chokidar.watch(this.vaultPath, {
@@ -32,31 +43,38 @@ export class FileWatcher {
       }
     });
 
-    this.watcher
-      .on('ready', () => {
-        const watched = this.watcher?.getWatched();
-        console.log('FileWatcher: ready and watching for changes');
-        console.log('FileWatcher: number of watched directories:', Object.keys(watched || {}).length);
-      })
-      .on('add', (filePath: string) => {
-        if (!filePath.endsWith('.md')) return;
-        console.log(`File added: ${filePath}`);
+    this.watcher.on('ready', () => {
+      logger.info('ready and watching for changes');
+      const watched = this.watcher?.getWatched();
+      logger.info('number of watched directories:', Object.keys(watched || {}).length);
+    });
+
+    this.watcher.on('add', (filePath: string) => {
+      logger.debug(`File added: ${filePath}`);
+      if (filePath.endsWith('.md')) {
         this.queue.enqueue(filePath, 'upsert');
-      })
-      .on('change', (filePath: string) => {
-        if (!filePath.endsWith('.md')) return;
-        console.log(`File changed: ${filePath}`);
+      }
+    });
+
+    this.watcher.on('change', (filePath: string) => {
+      logger.debug(`File changed: ${filePath}`);
+      if (filePath.endsWith('.md')) {
         this.queue.enqueue(filePath, 'upsert');
-      })
-      .on('unlink', (filePath: string) => {
-        if (!filePath.endsWith('.md')) return;
-        console.log(`File deleted: ${filePath}`);
+      }
+    });
+
+    this.watcher.on('unlink', (filePath: string) => {
+      logger.debug(`File deleted: ${filePath}`);
+      if (filePath.endsWith('.md')) {
         this.queue.enqueue(filePath, 'delete');
-      })
-      .on('error', (error: unknown) => {
-        console.error('FileWatcher error:', error);
-        this.handleError();
-      });
+      }
+    });
+
+    this.watcher.on('error', (error: unknown) => {
+      logger.error('FileWatcher error:', error);
+      this.emit('error', error);
+      this.handleError();
+    });
   }
 
   async stop() {
@@ -67,19 +85,20 @@ export class FileWatcher {
     if (this.watcher) {
       await this.watcher.close();
       this.watcher = null;
-      console.log('File watcher stopped');
+      logger.info('File watcher stopped');
     }
   }
 
   private handleError() {
     if (this.restartCount >= MAX_RESTARTS) {
-      console.error(`FileWatcher: max restarts (${MAX_RESTARTS}) reached, giving up`);
+      logger.error(`max restarts (${MAX_RESTARTS}) reached, giving up`);
+      this.emit('fatal_error', new Error('Max watcher restarts reached'));
       return;
     }
 
     this.restartCount++;
     const delay = Math.pow(2, this.restartCount) * 1000;
-    console.log(`FileWatcher: restarting in ${delay}ms (attempt ${this.restartCount}/${MAX_RESTARTS})`);
+    logger.info(`restarting in ${delay}ms (attempt ${this.restartCount}/${MAX_RESTARTS})`);
 
     this.restartTimer = setTimeout(async () => {
       this.restartTimer = null;

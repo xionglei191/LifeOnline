@@ -3,6 +3,9 @@ import path from 'path';
 import crypto from 'crypto';
 import { scanVault } from './scanner.js';
 import { parseMarkdownFile } from './parser.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('indexer');
 import { getDb } from '../db/client.js';
 import type { IndexResult } from '@lifeos/shared';
 
@@ -89,7 +92,7 @@ export async function indexFile(filePath: string): Promise<void> {
   const parseResult = await parseMarkdownFile(filePath);
 
   if (!parseResult.success) {
-    console.error(`Index file error: ${filePath}: ${parseResult.error}`);
+    logger.error(`Index file error: ${filePath}: ${parseResult.error}`);
     return;
   }
 
@@ -98,14 +101,14 @@ export async function indexFile(filePath: string): Promise<void> {
   const fileName = path.basename(filePath, '.md');
 
   upsertNote(db, id, filePath, fileName, frontmatter, content, stat.mtime.toISOString());
-  console.log(`Indexed file: ${filePath}`);
+  logger.info(`Indexed file: ${filePath}`);
 }
 
 // Delete file record (for file watcher unlink events)
 export async function deleteFileRecord(filePath: string): Promise<void> {
   const db = getDb();
   db.prepare('DELETE FROM notes WHERE file_path = ?').run(filePath);
-  console.log(`Deleted record: ${filePath}`);
+  logger.info(`Deleted record: ${filePath}`);
 }
 
 // Full vault index (existing functionality)
@@ -148,6 +151,6 @@ export async function indexVault(vaultPath: string): Promise<IndexResult> {
     }
   }
 
-  console.log(`Indexing complete: ${result.indexed} indexed, ${result.skipped} skipped, ${result.deleted} deleted, ${result.errors.length} errors`);
+  logger.info(`Indexing complete: ${result.indexed} indexed, ${result.skipped} skipped, ${result.deleted} deleted, ${result.errors.length} errors`);
   return result;
 }

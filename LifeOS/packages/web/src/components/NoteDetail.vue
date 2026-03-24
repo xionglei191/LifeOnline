@@ -156,6 +156,47 @@
             />
           </section>
 
+          <!-- Cognitive Derived Panel -->
+          <section v-if="relatedBrainstormSessions.length || relatedSoulActions.length || loadingCognitiveDetail" class="ai-panel cognitive-panel">
+            <div class="append-head">
+              <p class="panel-kicker">认知衍生</p>
+              <span class="append-hint">由此笔记激发的提炼或派发动作</span>
+            </div>
+            
+            <div v-if="loadingCognitiveDetail" class="empty-state">检索认知脉络中...</div>
+            <div v-else class="cognitive-lists">
+              <div v-if="relatedBrainstormSessions.length" class="cognitive-block">
+                <h5>🧠 心智头脑风暴 (Brainstorms)</h5>
+                <div class="bs-list">
+                  <article v-for="bs in relatedBrainstormSessions" :key="bs.id" class="bs-item">
+                    <div class="bs-meta">
+                      <span class="meta-pill">{{ bs.status }}</span>
+                      <span class="meta-pill">{{ new Date(bs.createdAt).toLocaleString() }}</span>
+                    </div>
+                    <strong>{{ bs.topic }}</strong>
+                    <div v-if="bs.distilledInsights?.length" class="bs-summary">洞察: {{ bs.distilledInsights.join('; ') }}</div>
+                  </article>
+                </div>
+              </div>
+
+              <div v-if="relatedSoulActions.length" class="cognitive-block">
+                <h5>⚡ 派发动作 (SoulActions)</h5>
+                <div class="sa-list">
+                  <router-link v-for="sa in relatedSoulActions" :key="sa.id" :to="`/governance/soul-action/${sa.id}`" class="sa-item">
+                    <div class="sa-top">
+                      <span class="sa-kind">{{ formatSoulActionKindLabel(sa.actionKind) }}</span>
+                      <span class="sa-time">{{ new Date(sa.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+                    </div>
+                    <div class="sa-bottom">
+                      <span>治理: {{ sa.governanceStatus }}</span>
+                      <span>执行: {{ sa.executionStatus }}</span>
+                    </div>
+                  </router-link>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- Worker Task Panel -->
           <NoteWorkerPanel
             :tasks="relatedWorkerTasks"
@@ -205,8 +246,8 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension } from '@lifeos/shared';
+import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchBrainstormSessions, fetchSoulActions } from '../api/client';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import NoteApprovalCard from './NoteApprovalCard.vue';
@@ -217,6 +258,7 @@ import { useNoteProjection } from '../composables/useNoteProjection';
 import { decryptContent, getEncryptionKey } from '../utils/crypto';
 import { workerTaskActionMessage } from '../utils/workerTaskLabels';
 import { getDimensionColor, getDimensionLabel, SELECTABLE_DIMENSIONS } from '../utils/dimensions';
+import { formatSoulActionKindLabel } from '@lifeos/shared';
 
 const props = defineProps<{ noteId: string | null }>();
 const emit = defineEmits<{ close: []; deleted: [] }>();
@@ -231,6 +273,10 @@ const workerSubmitting = ref(false);
 const workerMessage = ref('');
 const workerMessageType = ref<'success' | 'error'>('success');
 const relatedWorkerTasks = ref<WorkerTask[]>([]);
+const relatedBrainstormSessions = ref<BrainstormSession[]>([]);
+const relatedSoulActions = ref<SoulAction[]>([]);
+const loadingCognitiveDetail = ref(false);
+
 const relatedWorkerFilterStatus = ref('');
 const workerActionTaskId = ref<string | null>(null);
 const selectedWorkerTaskId = ref<string | null>(null);
@@ -246,7 +292,7 @@ const decryptedContent = ref<string | null>(null);
 const projection = useNoteProjection(currentNoteId);
 
 const isApprovalNote = computed(() => {
-  return note.value && note.value.approval_status != null && note.value.approval_status !== '';
+  return note.value && note.value.approval_status != null && (note.value.approval_status as any) !== '';
 });
 
 const renderedContent = computed(() => {
@@ -307,6 +353,25 @@ async function loadRelatedWorkerTasks(sourceNoteId: string, requestId?: number) 
   }
 }
 
+async function loadCognitiveEnhancedData(sourceNoteId: string, requestId?: number) {
+  loadingCognitiveDetail.value = true;
+  try {
+    const [bs, sa] = await Promise.all([
+      fetchBrainstormSessions(100),
+      fetchSoulActions({ sourceNoteId })
+    ]);
+    if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
+    relatedBrainstormSessions.value = bs.sessions.filter(s => s.sourceNoteId === sourceNoteId);
+    relatedSoulActions.value = sa;
+  } catch (e) {
+    console.warn('Failed to load cognitive enhancements', e);
+  } finally {
+    if (requestId == null || (requestId === activeNoteRequestId && currentNoteId.value === sourceNoteId)) {
+      loadingCognitiveDetail.value = false;
+    }
+  }
+}
+
 async function loadPersonaSnapshot(sourceNoteId: string, requestId?: number) {
   try {
     const snapshot = await fetchPersonaSnapshot(sourceNoteId);
@@ -336,7 +401,7 @@ watch(currentNoteId, async (id) => {
   const requestId = ++activeNoteRequestId;
   if (!id) {
     note.value = null; error.value = null; loading.value = false; decryptedContent.value = null;
-    relatedWorkerTasks.value = []; personaSnapshot.value = null;
+    relatedWorkerTasks.value = []; personaSnapshot.value = null; relatedBrainstormSessions.value = []; relatedSoulActions.value = [];
     projection.resetProjectionState();
     showDeleteConfirm.value = false;
     return;
@@ -350,6 +415,7 @@ watch(currentNoteId, async (id) => {
     await Promise.all([
       loadRelatedWorkerTasks(id, requestId),
       loadPersonaSnapshot(id, requestId),
+      loadCognitiveEnhancedData(id, requestId),
       projection.loadPromotionProjections(id, requestId, activeNoteRequestId),
     ]);
     if (requestId !== activeNoteRequestId || currentNoteId.value !== id) return;
@@ -366,7 +432,7 @@ watch(currentNoteId, async (id) => {
 async function handleUpdateStatus(status: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { status }); note.value = { ...note.value, status }; showMsg('状态已更新', 'success'); }
+  try { await updateNote(currentNoteId.value, { status: status as any }); note.value = { ...note.value, status: status as any }; showMsg('状态已更新', 'success'); }
   catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -374,7 +440,7 @@ async function handleUpdateStatus(status: string) {
 async function handleUpdatePriority(priority: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { priority }); note.value = { ...note.value, priority }; showMsg('优先级已更新', 'success'); }
+  try { await updateNote(currentNoteId.value, { priority: priority as any }); note.value = { ...note.value, priority: priority as any }; showMsg('优先级已更新', 'success'); }
   catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -438,7 +504,7 @@ async function handleCancelRelatedTask(taskId: string) {
 async function handleApprove() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' }); note.value = { ...note.value, approval_status: 'approved', status: 'done' }; showMsg('审批已批准', 'success'); }
+  try { await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' as any }); note.value = { ...note.value, approval_status: 'approved', status: 'done' as any }; showMsg('审批已批准', 'success'); }
   catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -446,7 +512,7 @@ async function handleApprove() {
 async function handleReject() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' }); note.value = { ...note.value, approval_status: 'rejected', status: 'done' }; showMsg('审批已拒绝', 'success'); }
+  try { await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' as any }); note.value = { ...note.value, approval_status: 'rejected', status: 'done' as any }; showMsg('审批已拒绝', 'success'); }
   catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -575,4 +641,23 @@ function showMsg(msg: string, type: 'success' | 'error') {
   .close-btn { top: 12px; right: 12px; width: 44px; height: 44px; z-index: 10; }
   .control-panel, .append-section, .body-content, .ai-panel, .danger-section, .note-hero { padding: 16px; border-radius: 20px; }
 }
-</style>
+
+/* ─── Cognitive Panel ─── */
+.cognitive-panel {
+  border-color: color-mix(in srgb, var(--dimension-color) 40%, var(--border));
+  background: color-mix(in srgb, var(--dimension-color) 4%, transparent);
+}
+.cognitive-lists { display: grid; gap: 20px; margin-top: 14px; }
+.cognitive-block h5 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text-primary); }
+.bs-list, .sa-list { display: grid; gap: 10px; }
+.bs-item { padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--surface) 60%, transparent); border: 1px solid var(--border); }
+.bs-meta { display: flex; gap: 8px; margin-bottom: 8px; }
+.bs-item strong { display: block; margin-bottom: 4px; color: var(--text); }
+.bs-summary { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; background: var(--meta-bg); padding: 8px; border-radius: 8px; margin-top: 8px; }
+
+.sa-item { display:flex; flex-direction:column; gap:6px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-muted); text-decoration: none; transition: background 0.2s; }
+.sa-item:hover { background: var(--surface); }
+.sa-top { display: flex; justify-content: space-between; align-items: center; }
+.sa-kind { font-weight: 600; color: var(--text); font-size: 0.85rem; }
+.sa-time { font-size: 0.75rem; color: var(--text-muted); }
+.sa-bottom { display: flex; gap: 12px; font-size: 0.8rem; color: var(--text-secondary); }

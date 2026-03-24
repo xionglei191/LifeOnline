@@ -6,14 +6,17 @@ import { broadcastUpdate, getIndexQueue } from '../../index.js';
 import { loadConfig } from '../../config/configManager.js';
 import { updateStoredVaultPath, InvalidVaultPathError } from '../../config/configUpdateService.js';
 import { indexVault } from '../../indexer/indexer.js';
+import { Logger } from '../../utils/logger.js';
 import type { ApiResponse, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult } from '@lifeos/shared';
+
+const logger = new Logger('configHandlers');
 
 export async function getConfig(_req: Request<Record<string, never>, ApiResponse<Config>>, res: Response<ApiResponse<Config>>): Promise<void> {
   try {
     const config = await loadConfig();
     res.json(config);
   } catch (error) {
-    console.error('Get config error:', error);
+    logger.error('Get config error:', error);
     res.status(500).json({ error: 'Failed to fetch config' });
   }
 }
@@ -30,7 +33,7 @@ export async function updateConfig(req: Request<Record<string, never>, ApiRespon
     res.json(response);
   } catch (error) {
     if (error instanceof InvalidVaultPathError) { res.status(400).json({ error: error.message }); return; }
-    console.error('Update config error:', error);
+    logger.error('Update config error:', error);
     res.status(500).json({ error: 'Failed to update config' });
   }
 }
@@ -42,7 +45,7 @@ export async function triggerIndex(_req: Request<Record<string, never>, ApiRespo
     broadcastUpdate({ type: 'index-complete', data: result });
     res.json(result);
   } catch (error) {
-    console.error('Index error:', error);
+    logger.error('Index error:', error);
     res.status(500).json({ error: 'Indexing failed' });
   }
 }

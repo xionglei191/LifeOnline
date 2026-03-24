@@ -1,4 +1,8 @@
+import { EventEmitter } from 'events';
 import { indexFile, deleteFileRecord } from './indexer.js';
+import { Logger } from '../utils/logger.js';
+
+const logger = new Logger('indexQueue');
 import { getIndexedNoteTriggerSnapshot, triggerCognitiveAnalysisAfterIndex } from '../soul/postIndexPersonaTrigger.js';
 import type { WsEvent, IndexOperation, IndexErrorEventData } from '@lifeos/shared';
 
@@ -72,7 +76,7 @@ export class IndexQueue {
           success = true;
           break;
         } catch (e: any) {
-          console.error(`Index attempt ${attempt}/${MAX_RETRIES} failed for ${filePath}:`, e.message);
+          logger.error(`Index attempt ${attempt}/${MAX_RETRIES} failed for ${filePath}:`, e instanceof Error ? e.message : String(e));
           if (attempt < MAX_RETRIES) {
             await new Promise(r => setTimeout(r, RETRY_DELAY));
           }

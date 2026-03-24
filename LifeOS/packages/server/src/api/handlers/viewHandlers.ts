@@ -7,6 +7,9 @@ import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndD
 import { getPersonaSnapshotBySourceNoteId } from '../../soul/personaSnapshots.js';
 import { parseNote } from './noteHandlers.js';
 import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, PersonaSnapshotResponse } from '@lifeos/shared';
+import { Logger } from '../../utils/logger.js';
+
+const logger = new Logger('viewHandlers');
 
 export async function getDashboard(_req: Request<Record<string, never>, ApiResponse<DashboardData>>, res: Response<ApiResponse<DashboardData>>): Promise<void> {
   try {
@@ -50,7 +53,7 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
     };
     res.json(response);
   } catch (error) {
-    console.error('Dashboard error:', error);
+    logger.error('Dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 }
@@ -69,7 +72,7 @@ export async function getTimeline(
     const response: TimelineData = { startDate: start, endDate: end, tracks };
     res.json(response);
   } catch (error) {
-    console.error('Timeline error:', error);
+    logger.error('Timeline error:', error);
     res.status(500).json({ error: 'Failed to fetch timeline data' });
   }
 }
@@ -99,7 +102,7 @@ export async function getCalendar(
     const response: CalendarData = { year: y, month: m, days };
     res.json(response);
   } catch (error) {
-    console.error('Calendar error:', error);
+    logger.error('Calendar error:', error);
     res.status(500).json({ error: 'Failed to fetch calendar data' });
   }
 }
@@ -113,7 +116,7 @@ export async function getPersonaSnapshotHandler(
     const snapshot = getPersonaSnapshotBySourceNoteId(sourceNoteId);
     res.json({ snapshot });
   } catch (error) {
-    console.error('Get persona snapshot error:', error);
+    logger.error('Get persona snapshot error:', error);
     res.status(500).json({ error: 'Failed to fetch persona snapshot' });
   }
 }
