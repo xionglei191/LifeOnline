@@ -192,6 +192,7 @@
       @defer-action="handleDeferSoulAction"
       @discard-action="handleDiscardSoulAction"
       @dispatch-action="handleDispatchSoulAction"
+      @answer-followup="handleAnswerFollowup"
     />
 
     <!-- Projection Panel -->
@@ -248,7 +249,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
 import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions } from '../api/client';
+import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions } from '../api/client';
 import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession } from '@lifeos/shared';
 import { formatReintegrationSignalKindLabel, formatReintegrationStrengthLabel, formatReintegrationTargetLabel, formatSoulActionKindLabel, formatSoulActionPromotionSummary, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationExtractTaskItems, getReintegrationOutcomeDetailRows, getReintegrationOutcomeNoPlanReason, getReintegrationOutcomeStripRows, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
 import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -651,6 +652,27 @@ async function handleDispatchSoulAction(action: SoulAction) {
     await loadReintegrationRecords();
   } catch (e: any) {
     soulActionMessage.value = e.message || '派发 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
+  }
+}
+
+async function handleAnswerFollowup(action: SoulAction, answer: string) {
+  if (!answer.trim()) {
+    soulActionMessage.value = '请输入回答内容';
+    soulActionMessageType.value = 'error';
+    return;
+  }
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    await answerFollowupQuestion(action.id, answer.trim());
+    soulActionMessage.value = '回答已提交，已追加到源笔记';
+    soulActionMessageType.value = 'success';
+    await loadSoulActions({ preserveMessage: true });
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '回答提交失败';
     soulActionMessageType.value = 'error';
   } finally {
     soulActionActionId.value = null;

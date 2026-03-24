@@ -2,7 +2,7 @@ import { getDb } from '../db/client.js';
 import { generateSoulActionCandidates, type SoulActionCandidate } from './soulActionGenerator.js';
 import { evaluateInterventionGate, type GateDecisionType } from './interventionGate.js';
 import { createOrReuseSoulAction } from './soulActions.js';
-import { createOrUpdateBrainstormSession } from './brainstormSessions.js';
+import { createOrUpdateBrainstormSession, getRecentThemeFrequency } from './brainstormSessions.js';
 
 interface IndexedNoteSnapshot {
   id: string;
@@ -126,6 +126,31 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
       });
     } catch (e) {
       console.warn('[postIndexPersonaTrigger] Failed to save brainstorm session:', e);
+    }
+  }
+
+  // ── Cross-session continuity pattern detection ────────
+  // If any theme from the current note appeared ≥3 times in the past 7 days,
+  // inject a persist_continuity_markdown candidate.
+  if (analysis) {
+    try {
+      const themeFreq = getRecentThemeFrequency(7);
+      const currentThemes = analysis.themes.filter(t => t !== 'general');
+      const recurringThemes = currentThemes.filter(t => (themeFreq.get(t) ?? 0) >= 3);
+
+      if (recurringThemes.length > 0 && !candidates.some(c => c.actionKind === 'persist_continuity_markdown')) {
+        const themeList = recurringThemes.map(t => `${t}(${themeFreq.get(t)}次)`).join('、');
+        candidates.push({
+          sourceNoteId: currentNote.id,
+          actionKind: 'persist_continuity_markdown',
+          noteId: currentNote.id,
+          trigger: 'cognitive_analysis',
+          confidence: Math.min(0.5 + recurringThemes.length * 0.1, 0.85),
+          analysisReason: `跨会话连续性检测：主题 ${themeList} 在近7天内反复出现，建议生成持久化连续性认知记录`,
+        });
+      }
+    } catch (e) {
+      console.warn('[postIndexPersonaTrigger] theme frequency check failed:', e);
     }
   }
 

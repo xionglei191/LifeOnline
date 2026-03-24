@@ -174,6 +174,33 @@
                 {{ actionId === action.id ? '处理中...' : '派发执行' }}
               </button>
             </div>
+
+            <!-- ask_followup_question answer UI -->
+            <div
+              v-if="action.actionKind === 'ask_followup_question' && action.executionStatus === 'pending'"
+              class="followup-answer-section"
+            >
+              <div class="followup-question-display">
+                <span class="followup-label">🤔 追问：</span>
+                <span>{{ action.governanceReason }}</span>
+              </div>
+              <div class="followup-input-row">
+                <textarea
+                  :id="`followup-${action.id}`"
+                  class="followup-textarea"
+                  placeholder="在此输入回答…"
+                  rows="2"
+                ></textarea>
+                <button
+                  class="btn-worker followup-submit"
+                  :disabled="actionId === action.id"
+                  @click="emit('answer-followup', action, ($event.target as HTMLElement).closest('.followup-input-row')?.querySelector('textarea')?.value ?? '')"
+                >
+                  {{ actionId === action.id ? '提交中...' : '回答' }}
+                </button>
+              </div>
+            </div>
+
           </article>
         </div>
       </section>
@@ -232,6 +259,7 @@ const emit = defineEmits<{
   (event: 'defer-action', action: SoulAction): void;
   (event: 'discard-action', action: SoulAction): void;
   (event: 'dispatch-action', action: SoulAction): void;
+  (event: 'answer-followup', action: SoulAction, answer: string): void;
 }>();
 
 function promotionExplanationRows(action: SoulAction) {
@@ -242,3 +270,53 @@ function isWorkerBackedAction(action: SoulAction): boolean {
   return action.actionKind.startsWith('launch_');
 }
 </script>
+
+<style scoped>
+.followup-answer-section {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--card-bg, #fff) 92%, oklch(95% 0.04 200) 8%);
+  border: 1px solid color-mix(in oklch, var(--border, #e5e7eb) 80%, oklch(70% 0.06 200) 20%);
+}
+
+.followup-question-display {
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.followup-label {
+  font-weight: 600;
+}
+
+.followup-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.followup-textarea {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 48px;
+  font-family: inherit;
+  background: var(--card-bg, #fff);
+}
+
+.followup-textarea:focus {
+  outline: none;
+  border-color: oklch(60% 0.15 220);
+  box-shadow: 0 0 0 2px oklch(60% 0.15 220 / 0.15);
+}
+
+.followup-submit {
+  white-space: nowrap;
+  align-self: flex-end;
+}
+</style>

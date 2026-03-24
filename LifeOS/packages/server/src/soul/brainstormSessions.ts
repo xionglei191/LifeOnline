@@ -140,3 +140,28 @@ export function listBrainstormSessions(limit = 50, offset = 0): { sessions: Brai
     .all(limit, offset) as BrainstormSessionRow[];
   return { sessions: rows.map(parseRow), total };
 }
+
+/**
+ * Get theme frequency across recent brainstorm sessions.
+ * Returns a map of theme → occurrence count within the given number of days.
+ */
+export function getRecentThemeFrequency(days = 7): Map<string, number> {
+  const db = getDb();
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const rows = db.prepare(
+    'SELECT themes_json FROM brainstorm_sessions WHERE updated_at >= ? ORDER BY updated_at DESC'
+  ).all(cutoff) as Array<{ themes_json: string }>;
+
+  const freq = new Map<string, number>();
+  for (const row of rows) {
+    try {
+      const themes: string[] = JSON.parse(row.themes_json);
+      for (const theme of themes) {
+        if (theme && theme !== 'general') {
+          freq.set(theme, (freq.get(theme) ?? 0) + 1);
+        }
+      }
+    } catch { /* skip malformed */ }
+  }
+  return freq;
+}
