@@ -870,3 +870,51 @@ export async function fetchIntegrations(): Promise<IntegrationStatus[]> {
   const data: ListIntegrationsResponse = await res.json();
   return data.integrations;
 }
+
+// ── physicalActionHistory API ──────────────────────────
+
+const MOCK_PHYSICAL_ACTION_HISTORY: PhysicalAction[] = [
+  {
+    id: 'pa-hist-1', type: 'send_email', status: 'completed',
+    sourceSoulActionId: 'sa-h-1', sourceNoteId: 'note-h-1',
+    title: '发送立会纪要', description: '向项目组发送上午立会记录',
+    payload: { to: 'team@example.com', subject: '3.24 立会纪要', body: '纪要内容...' },
+    approvalPolicy: 'auto_approve', autoApproveKey: 'send_email:standup',
+    executionLog: 'Successfully sent via SMTP.', externalId: 'msg-1234', errorMessage: null,
+    dryRunPreview: null,
+    createdAt: new Date(Date.now() - 3600000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    approvedAt: new Date(Date.now() - 3600000).toISOString(), executedAt: new Date(Date.now() - 3590000).toISOString(),
+  },
+  {
+    id: 'pa-hist-2', type: 'webhook_call', status: 'failed',
+    sourceSoulActionId: 'sa-h-2', sourceNoteId: 'note-h-2',
+    title: '触发家庭灯光全关', description: '睡眠模式已激活',
+    payload: { url: 'http://home-assistant/api', method: 'POST' },
+    approvalPolicy: 'always_ask', autoApproveKey: null,
+    executionLog: 'Connection timeout after 5000ms', externalId: null, errorMessage: 'Timeout',
+    dryRunPreview: null,
+    createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 7200000).toISOString(),
+    approvedAt: new Date(Date.now() - 7200000).toISOString(), executedAt: new Date(Date.now() - 7190000).toISOString(),
+  },
+  {
+    id: 'pa-hist-3', type: 'calendar_event', status: 'completed',
+    sourceSoulActionId: 'sa-h-3', sourceNoteId: 'note-h-3',
+    title: '预定健身房', description: '周二晚上力量训练',
+    payload: { title: '力量训练', startTime: '2026-03-24T19:00:00', endTime: '2026-03-24T20:00:00' },
+    approvalPolicy: 'auto_after_first', autoApproveKey: 'calendar_event:workout',
+    executionLog: 'Event created id: 987654321', externalId: '987654321', errorMessage: null,
+    dryRunPreview: null,
+    createdAt: new Date(Date.now() - 86400000).toISOString(), updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    approvedAt: new Date(Date.now() - 86400000).toISOString(), executedAt: new Date(Date.now() - 86390000).toISOString(),
+  }
+];
+
+export async function fetchPhysicalActionHistory(): Promise<PhysicalAction[]> {
+  const res = await fetch(`${API_BASE}/physical-actions/history`);
+  if (!res.ok) {
+    if (res.status === 404) return MOCK_PHYSICAL_ACTION_HISTORY;
+    throw new Error('Failed to fetch physical action history');
+  }
+  const data: ListPhysicalActionsResponse = await res.json();
+  return data.actions;
+}

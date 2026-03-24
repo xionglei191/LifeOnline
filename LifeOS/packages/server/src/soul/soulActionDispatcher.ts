@@ -406,7 +406,14 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     }
 
     // Submit to execution engine
-    const submitted = await submitPhysicalAction(physicalAction.type, physicalAction.payload, soulAction.sourceNoteId ?? undefined);
+    const defaultTitle = (physicalAction.payload as any).title || (physicalAction.payload as any).subject || `物理动作: ${physicalAction.type}`;
+    const submitted = await submitPhysicalAction(
+      physicalAction.type, 
+      physicalAction.payload, 
+      defaultTitle, 
+      soulAction.sourceNoteId ?? undefined,
+      soulAction.id
+    );
 
     getDb().prepare(`
       UPDATE soul_actions
@@ -425,6 +432,30 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
         operation: null,
         summary: `触发 ${submitted.type} (${submitted.status})`,
       },
+    };
+  }
+
+  // multiple_choices → explicitly queue for human review and selection
+  if (soulAction.actionKind === 'multiple_choices') {
+    const now = new Date().toISOString();
+    getDb().prepare(`
+      UPDATE soul_actions
+      SET execution_status = 'pending', updated_at = ?, started_at = ?
+      WHERE id = ?
+    `).run(now, now, soulAction.id);
+    return {
+      dispatched: true,
+      reason: '已生成双生子风险备选方案，等待人工抉择',
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+      executionSummary: {
+        objectType: 'multiple_choices' as any,
+        objectId: soulAction.id,
+        operation: 'awaiting_answer' as any,
+        summary: soulAction.governanceReason ?? '双生子方案等待抉择',
+      },
+      eventNode: null,
+      continuityRecord: null,
     };
   }
 

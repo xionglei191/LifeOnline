@@ -44,7 +44,7 @@ import {
   approvePhysicalActionHandler, rejectPhysicalActionHandler,
   // Integrations
   googleAuthHandler, googleCallbackHandler,
-  googleCalendarEventsHandler, integrationStatusHandler,
+  googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler,
 } from './handlers.js';
 
 export const router = Router();
@@ -71,6 +71,7 @@ router.post('/physical-actions/:id/reject', rejectPhysicalActionHandler);
 
 // Integrations
 router.get('/integrations/status', integrationStatusHandler);
+router.get('/integrations/insights', integrationInsightsHandler);
 router.get('/integrations/google/auth', googleAuthHandler);
 router.get('/integrations/google/callback', googleCallbackHandler);
 router.get('/integrations/google/calendar/events', googleCalendarEventsHandler);

@@ -45,4 +45,4 @@ export { searchHandler } from './handlers/searchHandler.js';
 export { listPhysicalActionsHandler, getPhysicalActionHandler, approvePhysicalActionHandler, rejectPhysicalActionHandler } from './handlers/physicalActionHandlers.js';
 
 // Integrations
-export { googleAuthHandler, googleCallbackHandler, googleCalendarEventsHandler, integrationStatusHandler } from './handlers/integrationHandlers.js';
+export { googleAuthHandler, googleCallbackHandler, googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler } from './handlers/integrationHandlers.js';

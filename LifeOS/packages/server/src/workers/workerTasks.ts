@@ -45,6 +45,7 @@ import { runClassifyInbox, persistClassifyInboxResult, summarizeClassifyInboxRes
 import { runExtractTasks, summarizeExtractTasksResult } from './executors/extractTasksExecutor.js';
 import { runUpdatePersonaSnapshot, summarizeUpdatePersonaSnapshotResult } from './executors/personaSnapshotExecutor.js';
 import { runDailyReport, persistDailyReportResult, summarizeDailyReportResult, runWeeklyReport, persistWeeklyReportResult, summarizeWeeklyReportResult } from './executors/reportExecutors.js';
+import { runPhysicalActionExecutor, summarizePhysicalActionResult, persistPhysicalActionResult } from './executors/physicalActionExecutor.js';
 
 // ── Types ──
 
@@ -144,6 +145,13 @@ const workerTaskDefinitions: WorkerTaskDefinitionMap = {
   weekly_report: {
     worker: 'lifeos',
     normalizeInput: (input) => ({ weekStart: input?.weekStart || getWeekStartDateString() }),
+  },
+  execute_physical_action: {
+    worker: 'lifeos',
+    normalizeInput: (input) => {
+      if (!input?.actionId) throwWorkerTaskValidationError('execute_physical_action requires actionId');
+      return { actionId: input.actionId };
+    },
   },
 };
 
@@ -500,6 +508,11 @@ const workerTaskExecutionRegistry: WorkerTaskExecutionRegistry = {
     run: (task) => runWeeklyReport(task),
     summarize: summarizeWeeklyReportResult,
     getOutputNotePaths: (task, result) => persistWeeklyReportResult(task, result),
+  },
+  execute_physical_action: {
+    run: (task, signal) => runPhysicalActionExecutor(task as never, signal),
+    summarize: summarizePhysicalActionResult,
+    getOutputNotePaths: (task, result) => persistPhysicalActionResult(task as never, result as never),
   },
 };
 

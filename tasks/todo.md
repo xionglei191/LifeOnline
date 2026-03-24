@@ -29,94 +29,107 @@
 
 ### 🔴 C 组 — 基础设施
 
-#### Phase 3 Sprint 1（新任务）
+<details>
+<summary>✅ 已完成（Sprint 1: Schema / OAuth / Execution Engine）</summary>
 
-- [x] **P0：PhysicalAction 数据模型与 DB Schema**
-  - 目标：设计 `physical_actions` 表结构，定义 PhysicalAction 的类型枚举与状态机
-  - 关键文件：`packages/server/src/db/schema.ts`, `packages/shared/types/physicalAction.ts`
-  - 完成标准：新增 `physical_actions` 表（类型/目标/状态/授权信息），DB migration 自动执行
-  - 验证：启动服务后表自动创建，TypeScript 类型可用
+- [x] P0：PhysicalAction 数据模型与 DB Schema
+- [x] P1：Google Calendar API OAuth 2.0 对接
+- [x] P2：Execution Engine 核心框架
 
-- [x] **P1：Google Calendar API OAuth 2.0 对接**
-  - 目标：实现 Google Calendar 的 OAuth 授权流程与 token 管理
-  - 关键文件：`packages/server/src/integrations/` (新建目录), `calendarProtocol.ts`
-  - 完成标准：完成 OAuth 授权 → 获取 access_token → 读取用户日历事件
-  - 验证：API 调用返回真实的日历数据
+</details>
 
-- [x] **P2：Execution Engine 核心框架**
-  - 目标：构建物理动作执行引擎，支持队列化执行、状态追踪、执行日志
-  - 关键文件：`packages/server/src/integrations/executionEngine.ts`
-  - 完成标准：PhysicalAction 从 pending → approved → executing → completed/failed 全生命周期
-  - 验证：模拟一个动作走完完整状态机
+#### Phase 3 Sprint 2（日常自动化闭环与重试）
+
+- [x] **P1：物理动作异步执行队列（Async Queue）**
+  - 目标：将 Execution Engine 调用外部 API 从同步改写为基于 worker 的异步任务
+  - 关键文件：`packages/server/src/workers/` (支持 physical_action_task)
+  - 完成标准：ExecutionEngine 产生任务入队，worker 消费并在失败时记录错误和重试次数
+  - 验证：断网模拟提交，观察重试队列
+
+- [x] **P2：执行错误聚合分析**
+  - 目标：抓取 `physical_actions` 失败记录，供终端用户和 Agent 进行错误自愈检查
+  - 关键文件：`packages/server/src/integrations/insightEngine.ts`
+  - 完成标准：失败记录（如 API 变更/日历满额）暴露到 API
+  - 验证：Mock 一个 `403 Forbidden` API，验证系统能够捕获并存储错误类型
 
 ---
 
 ### 🟢 B 组 — 客户端与 UX
 
-#### Phase 3 Sprint 1（新任务）
+<details>
+<summary>✅ 已完成（Sprint 1: 审批UI / Dry-Run / 集成页）</summary>
 
-- [ ] **P1：PhysicalAction 授权审批 UI**
-  - 目标：在 GovernanceView 中新增"物理动作审批"区域，展示待授权的 PhysicalAction 卡片
-  - 关键文件：`packages/web/src/components/` (新增 PhysicalActionCard.vue)
-  - 完成标准：滑动授权 ✅ 或拒绝 🚫，支持勾选"下次同类自动放行"
-  - 验证：前端展示待审批卡片，操作后状态同步到后端
+- [x] P1：PhysicalAction 授权审批 UI 卡片
+- [x] P2：Dry-Run 预测效果预览面板
+- [x] P3：集成管理设置页（OAuth授权绑定）
 
-- [ ] **P2：Dry-Run 预览面板**
-  - 目标：当用户审批前，展示 LLM 生成的"如果执行，预测结果是…"的模拟预览
-  - 关键文件：`packages/web/src/components/` (新增 DryRunPreview.vue)
-  - 完成标准：点击卡片展开预览，展示动作的预测效果
-  - 验证：模拟数据渲染预览面板
+</details>
 
-- [ ] **P3：集成管理设置页（Integrations Settings）**
-  - 目标：在设置页新增"外部集成"tab，管理已授权的外部服务（Google Calendar 等）
-  - 关键文件：`packages/web/src/views/SettingsView.vue`
-  - 完成标准：展示已连接/未连接的外部服务，支持授权/解绑
-  - 验证：点击授权跳转 OAuth 流程
+#### Phase 3 Sprint 2（冲突渲染与反馈）
+
+- [ ] **P1：日程冲突可视化（Conflict Map）**
+  - 目标：在授权批准时，画出目标时间段上下的 Timeline，提醒用户"那天下午你已经有两个会了"
+  - 关键文件：`packages/web/src/components/PhysicalActionCard.vue`
+  - 完成标准：获取当天日程流与待审批事件，如果冲突呈现橙/红警报 UI
+  - 验证：造一组重叠时间的 mock 事件验证渲染
+
+- [ ] **P2："自动化审计日志"追溯面板**
+  - 目标：提供一个全局的 Automation 审计列表，看到过去一个月系统帮你悄悄做了什么
+  - 关键文件：`packages/web/src/views/AutomationAuditView.vue`
+  - 完成标准：展示 physical actions 的 Timeline，支持过滤 success/failed
+  - 验证：可以溯源任意一条命令是由哪篇笔记产生的
 
 ---
 
 ### 🟡 D 组 — 灵光APP (LingGuangCatcher)
 
-#### Phase 3 Sprint 1（新任务）
+<details>
+<summary>✅ 已完成（Sprint 1: 手机授权推送 / 简版日历 / 自动化开关）</summary>
 
-- [x] **P1：手机端 PhysicalAction 一键授权**
-  - 目标：灵光APP收到"系统想帮你预约壁球场"推送时，可直接在通知中滑动授权
-  - 关键文件：`LingGuangCatcher/app/src/` (扩展 GovernanceFragment)
-  - 完成标准：推送通知内嵌 Approve/Reject 按钮，操作后调用 LifeOS API
-  - 验证：实际收到推送并在手机上完成授权
+- [x] P1：手机端推送卡片及向右滑动授权
+- [x] P2：移动端简版月视图日历展示
+- [x] P3：APP 设置自动化细化开关
 
-- [x] **P2：日历视图预览**
-  - 目标：在灵光APP中展示简版日历视图，展示 LifeOS 自动添加的事件
-  - 关键文件：`LingGuangCatcher/app/src/` (新增 CalendarPreviewFragment)
-  - 完成标准：月视图下可看到 PhysicalAction 产生的日历事件
-  - 验证：授权日历写入后手机端可见
+</details>
 
-- [x] **P3：自动化开关面板**
-  - 目标：在灵光设置中增加"自动化总开关"和按类型的细粒度开关
-  - 关键文件：`LingGuangCatcher/app/src/`
-  - 完成标准：可全局关闭自动化，或仅关闭日历类/通讯类
-  - 验证：关闭后不再收到对应类型的授权推送
+#### Phase 3 Sprint 2（底层探测与 Widget 关停）
+
+- [x] **P1：底层静默日历探测 (Silent Sync)**
+  - 目标：即使用户在主系统添加了工作日历安排，灵光 APP 需要将其探测拉回，避免规划冲突
+  - 关键文件：`LingGuangCatcher/app/src/.../CalendarSyncWorker.kt`
+  - 完成标准：后台周期性抓取手机本地日历变更，并写入 Vault 成为环境上下文
+  - 验证：在系统日历新建事件，稍后会在 Vault `dimension: environment` 里查看到快照
+
+- [/] **P2：桌面一键急停 (Emergency Stop Widget)**
+  - 目标：怕 AI 发疯暴走？手机桌面提供一个大红色的中止组件，干掉一切审批流并设为 observe_only
+  - 关键文件：`LingGuangCatcher/app/src/widget/`
+  - 完成标准：点击后向 `LifeOS` 发送停止一切物理动作指令，并锁死 `auto_approve`
+  - 验证：测试发送急停信令，验证所有的策略回落为强人工审核
 
 ---
 
 ### 🔵 A 组 — 认知与调度
 
-#### Phase 3 Sprint 1（新任务）
+<details>
+<summary>✅ 已完成（Sprint 1: 动作转换引擎 / 审批网关 / 完整闭环 E2E）</summary>
 
-- [ ] **P1：PhysicalAction 类型体系与转换引擎**
-  - 目标：定义 PhysicalAction 的类型层级（calendar_event / send_email / webhook_call 等），构建 SoulAction → PhysicalAction 的转换逻辑
-  - 关键文件：`packages/server/src/soul/` (新增 physicalActionMapper.ts)
-  - 完成标准：Planner Agent 可输出 `dispatch_physical_action` 类型的建议，mapper 将其转为结构化 PhysicalAction
-  - 验证：编译通过 + 给定一条"建议你下周二打壁球"的 SoulAction，自动生成 calendar_event 类型的 PhysicalAction
+- [x] P1：PhysicalAction 类型体系与转换引擎（mapSoulActionToPhysicalAction）
+- [x] P2：Approval Gate 审批网关流
+- [x] P3：Calendar Protocol 首个完整单向闭环
+- [x] **联调里程碑**：E2E 集成测试成功（审批/免审批双向验证）
 
-- [ ] **P2：Approval Gate 审批网关逻辑**
-  - 目标：实现"首次必须人工授权，可选自动放行"的审批策略引擎
-  - 关键文件：`packages/server/src/integrations/approvalGate.ts`
-  - 完成标准：每种 PhysicalAction 类型维护授权策略（always_ask / auto_after_first / auto_approve）
-  - 验证：首次日历写入需审批，勾选自动放行后同类动作直接执行
+</details>
 
-- [ ] **P3：Calendar Protocol 首个完整写入闭环**
-  - 目标：打通 "笔记 → 认知分析 → Planner 建议日历事件 → 用户授权 → Google Calendar 写入" 的全链路
-  - 关键文件：`packages/server/src/integrations/calendarProtocol.ts`, `executionEngine.ts`
-  - 完成标准：一条真实笔记走完全链路，Google Calendar 上出现对应事件
-  - 验证：实际在 Google Calendar 中看到系统自动创建的事件
+#### Phase 3 Sprint 2（高级 Planner 能力演进）
+
+- [ ] **P1：Planner Agent 结合日历的排期决策 (Cognitive Scheduling)**
+  - 目标：Planner 生成建议前，**主动读取日历快照**，如果发现那天太满，主动调整建议或向用户抛出警告 (Dry-Run Preview 附加上下文)
+  - 关键文件：`packages/server/src/soul/agents/plannerAgent.ts`
+  - 完成标准：输入"周三去牙医" + 虚拟周三日程满额，Planner 生成 `alert` 或改期建议
+  - 验证：跑一次 mock AI 判断
+
+- [ ] **P2：双生子计划生成（Fallback Option）**
+  - 目标：对有风险的操作，Agent 提供 A/B 两个 PhysicalAction 候选（Plan A: 自动订场地，Plan B: 仅提醒我订）。让用户在授权时做二选一。
+  - 关键文件：`packages/server/src/soul/agents/plannerAgent.ts`
+  - 完成标准：Governance 收到类型为 `multiple_choices` 的 SoulAction
+  - 验证：测试发散型规划，生成双动作可选路径。

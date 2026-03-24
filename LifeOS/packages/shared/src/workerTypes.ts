@@ -14,6 +14,7 @@ export const SUPPORTED_WORKER_TASK_TYPES = [
   'update_persona_snapshot',
   'daily_report',
   'weekly_report',
+  'execute_physical_action',
 ] as const;
 export type WorkerTaskType = typeof SUPPORTED_WORKER_TASK_TYPES[number];
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
@@ -43,6 +44,9 @@ export interface WorkerTaskInputMap {
   };
   weekly_report: {
     weekStart?: string;
+  };
+  execute_physical_action: {
+    actionId: string;
   };
 }
 
@@ -96,6 +100,11 @@ export interface WorkerTaskResultMap {
     weekStart: string;
     weekEnd: string;
     stats: { totalNotes: number; doneTasks: number; milestones: number };
+  };
+  execute_physical_action: {
+    actionId: string;
+    title: string;
+    success: boolean;
   };
 }
 

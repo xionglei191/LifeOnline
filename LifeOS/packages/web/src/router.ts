@@ -14,6 +14,7 @@ const routes = [
   { path: '/events', name: 'events', component: () => import('./views/EventsView.vue') },
   { path: '/settings', name: 'settings', component: () => import('./views/SettingsView.vue') },
   { path: '/insights', name: 'insights', component: () => import('./views/InsightsFeedView.vue') },
+  { path: '/automation-audit', name: 'automation-audit', component: () => import('./views/AutomationAuditView.vue') },
 ];
 
 export const router = createRouter({

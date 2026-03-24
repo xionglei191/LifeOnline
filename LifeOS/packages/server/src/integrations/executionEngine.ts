@@ -11,6 +11,7 @@ import { Logger } from '../utils/logger.js';
 import type { PhysicalAction, PhysicalActionType, PhysicalActionPayload, CalendarEventPayload } from '@lifeos/shared';
 import { evaluateActionStatus } from './approvalGate.js';
 import { executeCalendarEvent } from './calendarProtocol.js';
+import { createWorkerTask, startWorkerTaskExecution } from '../workers/workerTasks.js';
 import { randomUUID } from 'crypto';
 
 const logger = new Logger('executionEngine');
@@ -115,7 +116,11 @@ export async function submitPhysicalAction(
   logger.info(`PhysicalAction submitted: ${action.id} (${type}) → ${initialStatus}`);
 
   if (action.status === 'approved') {
-    executeAction(action.id).catch(e => logger.error('Async execution failed:', e));
+    const task = createWorkerTask({
+      taskType: 'execute_physical_action',
+      input: { actionId: action.id }
+    });
+    startWorkerTaskExecution(task.id);
   }
 
   return action;
@@ -132,7 +137,11 @@ export function approveAction(id: string): PhysicalAction | null {
   updateActionStatus(id, 'approved', { approved_at: now });
 
   // Trigger execution asynchronously
-  executeAction(id).catch(e => logger.error('Execution after approval failed:', e));
+  const task = createWorkerTask({
+    taskType: 'execute_physical_action',
+    input: { actionId: id }
+  });
+  startWorkerTaskExecution(task.id);
 
   return { ...action, status: 'approved', approvedAt: now, updatedAt: now };
 }
@@ -154,7 +163,9 @@ export function rejectAction(id: string): PhysicalAction | null {
 export async function executeAction(id: string): Promise<PhysicalAction> {
   const action = getPhysicalAction(id);
   if (!action) throw new Error(`PhysicalAction not found: ${id}`);
-  if (action.status !== 'approved') throw new Error(`Action ${id} is not approved (status: ${action.status})`);
+  if (action.status !== 'approved' && action.status !== 'failed') {
+    throw new Error(`Action ${id} is not executable (status: ${action.status})`);
+  }
 
   updateActionStatus(id, 'executing');
 

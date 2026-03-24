@@ -190,4 +190,54 @@ class LifeOSService(private val lifeosUrl: String) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Call POST /api/environment/sync
+     */
+    fun syncEnvironmentData(payload: JSONObject): Result<Boolean> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/environment/sync"
+            val body = RequestBody.create(
+                "application/json; charset=utf-8".toMediaTypeOrNull(),
+                payload.toString()
+            )
+            val request = Request.Builder().url(url).post(body).build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("Sync environment failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "syncEnvironmentData error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Call POST /api/physical-actions/emergency-stop
+     */
+    fun emergencyStop(): Result<Boolean> {
+        return try {
+            val url = "${lifeosUrl.trimEnd('/')}/api/physical-actions/emergency-stop"
+            val body = RequestBody.create(
+                "application/json; charset=utf-8".toMediaTypeOrNull(),
+                "{}"
+            )
+            val request = Request.Builder().url(url).post(body).build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("Emergency stop failed: ${response.code}"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "emergencyStop error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 }

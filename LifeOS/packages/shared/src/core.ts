@@ -43,6 +43,7 @@ export const SUPPORTED_SOUL_ACTION_KINDS = [
   'persist_continuity_markdown',
   'sync_continuity_to_r2',
   'dispatch_physical_action',
+  'multiple_choices',
 ] as const;
 export type SoulActionKind = typeof SUPPORTED_SOUL_ACTION_KINDS[number];
 export const SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES = ['pending_review', 'approved', 'deferred', 'discarded'] as const;
@@ -58,7 +59,8 @@ export type ReintegrationSignalKind =
   | 'persona_snapshot_reintegration'
   | 'daily_report_reintegration'
   | 'weekly_report_reintegration'
-  | 'openclaw_reintegration';
+  | 'openclaw_reintegration'
+  | 'physical_action_reintegration';
 
 export interface ApiErrorResponse {
   error: string;

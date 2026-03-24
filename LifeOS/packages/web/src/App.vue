@@ -114,6 +114,7 @@ const navItems = [
   { to: '/governance', label: '治理', hint: '决策审批', icon: '⚖' },
   { to: '/insights', label: '洞察', hint: '闲思记录', icon: '✧' },
   { to: '/ops', label: '运维', hint: '任务调度', icon: '⚡' },
+  { to: '/automation-audit', label: '审计', hint: '自动化追溯', icon: '📝' },
   { to: '/settings', label: '设置', hint: '系统配置', icon: '⚙' },
 ];
 

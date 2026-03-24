@@ -90,7 +90,7 @@ export interface ReintegrationSummaryContext extends ReintegrationOutcomeSummary
 
 export interface ActionOutcomePacket {
   taskId: string;
-  taskType: WorkerTaskType;
+  taskType: Exclude<WorkerTaskType, 'execute_physical_action'>;
   status: TerminalWorkerTaskStatus;
   resultSummary: string | null;
   error: string | null;

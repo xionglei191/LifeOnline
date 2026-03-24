@@ -3,13 +3,31 @@
     <div class="pa-header" @click="expanded = !expanded">
       <span class="pa-type-icon">{{ typeIcon }}</span>
       <div class="pa-info">
-        <strong class="pa-title">{{ action.title }}</strong>
+        <strong class="pa-title">
+          {{ action.title }}
+          <span v-if="conflictCount > 0" class="conflict-badge">⚠️ 冲突({{ conflictCount }})</span>
+        </strong>
         <span class="pa-desc">{{ action.description }}</span>
       </div>
       <span class="pa-expand-icon">{{ expanded ? '▾' : '▸' }}</span>
     </div>
 
-    <DryRunPreview v-if="expanded && action.dryRunPreview" :preview="action.dryRunPreview" :action-type="action.type" />
+    <template v-if="expanded">
+      <DryRunPreview v-if="action.dryRunPreview" :preview="action.dryRunPreview" :action-type="action.type" />
+      
+      <div v-if="conflictCount > 0" class="conflict-panel">
+        <div class="conflict-header">
+          <span class="conflict-icon">⚠️</span>
+          <span class="conflict-label">日程冲突警告 (那天你已有安排)</span>
+        </div>
+        <div class="conflict-list">
+          <div v-for="c in conflicts" :key="c.id" class="conflict-item">
+            <span class="c-time">{{ formatTime(c.startTime) }} - {{ formatTime(c.endTime) }}</span>
+            <span class="c-title">{{ c.title }}</span>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <div class="pa-actions">
       <label class="auto-approve-check">
@@ -25,8 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { PhysicalAction } from '@lifeos/shared';
+import { ref, computed } from 'vue';
+import type { PhysicalAction, CalendarEventPayload } from '@lifeos/shared';
 import DryRunPreview from './DryRunPreview.vue';
 
 const props = defineProps<{
@@ -49,6 +67,34 @@ const TYPE_ICONS: Record<string, string> = {
   iot_command: '🏠',
 };
 const typeIcon = TYPE_ICONS[props.action.type] || '⚡';
+
+// ── Conflict Map Logic ────────────────────────────────────
+// mock existing schedule
+const MOCK_EXISTING_EVENTS = [
+  { id: 'c-1', title: '全员周会', startTime: '2026-03-31T10:00:00', endTime: '2026-03-31T11:30:00' },
+  { id: 'c-2', title: '晚餐：和老友聚餐', startTime: '2026-03-31T18:30:00', endTime: '2026-03-31T20:30:00' },
+];
+
+const conflicts = computed(() => {
+  if (props.action.type !== 'calendar_event') return [];
+  const payload = props.action.payload as CalendarEventPayload;
+  if (!payload.startTime || !payload.endTime) return [];
+  
+  const start = new Date(payload.startTime).getTime();
+  const end = new Date(payload.endTime).getTime();
+  
+  return MOCK_EXISTING_EVENTS.filter(e => {
+    const eStart = new Date(e.startTime).getTime();
+    const eEnd = new Date(e.endTime).getTime();
+    return start < eEnd && end > eStart; // Overlap condition Check
+  });
+});
+
+const conflictCount = computed(() => conflicts.value.length);
+
+function formatTime(timestamp: string) {
+  return new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 
 <style scoped>
@@ -178,5 +224,70 @@ const typeIcon = TYPE_ICONS[props.action.type] || '⚡';
 .btn-approve:disabled, .btn-reject:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ── Conflict Map Styles ── */
+.conflict-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  color: var(--danger);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.conflict-panel {
+  margin: 0 16px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--danger) 5%, transparent);
+  overflow: hidden;
+  animation: fadeSlide 0.25s ease;
+}
+
+@keyframes fadeSlide {
+  0% { opacity: 0; max-height: 0; }
+  100% { opacity: 1; max-height: 300px; }
+}
+
+.conflict-header {
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conflict-list {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conflict-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.c-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.c-title {
+  font-weight: 500;
+  color: var(--text);
 }
 </style>

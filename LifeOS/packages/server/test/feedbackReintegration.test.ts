@@ -1472,6 +1472,7 @@ test('supported task types generate stable reintegration payloads', () => {
       daily_report: 'daily_report_reintegration',
       weekly_report: 'weekly_report_reintegration',
       openclaw_task: 'openclaw_reintegration',
+      execute_physical_action: 'physical_action_reintegration',
     }[taskType]);
   }
 });

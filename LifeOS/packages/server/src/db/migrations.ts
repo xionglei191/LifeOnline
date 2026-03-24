@@ -318,7 +318,7 @@ export function runMigrations(database: Database): void {
 
   ensureTaskTableConstraintOrRebuild(database, {
     tableName: 'worker_tasks',
-    insertSql: "(id, task_type, input_json, status, worker, created_at, updated_at) VALUES ('__migration_test__', 'extract_tasks', '{}', 'pending', 'lifeos', '', '')",
+    insertSql: "(id, task_type, input_json, status, worker, created_at, updated_at) VALUES ('__migration_test__', 'execute_physical_action', '{}', 'pending', 'lifeos', '', '')",
     createTableSql: WORKER_TASK_TABLE_COLUMNS_SQL,
     selectColumnsSql: `        id,
         ${normalizeLegacyTaskTypeSql()},

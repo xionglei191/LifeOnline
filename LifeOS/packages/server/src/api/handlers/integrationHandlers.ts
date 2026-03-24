@@ -4,6 +4,7 @@
 import type { Request, Response } from 'express';
 import { getGoogleAuthUrl, handleGoogleOAuthCallback, isGoogleCalendarConnected, listCalendarEvents } from '../../integrations/calendarProtocol.js';
 import { listCredentialProviders } from '../../integrations/credentialStore.js';
+import { getExecutionInsights } from '../../integrations/insightEngine.js';
 
 export function googleAuthHandler(_req: Request, res: Response) {
   const url = getGoogleAuthUrl();
@@ -44,4 +45,13 @@ export function integrationStatusHandler(_req: Request, res: Response) {
     },
   ];
   res.json({ integrations });
+}
+
+export function integrationInsightsHandler(_req: Request, res: Response) {
+  try {
+    const insights = getExecutionInsights(7);
+    res.json(insights);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || 'Failed to fetch execution insights' });
+  }
 }

@@ -11,7 +11,8 @@ export type ReintegrationSignalKind =
   | 'persona_snapshot_reintegration'
   | 'daily_report_reintegration'
   | 'weekly_report_reintegration'
-  | 'openclaw_reintegration';
+  | 'openclaw_reintegration'
+  | 'physical_action_reintegration';
 
 export type { ReintegrationRecord } from '@lifeos/shared';
 
