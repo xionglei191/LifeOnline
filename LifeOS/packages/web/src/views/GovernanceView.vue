@@ -714,4 +714,6 @@ onUnmounted(() => {
 .btn-danger-sm { padding: 6px 14px; border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); cursor: pointer; font-size: 12px; }
 .source-pill { background: color-mix(in oklch, var(--card-bg) 85%, oklch(80% 0.04 250) 15%); }
 .action-kind-worker { background: color-mix(in oklch, oklch(95% 0.03 280) 60%, var(--card-bg) 40%); color: oklch(45% 0.12 280); border-color: color-mix(in oklch, oklch(80% 0.06 280) 40%, var(--border) 60%); }
+.action-detail-link { text-decoration: none; color: inherit; }
+.action-detail-link:hover { color: #409eff; }
 </style>

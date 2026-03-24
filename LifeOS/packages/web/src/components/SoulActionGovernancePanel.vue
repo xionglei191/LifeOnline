@@ -112,7 +112,7 @@
           <article v-for="action in group.actions" :key="action.id" class="reintegration-item soul-action-item">
             <div class="reintegration-item-top">
               <div class="reintegration-item-title-row">
-                <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
+                <router-link :to="{ name: 'soul-action-detail', params: { id: action.id } }" class="action-detail-link"><strong>{{ promotionActionLabel(action.actionKind) }}</strong></router-link>
                 <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
                 <span class="worker-pill" :class="{ 'action-kind-worker': isWorkerBackedAction(action) }">{{ action.actionKind }}</span>
                 <span class="worker-pill">{{ action.executionStatus }}</span>
