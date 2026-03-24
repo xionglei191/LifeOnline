@@ -87,10 +87,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import ReintegrationReviewPanel from '../components/ReintegrationReviewPanel.vue';
-import SoulActionGovernancePanel from '../components/SoulActionGovernancePanel.vue';
-import PromotionProjectionPanel from '../components/PromotionProjectionPanel.vue';
-import BrainstormSessionPanel from '../components/BrainstormSessionPanel.vue';
+import { defineAsyncComponent } from 'vue';
+const ReintegrationReviewPanel = defineAsyncComponent(() => import('../components/ReintegrationReviewPanel.vue'));
+const SoulActionGovernancePanel = defineAsyncComponent(() => import('../components/SoulActionGovernancePanel.vue'));
+const PromotionProjectionPanel = defineAsyncComponent(() => import('../components/PromotionProjectionPanel.vue'));
+const BrainstormSessionPanel = defineAsyncComponent(() => import('../components/BrainstormSessionPanel.vue'));
 import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions } from '../api/client';
 import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession } from '@lifeos/shared';
 import { formatSoulActionKindLabel, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
@@ -98,7 +99,7 @@ import { workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } fro
 import { useWebSocket } from '../composables/useWebSocket';
 import { buildSoulActionGroups, getSoulActionGroupCount, getSoulActionGroupQuickFilterLabel, getSoulActionGroupQuickFilterStats, type SoulActionGroupQuickFilter } from '../utils/soulActionGroups';
 
-const { isConnected } = useWebSocket();
+useWebSocket(); // to initialize listener but no local state needed here
 
 // ── Reintegration State ────────────────────────────────
 const reintegrationRecords = ref<ReintegrationRecord[]>([]);
@@ -306,7 +307,8 @@ function soulActionApprovalReasonLabel(action: Pick<SoulAction, 'sourceNoteId' |
   return formatSoulActionSourceLabel(action);
 }
 
-function buildDispatchedWorkerTaskSuffix(result: Awaited<ReturnType<typeof dispatchSoulAction>>): string {
+function buildDispatchedWorkerTaskSuffix(result: Awaited<ReturnType<typeof dispatchSoulAction>> | null): string {
+  if (!result) return '';
   const wtLabel = result.task ? workerTaskTypeLabel(result.task.taskType) : null;
   const wtStatus = result.task ? workerTaskStatusLabel(result.task.status) : null;
   const wtWorker = result.task ? workerTaskWorkerLabel(result.task.worker) : null;
@@ -417,8 +419,8 @@ async function handleDispatchSoulActionGroup(group: { groupKey: string; actions:
   try {
     const dispatchResults = [] as Awaited<ReturnType<typeof dispatchSoulAction>>[];
     for (const action of dispatchableActions) { dispatchResults.push(await dispatchSoulAction(action.id)); }
-    const lastResult = dispatchResults.at(-1) ?? null;
-    const suffix = buildDispatchedWorkerTaskSuffix(lastResult);
+    const lastResult = dispatchResults[dispatchResults.length - 1] ?? null;
+    const suffix = lastResult ? buildDispatchedWorkerTaskSuffix(lastResult) : '';
     const lastMsg = lastResult ? getDispatchExecutionMessage(lastResult.result) : null;
     soulActionMessage.value = lastMsg ? `已批量派发 ${dispatchableActions.length}/${group.actions.length} 条 soul actions · ${lastMsg}${suffix}` : `已批量派发 ${dispatchableActions.length}/${group.actions.length} 条 soul actions${suffix}`;
     soulActionMessageType.value = 'success';

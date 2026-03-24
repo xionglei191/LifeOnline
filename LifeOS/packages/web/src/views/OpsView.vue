@@ -11,8 +11,9 @@
 </template>
 
 <script setup lang="ts">
-import WorkerTaskPanel from '../components/WorkerTaskPanel.vue';
-import SchedulePanel from '../components/SchedulePanel.vue';
+import { defineAsyncComponent } from 'vue';
+const WorkerTaskPanel = defineAsyncComponent(() => import('../components/WorkerTaskPanel.vue'));
+const SchedulePanel = defineAsyncComponent(() => import('../components/SchedulePanel.vue'));
 </script>
 
 <style scoped>

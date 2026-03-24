@@ -1,0 +1,43 @@
+{
+  "name": "LifeOS — 个人任务中枢",
+  "short_name": "LifeOS",
+  "description": "个人认知管理与治理系统",
+  "theme_color": "#0f766e",
+  "background_color": "#eef3f8",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "仪表盘",
+      "url": "/",
+      "description": "今日聚焦"
+    },
+    {
+      "name": "治理",
+      "url": "/governance",
+      "description": "决策审批"
+    },
+    {
+      "name": "事件",
+      "url": "/events",
+      "description": "认知时序"
+    }
+  ]
+}

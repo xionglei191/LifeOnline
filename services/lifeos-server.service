@@ -6,12 +6,7 @@ After=network-online.target
 Type=simple
 WorkingDirectory=/home/xionglei/LifeOnline/LifeOS/packages/server
 Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/bin:/usr/bin:/bin
-Environment=VAULT_PATH=/home/xionglei/Vault_OS
-Environment=DB_PATH=/home/xionglei/LifeOnline/LifeOS/packages/server/data/lifeos.db
-Environment=R2_ACCOUNT_ID=209d35d1b5923fb2d4420744901d9dbe
-Environment=R2_ACCESS_KEY_ID=afd70ec6e45b4f0292452acbfd8824fd
-Environment=R2_SECRET_ACCESS_KEY=8ad927099ad2dc0c0fa9aea41c9964b8b537bfcfdc0f0d33fd09a92f52d7be1e
-Environment=R2_BUCKET_NAME=vault2026
+EnvironmentFile=/home/xionglei/LifeOnline/LifeOS/packages/server/.env.production
 ExecStart=/home/linuxbrew/.linuxbrew/bin/pnpm dev
 Restart=on-failure
 RestartSec=5

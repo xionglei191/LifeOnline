@@ -231,13 +231,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { fetchSoulAction, approveSoulAction, dispatchSoulAction, deferSoulAction, discardSoulAction, answerFollowupQuestion, fetchReintegrationRecords, fetchSoulActions } from '../api/client';
 import { formatSoulActionKindLabel, formatReintegrationSignalKindLabel } from '@lifeos/shared';
 import type { SoulAction, ReintegrationRecord } from '@lifeos/shared';
 
 const route = useRoute();
-const router = useRouter();
 
 const action = ref<SoulAction | null>(null);
 const loading = ref(true);

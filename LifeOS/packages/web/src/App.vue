@@ -61,11 +61,13 @@
       </header>
 
       <main class="app-main">
-        <router-view v-slot="{ Component, route }">
-          <Transition name="route-fade" mode="out-in">
-            <component :is="Component" :key="route.fullPath" />
-          </Transition>
-        </router-view>
+        <ErrorBoundary>
+          <router-view v-slot="{ Component, route }">
+            <Transition name="route-fade" mode="out-in">
+              <component :is="Component" :key="route.fullPath" />
+            </Transition>
+          </router-view>
+        </ErrorBoundary>
       </main>
     </div>
 
@@ -91,6 +93,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import SearchBar from './components/SearchBar.vue';
 import CreateNoteFab from './components/CreateNoteFab.vue';
 import LockScreen from './components/LockScreen.vue';
+import ErrorBoundary from './components/ErrorBoundary.vue';
 import { initWebSocket, useWebSocket, isIndexSettledEvent } from './composables/useWebSocket';
 import { useTheme } from './composables/useTheme';
 import { usePrivacy } from './composables/usePrivacy';

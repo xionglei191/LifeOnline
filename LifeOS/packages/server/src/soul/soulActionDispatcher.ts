@@ -10,6 +10,7 @@ import type { SoulAction } from './types.js';
 import { loadConfig } from '../config/configManager.js';
 import { createFile } from '../vault/fileManager.js';
 import { isR2Configured, uploadToR2 } from '../infra/r2Client.js';
+import { appendInsightToSession, getBrainstormSessionByNoteId } from './brainstormSessions.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -157,6 +158,15 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       SET execution_status = ?, updated_at = ?, started_at = ?, finished_at = ?, error = NULL, result_summary = ?
       WHERE id = ?
     `).run('succeeded', now, now, now, result.summary, soulAction.id);
+
+    // Feedback P2: write execution result back to the originating BrainstormSession
+    if (soulAction.sourceNoteId) {
+      const session = getBrainstormSessionByNoteId(soulAction.sourceNoteId);
+      if (session) {
+        appendInsightToSession(session.id, `[execution: ${soulAction.actionKind}] ${result.summary}`);
+      }
+    }
+
     return {
       dispatched: true,
       reason: result.summary,
@@ -376,6 +386,16 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
   const request = buildWorkerTaskRequestFromSoulAction(soulAction);
   const task = createWorkerTask(request);
   await executeWorkerTask(task.id);
+
+  // Feedback P2: write execution result back to the originating BrainstormSession (fire-and-forget)
+  if (soulAction.sourceNoteId) {
+    try {
+      const session = getBrainstormSessionByNoteId(soulAction.sourceNoteId);
+      if (session) {
+        appendInsightToSession(session.id, `[execution: ${soulAction.actionKind}] 工作任务已入队 (task: ${task.id})`);
+      }
+    } catch { /* best-effort, never block dispatch */ }
+  }
 
   return {
     dispatched: true,

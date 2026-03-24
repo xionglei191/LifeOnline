@@ -21,7 +21,13 @@ let httpServer: Server | null = null;
 let lifecyclePromise: Promise<void> | null = null;
 let signalHandlersRegistered = false;
 
-app.use(cors());
+// Dynamic CORS: read CORS_ORIGIN env var (comma-separated whitelist, default: *)
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(cors({
+  origin: corsOrigin && corsOrigin !== '*'
+    ? corsOrigin.split(',').map(o => o.trim())
+    : '*',
+}));
 app.use(express.json());
 app.use('/api', router);
 

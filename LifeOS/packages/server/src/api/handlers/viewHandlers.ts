@@ -120,3 +120,17 @@ export async function getPersonaSnapshotHandler(
     res.status(500).json({ error: 'Failed to fetch persona snapshot' });
   }
 }
+
+export async function getCognitiveHealthHandler(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  try {
+    const { getCognitiveHealth } = await import('../../soul/cognitiveHealth.js');
+    const report = getCognitiveHealth();
+    res.json(report);
+  } catch (error) {
+    logger.error('Cognitive health error:', error);
+    res.status(500).json({ error: 'Failed to fetch cognitive health' });
+  }
+}

@@ -3,5 +3,6 @@
 </template>
 
 <script setup lang="ts">
-import DashboardOverview from '../components/DashboardOverview.vue';
+import { defineAsyncComponent } from 'vue';
+const DashboardOverview = defineAsyncComponent(() => import('../components/DashboardOverview.vue'));
 </script>

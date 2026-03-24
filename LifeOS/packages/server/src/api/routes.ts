@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   // Dashboard & Notes
-  getDashboard, getNotes, getNoteById, getPersonaSnapshotHandler,
+  getDashboard, getNotes, getNoteById, getPersonaSnapshotHandler, getCognitiveHealthHandler,
   searchNotes, createNote, updateNote, appendNote, deleteNote,
   getTimeline, getCalendar,
   // Index & Config
@@ -38,6 +38,7 @@ export const router = Router();
 
 router.get('/health', healthHandler);
 router.get('/dashboard', getDashboard);
+router.get('/cognitive-health', getCognitiveHealthHandler);
 router.get('/notes', getNotes);
 router.get('/notes/:id', getNoteById);
 router.get('/persona-snapshots/:sourceNoteId', getPersonaSnapshotHandler);
