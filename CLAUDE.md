@@ -14,11 +14,20 @@
 - Do not add docs unless they are real project artifacts or explicitly requested.
 
 
-Common LifeOS verification commands:
+Common LifeOS verification commands (dev machine):
 - `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" --filter server build`
 - `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" --filter web build`
 - `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" --filter server test`
 - `pnpm --dir "/home/xionglei/Project/LifeOnline/LifeOS" check`
+
+Deploy to 246:
+- `./scripts/deploy.sh`              — git pull only
+- `./scripts/deploy.sh --build`      — git pull + pnpm install + build
+- `./scripts/deploy.sh --restart`    — git pull + restart LifeOS server (systemd if available, nohup fallback)
+- `./scripts/deploy.sh --build --restart` — full deploy
+
+First-time setup on 246:
+- `cd ~/LifeOnline && ./scripts/install-services.sh` — install & enable systemd services
 
 ## Project Context
 - `LifeOnline/` is the repository root.
@@ -35,4 +44,19 @@ Common LifeOS verification commands:
 - Keep handler layers thin and service logic concentrated.
 - When changing websocket, API, indexing, or worker behavior, keep `server`, `web`, and `shared` aligned.
 
+## Deployment Information
+- **Deploy Server IP**: `192.168.31.246`
+  - **LifeOnline Deployment location**: `/home/xionglei/LifeOnline`
+  - **Vault location**: `/home/xionglei/Vault_OS`
+  - **Systemd user services**:
+    - `lifeos-server.service` — LifeOS backend (pnpm dev)
+    - `lifeos-web.service` — LifeOS web frontend (pnpm dev --host, port 5173)
+    - `openclaw-gateway.service` — OpenClaw (port 18789)
+  - **Local deploy script** (not in git): `~/LifeOnline/scripts/deploy-local.sh`
+  - **Logs**: `journalctl --user -u lifeos-server -f` / `journalctl --user -u lifeos-web -f`
+- **Dev Machine IP**: `192.168.31.252`
+  - **LifeOnline Dev location**: `/home/xionglei/Project/LifeOnline`
 
+## Sync Strategy
+- **Vault_OS (data)**: Mounted from `192.168.31.246` via SSHFS at `/home/xionglei/Vault_OS` on dev machine. Auto-mount managed by systemd user service `vault-os-sshfs.service`.
+- **Code (LifeOnline)**: Managed via GitHub (`xionglei191/LifeOnline`, branch `main`). Dev on 252, deploy via `git pull` on 246.

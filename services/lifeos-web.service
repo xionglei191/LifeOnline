@@ -1,0 +1,18 @@
+[Unit]
+Description=LifeOS Web Frontend (LifeOnline)
+After=lifeos-server.service
+Wants=lifeos-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/xionglei/LifeOnline/LifeOS/packages/web
+Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/linuxbrew/.linuxbrew/bin/pnpm dev --host
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lifeos-web
+
+[Install]
+WantedBy=default.target

@@ -36,6 +36,9 @@ export const SUPPORTED_SOUL_ACTION_KINDS = [
   'create_event_node',
   'promote_event_node',
   'promote_continuity_record',
+  'launch_daily_report',
+  'launch_weekly_report',
+  'launch_openclaw_task',
 ] as const;
 export type SoulActionKind = typeof SUPPORTED_SOUL_ACTION_KINDS[number];
 export const SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES = ['pending_review', 'approved', 'deferred', 'discarded'] as const;

@@ -1,5 +1,35 @@
 import { Router } from 'express';
-import { getDashboard, getNotes, triggerIndex, getTimeline, getCalendar, getNoteById, getPersonaSnapshotHandler, searchNotes, getConfig, updateConfig, getIndexStatus, getIndexErrors, listAiPrompts, updateAiPrompt, resetAiPrompt, getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler, listAiSuggestionsHandler, updateNote, appendNote, createNote, deleteNote, getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags, createWorkerTaskHandler, getWorkerTaskHandler, listWorkerTasksHandler, retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler, createScheduleHandler, listSchedulesHandler, getScheduleHandler, updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler, scheduleHealthHandler, listSoulActionsHandler, getSoulActionHandler, approveSoulActionHandler, dispatchSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, listReintegrationRecordsHandler, acceptReintegrationRecordHandler, rejectReintegrationRecordHandler, planPromotionsHandler, listEventNodesHandler, listContinuityRecordsHandler } from './handlers.js';
+import {
+  // Dashboard & Notes
+  getDashboard, getNotes, getNoteById, getPersonaSnapshotHandler,
+  searchNotes, createNote, updateNote, appendNote, deleteNote,
+  getTimeline, getCalendar,
+  // Index & Config
+  triggerIndex, getIndexStatus, getIndexErrors,
+  getConfig, updateConfig,
+  // AI
+  listAiPrompts, updateAiPrompt, resetAiPrompt,
+  getAiProviderHandler, updateAiProviderHandler, testAiProviderHandler,
+  listAiSuggestionsHandler,
+  // Worker Tasks
+  createWorkerTaskHandler, listWorkerTasksHandler, getWorkerTaskHandler,
+  retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler,
+  // Soul Actions
+  listSoulActionsHandler, getSoulActionHandler,
+  approveSoulActionHandler, dispatchSoulActionHandler,
+  deferSoulActionHandler, discardSoulActionHandler,
+  // Reintegration & Promotion
+  listReintegrationRecordsHandler,
+  acceptReintegrationRecordHandler, rejectReintegrationRecordHandler,
+  planPromotionsHandler,
+  listEventNodesHandler, listContinuityRecordsHandler,
+  // Schedules
+  createScheduleHandler, listSchedulesHandler, getScheduleHandler,
+  updateScheduleHandler, deleteScheduleHandler, runScheduleNowHandler,
+  scheduleHealthHandler,
+  // Stats
+  getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags,
+} from './handlers.js';
 
 export const router = Router();
 

@@ -1,4 +1,4 @@
-import type { WorkerTask, WorkerTaskStatus, WorkerTaskType, WorkerName } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskResultMap, WorkerTaskStatus, WorkerTaskType, WorkerName } from '@lifeos/shared';
 
 const workerTaskTypeLabels: Record<WorkerTaskType, string> = {
   openclaw_task: 'OpenClaw 任务',
@@ -45,46 +45,52 @@ export function workerTaskResultFacts(task: WorkerTask) {
   if (!task.result || task.status !== 'succeeded') return [];
 
   if (task.taskType === 'extract_tasks') {
+    const r = task.result as WorkerTaskResultMap['extract_tasks'];
     return [
-      `创建 ${task.result.created} 个行动项`,
-      `来源 ${task.result.sourceNoteTitle}`,
+      `创建 ${r.created} 个行动项`,
+      `来源 ${r.sourceNoteTitle}`,
     ];
   }
 
   if (task.taskType === 'update_persona_snapshot') {
+    const r = task.result as WorkerTaskResultMap['update_persona_snapshot'];
     return [
-      `快照 ${task.result.snapshotId}`,
-      `来源 ${task.result.sourceNoteTitle}`,
+      `快照 ${r.snapshotId}`,
+      `来源 ${r.sourceNoteTitle}`,
     ];
   }
 
   if (task.taskType === 'summarize_note') {
+    const r = task.result as WorkerTaskResultMap['summarize_note'];
     return [
-      `来源 ${task.result.sourceNoteTitle}`,
-      `要点 ${task.result.keyPoints.length} 条`,
+      `来源 ${r.sourceNoteTitle}`,
+      `要点 ${r.keyPoints.length} 条`,
     ];
   }
 
   if (task.taskType === 'classify_inbox') {
+    const r = task.result as WorkerTaskResultMap['classify_inbox'];
     return [
-      `归档 ${task.result.classified} 条`,
-      `失败 ${task.result.failed} 条`,
+      `归档 ${r.classified} 条`,
+      `失败 ${r.failed} 条`,
     ];
   }
 
   if (task.taskType === 'daily_report') {
+    const r = task.result as WorkerTaskResultMap['daily_report'];
     return [
-      `日期 ${task.result.date}`,
-      `记录 ${task.result.stats.totalNotes} 条`,
-      `完成 ${task.result.stats.doneTasks} 项`,
+      `日期 ${r.date}`,
+      `记录 ${r.stats.totalNotes} 条`,
+      `完成 ${r.stats.doneTasks} 项`,
     ];
   }
 
   if (task.taskType === 'weekly_report') {
+    const r = task.result as WorkerTaskResultMap['weekly_report'];
     return [
-      `${task.result.weekStart} → ${task.result.weekEnd}`,
-      `记录 ${task.result.stats.totalNotes} 条`,
-      `完成 ${task.result.stats.doneTasks} 项`,
+      `${r.weekStart} → ${r.weekEnd}`,
+      `记录 ${r.stats.totalNotes} 条`,
+      `完成 ${r.stats.doneTasks} 项`,
     ];
   }
 

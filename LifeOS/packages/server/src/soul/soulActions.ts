@@ -46,7 +46,6 @@ function rowToSoulAction(row: SoulActionRow): SoulAction {
     actionKind: row.action_kind,
     governanceStatus: row.governance_status,
     executionStatus: row.execution_status,
-    status: row.execution_status,
     governanceReason: row.governance_reason,
     workerTaskId: row.worker_task_id,
     createdAt: row.created_at,
@@ -161,6 +160,9 @@ export function deriveSoulActionKindFromWorkerTask(task: Pick<WorkerTask, 'taskT
   if (!task.sourceNoteId) return null;
   if (task.taskType === 'extract_tasks') return 'extract_tasks';
   if (task.taskType === 'update_persona_snapshot') return 'update_persona_snapshot';
+  if (task.taskType === 'daily_report') return 'launch_daily_report';
+  if (task.taskType === 'weekly_report') return 'launch_weekly_report';
+  if (task.taskType === 'openclaw_task') return 'launch_openclaw_task';
   return null;
 }
 
@@ -233,7 +235,6 @@ export function createOrReuseSoulAction(input: {
     actionKind: input.actionKind,
     governanceStatus,
     executionStatus,
-    status: executionStatus,
     governanceReason: input.governanceReason ?? null,
     workerTaskId: null,
     createdAt: now,

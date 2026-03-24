@@ -42,14 +42,40 @@ function buildWorkerTaskRequestFromSoulAction(action: SoulAction) {
     };
   }
 
-  throw new Error(`Unsupported soul action kind: ${action.actionKind}`);
+  if (action.actionKind === 'launch_daily_report') {
+    return {
+      taskType: 'daily_report' as const,
+      sourceNoteId: action.sourceNoteId,
+      sourceReintegrationId: action.sourceReintegrationId ?? undefined,
+    };
+  }
+
+  if (action.actionKind === 'launch_weekly_report') {
+    return {
+      taskType: 'weekly_report' as const,
+      sourceNoteId: action.sourceNoteId,
+      sourceReintegrationId: action.sourceReintegrationId ?? undefined,
+    };
+  }
+
+  if (action.actionKind === 'launch_openclaw_task') {
+    return {
+      taskType: 'openclaw_task' as const,
+      input: { instruction: action.governanceReason ?? '' },
+      sourceNoteId: action.sourceNoteId,
+      sourceReintegrationId: action.sourceReintegrationId ?? undefined,
+    };
+  }
+
+  throw new Error(`Unsupported soul action kind for worker dispatch: ${action.actionKind}`);
 }
 
 export async function dispatchSoulActionCandidate(
   candidate: SoulActionCandidate,
   gateDecision: InterventionGateDecision,
 ): Promise<SoulActionDispatchResult> {
-  if (gateDecision.decision !== 'queue_for_review') {
+  // observe_only / discard → do nothing
+  if (gateDecision.decision === 'observe_only' || gateDecision.decision === 'discard') {
     return {
       dispatched: false,
       reason: gateDecision.reason,
@@ -58,18 +84,31 @@ export async function dispatchSoulActionCandidate(
     };
   }
 
+  // queue_for_review → create pending soul action for human review
+  if (gateDecision.decision === 'queue_for_review') {
+    const soulAction = createOrReuseSoulAction({
+      sourceNoteId: candidate.sourceNoteId,
+      actionKind: candidate.actionKind,
+      governanceReason: gateDecision.reason,
+    });
+
+    return {
+      dispatched: false,
+      reason: gateDecision.reason,
+      soulActionId: soulAction.id,
+      workerTaskId: null,
+    };
+  }
+
+  // dispatch_now → create pre-approved soul action and dispatch immediately
   const soulAction = createOrReuseSoulAction({
     sourceNoteId: candidate.sourceNoteId,
     actionKind: candidate.actionKind,
+    governanceStatus: 'approved',
     governanceReason: gateDecision.reason,
   });
 
-  return {
-    dispatched: false,
-    reason: gateDecision.reason,
-    soulActionId: soulAction.id,
-    workerTaskId: null,
-  };
+  return dispatchApprovedSoulAction(soulAction.id);
 }
 
 export async function dispatchApprovedSoulAction(soulActionId: string): Promise<SoulActionDispatchResult> {

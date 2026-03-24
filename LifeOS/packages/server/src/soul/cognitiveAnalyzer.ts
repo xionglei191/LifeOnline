@@ -188,7 +188,10 @@ interface RawAnalysisResponse {
   }>;
 }
 
-const VALID_ACTION_KINDS: SoulActionKind[] = ['extract_tasks', 'update_persona_snapshot'];
+// AI-suggestable action kinds: only actions that the cognitive analyzer can directly propose.
+// Promotion actions (create_event_node, promote_event_node, promote_continuity_record) are
+// triggered via reintegration review, not via direct AI note analysis.
+const AI_SUGGESTABLE_ACTION_KINDS: SoulActionKind[] = ['extract_tasks', 'update_persona_snapshot'];
 
 function normalizeAnalysis(raw: RawAnalysisResponse): NoteAnalysis {
   return {
@@ -206,7 +209,7 @@ function normalizeAnalysis(raw: RawAnalysisResponse): NoteAnalysis {
 function normalizeSuggestedActions(raw?: RawAnalysisResponse['suggestedActions']): SuggestedAction[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter(a => a && typeof a.kind === 'string' && VALID_ACTION_KINDS.includes(a.kind as SoulActionKind))
+    .filter(a => a && typeof a.kind === 'string' && AI_SUGGESTABLE_ACTION_KINDS.includes(a.kind as SoulActionKind))
     .map(a => ({
       kind: a.kind as SoulActionKind,
       confidence: typeof a.confidence === 'number' ? Math.max(0, Math.min(1, a.confidence)) : 0.5,

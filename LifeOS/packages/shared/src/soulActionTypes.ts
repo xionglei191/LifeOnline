@@ -27,7 +27,6 @@ export interface SoulAction {
   actionKind: SoulActionKind;
   governanceStatus: SoulActionGovernanceStatus;
   executionStatus: SoulActionExecutionStatus;
-  status: SoulActionExecutionStatus;
   governanceReason: string | null;
   promotionSummary?: SoulActionPromotionSummary | null;
   executionSummary?: SoulActionDispatchExecutionSummary | null;
@@ -100,6 +99,9 @@ export function formatSoulActionKindLabel(actionKind: SoulAction['actionKind'] |
   if (actionKind === 'create_event_node') return '创建 Event Node';
   if (actionKind === 'promote_event_node') return '提升 Event Node';
   if (actionKind === 'promote_continuity_record') return '提升 Continuity Record';
+  if (actionKind === 'launch_daily_report') return '生成日报';
+  if (actionKind === 'launch_weekly_report') return '生成周报';
+  if (actionKind === 'launch_openclaw_task') return '执行 OpenClaw 任务';
   return actionKind;
 }
 

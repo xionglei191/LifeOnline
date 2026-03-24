@@ -140,6 +140,14 @@ export const CONTINUITY_RECORD_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_con
 CREATE INDEX IF NOT EXISTS idx_continuity_records_continuity_kind ON continuity_records(continuity_kind);
 CREATE INDEX IF NOT EXISTS idx_continuity_records_created_at ON continuity_records(created_at);`;
 
+export const GATE_DECISION_TABLE_COLUMNS_SQL = `  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  action_kind TEXT NOT NULL,
+  decision TEXT NOT NULL CHECK(decision IN ('approved', 'deferred', 'discarded')),
+  created_at TEXT NOT NULL`;
+
+export const GATE_DECISION_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_gate_decisions_action_kind ON gate_decisions(action_kind);
+CREATE INDEX IF NOT EXISTS idx_gate_decisions_created_at ON gate_decisions(created_at);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -221,6 +229,12 @@ ${CONTINUITY_RECORD_TABLE_COLUMNS_SQL}
 );
 
 ${CONTINUITY_RECORD_INDEXES_SQL}
+
+CREATE TABLE IF NOT EXISTS gate_decisions (
+${GATE_DECISION_TABLE_COLUMNS_SQL}
+);
+
+${GATE_DECISION_INDEXES_SQL}
 
 CREATE TABLE IF NOT EXISTS ai_prompts (
   key TEXT PRIMARY KEY,

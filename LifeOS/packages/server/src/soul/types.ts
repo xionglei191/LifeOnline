@@ -1,23 +1,24 @@
 import {
+  SUPPORTED_SOUL_ACTION_KINDS,
+  type SoulActionKind,
+  SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES,
+  type SoulActionGovernanceStatus,
+  SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES,
+  type SoulActionExecutionStatus,
   normalizeSoulActionSourceFilters as normalizeSharedSoulActionSourceFilters,
   type ListSoulActionsResponse as SharedListSoulActionsResponse,
   type SoulActionPromotionSummary,
 } from '@lifeos/shared';
 
-export const SUPPORTED_SOUL_ACTION_KINDS = [
-  'extract_tasks',
-  'update_persona_snapshot',
-  'create_event_node',
-  'promote_event_node',
-  'promote_continuity_record',
-] as const;
-export type SoulActionKind = typeof SUPPORTED_SOUL_ACTION_KINDS[number];
-
-export const SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES = ['pending_review', 'approved', 'deferred', 'discarded'] as const;
-export type SoulActionGovernanceStatus = typeof SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES[number];
-
-export const SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES = ['not_dispatched', 'pending', 'running', 'succeeded', 'failed', 'cancelled'] as const;
-export type SoulActionExecutionStatus = typeof SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES[number];
+// Re-export core types from shared (single source of truth)
+export {
+  SUPPORTED_SOUL_ACTION_KINDS,
+  type SoulActionKind,
+  SUPPORTED_SOUL_ACTION_GOVERNANCE_STATUSES,
+  type SoulActionGovernanceStatus,
+  SUPPORTED_SOUL_ACTION_EXECUTION_STATUSES,
+  type SoulActionExecutionStatus,
+};
 
 export type EventKind = 'weekly_reflection' | 'persona_shift' | 'milestone_report';
 export type ContinuityRecordKind = 'persona_direction' | 'daily_rhythm' | 'weekly_theme';
@@ -34,6 +35,8 @@ export function normalizeSoulActionSourceFilters(
   return normalizeSharedSoulActionSourceFilters(filters, soulActions);
 }
 
+// Server-internal SoulAction — mirrors the shared interface without the
+// presentation-only `executionSummary` field, and maps 1-to-1 with the DB row.
 export interface SoulAction {
   id: string;
   sourceNoteId: string;
@@ -41,7 +44,6 @@ export interface SoulAction {
   actionKind: SoulActionKind;
   governanceStatus: SoulActionGovernanceStatus;
   executionStatus: SoulActionExecutionStatus;
-  status: SoulActionExecutionStatus;
   governanceReason: string | null;
   promotionSummary?: SoulActionPromotionSummary | null;
   workerTaskId: string | null;
@@ -55,3 +57,4 @@ export interface SoulAction {
   error: string | null;
   resultSummary: string | null;
 }
+

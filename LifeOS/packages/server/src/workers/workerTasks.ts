@@ -199,9 +199,10 @@ function tryBestEffortReintegrateTerminalTask(task: WorkerTask): void {
       ? personaSnapshot
       : null;
 
+    const linkedSoulAction = getSoulActionByWorkerTaskId(task.id);
     const reintegrationInput = createReintegrationRecordInput(task, {
-      soulActionId: getSoulActionByWorkerTaskId(task.id)?.id ?? null,
-      sourceReintegrationId: getSoulActionByWorkerTaskId(task.id)?.sourceReintegrationId ?? null,
+      soulActionId: linkedSoulAction?.id ?? null,
+      sourceReintegrationId: linkedSoulAction?.sourceReintegrationId ?? null,
       personaSnapshot: personaSnapshotForTask,
     });
 
@@ -264,6 +265,7 @@ export function createWorkerTask(request: CreateWorkerTaskRequest, scheduleId?: 
     sourceReintegrationId: request.sourceReintegrationId || null,
     scheduleId: scheduleId || null,
     outputNotePaths: [],
+    outputNotes: [],
   };
 
   db.prepare(`

@@ -1,0 +1,361 @@
+/**
+ * Database migration logic.
+ *
+ * Extracted from client.ts to keep connection management separate from schema evolution.
+ *
+ * Design rules:
+ * - Tables are first created via the central SCHEMA template (IF NOT EXISTS).
+ * - Migrations here handle schema evolution for existing databases:
+ *   ADD COLUMN for additive changes, safe table rebuilds for constraint changes.
+ * - Destructive DROP TABLE is avoided — data-preserving migrations are used instead.
+ */
+
+import type Database from 'better-sqlite3';
+import {
+  WORKER_TASK_TABLE_COLUMNS_SQL,
+  WORKER_TASK_INDEXES_SQL,
+  TASK_SCHEDULE_TABLE_COLUMNS_SQL,
+  TASK_SCHEDULE_INDEXES_SQL,
+  SOUL_ACTION_TABLE_COLUMNS_SQL,
+  SOUL_ACTION_INDEXES_SQL,
+  PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL,
+  PERSONA_SNAPSHOT_INDEXES_SQL,
+  REINTEGRATION_RECORD_TABLE_COLUMNS_SQL,
+  REINTEGRATION_RECORD_INDEXES_SQL,
+  EVENT_NODE_TABLE_COLUMNS_SQL,
+  EVENT_NODE_INDEXES_SQL,
+  CONTINUITY_RECORD_TABLE_COLUMNS_SQL,
+  CONTINUITY_RECORD_INDEXES_SQL,
+} from './schema.js';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getTableColumns(database: Database.Database, tableName: string): Array<{ name: string }> {
+  return database.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+}
+
+function hasColumn(columns: Array<{ name: string }>, name: string): boolean {
+  return columns.some((c) => c.name === name);
+}
+
+function addColumnIfMissing(
+  database: Database.Database,
+  tableName: string,
+  columns: Array<{ name: string }>,
+  columnName: string,
+  columnDef: string,
+): void {
+  if (!hasColumn(columns, columnName)) {
+    database.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
+    console.log(`Migration: added ${columnName} column to ${tableName}`);
+  }
+}
+
+function getCreateTableSql(database: Database.Database, tableName: string): string {
+  const row = database.prepare(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+  ).get(tableName) as { sql?: string } | undefined;
+  return row?.sql ?? '';
+}
+
+function normalizeLegacyTaskTypeSql(columnName = 'task_type'): string {
+  return `CASE WHEN ${columnName} = 'collect_trending_news' THEN 'openclaw_task' ELSE ${columnName} END`;
+}
+
+function rebuildTableWithNormalizedTaskType(options: {
+  tableName: 'worker_tasks' | 'task_schedules';
+  createTableSql: string;
+  selectColumnsSql: string;
+  recreateIndexesSql: string;
+}): string {
+  const nextTableName = `${options.tableName}_new`;
+  return `
+    CREATE TABLE ${nextTableName} (
+${options.createTableSql}
+    );
+    INSERT INTO ${nextTableName} SELECT
+${options.selectColumnsSql}
+    FROM ${options.tableName};
+    DROP TABLE ${options.tableName};
+    ALTER TABLE ${nextTableName} RENAME TO ${options.tableName};
+${options.recreateIndexesSql}
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Safe table rebuild — preserves data by migrating common columns
+// ---------------------------------------------------------------------------
+
+/**
+ * Rebuild a table while preserving all data in columns that exist in both
+ * the old and new schema.  This replaces the old destructive DROP TABLE
+ * approach that silently discarded data.
+ */
+function safeRebuildTable(
+  database: Database.Database,
+  tableName: string,
+  columnsSQL: string,
+  indexesSQL: string,
+  existingColumns: Array<{ name: string }>,
+): void {
+  const tmpTable = `${tableName}_new`;
+  database.exec(`CREATE TABLE ${tmpTable} (\n${columnsSQL}\n);`);
+
+  // Discover which columns the NEW table has
+  const newColumns = getTableColumns(database, tmpTable);
+  // Intersect with old — only migrate columns that exist in both tables
+  const commonColumns = newColumns
+    .map((c) => c.name)
+    .filter((name) => existingColumns.some((ec) => ec.name === name));
+
+  if (commonColumns.length > 0) {
+    const columnList = commonColumns.join(', ');
+    database.exec(`INSERT INTO ${tmpTable} (${columnList}) SELECT ${columnList} FROM ${tableName};`);
+  }
+
+  database.exec(`DROP TABLE ${tableName};`);
+  database.exec(`ALTER TABLE ${tmpTable} RENAME TO ${tableName};`);
+  database.exec(indexesSQL);
+}
+
+// ---------------------------------------------------------------------------
+// Individual table migrations
+// ---------------------------------------------------------------------------
+
+function ensureTaskTableConstraintOrRebuild(database: Database.Database, options: {
+  tableName: 'worker_tasks' | 'task_schedules';
+  insertSql: string;
+  createTableSql: string;
+  selectColumnsSql: string;
+  recreateIndexesSql: string;
+  rebuildingLog: string;
+  rebuiltLog: string;
+}): void {
+  const legacyRows = database.prepare(
+    `SELECT COUNT(*) as total FROM ${options.tableName} WHERE task_type = 'collect_trending_news'`,
+  ).get() as { total: number };
+
+  if (legacyRows.total > 0) {
+    console.log(options.rebuildingLog);
+    database.exec(rebuildTableWithNormalizedTaskType({
+      tableName: options.tableName,
+      createTableSql: options.createTableSql,
+      selectColumnsSql: options.selectColumnsSql,
+      recreateIndexesSql: options.recreateIndexesSql,
+    }));
+    console.log(options.rebuiltLog);
+    return;
+  }
+
+  try {
+    database.exec(`INSERT INTO ${options.tableName} ${options.insertSql}`);
+    database.exec(`DELETE FROM ${options.tableName} WHERE id = '__migration_test__'`);
+  } catch {
+    console.log(options.rebuildingLog);
+    database.exec(rebuildTableWithNormalizedTaskType({
+      tableName: options.tableName,
+      createTableSql: options.createTableSql,
+      selectColumnsSql: options.selectColumnsSql,
+      recreateIndexesSql: options.recreateIndexesSql,
+    }));
+    console.log(options.rebuiltLog);
+  }
+}
+
+function ensureSoulActionsTable(database: Database.Database): void {
+  const columns = getTableColumns(database, 'soul_actions');
+  if (columns.length === 0) {
+    database.exec(`CREATE TABLE IF NOT EXISTS soul_actions (\n${SOUL_ACTION_TABLE_COLUMNS_SQL}\n);\n${SOUL_ACTION_INDEXES_SQL}`);
+    return;
+  }
+
+  const requiredColumns = [
+    'id', 'source_note_id', 'source_reintegration_id', 'action_kind',
+    'governance_status', 'execution_status', 'governance_reason', 'worker_task_id',
+    'created_at', 'updated_at', 'approved_at', 'deferred_at', 'discarded_at',
+    'started_at', 'finished_at', 'error', 'result_summary',
+  ];
+
+  const hasSourceReintegrationIdColumn = hasColumn(columns, 'source_reintegration_id');
+  const currentCreateTableSql = getCreateTableSql(database, 'soul_actions');
+  const hasLegacyStatusOnly = hasColumn(columns, 'status')
+    && !hasColumn(columns, 'governance_status')
+    && !hasColumn(columns, 'execution_status');
+  const needsRebuild = hasLegacyStatusOnly
+    || requiredColumns.some((name) => !hasColumn(columns, name))
+    || !currentCreateTableSql.includes('UNIQUE(source_note_id, action_kind, source_reintegration_id)');
+
+  if (!needsRebuild) {
+    database.exec(SOUL_ACTION_INDEXES_SQL);
+    return;
+  }
+
+  console.log('Migration: rebuilding soul_actions table with latest schema...');
+  const executionStatusSelectSql = hasLegacyStatusOnly
+    ? `CASE
+        WHEN status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled') THEN status
+        ELSE 'not_dispatched'
+      END`
+    : 'execution_status';
+  const governanceStatusSelectSql = hasLegacyStatusOnly ? `'approved'` : 'governance_status';
+  const approvedAtSelectSql = hasLegacyStatusOnly ? 'created_at' : 'approved_at';
+  const sourceReintegrationColumnSql = hasSourceReintegrationIdColumn ? 'source_reintegration_id' : 'NULL';
+
+  database.exec(`
+    CREATE TABLE soul_actions_new (
+${SOUL_ACTION_TABLE_COLUMNS_SQL}
+    );
+    INSERT INTO soul_actions_new (
+      id, source_note_id, source_reintegration_id, action_kind, governance_status, execution_status, governance_reason,
+      worker_task_id, created_at, updated_at, approved_at, deferred_at, discarded_at,
+      started_at, finished_at, error, result_summary
+    )
+    SELECT
+      id,
+      source_note_id,
+      CASE
+        WHEN action_kind IN ('create_event_node', 'promote_event_node', 'promote_continuity_record') THEN COALESCE(
+          ${sourceReintegrationColumnSql},
+          CASE
+            WHEN source_note_id LIKE 'reint:%' THEN source_note_id
+            ELSE NULL
+          END
+        )
+        ELSE ${sourceReintegrationColumnSql}
+      END,
+      action_kind,
+      ${governanceStatusSelectSql},
+      ${executionStatusSelectSql},
+      governance_reason,
+      worker_task_id,
+      created_at,
+      updated_at,
+      ${approvedAtSelectSql},
+      deferred_at,
+      discarded_at,
+      started_at,
+      finished_at,
+      error,
+      result_summary
+    FROM soul_actions;
+    DROP TABLE soul_actions;
+    ALTER TABLE soul_actions_new RENAME TO soul_actions;
+    ${SOUL_ACTION_INDEXES_SQL}
+  `);
+  console.log('Migration: soul_actions table rebuilt with latest schema');
+}
+
+/**
+ * Generic safe migration for tables that previously used destructive DROP TABLE.
+ * Now preserves existing data by migrating common columns to the new schema.
+ */
+function ensureTableSafe(
+  database: Database.Database,
+  tableName: string,
+  columnsSQL: string,
+  indexesSQL: string,
+  requiredColumns: string[],
+  extraNeedsRebuild?: (columns: Array<{ name: string }>, createSql: string) => boolean,
+): void {
+  const columns = getTableColumns(database, tableName);
+  if (columns.length === 0) {
+    database.exec(`CREATE TABLE IF NOT EXISTS ${tableName} (\n${columnsSQL}\n);\n${indexesSQL}`);
+    return;
+  }
+
+  const currentCreateSql = getCreateTableSql(database, tableName);
+  const missingColumns = requiredColumns.filter((name) => !hasColumn(columns, name));
+  const needsConstraintChange = extraNeedsRebuild?.(columns, currentCreateSql) ?? false;
+
+  if (missingColumns.length === 0 && !needsConstraintChange) {
+    database.exec(indexesSQL);
+    return;
+  }
+
+  console.log(`Migration: rebuilding ${tableName} table with latest schema (preserving data)...`);
+  safeRebuildTable(database, tableName, columnsSQL, indexesSQL, columns);
+  console.log(`Migration: ${tableName} table rebuilt with latest schema`);
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Run all migrations against an already-initialized database.
+ * Called from initDatabase() after the SCHEMA template has been applied.
+ */
+export function runMigrations(database: Database.Database): void {
+  // --- Additive column migrations (ALTER TABLE ADD COLUMN) -----------------
+
+  const workerTaskCols = getTableColumns(database, 'worker_tasks');
+  addColumnIfMissing(database, 'worker_tasks', workerTaskCols, 'schedule_id', 'TEXT');
+  addColumnIfMissing(database, 'worker_tasks', workerTaskCols, 'source_reintegration_id', 'TEXT');
+
+  const notesCols = getTableColumns(database, 'notes');
+  addColumnIfMissing(database, 'notes', notesCols, 'inbox_origin', 'TEXT');
+
+  const schedCols = getTableColumns(database, 'task_schedules');
+  addColumnIfMissing(database, 'task_schedules', schedCols, 'consecutive_failures', 'INTEGER DEFAULT 0');
+  addColumnIfMissing(database, 'task_schedules', schedCols, 'last_error', 'TEXT');
+
+  const promptCols = getTableColumns(database, 'ai_prompts');
+  addColumnIfMissing(database, 'ai_prompts', promptCols, 'notes', 'TEXT');
+
+  // --- Constraint migrations (table rebuild) --------------------------------
+
+  ensureTaskTableConstraintOrRebuild(database, {
+    tableName: 'worker_tasks',
+    insertSql: "(id, task_type, input_json, status, worker, created_at, updated_at) VALUES ('__migration_test__', 'extract_tasks', '{}', 'pending', 'lifeos', '', '')",
+    createTableSql: WORKER_TASK_TABLE_COLUMNS_SQL,
+    selectColumnsSql: `        id,
+        ${normalizeLegacyTaskTypeSql()},
+        input_json, status, worker, created_at, updated_at,
+        started_at, finished_at, error, result_json, result_summary, source_note_id, source_reintegration_id, output_note_paths, schedule_id`,
+    recreateIndexesSql: WORKER_TASK_INDEXES_SQL,
+    rebuildingLog: 'Migration: rebuilding worker_tasks table with latest task_type CHECK constraint...',
+    rebuiltLog: 'Migration: worker_tasks table rebuilt with latest task types',
+  });
+
+  ensureTaskTableConstraintOrRebuild(database, {
+    tableName: 'task_schedules',
+    insertSql: "(id, task_type, input_json, cron_expression, label, enabled, created_at, updated_at) VALUES ('__migration_test__', 'extract_tasks', '{}', '0 9 * * *', 'test', 1, '', '')",
+    createTableSql: TASK_SCHEDULE_TABLE_COLUMNS_SQL,
+    selectColumnsSql: `        id,
+        ${normalizeLegacyTaskTypeSql()},
+        input_json, cron_expression, label, enabled, created_at, updated_at,
+        last_run_at, last_task_id, consecutive_failures, last_error`,
+    recreateIndexesSql: TASK_SCHEDULE_INDEXES_SQL,
+    rebuildingLog: 'Migration: rebuilding task_schedules table with latest task_type CHECK constraint...',
+    rebuiltLog: 'Migration: task_schedules table rebuilt with latest task types',
+  });
+
+  ensureSoulActionsTable(database);
+
+  // --- Data-preserving migrations for tables that previously used DROP TABLE ---
+
+  ensureTableSafe(database, 'persona_snapshots', PERSONA_SNAPSHOT_TABLE_COLUMNS_SQL, PERSONA_SNAPSHOT_INDEXES_SQL, [
+    'id', 'source_note_id', 'soul_action_id', 'worker_task_id',
+    'summary', 'snapshot_json', 'created_at', 'updated_at',
+  ]);
+
+  ensureTableSafe(database, 'reintegration_records', REINTEGRATION_RECORD_TABLE_COLUMNS_SQL, REINTEGRATION_RECORD_INDEXES_SQL, [
+    'id', 'worker_task_id', 'source_note_id', 'soul_action_id', 'task_type', 'terminal_status',
+    'signal_kind', 'review_status', 'target', 'strength', 'summary', 'evidence_json',
+    'review_reason', 'created_at', 'updated_at', 'reviewed_at',
+  ]);
+
+  ensureTableSafe(database, 'event_nodes', EVENT_NODE_TABLE_COLUMNS_SQL, EVENT_NODE_INDEXES_SQL, [
+    'id', 'source_reintegration_id', 'source_note_id', 'source_soul_action_id', 'promotion_soul_action_id',
+    'event_kind', 'title', 'summary', 'threshold', 'status', 'evidence_json', 'explanation_json',
+    'occurred_at', 'created_at', 'updated_at',
+  ]);
+
+  ensureTableSafe(database, 'continuity_records', CONTINUITY_RECORD_TABLE_COLUMNS_SQL, CONTINUITY_RECORD_INDEXES_SQL, [
+    'id', 'source_reintegration_id', 'source_note_id', 'source_soul_action_id', 'promotion_soul_action_id',
+    'continuity_kind', 'target', 'strength', 'summary', 'continuity_json', 'evidence_json', 'explanation_json',
+    'recorded_at', 'created_at', 'updated_at',
+  ], (_columns, createSql) => !createSql.includes("'daily_rhythm'"));
+}

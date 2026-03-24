@@ -1,0 +1,19 @@
+[Unit]
+Description=LifeOS Backend Server (LifeOnline)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/xionglei/LifeOnline/LifeOS/packages/server
+Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/bin:/usr/bin:/bin
+Environment=VAULT_PATH=/home/xionglei/Vault_OS
+Environment=DB_PATH=/home/xionglei/LifeOnline/LifeOS/packages/server/data/lifeos.db
+ExecStart=/home/linuxbrew/.linuxbrew/bin/pnpm dev
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lifeos-server
+
+[Install]
+WantedBy=default.target

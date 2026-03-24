@@ -767,7 +767,6 @@ test('executePromotionSoulAction reports the explicit reintegration source contr
       actionKind: 'promote_event_node',
       governanceStatus: 'approved',
       executionStatus: 'not_dispatched',
-      status: 'not_dispatched',
       workerTaskId: null,
       governanceReason: null,
       resultSummary: null,
@@ -815,7 +814,6 @@ test('executePromotionSoulAction prefers explicit sourceReintegrationId over a n
     actionKind: 'promote_event_node',
     governanceStatus: 'approved',
     executionStatus: 'not_dispatched',
-    status: 'not_dispatched',
     workerTaskId: null,
     governanceReason: null,
     resultSummary: null,
@@ -869,7 +867,6 @@ test('executePromotionSoulAction still supports legacy reintegration ids stored 
     actionKind: 'promote_event_node',
     governanceStatus: 'approved',
     executionStatus: 'not_dispatched',
-    status: 'not_dispatched',
     workerTaskId: null,
     governanceReason: null,
     resultSummary: null,
@@ -924,7 +921,6 @@ test('executePromotionSoulAction still supports legacy reintegration ids stored 
     actionKind: 'promote_continuity_record',
     governanceStatus: 'approved',
     executionStatus: 'not_dispatched',
-    status: 'not_dispatched',
     workerTaskId: null,
     governanceReason: null,
     resultSummary: null,
@@ -1043,11 +1039,22 @@ test('worker tasks without supported SoulAction path do not create SoulAction re
   assert.equal(getSoulActionByWorkerTaskId(noSourceTask.id), null);
 
   const unsupportedTask = createWorkerTask({
+    taskType: 'summarize_note',
+    input: { noteId: 'note-missing-source' },
+    sourceNoteId: 'note-missing-source',
+  });
+  assert.equal(getSoulActionByWorkerTaskId(unsupportedTask.id), null);
+
+  // daily_report now creates a SoulAction record (launch_daily_report)
+  const dailyReportTask = createWorkerTask({
     taskType: 'daily_report',
     input: { date: '2026-03-20' },
     sourceNoteId: 'note-missing-source',
   });
-  assert.equal(getSoulActionByWorkerTaskId(unsupportedTask.id), null);
+  const dailySoulAction = getSoulActionByWorkerTaskId(dailyReportTask.id);
+  assert.ok(dailySoulAction);
+  assert.equal(dailySoulAction.actionKind, 'launch_daily_report');
+  assert.equal(dailySoulAction.workerTaskId, dailyReportTask.id);
 });
 
 test('extract_tasks execution syncs SoulAction lifecycle to terminal state', async (t) => {
@@ -2179,7 +2186,7 @@ test('update_persona_snapshot execution syncs SoulAction lifecycle and upserts p
 
   assert.equal(result.status, 'succeeded');
   assert.ok(soulAction);
-  assert.equal(soulAction?.status, 'succeeded');
+  assert.equal(soulAction?.executionStatus, 'succeeded');
   assert.match(result.resultSummary || '', /已更新人格快照/);
   assert.ok(snapshot);
   assert.equal(snapshot?.workerTaskId, task.id);
@@ -2267,7 +2274,7 @@ test('update_persona_snapshot missing note fails without creating persona snapsh
   assert.equal(result.status, 'failed');
   assert.match(result.error || '', /笔记不存在/);
   assert.ok(soulAction);
-  assert.equal(soulAction?.status, 'failed');
+  assert.equal(soulAction?.executionStatus, 'failed');
   assert.equal(snapshot, null);
 });
 

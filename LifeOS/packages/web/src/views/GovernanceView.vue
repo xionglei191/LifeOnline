@@ -160,6 +160,7 @@
     <SoulActionGovernancePanel
       :filter-status="soulActionFilterStatus"
       :execution-filter="soulActionExecutionFilter"
+      :action-kind-filter="soulActionActionKindFilter"
       :quick-filter="soulActionGroupQuickFilter"
       :quick-filter-label="soulActionGroupQuickFilterLabel"
       :quick-filter-stats="soulActionGroupQuickFilterStats"
@@ -181,6 +182,7 @@
       :format-time="formatTime"
       @update:filterStatus="soulActionFilterStatus = $event as '' | SoulAction['governanceStatus']"
       @update:executionFilter="soulActionExecutionFilter = $event as '' | SoulAction['executionStatus']"
+      @update:actionKindFilter="soulActionActionKindFilter = $event as '' | SoulAction['actionKind']"
       @update:quickFilter="soulActionGroupQuickFilter = $event"
       @refresh="loadSoulActions"
       @approve-group="handleApproveSoulActionGroup"
@@ -236,6 +238,7 @@ const soulActionMessage = ref('');
 const soulActionMessageType = ref<'success' | 'error'>('success');
 const soulActionFilterStatus = ref<'' | SoulAction['governanceStatus']>('pending_review');
 const soulActionExecutionFilter = ref<'' | SoulAction['executionStatus']>('not_dispatched');
+const soulActionActionKindFilter = ref<'' | SoulAction['actionKind']>('');
 const soulActionActionId = ref<string | null>(null);
 const soulActionGroupActionId = ref<string | null>(null);
 const soulActionGroupDispatchId = ref<string | null>(null);
@@ -305,6 +308,7 @@ async function loadSoulActions(options?: { preserveMessage?: boolean }) {
     soulActions.value = await fetchSoulActions({
       governanceStatus: soulActionFilterStatus.value || undefined,
       executionStatus: soulActionExecutionFilter.value || undefined,
+      actionKind: soulActionActionKindFilter.value || undefined,
     });
   } catch (e: any) {
     soulActionMessage.value = e.message || '加载 soul actions 失败';
@@ -709,4 +713,5 @@ onUnmounted(() => {
 .btn-secondary { padding: 8px 16px; background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 14px; }
 .btn-danger-sm { padding: 6px 14px; border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border)); border-radius: 999px; background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); cursor: pointer; font-size: 12px; }
 .source-pill { background: color-mix(in oklch, var(--card-bg) 85%, oklch(80% 0.04 250) 15%); }
+.action-kind-worker { background: color-mix(in oklch, oklch(95% 0.03 280) 60%, var(--card-bg) 40%); color: oklch(45% 0.12 280); border-color: color-mix(in oklch, oklch(80% 0.06 280) 40%, var(--border) 60%); }
 </style>

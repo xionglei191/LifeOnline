@@ -41,7 +41,7 @@ updated: 2026-03-17T15:30
 | `status` | enum | `pending` `in_progress` `done` `cancelled` | 当前状态 |
 | `privacy` | enum | `public` `private` `sensitive` | 隐私级别 |
 | `date` | date | `YYYY-MM-DD` | 关联日期 |
-| `source` | enum | `lingguang` `desktop` `webclipper` `openclaw` `web` | 数据来源 |
+| `source` | enum | `lingguang` `desktop` `webclipper` `openclaw` `web` `auto` | 数据来源 |
 | `created` | datetime | `YYYY-MM-DDTHH:mm` | 创建时间 |
 
 ### 可选字段
@@ -91,6 +91,7 @@ updated: 2026-03-17T15:30
 | `webclipper` | 浏览器剪藏工具 |
 | `openclaw` | OpenClaw 外部执行结果 |
 | `web` | LifeOS 看板创建 |
+| `auto` | LifeOS 自动化生成（分类归档、日报、周报等） |
 
 ### privacy — 隐私级别
 

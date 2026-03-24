@@ -3,7 +3,7 @@
     <div class="reintegration-head">
       <div>
         <h3>Soul Action Governance</h3>
-        <p class="hint reintegration-subtitle">承接 accept 后自动规划出的 PR6 promotion actions，并在 web 端完成 approve / dispatch。</p>
+        <p class="hint reintegration-subtitle">管理所有治理动作（promotion 与 worker-backed），在 web 端完成 approve / dispatch。</p>
       </div>
       <div class="reintegration-head-actions soul-action-filters">
         <select :value="filterStatus" class="worker-filter" @change="emit('update:filterStatus', ($event.target as HTMLSelectElement).value)">
@@ -26,6 +26,17 @@
           <option value="all">全部分组</option>
           <option value="pending_only">仅待治理分组</option>
           <option value="dispatch_ready_only">仅可派发分组</option>
+        </select>
+        <select :value="actionKindFilter" class="worker-filter" @change="emit('update:actionKindFilter', ($event.target as HTMLSelectElement).value)">
+          <option value="">全部动作类型</option>
+          <option value="extract_tasks">提取任务</option>
+          <option value="update_persona_snapshot">更新 Persona</option>
+          <option value="create_event_node">创建 Event Node</option>
+          <option value="promote_event_node">提升 Event Node</option>
+          <option value="promote_continuity_record">提升 Continuity</option>
+          <option value="launch_daily_report">生成日报</option>
+          <option value="launch_weekly_report">生成周报</option>
+          <option value="launch_openclaw_task">执行 OpenClaw</option>
         </select>
         <button class="btn-link" @click="emit('refresh')">刷新</button>
       </div>
@@ -103,7 +114,7 @@
               <div class="reintegration-item-title-row">
                 <strong>{{ promotionActionLabel(action.actionKind) }}</strong>
                 <span class="prompt-status" :class="soulActionStatusClass(action)">{{ soulActionStatusText(action) }}</span>
-                <span class="worker-pill">{{ action.actionKind }}</span>
+                <span class="worker-pill" :class="{ 'action-kind-worker': isWorkerBackedAction(action) }">{{ action.actionKind }}</span>
                 <span class="worker-pill">{{ action.executionStatus }}</span>
               </div>
             </div>
@@ -179,6 +190,7 @@ import type { SoulActionGroup, SoulActionGroupQuickFilter } from '../utils/soulA
 defineProps<{
   filterStatus: '' | SoulAction['governanceStatus'];
   executionFilter: '' | SoulAction['executionStatus'];
+  actionKindFilter: '' | SoulAction['actionKind'];
   quickFilter: SoulActionGroupQuickFilter;
   quickFilterLabel: string;
   quickFilterStats: string;
@@ -207,6 +219,7 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'update:filterStatus', value: string): void;
   (event: 'update:executionFilter', value: string): void;
+  (event: 'update:actionKindFilter', value: string): void;
   (event: 'update:quickFilter', value: SoulActionGroupQuickFilter): void;
   (event: 'refresh'): void;
   (event: 'approve-group', group: SoulActionGroup): void;
@@ -220,5 +233,9 @@ const emit = defineEmits<{
 
 function promotionExplanationRows(action: SoulAction) {
   return getPromotionExplanationRows(action);
+}
+
+function isWorkerBackedAction(action: SoulAction): boolean {
+  return action.actionKind.startsWith('launch_');
 }
 </script>

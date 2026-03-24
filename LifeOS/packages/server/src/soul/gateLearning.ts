@@ -20,27 +20,10 @@ interface GateDecisionRow {
   created_at: string;
 }
 
-// ── Table Management ───────────────────────────────────
-
-export function ensureGateDecisionsTable(): void {
-  const db = getDb();
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS gate_decisions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      action_kind TEXT NOT NULL,
-      decision TEXT NOT NULL CHECK(decision IN ('approved', 'deferred', 'discarded')),
-      created_at TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_gate_decisions_action_kind ON gate_decisions(action_kind);
-    CREATE INDEX IF NOT EXISTS idx_gate_decisions_created_at ON gate_decisions(created_at);
-  `);
-}
-
 // ── Record a Decision ──────────────────────────────────
 
 export function recordGateOutcome(actionKind: string, decision: GateDecisionOutcome): void {
   try {
-    ensureGateDecisionsTable();
     const db = getDb();
     db.prepare(`
       INSERT INTO gate_decisions (action_kind, decision, created_at)
@@ -64,7 +47,6 @@ const DEFAULT_STATS: GateStats = {
 
 export function getGateStats(actionKind: string): GateStats {
   try {
-    ensureGateDecisionsTable();
     const db = getDb();
 
     // Total counts by decision type
@@ -162,3 +144,4 @@ export function adjustConfidenceByHistory(
     reason: `approve 率 ${(stats.approveRate * 100).toFixed(0)}%，在正常范围内`,
   };
 }
+
