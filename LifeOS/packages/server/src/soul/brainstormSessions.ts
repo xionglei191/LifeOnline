@@ -3,7 +3,7 @@
  */
 import { getDb } from '../db/client.js';
 import type { BrainstormSession } from '@lifeos/shared';
-import type { NoteAnalysis } from './cognitiveAnalyzer.js';
+import type { NoteAnalysis } from './agents/agentOrchestrator.js';
 import { callClaude, parseJSON } from '../ai/aiClient.js';
 import { getEmbedding } from '../ai/embedding.js';
 import { upsertEmbedding, isVectorStoreReady } from '../db/vectorStore.js';

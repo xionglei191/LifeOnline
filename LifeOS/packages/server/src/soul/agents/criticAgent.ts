@@ -4,7 +4,7 @@ import type { ExtractionResult } from './extractorAgent.js';
 
 const logger = new Logger('criticAgent');
 
-import type { SuggestedAction } from '../cognitiveAnalyzer.js';
+import type { SuggestedAction } from './agentOrchestrator.js';
 
 export interface CriticResult {
   emotionalTone: string;

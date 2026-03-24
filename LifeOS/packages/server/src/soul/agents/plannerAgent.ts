@@ -1,6 +1,6 @@
 import { callClaude, parseJSON } from '../../ai/aiClient.js';
 import { Logger } from '../../utils/logger.js';
-import type { SuggestedAction } from '../cognitiveAnalyzer.js';
+import type { SuggestedAction } from './agentOrchestrator.js';
 import type { ExtractionResult } from './extractorAgent.js';
 import type { CriticResult } from './criticAgent.js';
 import { getEmbedding } from '../../ai/embedding.js';

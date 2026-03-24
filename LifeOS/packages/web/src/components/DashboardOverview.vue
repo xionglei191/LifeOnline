@@ -102,6 +102,19 @@
 
       <!-- ── Cognitive Overview ── -->
       <section class="cognitive-grid">
+        <!-- Radar Card -->
+        <article class="radar-card settings-card">
+          <div class="card-head">
+            <h3>🎛 认知健康度</h3>
+          </div>
+          <div class="radar-wrapper" style="padding: 10px 0;">
+            <CognitiveRadar 
+              :labels="['事实锚点', '岁月连续性', '认知任务', '自主治理', '闲时洞察']" 
+              :data="mockRadarData" 
+            />
+          </div>
+        </article>
+
         <!-- Persona Card -->
         <article class="persona-card settings-card">
           <div class="card-head">
@@ -183,11 +196,13 @@ import DimensionHealth from './DimensionHealth.vue';
 import AISuggestions from './AISuggestions.vue';
 import NoteDetail from './NoteDetail.vue';
 import StateDisplay from './StateDisplay.vue';
+import CognitiveRadar from './CognitiveRadar.vue';
 
 const { data, loading, error, load } = useDashboard();
 const recentSoulActions = ref<SoulAction[]>([]);
 const latestPersonaSnapshot = ref<PersonaSnapshot | null>(null);
 const loadingCognitive = ref(false);
+const mockRadarData = ref([85, 60, 92, 45, 78]);
 
 const selectedNoteId = ref<string | null>(null);
 const scheduleHealth = ref<ScheduleHealth | null>(null);
@@ -655,8 +670,14 @@ onUnmounted(() => {
 /* ─── Cognitive Grid ─── */
 .cognitive-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(20rem, 0.8fr);
   gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .cognitive-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .settings-card {
   background: var(--card-bg);

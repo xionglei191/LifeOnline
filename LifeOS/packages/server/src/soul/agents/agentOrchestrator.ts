@@ -1,12 +1,12 @@
-import { callClaude, parseJSON } from '../ai/aiClient.js';
-import type { SoulActionKind } from './types.js';
-import { getEffectiveAiProviderConfig } from '../ai/providerConfigService.js';
-import { Logger } from '../utils/logger.js';
-import { runExtractorAgent } from './agents/extractorAgent.js';
-import { runCriticAgent } from './agents/criticAgent.js';
-import { runPlannerAgent } from './agents/plannerAgent.js';
+import { callClaude, parseJSON } from '../../ai/aiClient.js';
+import type { SoulActionKind } from '../types.js';
+import { getEffectiveAiProviderConfig } from '../../ai/providerConfigService.js';
+import { Logger } from '../../utils/logger.js';
+import { runExtractorAgent } from './extractorAgent.js';
+import { runCriticAgent } from './criticAgent.js';
+import { runPlannerAgent } from './plannerAgent.js';
 
-const logger = new Logger('cognitiveAnalyzer');
+const logger = new Logger('agentOrchestrator');
 
 // ── Types ──────────────────────────────────────────────
 

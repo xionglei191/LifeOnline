@@ -33,4 +33,4 @@ export { createWorkerTaskHandler, listWorkerTasksHandler, getWorkerTaskHandler, 
 export { healthHandler } from './handlers/healthHandlers.js';
 
 // Vector Search
-export { vectorSearchHandler } from './handlers/vectorSearchHandlers.js';
+export { semanticSearchHandler, vectorSearchHandler } from './handlers/vectorSearchHandlers.js';

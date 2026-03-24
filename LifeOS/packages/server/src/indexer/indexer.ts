@@ -4,10 +4,11 @@ import crypto from 'crypto';
 import { scanVault } from './scanner.js';
 import { parseMarkdownFile } from './parser.js';
 import { Logger } from '../utils/logger.js';
+import { getDb } from '../db/client.js';
+import { deleteEmbedding, isVectorStoreReady } from '../db/vectorStore.js';
+import type { IndexResult } from '@lifeos/shared';
 
 const logger = new Logger('indexer');
-import { getDb } from '../db/client.js';
-import type { IndexResult } from '@lifeos/shared';
 
 // Encryption key for sensitive content (32 bytes for AES-256)
 // In production, set LIFEOS_ENCRYPTION_KEY environment variable
@@ -107,8 +108,23 @@ export async function indexFile(filePath: string): Promise<void> {
 // Delete file record (for file watcher unlink events)
 export async function deleteFileRecord(filePath: string): Promise<void> {
   const db = getDb();
+
+  // Before deleting, find the note ID so we can clean up the vector embedding
+  const noteRow = db.prepare('SELECT id FROM notes WHERE file_path = ?').get(filePath) as { id: string } | undefined;
+
   db.prepare('DELETE FROM notes WHERE file_path = ?').run(filePath);
   logger.info(`Deleted record: ${filePath}`);
+
+  // Clean up the associated BrainstormSession embedding from vector store
+  if (noteRow && isVectorStoreReady()) {
+    const sessionId = `brainstorm:${noteRow.id}`;
+    try {
+      deleteEmbedding(db, `bs:${sessionId}`);
+      logger.info(`Cleaned up embedding for deleted note: ${noteRow.id}`);
+    } catch (err) {
+      logger.warn(`Failed to clean up embedding for deleted note ${noteRow.id}:`, err);
+    }
+  }
 }
 
 // Full vault index (existing functionality)
@@ -141,13 +157,20 @@ export async function indexVault(vaultPath: string): Promise<IndexResult> {
     result.indexed++;
   }
 
-  // Remove stale records
-  const allNotes = db.prepare('SELECT file_path FROM notes').all() as any[];
+  // Remove stale records and their embeddings
+  const allNotes = db.prepare('SELECT id, file_path FROM notes').all() as { id: string; file_path: string }[];
   const deleteStmt = db.prepare('DELETE FROM notes WHERE file_path = ?');
   for (const row of allNotes) {
     if (!existingFiles.has(row.file_path)) {
       deleteStmt.run(row.file_path);
       result.deleted++;
+
+      // Clean up vector embedding for deleted stale note
+      if (isVectorStoreReady()) {
+        try {
+          deleteEmbedding(db, `bs:brainstorm:${row.id}`);
+        } catch { /* non-fatal */ }
+      }
     }
   }
 

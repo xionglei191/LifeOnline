@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeNoteContent } from '../src/soul/cognitiveAnalyzer.js';
+import { analyzeNoteContent } from '../src/soul/agents/agentOrchestrator.js';
 
 test('analyzeNoteContent rules fallback extracts goal_trend signal with evidence', async () => {
   const content = '最近思考未来的发展，我觉得要在今年实现核心系统的平滑升级，这个目标不能变。';

@@ -1,5 +1,5 @@
 import type { SoulActionKind } from './types.js';
-import { analyzeNoteContent, type NoteAnalysis, type SuggestedAction, type PersonaAnalysisContext } from './cognitiveAnalyzer.js';
+import { analyzeNoteContent, type NoteAnalysis, type SuggestedAction, type PersonaAnalysisContext } from './agents/agentOrchestrator.js';
 
 // ── Types ──────────────────────────────────────────────
 

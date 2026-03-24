@@ -1,5 +1,5 @@
 import { callClaude, parseJSON } from '../../ai/aiClient.js';
-import type { ContinuitySignal, PersonaAnalysisContext } from '../cognitiveAnalyzer.js';
+import type { ContinuitySignal, PersonaAnalysisContext } from './agentOrchestrator.js';
 import { Logger } from '../../utils/logger.js';
 
 const logger = new Logger('extractorAgent');

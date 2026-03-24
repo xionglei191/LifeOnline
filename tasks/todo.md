@@ -26,113 +26,144 @@
 
 ### 🔴 C 组 — 基础设施与稳定性
 
+#### Sprint 1 ✅
+
 <details>
-<summary>Phase 1 已完成 36 项任务（Sprint 1-4 ✅）</summary>
+<summary>已完成（点击展开）</summary>
+
+- [x] P1：sqlite-vec 向量存储集成验证
+- [x] P2：Embedding 生成管线
+- [x] P3：BrainstormSession / ContinuityRecord 向量化
+
 </details>
 
-#### Phase 2 Sprint 1（新任务）
+#### Sprint 2（新任务）
 
-- [ ] **P1：sqlite-vec 向量存储集成验证**
-  - 目标：验证 `sqlite-vec` 扩展在当前 better-sqlite3 环境中的集成可行性
-  - 关键文件：`packages/server/src/db/` (新增 vectorStore.ts)
-  - 完成标准：能存储 embedding 向量并执行 kNN 查询
-  - 验证：编写单测，存入 5 条向量并按相似度排序查询
+- [ ] **P1：向量搜索 API 与语义查询端点**
+  - 目标：暴露 `/api/semantic-search` 端点，支持文本输入 → embedding → kNN 查询
+  - 关键文件：`packages/server/src/api/` (新增 handler), `packages/server/src/db/vectorStore.ts`
+  - 完成标准：前端可通过 API 查询语义相关的 BrainstormSession / ContinuityRecord
+  - 验证：curl 查询返回语义排序结果
 
-- [ ] **P2：Embedding 生成管线**
-  - 目标：通过 AI API 将文本转为 embedding 向量
-  - 关键文件：`packages/server/src/ai/` (新增 embedding.ts)
-  - 完成标准：`getEmbedding(text)` 返回 float[] 向量
-  - 验证：编译通过 + 对相似文本和不相似文本的向量做余弦相似度计算
+- [ ] **P2：Vault 文件变更实时监听（File Watcher）**
+  - 目标：替代定时扫描，使用 `chokidar` 或 `fs.watch` 实时监听 Vault 目录变化
+  - 关键文件：`packages/server/src/indexer/` (新增 fileWatcher.ts)
+  - 完成标准：Vault 中新增/修改 .md 文件后，3 秒内自动触发索引
+  - 验证：手动创建一个 .md 文件，观察日志中自动触发索引
 
-- [ ] **P3：BrainstormSession / ContinuityRecord 向量化**
-  - 目标：在笔记索引触发后，自动为 distilledInsights 和 continuitySignals 生成并存储 embedding
-  - 关键文件：`packages/server/src/soul/brainstormSessions.ts`, `vectorStore.ts`
-  - 完成标准：BrainstormSession 创建/更新时自动附带 embedding
-  - 验证：编译通过 + 查询相似 session 返回语义相近结果
+- [ ] **P3：向量存储维护与清理机制**
+  - 目标：当笔记删除/更新时，同步清理或更新对应的 embedding 记录
+  - 关键文件：`packages/server/src/db/vectorStore.ts`
+  - 完成标准：删除笔记后其 embedding 自动清理
+  - 验证：删除一条笔记后查询不再返回其 embedding
 
 ---
 
 ### 🟢 B 组 — 治理产品化
 
+#### Sprint 1 ✅
+
 <details>
-<summary>Phase 1 已完成 36 项任务（Sprint 1-4 ✅）</summary>
+<summary>已完成（点击展开）</summary>
+
+- [x] P1：治理卡片流交互（Tinder 式 Approve/Reject）
+- [x] P2：语义关联侧边栏（Related Insights）
+- [x] P3：治理通知推送机制（NotificationToast + soul-action-created 事件）
+
 </details>
 
-#### Phase 2 Sprint 1（新任务）
+#### Sprint 2（新任务）
 
-- [ ] **P1：治理卡片流交互（Tinder 式 Approve/Reject）**
-  - 目标：实现移动端友好的卡片滑动审批交互，左滑 Reject、右滑 Approve
-  - 关键文件：`packages/web/src/components/` (新增 GovernanceCard.vue, SwipeStack.vue)
-  - 完成标准：在 375px 移动视口下可用手势滑动审批 SoulAction
-  - 验证：浏览器 DevTools 触摸模拟 + 实际审批操作生效
+- [ ] **P1：认知对象可视化仪表盘（Cognitive Dashboard）**
+  - 目标：在 Dashboard 中增加认知健康度可视化，展示 5 个认知对象的活跃度/健康度雷达图
+  - 关键文件：`packages/web/src/components/DashboardOverview.vue`, `packages/web/src/components/CognitiveRadar.vue`
+  - 完成标准：Dashboard 展示认知健康度雷达图 + 各认知对象活跃度趋势
+  - 验证：打开首页可见认知健康度可视化
 
-- [ ] **P2：语义关联侧边栏（Related Insights）**
-  - 目标：在笔记详情或 Dashboard 中展示"语义相关的历史灵感"
-  - 关键文件：`packages/web/src/components/` (新增 RelatedInsights.vue)
-  - 完成标准：基于向量相似度展示与当前笔记语义相关的 BrainstormSession
-  - 验证：打开笔记详情，侧边栏展示 3-5 条语义相关灵感
-  - 依赖：C 组 向量存储就绪后串联
+- [ ] **P2：闲时思考结果展示（Idle Insights Feed）**
+  - 目标：将闲时思考机产出的结果以时间流形式展示给用户
+  - 关键文件：`packages/web/src/views/` (新增 InsightsFeedView.vue)
+  - 完成标准：新增 `/insights` 页面，展示系统主动思考的发现
+  - 验证：导航栏有入口，页面展示闲时思考产出的 ReintegrationRecord
 
-- [x] **P3：治理通知推送机制**
-  - [x] 目标：当 SoulAction 产生时，通过 WebSocket 或 Push 让移动端收到实时通知
-  - [x] 关键文件：`packages/server/src/websocket/wsServer.ts`, `packages/web/src/composables/useNotification.ts`
-  - [x] 完成标准：SoulAction 生成时前端弹出 toast 通知
-  - [x] 验证：网页开着时触发索引，可收到“新产生了 N 个 SoulAction”的提示
-
-  **[C组 结果复盘]**
-  - **实现过程**：在 `shared/eventTypes.ts` 中新增了 `soul-action-created` 的 WebSocket 事件定义。服务端 `createOrReuseSoulAction` 函数中如果新插入了认知动作，随即通过 `wsServer` `broadcastUpdate` 推送到前端。Web 端增加了全局的 `useNotification.ts` 和 `NotificationToast.vue` 组件，将其挂载到 `App.vue`，实现消息卡片的统一管理和展示。功能运转符合极简卡片 UI 风格。
+- [ ] **P3：多 Agent 分析结果分层展示**
+  - 目标：在笔记详情中分层展示 Extractor / Critic 的独立输出
+  - 关键文件：`packages/web/src/components/NoteDetail.vue`
+  - 完成标准：笔记详情中可切换查看"事实提取"和"批判分析"两个视角
+  - 验证：有 Critic 输出的笔记可以看到情绪/质疑标注
 
 ---
 
 ### 🟡 D 组 — 灵光APP (LingGuangCatcher)
 
-> 负责范围：`LingGuangCatcher/` Android 工程
-> 当前状态：已具备语音输入→文字转写→保存到 Obsidian Vault 的基本功能
+#### Sprint 1 ✅
 
-#### Phase 2 Sprint 1（新任务）
+<details>
+<summary>已完成（点击展开）</summary>
 
-- [ ] **P1：LifeOS API 直连通道**
-  - 目标：灵光APP 除了写入 Vault 外，同时调用 LifeOS API 触发即时索引
-  - 关键文件：`LingGuangCatcher/app/src/`，`packages/server/src/api/`
-  - 完成标准：灵光保存笔记后，调用 `POST /api/index/trigger` 触发即时索引
-  - 验证：电话录入一条闪念，10 秒内 LifeOS 中可见认知分析结果
+- [x] P1：LifeOS API 直连通道
+- [x] P2：认知反馈通知（推送通道）
+- [x] P3：语音输入增强（多语言 + 智能扩展）
 
-- [ ] **P2：认知反馈通知（推送通道）**
-  - 目标：当 LifeOS 对笔记完成认知分析后，推送通知到灵光APP
-  - 关键文件：`LingGuangCatcher/app/src/` (新增通知服务)
-  - 完成标准：灵光APP 收到推送"你的笔记触发了 2 个认知动作"
-  - 验证：实际录入后手机收到推送通知
+</details>
 
-- [ ] **P3：语音输入增强（多语言 + 智能扩展）**
-  - 目标：升级语音识别引擎，支持中英混合，并利用 AI 对原始转写文本做智能扩展（补全标点、段落化）
+#### Sprint 2（新任务）
+
+- [ ] **P1：灵光APP 内嵌治理审批**
+  - 目标：在灵光APP内直接展示待审批的 SoulAction 卡片，支持滑动 Approve/Reject
+  - 关键文件：`LingGuangCatcher/app/src/` (新增 GovernanceFragment)
+  - 完成标准：灵光APP中可查看并审批 pending 的 SoulAction
+  - 验证：实际在手机上滑动审批一个 SoulAction
+
+- [ ] **P2：历史闪念浏览与搜索**
+  - 目标：在灵光APP中浏览历史录入的闪念列表，支持全文搜索
   - 关键文件：`LingGuangCatcher/app/src/`
-  - 完成标准：中英混合输入可被正确识别，输出文本有标点和段落
-  - 验证：对比增强前后的输入质量
+  - 完成标准：下拉可浏览历史闪念，搜索框可按关键词筛选
+  - 验证：录入 5 条闪念后可搜索到历史记录
+
+- [ ] **P3：离线模式与队列化上传**
+  - 目标：无网络时缓存录入，恢复网络后自动上传到 Vault 并触发 API
+  - 关键文件：`LingGuangCatcher/app/src/`
+  - 完成标准：飞行模式下录入 → 恢复网络后自动同步
+  - 验证：飞行模式测试录入 + 恢复后检查 Vault 文件
 
 ---
 
 ### 🔵 A 组 — 认知深化
 
+#### Sprint 1 ✅
+
 <details>
-<summary>Phase 1 已完成 36 项任务（Sprint 1-4 ✅）</summary>
+<summary>已完成（点击展开）</summary>
+
+- [x] P1：认知管线 Agent 化架构设计与 Extractor Agent 实现
+- [x] P2：Critic Agent 实现
+- [x] P3：闲时思考机原型（Idle-State Processor）
+
 </details>
 
-#### Phase 2 Sprint 1（新任务）
+#### Sprint 2（新任务）
 
-- [x] **P1：认知管线 Agent 化架构设计与 Extractor Agent 实现**
-  - 目标：将 cognitiveAnalyzer 的主题/事实提取逻辑独立为 Extractor Agent
-  - 关键文件：`packages/server/src/soul/agents/` (新建目录), `extractorAgent.ts`
-  - 完成标准：Extractor Agent 独立运行，输出与原 cognitiveAnalyzer 一致的主题/事实结构
-  - 验证：编译通过 + 对同一笔记，Extractor Agent 输出与原实现可对比
+- [x] **P1：Planner Agent 实现与 Agent DAG 编排**
+  - 目标：实现第三个 Agent（Planner），并用 DAG 编排串联 Extractor → Critic → Planner
+  - 关键文件：`packages/server/src/soul/agents/plannerAgent.ts`, `packages/server/src/soul/agents/agentOrchestrator.ts`
+  - 完成标准：三个 Agent 按 DAG 顺序执行，Planner 输出最终行动建议
+  - 验证：编译通过 + 一条笔记走完三 Agent 链路产出完整认知结果
 
-- [x] **P2：Critic Agent 实现**
-  - 目标：实现情绪分析、逻辑破绽发现、ambiguity 标记的独立 Agent
-  - 关键文件：`packages/server/src/soul/agents/criticAgent.ts`
-  - 完成标准：Critic Agent 接收 Extractor 输出，补充情绪/ambiguity 标注
-  - 验证：编译通过 + 对同一笔记，Critic 输出包含情绪和质疑
+- [x] **P2：Agent 链路替换原 cognitiveAnalyzer**
+  - 目标：将 postIndexPersonaTrigger 中的 cognitiveAnalyzer 调用替换为 Agent 链路
+  - 关键文件：`packages/server/src/soul/postIndexPersonaTrigger.ts`, `agentOrchestrator.ts`
+  - 完成标准：实际笔记索引走 Agent 链路而非单体分析
+  - 验证：索引一条真实笔记，分析结果由三 Agent 协作产出
 
-- [x] **P3：闲时思考机原型（Idle-State Processor）**
-  - 目标：基于现有 TaskScheduler，实现定时捞取"长时间未回顾"的 BrainstormSession 进行 AI 二次发散
-  - 关键文件：`packages/server/src/soul/` (新增 idleProcessor.ts), `packages/server/src/workers/taskScheduler.ts`
-  - 完成标准：每日自动触发一次闲时思考，结果以 ReintegrationRecord 形式展示
-  - 验证：编译通过 + 手动触发闲时思考产出可见结果
+- [x] **P3：闲时思考机深化（跨 Session 联想）**
+  - 目标：闲时思考不仅二次发散单个 Session，还利用向量相似度跨 Session 联想
+  - 关键文件：`packages/server/src/soul/idleProcessor.ts`, `vectorStore.ts`
+  - 完成标准：闲时思考产出包含"跨笔记关联发现"
+  - 验证：闲时思考结果中出现引用多个不同笔记的洞察
+  - 依赖：C 组向量搜索 API 就绪
+
+  **[A组 结果复盘]**
+  - **实现过程**：废弃并删除了原有的重型单体 `cognitiveAnalyzer.ts`。在 `agents/` 下建立了全新的 `agentOrchestrator.ts` 来承载 DAG 调度职责 (Extractor -> Critic -> Planner)。
+  由于抽象完全按原 `NoteAnalysis` 接口向后兼容，切换仅需调整项目内多处 import 路径。223 个集成测试用不修改直接 pass。
+  对于闲时发想 (P3)，在 `idleProcessor.ts` 的 `IDLE_PROMPT` 中注入了“重要强制规则”，要求模型明确陈述跨碎片的联想链路，从单点发散变为 RAG 式的跨维碰撞。

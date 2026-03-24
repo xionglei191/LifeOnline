@@ -32,14 +32,16 @@ import {
   getStatsTrend, getStatsRadar, getStatsMonthly, getStatsTags,
   // Health
   healthHandler,
-  // Vector Search
+  // Vector Search (canonical + backwards-compat alias)
+  semanticSearchHandler,
   vectorSearchHandler,
 } from './handlers.js';
 
 export const router = Router();
 
 router.get('/health', healthHandler);
-router.get('/vector-search', vectorSearchHandler);
+router.get('/semantic-search', semanticSearchHandler);
+router.get('/vector-search', vectorSearchHandler); // backwards-compat alias
 router.get('/dashboard', getDashboard);
 router.get('/cognitive-health', getCognitiveHealthHandler);
 router.get('/notes', getNotes);
