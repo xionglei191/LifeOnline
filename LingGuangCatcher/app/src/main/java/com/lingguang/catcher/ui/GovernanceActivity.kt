@@ -16,6 +16,7 @@ import com.lingguang.catcher.databinding.ActivityGovernanceBinding
 import com.lingguang.catcher.util.AnimUtil
 import com.lingguang.catcher.util.FeedbackUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 

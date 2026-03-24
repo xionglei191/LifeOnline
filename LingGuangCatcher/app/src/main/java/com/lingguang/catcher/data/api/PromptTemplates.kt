@@ -11,6 +11,11 @@ object PromptTemplates {
         VoiceNoteType.LEARNING -> getLearningPrompt(text)
         VoiceNoteType.THOUGHT -> getThoughtPrompt(text)
         VoiceNoteType.EXCERPT -> getExcerptPrompt(text)
+        VoiceNoteType.GOAL -> getGoalPrompt(text)
+        VoiceNoteType.QUESTION -> getQuestionPrompt(text)
+        VoiceNoteType.CONTACT -> getContactPrompt(text)
+        VoiceNoteType.LIFE -> getLifePrompt(text)
+        VoiceNoteType.WORK -> getWorkPrompt(text)
         VoiceNoteType.BRAINSTORM -> getBrainstormPrompt(text)
     }
 

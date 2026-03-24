@@ -28,7 +28,7 @@ class CalendarAdapter : ListAdapter<PhysicalAction, CalendarAdapter.ViewHolder>(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.id.item_governance_card, parent, false)
+            .inflate(R.layout.item_governance_card, parent, false)
         return ViewHolder(view)
     }
 
