@@ -22,7 +22,7 @@ export interface SoulActionDispatchResult {
   soulActionId: string | null;
   workerTaskId: string | null;
   executionSummary?: {
-    objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | 'r2_sync' | null;
+    objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | 'r2_sync' | 'multiple_choices' | 'physical_action' | null;
     objectId: string | null;
     operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | 'synced' | null;
     summary: string | null;
@@ -385,14 +385,14 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
     };
   }
 
-  // dispatch_physical_action → translate via mapper and submit to execution engine
+  // dispatch_physical_action -> translate via mapper and submit to execution engine (single or DAG)
   if (soulAction.actionKind === 'dispatch_physical_action') {
     const now = new Date().toISOString();
     const intent = soulAction.governanceReason || '';
     
-    const physicalAction = await mapSoulActionToPhysicalAction(intent);
+    const mapperResult = await mapSoulActionToPhysicalAction(intent);
     
-    if (!physicalAction) {
+    if (!mapperResult) {
       getDb().prepare(`
         UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?
       `).run('物理动作转换解析失败 (Mapper returned null)', now, now, soulAction.id);
@@ -405,11 +405,45 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       };
     }
 
-    // Submit to execution engine
-    const defaultTitle = (physicalAction.payload as any).title || (physicalAction.payload as any).subject || `物理动作: ${physicalAction.type}`;
+    // --- Multi-step DAG path ---
+    if (mapperResult.kind === 'multi') {
+      const { createDag, executeDag } = await import('./dagExecutor.js');
+      const dag = createDag(mapperResult.steps, soulAction.id, intent);
+      
+      // Fire DAG execution asynchronously
+      executeDag(dag.id).catch(e => console.error('[dagExecutor] DAG execution failed', e));
+
+      getDb().prepare(`
+        UPDATE soul_actions
+        SET execution_status = 'succeeded', updated_at = ?, started_at = ?, finished_at = ?, result_summary = ?
+        WHERE id = ?
+      `).run(now, now, now, `DAG 已创建并启动: ${dag.nodes.length} 步, dagId=${dag.id}`, soulAction.id);
+
+      return {
+        dispatched: true,
+        reason: `已创建 ${dag.nodes.length} 步物理动作 DAG`,
+        soulActionId: soulAction.id,
+        workerTaskId: null,
+        executionSummary: {
+          objectType: 'physical_action',
+          objectId: dag.id,
+          operation: 'enqueued',
+          summary: `DAG (${dag.nodes.length} nodes): ${dag.description}`,
+        },
+      };
+    }
+
+    // --- Single-step path (unchanged logic) ---
+    let defaultTitle = `物理动作: ${mapperResult.type}`;
+    switch (mapperResult.type) {
+      case 'calendar_event': defaultTitle = (mapperResult.payload as import('@lifeos/shared').CalendarEventPayload).title; break;
+      case 'send_email': defaultTitle = (mapperResult.payload as import('@lifeos/shared').SendEmailPayload).subject; break;
+      case 'webhook_call': defaultTitle = `Webhook: ${(mapperResult.payload as import('@lifeos/shared').WebhookCallPayload).url}`; break;
+      case 'iot_command': defaultTitle = `IoT: ${(mapperResult.payload as import('@lifeos/shared').IoTCommandPayload).command}`; break;
+    }
     const submitted = await submitPhysicalAction(
-      physicalAction.type, 
-      physicalAction.payload, 
+      mapperResult.type, 
+      mapperResult.payload, 
       defaultTitle, 
       soulAction.sourceNoteId ?? undefined,
       soulAction.id
@@ -427,9 +461,9 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       soulActionId: soulAction.id,
       workerTaskId: null,
       executionSummary: {
-        objectType: null,
+        objectType: 'physical_action',
         objectId: submitted.id,
-        operation: null,
+        operation: 'enqueued',
         summary: `触发 ${submitted.type} (${submitted.status})`,
       },
     };
@@ -449,9 +483,9 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
       soulActionId: soulAction.id,
       workerTaskId: null,
       executionSummary: {
-        objectType: 'multiple_choices' as any,
+        objectType: 'multiple_choices',
         objectId: soulAction.id,
-        operation: 'awaiting_answer' as any,
+        operation: 'awaiting_answer',
         summary: soulAction.governanceReason ?? '双生子方案等待抉择',
       },
       eventNode: null,

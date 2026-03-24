@@ -8,6 +8,7 @@ const workerTaskTypeLabels: Record<WorkerTaskType, string> = {
   update_persona_snapshot: '人格快照更新',
   daily_report: '每日回顾',
   weekly_report: '每周回顾',
+  execute_physical_action: '执行物理动作',
 };
 
 const workerTaskStatusLabels: Record<WorkerTaskStatus, string> = {

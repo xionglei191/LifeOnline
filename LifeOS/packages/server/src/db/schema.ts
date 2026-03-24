@@ -218,6 +218,19 @@ export const INTEGRATION_CREDENTIALS_TABLE_COLUMNS_SQL = `  provider TEXT PRIMAR
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL`;
 
+export const DAG_TABLE_COLUMNS_SQL = `  id TEXT PRIMARY KEY,
+  source_soul_action_id TEXT,
+  description TEXT NOT NULL,
+  nodes_json TEXT NOT NULL,
+  edges_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'running', 'completed', 'partial_failure', 'failed')),
+  breakpoint_node_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL`;
+
+export const DAG_INDEXES_SQL = `CREATE INDEX IF NOT EXISTS idx_dags_status ON physical_action_dags(status);
+CREATE INDEX IF NOT EXISTS idx_dags_created ON physical_action_dags(created_at);`;
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY,
@@ -343,4 +356,10 @@ CREATE TABLE IF NOT EXISTS config (
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS physical_action_dags (
+${DAG_TABLE_COLUMNS_SQL}
+);
+
+${DAG_INDEXES_SQL}
 `;

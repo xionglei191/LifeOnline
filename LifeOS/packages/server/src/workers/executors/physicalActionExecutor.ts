@@ -1,5 +1,7 @@
 import type { WorkerTask } from '@lifeos/shared';
 import { executeAction, getPhysicalAction } from '../../integrations/executionEngine.js';
+import { archiveExecutionResult } from '../../integrations/executionArchiver.js';
+import { recordFailure, recordSuccess } from '../../integrations/circuitBreaker.js';
 import { Logger } from '../../utils/logger.js';
 
 const logger = new Logger('physicalActionExecutor');
@@ -24,11 +26,18 @@ export async function runPhysicalActionExecutor(
   // Execute the underlying protocol (this updates the action state internally)
   const resultAction = await executeAction(actionId);
 
+  // Archive the execution result to R2 cold storage (best-effort)
+  archiveExecutionResult(resultAction).catch(err =>
+    logger.warn(`Non-critical: archival failed for ${actionId}:`, err)
+  );
+
   if (resultAction.status === 'failed') {
+    recordFailure(resultAction.type);
     // We throw here so the worker framework knows it failed and marks the WorkerTask as 'failed'.
-    // The execution log/error message is already in physical_actions table.
     throw new Error(`Execution failed: ${resultAction.errorMessage || 'Unknown error'}`);
   }
+
+  recordSuccess(resultAction.type);
 
   return {
     actionId: resultAction.id,

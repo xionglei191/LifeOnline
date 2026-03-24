@@ -32,6 +32,8 @@ import {
   BRAINSTORM_SESSION_INDEXES_SQL,
   AI_PROVIDER_SETTINGS_TABLE_COLUMNS_SQL,
   AI_PROVIDER_SETTINGS_INDEXES_SQL,
+  DAG_TABLE_COLUMNS_SQL,
+  DAG_INDEXES_SQL,
 } from './schema.js';
 import { Logger } from '../utils/logger.js';
 
@@ -483,7 +485,19 @@ const MIGRATIONS: Migration[] = [
       `);
       logger.info('Migration v3 applied: physical_actions + integration_credentials tables created.');
     }
-  }
+  },
+  {
+    version: 4,
+    up(db: Database) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS physical_action_dags (
+          ${DAG_TABLE_COLUMNS_SQL}
+        );
+      `);
+      db.exec(DAG_INDEXES_SQL);
+      logger.info('Migration v4 applied: physical_action_dags table created.');
+    }
+  },
 ];
 
 /**

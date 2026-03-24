@@ -1,5 +1,8 @@
 <template>
   <div class="dashboard">
+    <!-- ── Automation Live Panel (always visible) ── -->
+    <AutomationLivePanel />
+
     <StateDisplay v-if="loading" type="loading" message="正在同步生命信号..." />
     <StateDisplay v-else-if="error" type="error" :message="error.message" />
     <div v-else-if="data" class="dashboard-layout">
@@ -196,6 +199,7 @@ import DimensionHealth from './DimensionHealth.vue';
 import AISuggestions from './AISuggestions.vue';
 import NoteDetail from './NoteDetail.vue';
 import StateDisplay from './StateDisplay.vue';
+import AutomationLivePanel from './AutomationLivePanel.vue';
 import CognitiveRadar from './CognitiveRadar.vue';
 
 const { data, loading, error, load } = useDashboard();

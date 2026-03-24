@@ -6,6 +6,10 @@
     <color name="md_theme_primaryContainer">#E8E2D9</color>
     <color name="md_theme_onPrimaryContainer">#27231E</color>
 
+    <!-- Aliases for widget/layout compatibility -->
+    <color name="primary">#6E6961</color>
+    <color name="on_primary">#F6F4F0</color>
+
     <!-- Secondary Colors -->
     <color name="md_theme_secondary">#7D756B</color>
     <color name="md_theme_onSecondary">#F6F4F0</color>
@@ -36,6 +40,7 @@
     <color name="surface">#F6F4F0</color>
     <color name="surface_variant">#ECE8E1</color>
     <color name="surface_elevated">#FBF9F5</color>
+    <color name="surface_container">#F0EDE7</color>
     <color name="on_surface">#201D1A</color>
     <color name="on_surface_variant">#5D564F</color>
 

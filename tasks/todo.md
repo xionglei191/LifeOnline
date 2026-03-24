@@ -67,13 +67,13 @@
 
 #### Phase 3 Sprint 2（冲突渲染与反馈）
 
-- [ ] **P1：日程冲突可视化（Conflict Map）**
+- [x] **P1：日程冲突可视化（Conflict Map）**
   - 目标：在授权批准时，画出目标时间段上下的 Timeline，提醒用户"那天下午你已经有两个会了"
   - 关键文件：`packages/web/src/components/PhysicalActionCard.vue`
   - 完成标准：获取当天日程流与待审批事件，如果冲突呈现橙/红警报 UI
   - 验证：造一组重叠时间的 mock 事件验证渲染
 
-- [ ] **P2："自动化审计日志"追溯面板**
+- [x] **P2："自动化审计日志"追溯面板**
   - 目标：提供一个全局的 Automation 审计列表，看到过去一个月系统帮你悄悄做了什么
   - 关键文件：`packages/web/src/views/AutomationAuditView.vue`
   - 完成标准：展示 physical actions 的 Timeline，支持过滤 success/failed
@@ -100,7 +100,7 @@
   - 完成标准：后台周期性抓取手机本地日历变更，并写入 Vault 成为环境上下文
   - 验证：在系统日历新建事件，稍后会在 Vault `dimension: environment` 里查看到快照
 
-- [/] **P2：桌面一键急停 (Emergency Stop Widget)**
+- [x] **P2：桌面一键急停 (Emergency Stop Widget)**
   - 目标：怕 AI 发疯暴走？手机桌面提供一个大红色的中止组件，干掉一切审批流并设为 observe_only
   - 关键文件：`LingGuangCatcher/app/src/widget/`
   - 完成标准：点击后向 `LifeOS` 发送停止一切物理动作指令，并锁死 `auto_approve`
@@ -122,14 +122,101 @@
 
 #### Phase 3 Sprint 2（高级 Planner 能力演进）
 
-- [ ] **P1：Planner Agent 结合日历的排期决策 (Cognitive Scheduling)**
+- [x] **P1：Planner Agent 结合日历的排期决策 (Cognitive Scheduling)**
   - 目标：Planner 生成建议前，**主动读取日历快照**，如果发现那天太满，主动调整建议或向用户抛出警告 (Dry-Run Preview 附加上下文)
   - 关键文件：`packages/server/src/soul/agents/plannerAgent.ts`
   - 完成标准：输入"周三去牙医" + 虚拟周三日程满额，Planner 生成 `alert` 或改期建议
   - 验证：跑一次 mock AI 判断
 
-- [ ] **P2：双生子计划生成（Fallback Option）**
+- [x] **P2：双生子计划生成（Fallback Option）**
   - 目标：对有风险的操作，Agent 提供 A/B 两个 PhysicalAction 候选（Plan A: 自动订场地，Plan B: 仅提醒我订）。让用户在授权时做二选一。
   - 关键文件：`packages/server/src/soul/agents/plannerAgent.ts`
   - 完成标准：Governance 收到类型为 `multiple_choices` 的 SoulAction
   - 验证：测试发散型规划，生成双动作可选路径。
+
+---
+
+## Phase 3 Sprint 3 — 高级串联与熔断
+
+> 蓝图来源：`vision/02-权威基线/LifeOnline_Phase3_技术蓝图.md` Sprint 3 行
+> 分工规则：`vision/01-当前进度/LifeOnline 三开发组并行方案.md`
+
+### 🔴 C 组 — 基础设施
+
+- [x] **P1：R2 物理执行日志持久化**
+  - 目标：所有 PhysicalAction 到达终态后，完整执行记录序列化到 R2 冷存储，实现不可变审计日志
+  - 关键文件：`packages/server/src/integrations/executionArchiver.ts` [NEW]
+  - 集成点：`packages/server/src/workers/executors/physicalActionExecutor.ts`（执行完成回调中触发归档）
+  - R2 Key 格式：`execution-logs/{YYYY-MM}/{action.id}.json`
+  - 完成标准：执行成功/失败后自动 uploadToR2；R2 未配置时静默跳过（best-effort）
+  - 验证：模拟一条 completed action，检查 R2 key 格式正确
+
+- [x] **P2：安全熔断器 (Circuit Breaker)**
+  - 目标：连续 N 次同类型 PhysicalAction 执行失败时，自动熔断该类型的自动审批
+  - 关键文件：`packages/server/src/integrations/circuitBreaker.ts` [NEW]
+  - 集成点：`physicalActionExecutor.ts`（recordFailure/recordSuccess）、`executionEngine.ts`（approveAction 前检查 isBreakerOpen）
+  - 配置：阈值=3 次、滑动窗口=1h、冷却=30min 自动恢复（半开探测）
+  - API：`GET /insight/breaker-states` → `insightHandlers.ts` 新增 `getBreakerStatesHandler`
+  - 完成标准：3 次连续失败 → 熔断 → 30min 后半开 → 首次成功 → 恢复
+  - 验证：`circuitBreaker.test.ts` 模拟 3 次失败 → 验证熔断 → 验证半开恢复
+
+### 🔵 A 组 — 认知与调度
+
+- [x] **P1：复合式任务流 DAG (DAG Of Physical Actions)**
+  - 目标：支持「链式物理动作」— 一个 SoulAction 触发多个 PhysicalAction，有依赖顺序（如：查询空闲 → 创建日历 → 发送邮件）
+  - 关键文件：
+    - `packages/server/src/soul/dagExecutor.ts` [NEW] — DAG 拓扑排序执行引擎
+    - `packages/server/src/soul/soulActionDispatcher.ts` — `dispatch_physical_action` payload 含多步时构造 DAG
+  - ⚠️ 类型定义需求：需要 C 组在 `packages/shared/src/dagTypes.ts` 新增 `PhysicalActionDag`、`DagNode`、`DagEdge` 类型
+  - 执行策略：按拓扑排序依次提交 worker tasks，上一步成功才触发下一步；失败则标记 `partial_failure` 并记录断点
+  - 完成标准：3-node DAG 中间节点失败 → 后续节点不执行 → 断点可查
+  - 验证：`dagExecution.test.ts` 正常/中断双路径测试
+
+### 🟢 B 组 — 客户端与 UX
+
+- [x] **P1：实时执行状态 Dashboard（执行大屏）**
+  - 目标：在 Web Dashboard 中新增「自动化实时面板」，展示进行中的 PhysicalAction、DAG 进度、熔断器状态
+  - 关键文件：
+    - `packages/web/src/components/AutomationLivePanel.vue` [NEW]
+    - `packages/web/src/views/DashboardView.vue`（嵌入 AutomationLivePanel）
+    - `packages/web/src/api/client.ts`（新增 `fetchBreakerStates()`）
+  - 功能点：
+    - 轮询 `/physical-actions?status=executing` 展示执行中动作
+    - 熔断器指示灯：调用 `GET /insight/breaker-states`（🟢正常/🟡半开/🔴熔断）
+    - DAG 进度条（可在 A 组交付 DAG 后接入，先预留插槽）
+  - 完成标准：Dashboard 页面可看到实时执行状态 + 熔断器红绿灯
+  - 验证：Mock 一个 executing 状态的 action，面板正确渲染
+
+### 🟡 D 组 — 灵光 APP
+
+- [x] **P1：实时执行推送通知**
+  - 目标：PhysicalAction 执行完成时，向灵光 APP 推送结果通知
+  - 关键文件：
+    - `LingGuangCatcher/app/src/.../ExecutionNotificationReceiver.kt` [NEW]
+    - Server 端可选：在 `physicalActionExecutor.ts` 完成后触发推送 webhook
+  - 三级推送策略：
+    - 成功 → 普通通知（可收起）
+    - 失败 → 高优先级通知（前台弹出 + 震动）
+    - 熔断触发 → 特殊警报「⚠️ 系统已熔断 {type} 自动化」
+  - 完成标准：灵光 APP 收到三种级别的推送通知
+  - 验证：分别触发三种场景，验证通知级别与震动策略
+
+---
+
+## Phase 3 Backlog — 代码质量优化
+
+### 🔵 A 组
+
+- [ ] **消除 soulActionDispatcher payload `as any` 断言**
+  - 位置：`packages/server/src/soul/soulActionDispatcher.ts` L437
+  - 当前：`(mapperResult.payload as any).title` 不安全访问
+  - 建议：在 `PhysicalActionPayload` 联合类型上增加 `title?: string` 基础字段，或按 `mapperResult.type` 做类型守卫分支访问
+  - 优先级：P3
+
+### 🔴 C 组
+
+- [ ] **DAG 持久化（内存 → DB）**
+  - 位置：`packages/server/src/soul/dagExecutor.ts` L25-28
+  - 当前：`const dagStore = new Map<string, PhysicalActionDag>()` 进程重启丢数据
+  - 建议：`db/schema.ts` 新增 `physical_action_dags` 表，将 DAG 进度和断点信息持久化，支持审计面板溯源
+  - 优先级：P2

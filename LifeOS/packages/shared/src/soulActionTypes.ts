@@ -14,7 +14,7 @@ export interface SoulActionPromotionSummary {
 }
 
 export interface SoulActionDispatchExecutionSummary {
-  objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | 'r2_sync' | null;
+  objectType: 'event_node' | 'continuity_record' | 'worker_task' | 'followup_question' | 'continuity_markdown' | 'r2_sync' | 'multiple_choices' | 'physical_action' | null;
   objectId: string | null;
   operation: 'created' | 'updated' | 'enqueued' | 'awaiting_answer' | 'persisted' | 'synced' | null;
   summary: string | null;
@@ -104,6 +104,8 @@ export function formatSoulActionKindLabel(actionKind: SoulAction['actionKind'] |
   if (actionKind === 'launch_daily_report') return '生成日报';
   if (actionKind === 'launch_weekly_report') return '生成周报';
   if (actionKind === 'launch_openclaw_task') return '执行 OpenClaw 任务';
+  if (actionKind === 'dispatch_physical_action') return '执行物理动作';
+  if (actionKind === 'multiple_choices') return '双生子风险方案';
   return actionKind;
 }
 

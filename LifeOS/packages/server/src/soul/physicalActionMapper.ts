@@ -1,5 +1,5 @@
 import { callClaude, parseJSON } from '../ai/aiClient.js';
-import type { PhysicalActionPayload, PhysicalActionType } from '@lifeos/shared';
+import type { PhysicalActionPayload, PhysicalActionType, PhysicalActionStep } from '@lifeos/shared';
 import { Logger } from '../utils/logger.js';
 
 const logger = new Logger('physicalActionMapper');
@@ -47,25 +47,67 @@ JSON 格式要求：
 现在时间是：{CURRENT_TIME}。请基于这个时间推断“明天”、“下周”、“下午”等相对时间概念。
 如果没有说明 endTime，通常默认持续1个小时。
 不要返回 markdown 代码块，只返回纯 JSON。
+
+如果用户的意图包含多个有依赖顺序的步骤（如：先查日程再创建日历最后发邮件），则返回 steps 数组格式：
+{
+  "steps": [
+    {
+      "type": "calendar_event",
+      "title": "步骤标题",
+      "payload": { ... },
+      "dependsOn": []
+    },
+    {
+      "type": "send_email",
+      "title": "步骤标题",
+      "payload": { ... },
+      "dependsOn": ["0"]
+    }
+  ]
+}
+
+如果只是单步操作，使用原来的格式即可（无需 steps 包裹）。
 `;
+
+export type MapperResult =
+  | { kind: 'single'; type: PhysicalActionType; payload: PhysicalActionPayload }
+  | { kind: 'multi'; steps: PhysicalActionStep[] };
 
 export async function mapSoulActionToPhysicalAction(
   reasonOrContent: string
-): Promise<{ type: PhysicalActionType, payload: PhysicalActionPayload } | null> {
+): Promise<MapperResult | null> {
   const currentTime = new Date().toISOString();
-  const prompt = MAPPER_PROMPT.replace('{CURRENT_TIME}', currentTime) + 
+  const prompt = MAPPER_PROMPT.replace('{CURRENT_TIME}', currentTime) +
                  `\n待转换的指令内容: "${reasonOrContent}"`;
 
   try {
-    const resString = await callClaude(prompt, 1000);
-    const parsed = parseJSON(resString) as { type: PhysicalActionType, payload: PhysicalActionPayload };
+    const resString = await callClaude(prompt, 1500);
+    const parsed = parseJSON(resString) as any;
 
-    if (!parsed || !parsed.type || !parsed.payload) {
+    if (!parsed) {
       logger.error('Invalid mapper response format:', resString);
       return null;
     }
-    
-    // Quick validation
+
+    // Multi-step response
+    if (Array.isArray(parsed.steps) && parsed.steps.length > 0) {
+      const steps: PhysicalActionStep[] = parsed.steps.map((s: any) => ({
+        type: s.type,
+        payload: s.payload,
+        title: s.title || `步骤: ${s.type}`,
+        dependsOn: s.dependsOn ?? [],
+      }));
+      logger.info(`Mapper returned multi-step (${steps.length} steps)`);
+      return { kind: 'multi', steps };
+    }
+
+    // Single-step response
+    if (!parsed.type || !parsed.payload) {
+      logger.error('Invalid mapper response format:', resString);
+      return null;
+    }
+
+    // Quick validation for calendar
     if (parsed.type === 'calendar_event') {
       const p = parsed.payload as any;
       if (!p.title || !p.startTime || !p.endTime) {
@@ -74,7 +116,7 @@ export async function mapSoulActionToPhysicalAction(
       }
     }
 
-    return { type: parsed.type, payload: parsed.payload };
+    return { kind: 'single', type: parsed.type, payload: parsed.payload };
   } catch (error) {
     logger.error('Failed to map physical action:', error);
     return null;

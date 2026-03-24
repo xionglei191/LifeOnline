@@ -910,7 +910,7 @@ const MOCK_PHYSICAL_ACTION_HISTORY: PhysicalAction[] = [
 ];
 
 export async function fetchPhysicalActionHistory(): Promise<PhysicalAction[]> {
-  const res = await fetch(`${API_BASE}/physical-actions/history`);
+  const res = await fetch(`${API_BASE}/physical-actions`);
   if (!res.ok) {
     if (res.status === 404) return MOCK_PHYSICAL_ACTION_HISTORY;
     throw new Error('Failed to fetch physical action history');
@@ -918,3 +918,101 @@ export async function fetchPhysicalActionHistory(): Promise<PhysicalAction[]> {
   const data: ListPhysicalActionsResponse = await res.json();
   return data.actions;
 }
+
+// ── Conflict Detection API ─────────────────────────────
+
+export interface ConflictEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+}
+
+export async function fetchConflictsForAction(actionId: string): Promise<ConflictEvent[]> {
+  const res = await fetch(`${API_BASE}/physical-actions/${encodeURIComponent(actionId)}/conflicts`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.conflicts || [];
+}
+
+// ── Insight Engine API ─────────────────────────────────
+
+export interface InsightStats {
+  total: number;
+  completed: number;
+  failed: number;
+  rejected: number;
+  pending: number;
+  successRate: number;
+  failRate: number;
+}
+
+export interface FailingType {
+  type: string;
+  errorCount: number;
+}
+
+export async function fetchInsightStats(): Promise<InsightStats> {
+  const res = await fetch(`${API_BASE}/insight/stats`);
+  if (!res.ok) return { total: 0, completed: 0, failed: 0, rejected: 0, pending: 0, successRate: 0, failRate: 0 };
+  const data = await res.json();
+  return data.stats;
+}
+
+export async function fetchTopFailingTypes(): Promise<FailingType[]> {
+  const res = await fetch(`${API_BASE}/insight/top-failing-types`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.types || [];
+}
+
+// ── Breaker States API ─────────────────────────────────
+
+export interface BreakerStateEntry {
+  type: string;
+  state: 'closed' | 'open' | 'half_open';
+  failureCount: number;
+  lastFailureAt: string | null;
+}
+
+const MOCK_BREAKER_STATES: BreakerStateEntry[] = [
+  { type: 'calendar_event', state: 'closed', failureCount: 0, lastFailureAt: null },
+  { type: 'send_email', state: 'closed', failureCount: 1, lastFailureAt: new Date(Date.now() - 3600000).toISOString() },
+  { type: 'webhook_call', state: 'open', failureCount: 3, lastFailureAt: new Date(Date.now() - 600000).toISOString() },
+];
+
+export async function fetchBreakerStates(): Promise<BreakerStateEntry[]> {
+  const res = await fetch(`${API_BASE}/insight/breaker-states`);
+  if (!res.ok) {
+    if (res.status === 404) return MOCK_BREAKER_STATES;
+    return [];
+  }
+  const data = await res.json();
+  return data.breakers || [];
+}
+
+// ── Executing Actions API ──────────────────────────────
+
+const MOCK_EXECUTING_ACTIONS: PhysicalAction[] = [
+  {
+    id: 'pa-exec-1', type: 'calendar_event', status: 'executing',
+    sourceSoulActionId: 'sa-e-1', sourceNoteId: 'note-e-1',
+    title: '正在创建日历事件: 周四瑜伽课', description: 'Google Calendar API 调用中...',
+    payload: { title: '瑜伽课', startTime: '2026-03-27T07:00:00', endTime: '2026-03-27T08:00:00' },
+    approvalPolicy: 'auto_after_first', autoApproveKey: 'calendar_event:yoga',
+    executionLog: null, externalId: null, errorMessage: null, dryRunPreview: null,
+    createdAt: new Date(Date.now() - 5000).toISOString(), updatedAt: new Date().toISOString(),
+    approvedAt: new Date(Date.now() - 5000).toISOString(), executedAt: null,
+  }
+];
+
+export async function fetchExecutingActions(): Promise<PhysicalAction[]> {
+  const res = await fetch(`${API_BASE}/physical-actions?status=executing`);
+  if (!res.ok) {
+    if (res.status === 404) return MOCK_EXECUTING_ACTIONS;
+    return [];
+  }
+  const data: ListPhysicalActionsResponse = await res.json();
+  return data.actions;
+}
+

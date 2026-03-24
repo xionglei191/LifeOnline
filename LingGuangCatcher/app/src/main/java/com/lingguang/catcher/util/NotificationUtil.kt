@@ -16,6 +16,9 @@ object NotificationUtil {
     private const val COGNITION_CHANNEL_ID = "lingguang_cognition"
     private const val COGNITION_CHANNEL_NAME = "认知分析通知"
 
+    private const val EXECUTION_CHANNEL_ID = "lingguang_execution"
+    private const val EXECUTION_CHANNEL_NAME = "自动化执行通知"
+
     private var notificationId = 1000
 
     fun createChannel(context: Context) {
@@ -40,6 +43,17 @@ object NotificationUtil {
                 setShowBadge(true)
             }
             manager.createNotificationChannel(apiChannel)
+
+            val execChannel = NotificationChannel(
+                EXECUTION_CHANNEL_ID,
+                EXECUTION_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "物理动作执行结果推送（成功/失败/熔断）"
+                setShowBadge(true)
+                enableVibration(true)
+            }
+            manager.createNotificationChannel(execChannel)
         }
     }
 
@@ -94,5 +108,69 @@ object NotificationUtil {
         } catch (e: SecurityException) {
             // ignore
         }
+    }
+
+    // ==================== 执行结果三级通知 ====================
+
+    /**
+     * 执行成功 — 普通优先级，可收起
+     */
+    fun notifyExecutionSuccess(context: Context, actionType: String, summary: String) {
+        createChannel(context)
+        val notification = NotificationCompat.Builder(context, EXECUTION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_check)
+            .setContentTitle("✅ 执行完成: $actionType")
+            .setContentText(summary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(true)
+            .setGroup("execution_results")
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId++, notification)
+        } catch (e: SecurityException) { /* ignore */ }
+    }
+
+    /**
+     * 执行失败 — 高优先级，前台弹出 + 震动
+     */
+    fun notifyExecutionFailure(context: Context, actionType: String, errorMsg: String) {
+        createChannel(context)
+        val notification = NotificationCompat.Builder(context, EXECUTION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_close)
+            .setContentTitle("❌ 执行失败: $actionType")
+            .setContentText(errorMsg)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(errorMsg))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE or NotificationCompat.DEFAULT_SOUND)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId++, notification)
+        } catch (e: SecurityException) { /* ignore */ }
+    }
+
+    /**
+     * 熔断触发 — 最高优先级特殊警报，持续显示
+     */
+    fun notifyBreakerTriggered(context: Context, actionType: String) {
+        createChannel(context)
+        val notification = NotificationCompat.Builder(context, EXECUTION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_close)
+            .setContentTitle("⚠️ 系统已熔断 $actionType 自动化")
+            .setContentText("连续执行失败已触发安全保护，该类型已暂停自动审批。请在设置中检查。")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "连续执行失败已触发安全保护，$actionType 类型已暂停自动审批。请在设置中检查或手动恢复。"
+            ))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setOngoing(true) // 持续显示，不可划除
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId++, notification)
+        } catch (e: SecurityException) { /* ignore */ }
     }
 }

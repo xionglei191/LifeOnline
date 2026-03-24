@@ -71,6 +71,18 @@ class LifeOSNotificationService : Service(), LifeOSWsListener {
         NotificationUtil.notifyCognition(this, title, msg)
     }
 
+    override fun onExecutionCompleted(actionId: String, actionType: String, summary: String) {
+        NotificationUtil.notifyExecutionSuccess(this, actionType, summary)
+    }
+
+    override fun onExecutionFailed(actionId: String, actionType: String, errorMsg: String) {
+        NotificationUtil.notifyExecutionFailure(this, actionType, errorMsg)
+    }
+
+    override fun onBreakerTriggered(actionType: String) {
+        NotificationUtil.notifyBreakerTriggered(this, actionType)
+    }
+
     private fun createForegroundNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(

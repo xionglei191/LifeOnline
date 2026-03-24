@@ -27,6 +27,22 @@
         <h4>错误</h4>
         <p>{{ action.error }}</p>
       </div>
+
+      <!-- Dual-Plan Display for multiple_choices -->
+      <div v-if="action.actionKind === 'multiple_choices' && action.governanceReason" class="dual-plan-section">
+        <h4>🔀 双生子方案抉择</h4>
+        <div class="plan-options">
+          <div class="plan-card plan-a">
+            <span class="plan-label">Plan A</span>
+            <p class="plan-desc">{{ parsePlanA(action.governanceReason) }}</p>
+          </div>
+          <div class="plan-card plan-b">
+            <span class="plan-label">Plan B</span>
+            <p class="plan-desc">{{ parsePlanB(action.governanceReason) }}</p>
+          </div>
+        </div>
+        <p class="plan-hint">请在授权时选择其中一个方案执行</p>
+      </div>
     </div>
     
     <div class="g-meta">
@@ -52,6 +68,21 @@ const props = defineProps<{
 }>();
 
 const promotionText = computed(() => formatSoulActionPromotionSummary(props.action));
+
+function parsePlanA(reason: string): string {
+  // Try to split on common delimiters for A/B plans
+  const match = reason.match(/Plan\s*A[：:.]?\s*(.+?)(?:(?:Plan\s*B|；|;|\n)|$)/i);
+  if (match) return match[1].trim();
+  const parts = reason.split(/[；;\n]/).filter(Boolean);
+  return parts[0]?.trim() || reason;
+}
+
+function parsePlanB(reason: string): string {
+  const match = reason.match(/Plan\s*B[：:.]?\s*(.+?)$/i);
+  if (match) return match[1].trim();
+  const parts = reason.split(/[；;\n]/).filter(Boolean);
+  return parts[1]?.trim() || '仅设置提醒，不自动执行';
+}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -97,6 +128,8 @@ function formatTime(iso: string) {
 .action-kind-badge.kind-create_worker_task { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
 .action-kind-badge.kind-defer_worker_task { background: var(--surface-muted); color: var(--text-muted); }
 .action-kind-badge.kind-clarify_note { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
+.action-kind-badge.kind-dispatch_physical_action { background: color-mix(in srgb, #3b82f6 15%, transparent); color: #3b82f6; }
+.action-kind-badge.kind-multiple_choices { background: linear-gradient(135deg, color-mix(in srgb, #f59e0b 15%, transparent), color-mix(in srgb, #8b5cf6 15%, transparent)); color: #8b5cf6; }
 
 .source-hint {
   font-size: 0.75rem;
@@ -180,4 +213,56 @@ function formatTime(iso: string) {
 
 .swipe-hint.reject { color: var(--danger); }
 .swipe-hint.approve { color: var(--signal); }
+
+/* ── Dual-Plan (multiple_choices) ── */
+.dual-plan-section {
+  padding: 14px;
+  background: color-mix(in srgb, #8b5cf6 5%, transparent);
+  border: 1px solid color-mix(in srgb, #8b5cf6 20%, transparent);
+  border-radius: 12px;
+}
+.dual-plan-section h4 {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #8b5cf6;
+  font-weight: 700;
+}
+.plan-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.plan-card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.plan-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px -4px var(--shadow);
+}
+.plan-card.plan-a { border-left: 3px solid #3b82f6; }
+.plan-card.plan-b { border-left: 3px solid #f59e0b; }
+.plan-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.plan-desc {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.plan-hint {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
 </style>

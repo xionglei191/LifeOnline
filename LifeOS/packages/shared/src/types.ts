@@ -22,3 +22,4 @@ export * from './reintegrationTypes.js';
 export * from './eventTypes.js';
 export * from './brainstormTypes.js';
 export * from './physicalActionTypes.js';
+export * from './dagTypes.js';

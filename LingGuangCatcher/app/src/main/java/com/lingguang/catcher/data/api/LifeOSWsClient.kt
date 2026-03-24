@@ -10,6 +10,9 @@ interface LifeOSWsListener {
     fun onDisconnected()
     fun onIndexFinished(summary: String, successCount: Int)
     fun onSoulActionCreated(actionDesc: String)
+    fun onExecutionCompleted(actionId: String, actionType: String, summary: String)
+    fun onExecutionFailed(actionId: String, actionType: String, errorMsg: String)
+    fun onBreakerTriggered(actionType: String)
 }
 
 class LifeOSWsClient(private val lifeosUrl: String, private val listener: LifeOSWsListener) {
@@ -47,6 +50,22 @@ class LifeOSWsClient(private val lifeosUrl: String, private val listener: LifeOS
                         "soul-action-created" -> {
                             val actionDesc = data?.optString("actionType") ?: "新动作"
                             listener.onSoulActionCreated(actionDesc)
+                        }
+                        "execution-completed" -> {
+                            val actionId = data?.optString("actionId") ?: ""
+                            val actionType = data?.optString("actionType") ?: "unknown"
+                            val summary = data?.optString("summary") ?: "执行完成"
+                            listener.onExecutionCompleted(actionId, actionType, summary)
+                        }
+                        "execution-failed" -> {
+                            val actionId = data?.optString("actionId") ?: ""
+                            val actionType = data?.optString("actionType") ?: "unknown"
+                            val errorMsg = data?.optString("error") ?: "未知错误"
+                            listener.onExecutionFailed(actionId, actionType, errorMsg)
+                        }
+                        "breaker-triggered" -> {
+                            val actionType = data?.optString("actionType") ?: "unknown"
+                            listener.onBreakerTriggered(actionType)
                         }
                     }
                 } catch (e: Exception) {

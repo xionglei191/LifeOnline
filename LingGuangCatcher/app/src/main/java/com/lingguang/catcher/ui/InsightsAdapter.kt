@@ -52,7 +52,7 @@ class InsightsAdapter : ListAdapter<ReintegrationRecord, InsightsAdapter.ViewHol
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.id.item_insight_card, parent, false)
+            .inflate(R.layout.item_insight_card, parent, false)
         return ViewHolder(view)
     }
 

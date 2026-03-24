@@ -190,6 +190,28 @@
                 android:resource="@xml/quick_capture_widget_info" />
         </receiver>
 
+        <!-- 桌面急停小部件 -->
+        <receiver
+            android:name=".widget.EmergencyStopWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.lingguang.catcher.ACTION_EMERGENCY_STOP" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/emergency_stop_widget_info" />
+        </receiver>
+
+        <!-- 执行结果推送接收器（WS 断连时的降级通道） -->
+        <receiver
+            android:name=".service.ExecutionNotificationReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.lingguang.catcher.ACTION_EXECUTION_RESULT" />
+            </intent-filter>
+        </receiver>
+
         <!-- FileProvider for sharing log files -->
         <provider
             android:name="androidx.core.content.FileProvider"

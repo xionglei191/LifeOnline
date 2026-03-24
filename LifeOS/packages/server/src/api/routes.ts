@@ -42,6 +42,10 @@ import {
   // Physical Actions
   listPhysicalActionsHandler, getPhysicalActionHandler,
   approvePhysicalActionHandler, rejectPhysicalActionHandler,
+  // Calendar Conflict Detection
+  getConflictsForActionHandler,
+  // Insight Engine
+  getFailedActionsHandler, getTopFailingTypesHandler, getInsightStatsHandler, getBreakerStatesHandler,
   // Integrations
   googleAuthHandler, googleCallbackHandler,
   googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler,
@@ -66,8 +70,15 @@ router.get('/hybrid-search', searchHandler);
 // Physical Actions
 router.get('/physical-actions', listPhysicalActionsHandler);
 router.get('/physical-actions/:id', getPhysicalActionHandler);
+router.get('/physical-actions/:id/conflicts', getConflictsForActionHandler);
 router.post('/physical-actions/:id/approve', approvePhysicalActionHandler);
 router.post('/physical-actions/:id/reject', rejectPhysicalActionHandler);
+
+// Insight Engine
+router.get('/insight/stats', getInsightStatsHandler);
+router.get('/insight/failed-actions', getFailedActionsHandler);
+router.get('/insight/top-failing-types', getTopFailingTypesHandler);
+router.get('/insight/breaker-states', getBreakerStatesHandler);
 
 // Integrations
 router.get('/integrations/status', integrationStatusHandler);

@@ -44,5 +44,11 @@ export { searchHandler } from './handlers/searchHandler.js';
 // Physical Actions
 export { listPhysicalActionsHandler, getPhysicalActionHandler, approvePhysicalActionHandler, rejectPhysicalActionHandler } from './handlers/physicalActionHandlers.js';
 
+// Calendar Conflict Detection
+export { getConflictsForActionHandler } from './handlers/calendarConflictHandler.js';
+
+// Insight Engine
+export { getFailedActionsHandler, getTopFailingTypesHandler, getInsightStatsHandler, getBreakerStatesHandler } from './handlers/insightHandlers.js';
+
 // Integrations
 export { googleAuthHandler, googleCallbackHandler, googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler } from './handlers/integrationHandlers.js';

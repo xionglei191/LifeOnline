@@ -363,7 +363,6 @@ class SyncWorker(
                 Pair(false, false)
             }
         }
-        }
     }
 
     companion object {

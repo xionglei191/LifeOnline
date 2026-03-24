@@ -12,6 +12,7 @@ import type { PhysicalAction, PhysicalActionType, PhysicalActionPayload, Calenda
 import { evaluateActionStatus } from './approvalGate.js';
 import { executeCalendarEvent } from './calendarProtocol.js';
 import { createWorkerTask, startWorkerTaskExecution } from '../workers/workerTasks.js';
+import { isBreakerOpen } from './circuitBreaker.js';
 import { randomUUID } from 'crypto';
 
 const logger = new Logger('executionEngine');
@@ -132,6 +133,11 @@ export async function submitPhysicalAction(
 export function approveAction(id: string): PhysicalAction | null {
   const action = getPhysicalAction(id);
   if (!action || action.status !== 'pending') return null;
+
+  // Circuit breaker check — if breaker is open, log warning but still allow manual approval
+  if (isBreakerOpen(action.type)) {
+    logger.warn(`Circuit breaker is OPEN for "${action.type}" — proceeding with manual approval for ${id}`);
+  }
 
   const now = new Date().toISOString();
   updateActionStatus(id, 'approved', { approved_at: now });
