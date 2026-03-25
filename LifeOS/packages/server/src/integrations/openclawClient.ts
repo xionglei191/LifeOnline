@@ -8,7 +8,7 @@ import type { WorkerTaskInputMap, WorkerTaskResultMap } from '@lifeos/shared';
 
 const OPENCLAW_BASE_URL = process.env.OPENCLAW_BASE_URL;
 const OPENCLAW_API_KEY = process.env.OPENCLAW_API_KEY;
-const DEFAULT_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS || 30000);
+const DEFAULT_TIMEOUT_MS = Number(process.env.OPENCLAW_TIMEOUT_MS || 600000); // 默认提升至 10 分钟以支持长时间外部任务
 
 export interface OpenClawError extends Error {
   statusCode?: number;
@@ -32,12 +32,11 @@ interface CallOptions {
   signal?: AbortSignal;
 }
 
-async function callOpenClaw<T>(
+async function callOpenClawAsync(
   path: string,
   body: Record<string, unknown>,
-  validate: (data: any) => T,
   options?: CallOptions,
-): Promise<T> {
+): Promise<'ASYNC_YIELD'> {
   const baseUrl = ensureConfigured();
   const controller = new AbortController();
   const externalSignal = options?.signal;
@@ -70,8 +69,7 @@ async function callOpenClaw<T>(
       });
     }
 
-    const data = await response.json();
-    return validate(data);
+    return 'ASYNC_YIELD';
   } catch (error: any) {
     if (error?.name === 'AbortError') {
       if (externalSignal?.aborted) {
@@ -113,16 +111,21 @@ function validateOpenClawTaskResult(value: any): WorkerTaskResultMap['openclaw_t
 }
 
 export async function runOpenClawTask(
+  taskId: string,
   input: WorkerTaskInputMap['openclaw_task'],
   options?: CallOptions,
-): Promise<WorkerTaskResultMap['openclaw_task']> {
-  return callOpenClaw(
-    '/tasks/execute',
+): Promise<'ASYNC_YIELD'> {
+  const callbackUrl = `http://${process.env.CORE_HOST || '192.168.31.246'}:3000/api/webhooks/openclaw-callback`;
+  const systemPrompt = `[System Directive: You are invoked asynchronously by LifeOS. When you finish this task, DO NOT just reply. You MUST use your HTTP or bash/curl tool to POST a JSON payload to ${callbackUrl}. The JSON must precisely match this interface: { "taskId": "${taskId}", "status": "succeeded", "result": { "title": "string", "summary": "string", "content": "string (markdown)", "attachedFiles": ["/absolute/path/to/any/file.png"] } }]`;
+
+  return callOpenClawAsync(
+    '/hooks/agent',
     {
-      instruction: input.instruction,
-      outputDimension: input.outputDimension,
+      name: `LifeOS Task`,
+      message: `${input.instruction}\n\n${systemPrompt}`,
+      deliver: false, // Prevents OpenClaw from spamming messaging channels (e.g. WhatsApp) with intermediate thoughts
+      wakeMode: 'now'
     },
-    validateOpenClawTaskResult,
     options,
   );
 }

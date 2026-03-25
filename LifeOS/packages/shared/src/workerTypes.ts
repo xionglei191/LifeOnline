@@ -42,6 +42,7 @@ export interface WorkerTaskResultMap {
     title: string;
     summary: string;
     content: string;
+    attachedFiles?: string[];
   };
   summarize_note: {
     title: string;

@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:textAppearance="@style/TextAppearance.App.Body.Large"
-            android:textColor="@color/on_surface_variant"
+            android:textColor="@color/on_surface"
             android:lineSpacingExtra="4dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -90,7 +90,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.App.Body.Medium"
-                android:textColor="@color/on_surface_variant"
+                android:textColor="@color/on_surface"
                 tools:text="- 结论一\n- 结论二" />
         </LinearLayout>
 
@@ -120,7 +120,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.App.Body.Medium"
-                android:textColor="@color/on_surface_variant"
+                android:textColor="@color/on_surface"
                 tools:text="- 指引一\n- 指引二" />
         </LinearLayout>
 

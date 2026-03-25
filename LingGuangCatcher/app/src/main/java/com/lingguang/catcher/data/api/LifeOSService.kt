@@ -24,6 +24,19 @@ class LifeOSService(private val lifeosUrl: String) {
         .build()
 
     /**
+     * 兼容 ApiResponse<T> 包装格式。
+     * 服务端标准化后返回 {success: true, data: {...}}，
+     * 此方法优先从 data 中提取实际数据，fallback 到旧的扁平格式。
+     */
+    private fun unwrapApiResponse(raw: JSONObject): JSONObject {
+        return if (raw.optBoolean("success", false) && raw.has("data")) {
+            raw.getJSONObject("data")
+        } else {
+            raw
+        }
+    }
+
+    /**
      * Call POST /api/index to trigger the indexer
      */
     fun triggerIndex(): Result<Boolean> {
@@ -61,7 +74,7 @@ class LifeOSService(private val lifeosUrl: String) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val respBody = response.body?.string() ?: "{}"
-                    val json = JSONObject(respBody)
+                    val json = unwrapApiResponse(JSONObject(respBody))
                     val actionsArray = json.optJSONArray("soulActions") ?: JSONArray()
                     val resultList = mutableListOf<SoulAction>()
                     for (i in 0 until actionsArray.length()) {
@@ -86,7 +99,7 @@ class LifeOSService(private val lifeosUrl: String) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val respBody = response.body?.string() ?: "{}"
-                    val json = JSONObject(respBody)
+                    val json = unwrapApiResponse(JSONObject(respBody))
                     val recordsArray = json.optJSONArray("reintegrationRecords") ?: JSONArray()
                     val resultList = mutableListOf<ReintegrationRecord>()
                     for (i in 0 until recordsArray.length()) {
@@ -141,7 +154,7 @@ class LifeOSService(private val lifeosUrl: String) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val respBody = response.body?.string() ?: "{}"
-                    val json = JSONObject(respBody)
+                    val json = unwrapApiResponse(JSONObject(respBody))
                     val actionsArray = json.optJSONArray("actions") ?: JSONArray()
                     val resultList = mutableListOf<PhysicalAction>()
                     for (i in 0 until actionsArray.length()) {

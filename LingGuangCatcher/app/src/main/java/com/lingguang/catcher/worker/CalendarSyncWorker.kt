@@ -50,7 +50,7 @@ class CalendarSyncWorker(
             payload.put("source", "android_calendar")
             payload.put("events", eventsJsonArray)
 
-            val lifeOSService = LifeOSService(appSettings.lifeosUrl.ifEmpty { "http://192.168.31.246:3000" })
+            val lifeOSService = LifeOSService(appSettings.lifeosUrl.ifEmpty { "http://192.168.31.252:3000" })
             val syncResult = lifeOSService.syncEnvironmentData(payload)
             
             if (syncResult.isSuccess) {

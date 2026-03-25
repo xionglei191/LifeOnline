@@ -103,7 +103,7 @@ class AppSettings private constructor(context: Context) {
 
     /** LifeOS API URL */
     var lifeosUrl: String
-        get() = prefs.getString(KEY_LIFEOS_URL, "http://192.168.31.246:3000") ?: "http://192.168.31.246:3000"
+        get() = prefs.getString(KEY_LIFEOS_URL, "http://192.168.31.252:3000") ?: "http://192.168.31.252:3000"
         set(value) = prefs.edit().putString(KEY_LIFEOS_URL, value).apply()
 
     // ==================== 应用配置 ====================

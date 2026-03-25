@@ -171,7 +171,9 @@ SQLite 是索引与运行态存储。
 
 ## 3.3 `OpenClaw`
 ### 定位
-OpenClaw 是外部执行器。
+OpenClaw 是本机运行的 AI Agent 智能体，作为系统能力延伸的外部执行器。
+- **项目主页**: [https://openclaw.ai/](https://openclaw.ai/)
+- **开源地址**: [https://github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)
 
 ### 主要职责
 - 承接被委托的外部任务

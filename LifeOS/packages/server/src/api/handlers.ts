@@ -52,3 +52,6 @@ export { getFailedActionsHandler, getTopFailingTypesHandler, getInsightStatsHand
 
 // Integrations
 export { googleAuthHandler, googleCallbackHandler, googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler } from './handlers/integrationHandlers.js';
+
+// Webhooks
+export { openclawCallbackHandler } from './handlers/webhookHandlers.js';

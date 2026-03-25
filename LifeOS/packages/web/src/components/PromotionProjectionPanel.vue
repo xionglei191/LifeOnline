@@ -35,42 +35,54 @@
             <div class="reintegration-item-title-row">
               <strong>{{ eventNode.title }}</strong>
               <span class="worker-pill">{{ formatEventKindLabel(eventNode) }}</span>
-              <span class="worker-pill">回流 {{ eventNode.sourceReintegrationId }}</span>
+              <span class="worker-pill">{{ formatEventNodeThresholdLabel(eventNode) }}</span>
+              <span :class="['worker-pill', eventNode.status === 'active' ? 'success' : '']">{{ formatEventNodeStatusLabel(eventNode) }}</span>
             </div>
             <div class="reintegration-summary-text">{{ eventNode.summary }}</div>
-            <div class="reintegration-meta-grid">
-              <span>提升动作：{{ eventNode.promotionSoulActionId }}</span>
-              <span>阈值：{{ formatEventNodeThresholdLabel(eventNode) }}</span>
-              <span>状态：{{ formatEventNodeStatusLabel(eventNode) }}</span>
-              <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
+            
+            <div class="projection-inline-summary">
+              <span v-if="getProjectionExplanationSummary(eventNode)" class="worker-pill subtle text-muted">💡 {{ formatProjectionExplanationSummary(eventNode) ?? 'review-backed projection' }}</span>
+              <span class="worker-pill subtle text-muted">🕒 {{ formatTime(eventNode.occurredAt) }}</span>
             </div>
-            <div v-if="getProjectionExplanationSummary(eventNode)" class="projection-inline-summary">
-              <span class="worker-pill subtle">{{ getProjectionExplanationSummary(eventNode) ?? 'review-backed projection' }}</span>
-            </div>
-            <div class="projection-detail-grid">
-              <div class="projection-detail-block">
-                <span class="projection-detail-label">来源笔记</span>
-                <code>{{ eventNode.sourceNoteId ?? '未提供' }}</code>
-              </div>
-              <div class="projection-detail-block">
-                <span class="projection-detail-label">来源回流</span>
-                <code>{{ eventNode.sourceReintegrationId }}</code>
-              </div>
-              <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
-                <span class="projection-detail-label">来源动作</span>
-                <code>{{ eventNode.sourceSoulActionId }}</code>
-              </div>
-            </div>
+
             <div v-if="projectionExplanationRows(eventNode).length" class="projection-detail-block">
               <span class="projection-detail-label">判定说明</span>
               <ul class="projection-detail-list">
                 <li v-for="row in projectionExplanationRows(eventNode)" :key="`${eventNode.id}-${row.label}`">{{ row.label }}：{{ row.value }}</li>
               </ul>
             </div>
-            <div class="projection-detail-block">
-              <span class="projection-detail-label">证据</span>
-              <pre class="projection-json">{{ formatJson(eventNode.evidence) }}</pre>
+
+            <div class="projection-actions-row">
+              <button class="btn-link subtle-toggle" @click="toggleMeta(eventNode.id)">
+                {{ expandedMetaIds.includes(eventNode.id) ? '收起溯源 ▼' : '查看技术溯源 ▶' }}
+              </button>
+              <button class="btn-link subtle-toggle" @click="toggleEvidence(eventNode.id)">
+                {{ expandedEvidenceIds.includes(eventNode.id) ? '收起数据 ▼' : '查看 JSON ▶' }}
+              </button>
             </div>
+
+            <div v-if="expandedMetaIds.includes(eventNode.id)" class="projection-meta-drawer">
+              <div class="projection-detail-grid">
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">来源笔记</span>
+                  <code>{{ eventNode.sourceNoteId ?? '未提供' }}</code>
+                </div>
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">来源回流</span>
+                  <code>{{ eventNode.sourceReintegrationId }}</code>
+                </div>
+                <div v-if="eventNode.sourceSoulActionId" class="projection-detail-block">
+                  <span class="projection-detail-label">来源动作</span>
+                  <code>{{ eventNode.sourceSoulActionId }}</code>
+                </div>
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">提升动作</span>
+                  <code>{{ eventNode.promotionSoulActionId }}</code>
+                </div>
+              </div>
+            </div>
+
+            <pre v-if="expandedEvidenceIds.includes(eventNode.id)" class="projection-json">{{ formatJson(eventNode.evidence) }}</pre>
           </article>
         </div>
         <div v-else class="worker-empty-state">暂无事件节点</div>
@@ -83,48 +95,61 @@
             <div class="reintegration-item-title-row">
               <strong>{{ continuity.summary }}</strong>
               <span class="worker-pill">{{ formatContinuityKindLabel(continuity) }}</span>
-              <span class="worker-pill">回流 {{ continuity.sourceReintegrationId }}</span>
+              <span class="worker-pill text-muted">强度: {{ formatContinuityStrengthLabel(continuity) }}</span>
             </div>
-            <div class="reintegration-meta-grid">
-              <span>目标：{{ formatContinuityTargetLabel(continuity) }}</span>
-              <span>强度：{{ formatContinuityStrengthLabel(continuity) }}</span>
-              <span>提升动作：{{ continuity.promotionSoulActionId }}</span>
-              <span>记录于 {{ formatTime(continuity.recordedAt) }}</span>
+            
+            <div class="projection-inline-summary">
+              <span class="worker-pill subtle text-muted">🎯 {{ formatContinuityTargetLabel(continuity) }}</span>
+              <span v-if="formatProjectionContinuitySummary(continuity)" class="worker-pill subtle text-muted">{{ formatProjectionContinuitySummary(continuity) }}</span>
+              <span v-if="getProjectionExplanationSummary(continuity)" class="worker-pill subtle text-muted">💡 {{ formatProjectionExplanationSummary(continuity) }}</span>
+              <span class="worker-pill subtle text-muted">🕒 {{ formatTime(continuity.recordedAt) }}</span>
             </div>
-            <div v-if="formatProjectionContinuitySummary(continuity) || getProjectionExplanationSummary(continuity)" class="projection-inline-summary">
-              <span v-if="formatProjectionContinuitySummary(continuity)" class="worker-pill subtle">{{ formatProjectionContinuitySummary(continuity) }}</span>
-              <span v-if="getProjectionExplanationSummary(continuity)" class="worker-pill subtle">{{ getProjectionExplanationSummary(continuity) }}</span>
-            </div>
-            <div class="projection-detail-grid">
-              <div class="projection-detail-block">
-                <span class="projection-detail-label">来源笔记</span>
-                <code>{{ continuity.sourceNoteId ?? '未提供' }}</code>
-              </div>
-              <div class="projection-detail-block">
-                <span class="projection-detail-label">来源回流</span>
-                <code>{{ continuity.sourceReintegrationId }}</code>
-              </div>
-              <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
-                <span class="projection-detail-label">来源动作</span>
-                <code>{{ continuity.sourceSoulActionId }}</code>
-              </div>
-            </div>
+
             <div v-if="formatProjectionContinuityDetails(continuity).length" class="projection-detail-block">
               <span class="projection-detail-label">连续性内容</span>
               <ul class="projection-detail-list">
                 <li v-for="detail in formatProjectionContinuityDetails(continuity)" :key="detail">{{ detail }}</li>
               </ul>
             </div>
+            
             <div v-if="projectionExplanationRows(continuity).length" class="projection-detail-block">
               <span class="projection-detail-label">判定说明</span>
               <ul class="projection-detail-list">
                 <li v-for="row in projectionExplanationRows(continuity)" :key="`${continuity.id}-${row.label}`">{{ row.label }}：{{ row.value }}</li>
               </ul>
             </div>
-            <div class="projection-detail-block">
-              <span class="projection-detail-label">证据</span>
-              <pre class="projection-json">{{ formatJson(continuity.evidence) }}</pre>
+
+            <div class="projection-actions-row">
+              <button class="btn-link subtle-toggle" @click="toggleMeta(continuity.id)">
+                {{ expandedMetaIds.includes(continuity.id) ? '收起溯源 ▼' : '查看技术溯源 ▶' }}
+              </button>
+              <button class="btn-link subtle-toggle" @click="toggleEvidence(continuity.id)">
+                {{ expandedEvidenceIds.includes(continuity.id) ? '收起数据 ▼' : '查看 JSON ▶' }}
+              </button>
             </div>
+
+            <div v-if="expandedMetaIds.includes(continuity.id)" class="projection-meta-drawer">
+              <div class="projection-detail-grid">
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">来源笔记</span>
+                  <code>{{ continuity.sourceNoteId ?? '未提供' }}</code>
+                </div>
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">来源回流</span>
+                  <code>{{ continuity.sourceReintegrationId }}</code>
+                </div>
+                <div v-if="continuity.sourceSoulActionId" class="projection-detail-block">
+                  <span class="projection-detail-label">来源动作</span>
+                  <code>{{ continuity.sourceSoulActionId }}</code>
+                </div>
+                <div class="projection-detail-block">
+                  <span class="projection-detail-label">提升动作</span>
+                  <code>{{ continuity.promotionSoulActionId }}</code>
+                </div>
+              </div>
+            </div>
+
+            <pre v-if="expandedEvidenceIds.includes(continuity.id)" class="projection-json">{{ formatJson(continuity.evidence) }}</pre>
           </article>
         </div>
         <div v-else class="worker-empty-state">暂无连续性记录</div>
@@ -134,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
   formatContinuityKindLabel,
   formatContinuityStrengthLabel,
@@ -143,7 +169,7 @@ import {
   formatEventNodeThresholdLabel,
   formatProjectionContinuityDetails,
   formatProjectionContinuitySummary,
-  
+  formatProjectionExplanationSummary,
   getProjectionExplanationRows,
   getProjectionExplanationSummary,
 } from '@lifeos/shared';
@@ -164,6 +190,25 @@ const emit = defineEmits<{
 
 function formatJson(value: unknown) {
   return JSON.stringify(value, null, 2);
+}
+
+const expandedEvidenceIds = ref<string[]>([]);
+const expandedMetaIds = ref<string[]>([]);
+
+function toggleEvidence(id: string) {
+  if (expandedEvidenceIds.value.includes(id)) {
+    expandedEvidenceIds.value = expandedEvidenceIds.value.filter(i => i !== id);
+  } else {
+    expandedEvidenceIds.value.push(id);
+  }
+}
+
+function toggleMeta(id: string) {
+  if (expandedMetaIds.value.includes(id)) {
+    expandedMetaIds.value = expandedMetaIds.value.filter(i => i !== id);
+  } else {
+    expandedMetaIds.value.push(id);
+  }
 }
 
 function projectionExplanationRows(projection: EventNode | ContinuityRecord) {
@@ -224,11 +269,36 @@ function projectionExplanationRows(projection: EventNode | ContinuityRecord) {
 }
 
 .projection-detail-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.projection-actions-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.projection-meta-drawer {
+  margin-top: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.subtle-toggle {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .projection-detail-list {

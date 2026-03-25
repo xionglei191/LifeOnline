@@ -2,6 +2,7 @@
  * OpenClaw task executor — runs external OpenClaw tasks and persists results to Vault.
  */
 import path from 'path';
+import fs from 'fs/promises';
 import type { WorkerTask, WorkerTaskInputMap, WorkerTaskResultMap } from '@lifeos/shared';
 import { loadConfig } from '../../config/configManager.js';
 import { runOpenClawTask } from '../../integrations/openclawClient.js';
@@ -29,6 +30,28 @@ export async function persistOpenClawResult(
   const dir = path.join(config.vaultPath, dirName);
   const fileName = `${date}-${sanitizeFileName(result.title)}.md`;
   const filePath = path.join(dir, fileName);
+
+  let contentAdditions = '';
+  if (result.attachedFiles && Array.isArray(result.attachedFiles)) {
+    const assetsDir = path.join(config.vaultPath, 'assets');
+    await fs.mkdir(assetsDir, { recursive: true });
+    
+    for (const absolutePath of result.attachedFiles) {
+      try {
+        const baseName = path.basename(absolutePath);
+        const targetPath = path.join(assetsDir, baseName);
+        await fs.copyFile(absolutePath, targetPath);
+        contentAdditions += `\n![[${baseName}]]\n`;
+      } catch (err) {
+        contentAdditions += `\n(附件文件提取失败: ${absolutePath})\n`;
+      }
+    }
+  }
+
+  if (contentAdditions) {
+    result = { ...result, content: (result.content || '') + contentAdditions };
+  }
+
   const frontmatterInput = {
     title: result.title,
     dimension: dimensionKey || 'learning',
@@ -49,6 +72,6 @@ export function summarizeOpenClawResult(result: WorkerTaskResultMap['openclaw_ta
 export async function runOpenClawTaskExecutor(
   task: WorkerTask<'openclaw_task'>,
   signal: AbortSignal
-): Promise<WorkerTaskResultMap['openclaw_task']> {
-  return runOpenClawTask(task.input, { signal });
+): Promise<WorkerTaskResultMap['openclaw_task'] | 'ASYNC_YIELD'> {
+  return runOpenClawTask(task.id, task.input, { signal });
 }

@@ -464,7 +464,7 @@ export function startWorkerTaskExecution(taskId: string): void {
 }
 
 type WorkerTaskExecutionRegistryEntry<T extends WorkerTaskType> = {
-  run: (task: WorkerTask<T>, signal: AbortSignal) => Promise<WorkerTaskResultMap[T]>;
+  run: (task: WorkerTask<T>, signal: AbortSignal) => Promise<WorkerTaskResultMap[T] | 'ASYNC_YIELD'>;
   summarize: (result: WorkerTaskResultMap[T]) => string;
   getOutputNotePaths: (task: WorkerTask<T>, result: WorkerTaskResultMap[T]) => Promise<string[]>;
 };
@@ -534,6 +534,10 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
 
     const result = await handler.run(task as never, controller.signal);
 
+    if (result as any === 'ASYNC_YIELD') {
+      return getWorkerTask(taskId)!;
+    }
+
     const finalizableTask = ensureTaskCanFinalize(taskId);
     if (!finalizableTask) {
       const cancelledTask = getWorkerTask(taskId);
@@ -580,4 +584,36 @@ export async function executeWorkerTask(taskId: string): Promise<WorkerTask> {
   const updated = getWorkerTask(taskId);
   if (!updated) throw new Error('Worker task disappeared');
   return updated;
+}
+
+export async function completeAsyncWorkerTask(
+  taskId: string,
+  result: WorkerTaskResultMap[WorkerTaskType],
+  outputNotePaths: string[]
+): Promise<WorkerTask> {
+  const task = getWorkerTask(taskId);
+  if (!task) throw new Error('Worker task not found');
+  const handler = workerTaskExecutionRegistry[task.taskType];
+  
+  if (!handler) {
+    throw new Error(`Unsupported async completion for task type: ${task.taskType}`);
+  }
+
+  const finalizableTask = ensureTaskCanFinalize(taskId);
+  if (!finalizableTask) return getWorkerTask(taskId)!;
+
+  updateTaskStatus(taskId, {
+    status: 'succeeded',
+    finishedAt: new Date().toISOString(),
+    result: result,
+    resultSummary: handler.summarize(result as never),
+    outputNotePaths,
+    error: null,
+  });
+
+  const completedTask = getWorkerTask(taskId);
+  if (!completedTask) throw new Error('Worker task disappeared');
+  tryBestEffortReintegrateTerminalTask(completedTask);
+  runningTaskControllers.delete(taskId);
+  return completedTask;
 }

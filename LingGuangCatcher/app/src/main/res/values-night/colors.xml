@@ -36,8 +36,13 @@
     <color name="surface">#181614</color>
     <color name="surface_variant">#26221F</color>
     <color name="surface_elevated">#2D2825</color>
+    <color name="surface_container">#231F1C</color>
     <color name="on_surface">#ECE6DE</color>
     <color name="on_surface_variant">#C9C0B5</color>
+
+    <!-- Aliases (Dark Mode) -->
+    <color name="primary">#D0C7BB</color>
+    <color name="on_primary">#38332D</color>
 
     <!-- Camera UI (Dark Mode - same as light) -->
     <color name="camera_background">#000000</color>

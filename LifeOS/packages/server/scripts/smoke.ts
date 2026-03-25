@@ -26,7 +26,11 @@ async function api<T>(baseUrl: string, pathname: string, init?: RequestInit): Pr
     throw new Error(`${pathname} failed: ${response.status} ${await response.text()}`);
   }
 
-  return response.json() as Promise<T>;
+  const payload = await response.json();
+  if (payload && payload.success === true && 'data' in payload) {
+    return payload.data as T;
+  }
+  return payload as T;
 }
 
 async function waitForWebSocketEvent<T>(socket: WebSocket, predicate: (payload: T) => boolean, timeoutMs = 10000): Promise<T> {

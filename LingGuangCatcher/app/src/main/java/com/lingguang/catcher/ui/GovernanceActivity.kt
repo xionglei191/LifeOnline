@@ -32,7 +32,7 @@ class GovernanceActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val settings = AppSettings.getInstance(this)
-        val url = settings.lifeosUrl.ifEmpty { "http://192.168.31.246:3000" }
+        val url = settings.lifeosUrl.ifEmpty { "http://192.168.31.252:3000" }
         lifeOSService = LifeOSService(url)
 
         setupToolbar()

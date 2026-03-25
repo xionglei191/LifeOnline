@@ -59,9 +59,26 @@ export function getIndexedNoteTriggerSnapshot(filePath: string): IndexedNoteSnap
 function shouldAnalyze(
   previousNote: IndexedNoteSnapshot | null,
   currentNote: IndexedNoteSnapshot | null,
+  filePath: string,
 ): currentNote is IndexedNoteSnapshot {
   if (!currentNote) return false;
-  if (currentNote.type !== 'note') return false;
+
+  // 1. Path-based Immunity Gate: Ignore files in machine-dominated or asset directories
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const ignorePatterns = ['/assets/', '/soul/continuity/', '/system/', '/Automated/'];
+  if (ignorePatterns.some(pattern => normalizedPath.includes(pattern))) {
+    return false;
+  }
+
+  // 1.5 Inbox Bypass: Files entering the inbox (e.g. from the mobile app) should always be analyzed
+  const isInbox = currentNote.dimension === '_inbox' || normalizedPath.includes('/inbox/');
+
+  // 2. Type-based Immunity Gate: Only analyze explicit human knowledge types (unless it's an inbox drop)
+  const allowedCognitiveTypes = ['note', 'record', 'review', 'milestone', 'article'];
+  if (!isInbox && !allowedCognitiveTypes.includes(currentNote.type)) {
+    return false;
+  }
+  
   if (!currentNote.content.trim()) return false;
   // Only analyze if content actually changed
   if (previousNote && previousNote.content === currentNote.content) return false;
@@ -81,7 +98,7 @@ export async function triggerCognitiveAnalysisAfterIndex(params: {
 }): Promise<PostIndexTriggerResult> {
   const currentNote = readIndexedNoteByFilePath(params.filePath);
 
-  if (!shouldAnalyze(params.previousNote, currentNote)) {
+  if (!shouldAnalyze(params.previousNote, currentNote, params.filePath)) {
     return {
       triggered: false,
       reason: 'note does not qualify for cognitive analysis',

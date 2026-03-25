@@ -65,7 +65,7 @@ class EmergencyStopWidget : AppWidgetProvider() {
         Toast.makeText(context, "已触发急停：端侧权限已锁死", Toast.LENGTH_SHORT).show()
         
         // 3. 异步呼叫服务端
-        val url = appSettings.lifeosUrl.ifEmpty { "http://192.168.31.246:3000" }
+        val url = appSettings.lifeosUrl.ifEmpty { "http://192.168.31.252:3000" }
         val service = LifeOSService(url)
         
         CoroutineScope(Dispatchers.IO).launch {

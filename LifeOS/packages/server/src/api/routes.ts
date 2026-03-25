@@ -49,6 +49,8 @@ import {
   // Integrations
   googleAuthHandler, googleCallbackHandler,
   googleCalendarEventsHandler, integrationStatusHandler, integrationInsightsHandler,
+  // Webhooks
+  openclawCallbackHandler,
 } from './handlers.js';
 
 export const router = Router();
@@ -86,6 +88,9 @@ router.get('/integrations/insights', integrationInsightsHandler);
 router.get('/integrations/google/auth', googleAuthHandler);
 router.get('/integrations/google/callback', googleCallbackHandler);
 router.get('/integrations/google/calendar/events', googleCalendarEventsHandler);
+
+// Webhooks
+router.post('/webhooks/openclaw-callback', openclawCallbackHandler);
 router.get('/config', getConfig);
 router.post('/config', updateConfig);
 router.post('/index', triggerIndex);
