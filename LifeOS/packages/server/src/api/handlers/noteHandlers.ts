@@ -23,7 +23,7 @@ export function parseNote(row: Record<string, unknown>): Note {
   if (row.privacy === 'sensitive' && row.content && (row.content as string).includes(':')) {
     note.encrypted = true;
   }
-  return note as Note;
+  return note as unknown as Note;
 }
 
 export async function getNotes(req: Request, res: Response): Promise<void> {
