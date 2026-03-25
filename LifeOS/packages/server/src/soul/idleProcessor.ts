@@ -36,7 +36,7 @@ export async function runIdleProcessing(): Promise<void> {
     SELECT * FROM brainstorm_sessions 
     WHERE status = 'distilled' AND updated_at < ? 
     ORDER BY RANDOM() LIMIT 1
-  `).get(cutoffIso) as any;
+  `).get(cutoffIso) as Record<string, unknown> | undefined;
 
   if (!seedSession) {
     logger.info('No dormant BrainstormSessions found for processing.');
@@ -60,7 +60,7 @@ export async function runIdleProcessing(): Promise<void> {
         const sessionId = row.id.startsWith('bs:') ? row.id.slice(3) : row.id;
         if (sessionId === seedSession.id) continue;
         
-        const session = db.prepare('SELECT * FROM brainstorm_sessions WHERE id = ?').get(sessionId) as any;
+        const session = db.prepare('SELECT * FROM brainstorm_sessions WHERE id = ?').get(sessionId) as Record<string, unknown> | undefined;
         if (session) dormantSessions.push(session);
       }
     } catch (err) {
@@ -74,18 +74,19 @@ export async function runIdleProcessing(): Promise<void> {
       SELECT * FROM brainstorm_sessions 
       WHERE status = 'distilled' AND id != ? AND updated_at < ?
       ORDER BY RANDOM() LIMIT ?
-    `).all(seedSession.id, cutoffIso, MAX_SESSIONS - dormantSessions.length) as any[];
+    `).all(seedSession.id, cutoffIso, MAX_SESSIONS - dormantSessions.length) as Record<string, unknown>[];
     dormantSessions.push(...fillers);
   }
 
   try {
     const inputParts = dormantSessions.map((session, index) => {
-      const themes = JSON.parse(session.themes_json || '[]');
+      const themesStrRaw = session.themes_json as string | null;
+      const themes = JSON.parse(themesStrRaw || '[]');
       const themesStr = Array.isArray(themes) ? themes.join(', ') : '';
       return `[灵感碎片 ${index + 1}]
-核心内容预览: ${session.raw_input_preview}
+核心内容预览: ${session.raw_input_preview as string}
 相关主题: ${themesStr}
-情绪基调: ${session.emotional_tone}`;
+情绪基调: ${session.emotional_tone as string}`;
     });
 
     const combinedInput = inputParts.join('\n\n');
@@ -100,7 +101,7 @@ export async function runIdleProcessing(): Promise<void> {
     const now = new Date().toISOString();
     // Use the first session's source note ID simply as an anchor
     const primarySession = dormantSessions[0];
-    const sourceNoteId = primarySession.source_note_id;
+    const sourceNoteId = (primarySession.source_note_id as string) || `virtual-${Date.now()}`;
 
     // A simpler reintegration ID format
     const reintegrationId = buildReintegrationIdDumb(sourceNoteId, Date.now().toString());

@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import type { WorkerTask } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskInputMap } from '@lifeos/shared';
 import { workerTaskResultFacts, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
 
 defineProps<{
@@ -89,34 +89,43 @@ function formatDateTime(ts: string) {
 }
 
 function formatWorkerInput(task: WorkerTask) {
-  const input = task.input || {};
+  const input = task.input;
+  if (!input) return '无额外参数';
+  
   if (task.taskType === 'openclaw_task') {
+    const t = task.input as WorkerTaskInputMap['openclaw_task'];
     return [
-      `指令：${(input as any).instruction || '—'}`,
-      `归档：${(input as any).outputDimension || 'learning'}`,
+      `指令：${t?.instruction || '—'}`,
+      `归档：${t?.outputDimension || 'learning'}`,
     ].join(' · ');
   }
   if (task.taskType === 'summarize_note') {
+    const t = task.input as WorkerTaskInputMap['summarize_note'];
     return [
-      `笔记：${shortId((input as any).noteId || '—')}`,
-      `语言：${(input as any).language || 'zh'}`,
-      `长度：${(input as any).maxLength || 500}`,
+      `笔记：${shortId(t?.noteId || '—')}`,
+      `语言：${t?.language || 'zh'}`,
+      `长度：${t?.maxLength || 500}`,
     ].join(' · ');
   }
   if (task.taskType === 'classify_inbox') {
-    return `模式：${(input as any).dryRun ? '预演' : '实际写入'}`;
+    const t = task.input as WorkerTaskInputMap['classify_inbox'];
+    return `模式：${t?.dryRun ? '预演' : '实际写入'}`;
   }
   if (task.taskType === 'extract_tasks') {
-    return `源笔记：${shortId((input as any).noteId || task.sourceNoteId || '—')}`;
+    const t = task.input as WorkerTaskInputMap['extract_tasks'];
+    return `源笔记：${shortId(t?.noteId || task.sourceNoteId || '—')}`;
   }
   if (task.taskType === 'update_persona_snapshot') {
-    return `人格源笔记：${shortId((input as any).noteId || task.sourceNoteId || '—')}`;
+    const t = task.input as WorkerTaskInputMap['update_persona_snapshot'];
+    return `人格源笔记：${shortId(t?.noteId || task.sourceNoteId || '—')}`;
   }
   if (task.taskType === 'daily_report') {
-    return `日期：${(input as any).date || '今天'}`;
+    const t = task.input as WorkerTaskInputMap['daily_report'];
+    return `日期：${t?.date || '今天'}`;
   }
   if (task.taskType === 'weekly_report') {
-    return `周起始：${(input as any).weekStart || '本周一'}`;
+    const t = task.input as WorkerTaskInputMap['weekly_report'];
+    return `周起始：${t?.weekStart || '本周一'}`;
   }
   return '无额外参数';
 }

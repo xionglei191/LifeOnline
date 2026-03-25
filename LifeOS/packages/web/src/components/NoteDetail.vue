@@ -300,7 +300,7 @@ import DOMPurify from 'dompurify';
 
 const activeAgentTab = ref<'extractor' | 'critic'>('extractor');
 import { fetchNoteById, fetchPersonaSnapshot, extractTasks, updateNote, appendNote as appendNoteApi, deleteNote as deleteNoteApi, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, fetchBrainstormSessions, fetchSoulActions } from '../api/client';
-import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction, Dimension } from '@lifeos/shared';
+import type { Note, WorkerTask, WsEvent, PersonaSnapshot, SelectableDimension, BrainstormSession, SoulAction, Dimension, Status, Priority, WorkerTaskStatus } from '@lifeos/shared';
 import PrivacyMask from './PrivacyMask.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import NoteApprovalCard from './NoteApprovalCard.vue';
@@ -350,7 +350,7 @@ const decryptedContent = ref<string | null>(null);
 const projection = useNoteProjection(currentNoteId);
 
 const isApprovalNote = computed(() => {
-  return note.value && note.value.approval_status != null && (note.value.approval_status as any) !== '';
+  return note.value && note.value.approval_status != null && note.value.approval_status !== '' as any;
 });
 
 const renderedContent = computed(() => {
@@ -385,7 +385,7 @@ function dimensionColor(dimension: string) {
 // ── Data Loading ──
 
 async function loadCurrentNote(noteId: string, requestId?: number) {
-  const nextNote = await fetchNoteById(noteId) as any;
+  const nextNote = await fetchNoteById(noteId);
   if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== noteId)) return null;
   note.value = nextNote;
   decryptedContent.value = null;
@@ -402,7 +402,7 @@ async function loadCurrentNote(noteId: string, requestId?: number) {
 
 async function loadRelatedWorkerTasks(sourceNoteId: string, requestId?: number) {
   try {
-    const tasks = await fetchWorkerTasks(5, { sourceNoteId, status: (relatedWorkerFilterStatus.value || undefined) as any });
+    const tasks = await fetchWorkerTasks(5, { sourceNoteId, status: (relatedWorkerFilterStatus.value || undefined) as WorkerTaskStatus | undefined });
     if (requestId != null && (requestId !== activeNoteRequestId || currentNoteId.value !== sourceNoteId)) return;
     relatedWorkerTasks.value = tasks;
   } catch {
@@ -510,7 +510,7 @@ watch(currentNoteId, async (id) => {
 async function handleUpdateStatus(status: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { status: status as any }); note.value = { ...note.value, status: status as any }; showMsg('状态已更新', 'success'); }
+  try { await updateNote(currentNoteId.value, { status: status as Status }); note.value = { ...note.value, status: status as Status }; showMsg('状态已更新', 'success'); }
   catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -518,7 +518,7 @@ async function handleUpdateStatus(status: string) {
 async function handleUpdatePriority(priority: string) {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { priority: priority as any }); note.value = { ...note.value, priority: priority as any }; showMsg('优先级已更新', 'success'); }
+  try { await updateNote(currentNoteId.value, { priority: priority as Priority }); note.value = { ...note.value, priority: priority as Priority }; showMsg('优先级已更新', 'success'); }
   catch (e: any) { showMsg(e.message || '更新失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -582,7 +582,7 @@ async function handleCancelRelatedTask(taskId: string) {
 async function handleApprove() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' as any }); note.value = { ...note.value, approval_status: 'approved', status: 'done' as any }; showMsg('审批已批准', 'success'); }
+  try { await updateNote(currentNoteId.value, { approval_status: 'approved', status: 'done' }); note.value = { ...note.value, approval_status: 'approved', status: 'done' }; showMsg('审批已批准', 'success'); }
   catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
   finally { saving.value = false; }
 }
@@ -590,7 +590,7 @@ async function handleApprove() {
 async function handleReject() {
   if (!currentNoteId.value || !note.value) return;
   saving.value = true;
-  try { await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' as any }); note.value = { ...note.value, approval_status: 'rejected', status: 'done' as any }; showMsg('审批已拒绝', 'success'); }
+  try { await updateNote(currentNoteId.value, { approval_status: 'rejected', status: 'done' }); note.value = { ...note.value, approval_status: 'rejected', status: 'done' }; showMsg('审批已拒绝', 'success'); }
   catch (e: any) { showMsg(e.message || '操作失败', 'error'); }
   finally { saving.value = false; }
 }

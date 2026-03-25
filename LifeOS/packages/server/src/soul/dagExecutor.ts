@@ -215,7 +215,7 @@ export async function executeDag(dagId: string): Promise<PhysicalActionDag> {
  */
 export function getDag(dagId: string): PhysicalActionDag | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM physical_action_dags WHERE id = ?').get(dagId) as any;
+  const row = db.prepare('SELECT * FROM physical_action_dags WHERE id = ?').get(dagId) as Record<string, unknown> | undefined;
   return row ? rowToDag(row) : null;
 }
 
@@ -224,7 +224,7 @@ export function getDag(dagId: string): PhysicalActionDag | null {
  */
 export function listDags(limit = 50): PhysicalActionDag[] {
   const db = getDb();
-  const rows = db.prepare('SELECT * FROM physical_action_dags ORDER BY created_at DESC LIMIT ?').all(limit) as any[];
+  const rows = db.prepare('SELECT * FROM physical_action_dags ORDER BY created_at DESC LIMIT ?').all(limit) as Array<Record<string, unknown>>;
   return rows.map(rowToDag);
 }
 

@@ -15,14 +15,11 @@ import {
   getPlanReintegrationMessage,
   type ContinuityRecord,
   type EventNode,
-  type CreateNoteRequest,
   type CreateNoteResponse,
   type UpdateNoteResponse,
   type SearchResult,
   type Config,
   type UpdateConfigResponse,
-  type IndexStatus,
-  type IndexErrorEventData,
   type ScheduleHealth,
   type StatsTrendPoint,
   type StatsRadarPoint,
@@ -46,7 +43,7 @@ import {
   type ListSoulActionsResponse,
   getSoulActionGovernanceMessage,
 } from '@lifeos/shared';
-import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActionList, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTaskList, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecordList, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar, fetchNoteById } from './client';
+import { fetchAISuggestions, fetchContinuityProjectionList, fetchEventNodeProjectionList, fetchContinuityRecords, fetchEventNodes, fetchSoulActionList, fetchSoulActions, fetchSoulAction, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, createNote, updateNote, appendNote, deleteNote, searchNotes, fetchConfig, updateConfig, fetchIndexStatus, fetchIndexErrors, fetchScheduleHealth, fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags, createTaskSchedule, fetchTaskSchedules, updateTaskSchedule, deleteTaskSchedule, runTaskScheduleNow, createWorkerTask, fetchWorkerTaskList, fetchWorkerTasks, fetchWorkerTask, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchReintegrationRecordList, fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchPersonaSnapshot, fetchDashboard, fetchNotes, triggerIndex, fetchTimeline, fetchCalendar,  fetchNoteById, type IndexStatus, type IndexError } from './client';
 
 describe('api client promotion projections', () => {
   afterEach(() => {
@@ -244,14 +241,15 @@ describe('api client promotion projections', () => {
       executionStatus: 'not_dispatched',
       governanceReason: null,
       workerTaskId: null,
-      payload: { source: 'client-test' },
+      resultSummary: 'client-test' as any,
       createdAt: '2026-03-22T10:00:00.000Z',
       updatedAt: '2026-03-22T10:00:00.000Z',
       approvedAt: null,
+      deferredAt: null,
+      discardedAt: null,
       startedAt: null,
       finishedAt: null,
       error: null,
-      resultSummary: null,
     };
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -375,14 +373,15 @@ describe('api client promotion projections', () => {
       executionStatus: 'not_dispatched',
       governanceReason: null,
       workerTaskId: null,
-      payload: { source: 'client-test' },
+      resultSummary: 'client-test' as any,
       createdAt: '2026-03-22T10:00:00.000Z',
       updatedAt: '2026-03-22T10:00:00.000Z',
       approvedAt: null,
+      deferredAt: null,
+      discardedAt: null,
       startedAt: null,
       finishedAt: null,
       error: null,
-      resultSummary: null,
     };
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -515,14 +514,15 @@ describe('api client promotion projections', () => {
       executionStatus: 'not_dispatched',
       governanceReason: 'queued for review',
       workerTaskId: null,
-      payload: { source: 'client-test' },
+      resultSummary: 'client-test' as any,
       createdAt: '2026-03-22T10:00:00.000Z',
       updatedAt: '2026-03-22T10:00:00.000Z',
       approvedAt: null,
+      deferredAt: null,
+      discardedAt: null,
       startedAt: null,
       finishedAt: null,
       error: null,
-      resultSummary: null,
     };
     const dispatchResponse: DispatchSoulActionResponse = {
       result: {
@@ -541,10 +541,9 @@ describe('api client promotion projections', () => {
       task: {
         id: 'worker-task-1',
         taskType: 'update_persona_snapshot',
-        worker: 'claude_code',
+        worker: 'lifeos',
         status: 'succeeded',
-        input: { profile: 'Long-term thinker' },
-        output: { applied: true },
+        input: { profile: 'Long-term thinker' } as any,
         createdAt: '2026-03-22T10:01:00.000Z',
         updatedAt: '2026-03-22T10:01:00.000Z',
         startedAt: '2026-03-22T10:01:00.000Z',
@@ -634,10 +633,11 @@ describe('api client promotion projections', () => {
         projectionKind: 'event',
       },
       workerTaskId: null,
-      payload: { source: 'client-test' },
       createdAt: '2026-03-22T10:05:00.000Z',
       updatedAt: '2026-03-22T10:05:00.000Z',
       approvedAt: null,
+      deferredAt: null,
+      discardedAt: null,
       startedAt: null,
       finishedAt: null,
       error: null,
@@ -1025,7 +1025,7 @@ describe('api client promotion projections', () => {
       createdAt: '2026-03-22T10:00:00.000Z',
       updatedAt: '2026-03-22T10:00:00.000Z',
       startedAt: null,
-      completedAt: null,
+      finishedAt: null,
     };
 
     vi.stubGlobal('fetch', vi.fn()
@@ -1130,14 +1130,14 @@ describe('api client promotion projections', () => {
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'New note', dimension: 'growth' }),
+      body: JSON.stringify({ dimension: 'growth' }),
     });
 
-    await expect(updateNote('note-1', { title: 'Updated note' })).resolves.toEqual(updateResponse);
+    await expect(updateNote('note-1', { dimension: 'growth' } as any)).resolves.toEqual(updateResponse);
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/notes/note-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Updated note' }),
+      body: JSON.stringify({ dimension: 'growth' }),
     });
   });
 
@@ -1170,7 +1170,7 @@ describe('api client promotion projections', () => {
       processing: true,
       processingFile: '/vault/inbox.md',
     };
-    const indexErrors: IndexErrorEventData[] = [
+    const indexErrors: IndexError[] = [
       {
         filePath: '/vault/bad.md',
         operation: 'upsert',
@@ -1376,6 +1376,8 @@ describe('api client promotion projections', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'tags unavailable' }) }));
 
     await expect(fetchScheduleHealth()).rejects.toThrow('schedule health unavailable');
+    await expect(fetchIndexStatus()).rejects.toThrow('index status unavailable');
+    await expect(fetchIndexErrors()).rejects.toThrow('index errors unavailable');
     await expect(fetchStatsTrend()).rejects.toThrow('trend unavailable');
     await expect(fetchStatsRadar()).rejects.toThrow('radar unavailable');
     await expect(fetchStatsMonthly()).rejects.toThrow('monthly unavailable');

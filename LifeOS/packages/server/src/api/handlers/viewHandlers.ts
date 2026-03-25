@@ -39,12 +39,29 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
       FROM notes WHERE dimension = ?
     `);
     for (const dimension of dimensions) {
-      const stats = statsStmt.get(dimension) as any || { total: 0, pending: 0, in_progress: 0, done: 0 };
-      const healthScore = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-      dimensionStats.push({ dimension, total: stats.total, pending: stats.pending, in_progress: stats.in_progress, done: stats.done, health_score: healthScore });
+      const stats = db.prepare(`
+        SELECT COUNT(*) as total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done
+        FROM notes WHERE dimension = ?
+      `).get(dimension) as { total: number; pending: number | null; in_progress: number | null; done: number | null } | undefined;
+      
+      const safeStats = stats || { total: 0, pending: 0, in_progress: 0, done: 0 };
+      const total = safeStats.total || 0;
+      const done = safeStats.done || 0;
+      
+      const healthScore = total > 0 ? Math.round((done / total) * 100) : 0;
+      dimensionStats.push({ 
+        dimension, 
+        total, 
+        pending: safeStats.pending || 0, 
+        in_progress: safeStats.in_progress || 0, 
+        done, 
+        health_score: healthScore 
+      });
     }
 
-    const inboxStats = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE dimension = '_inbox' AND status != 'done'`).get() as any;
+    const inboxStats = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE dimension = '_inbox' AND status != 'done'`).get() as { total: number } | undefined;
     const response: DashboardData = {
       todayTodos: todayTodos.map(parseNote),
       weeklyHighlights: weeklyHighlights.map(parseNote),

@@ -96,7 +96,7 @@
       <div class="filter-group">
         <label>排序</label>
         <div class="sort-row">
-          <select :value="filters.sortBy" @change="updateField('sortBy', ($event.target as HTMLSelectElement).value)">
+          <select :value="filters.sortBy" @change="updateField('sortBy', ($event.target as HTMLSelectElement).value as 'date' | 'priority')">
             <option value="date">按日期</option>
             <option value="priority">按优先级</option>
           </select>
@@ -161,6 +161,8 @@ watch(() => props.filters, (newFilters) => {
   filters.value = { ...newFilters };
 }, { deep: true });
 
+const emitFilterUpdate = () => emit('update:filters', { ...filters.value });
+
 function toggleFilter(key: 'types' | 'statuses' | 'priorities' | 'tags', value: string) {
   const index = filters.value[key].indexOf(value);
   if (index > -1) {
@@ -168,12 +170,12 @@ function toggleFilter(key: 'types' | 'statuses' | 'priorities' | 'tags', value: 
   } else {
     filters.value[key].push(value);
   }
-  emit('update:filters', { ...filters.value });
+  emitFilterUpdate();
 }
 
-function updateField(key: keyof Filters, value: string) {
-  (filters.value as any)[key] = value;
-  emit('update:filters', { ...filters.value });
+function updateField<K extends keyof Filters>(key: K, value: Filters[K]) {
+  filters.value[key] = value;
+  emitFilterUpdate();
 }
 
 function toggleSortOrder() {

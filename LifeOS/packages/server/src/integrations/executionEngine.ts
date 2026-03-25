@@ -215,7 +215,7 @@ export function listPhysicalActions(status?: string, limit = 50): PhysicalAction
   sql += ' ORDER BY created_at DESC LIMIT ?';
   params.push(limit);
 
-  const rows = db.prepare(sql).all(...params) as any[];
+  const rows = db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
   return rows.map(rowToAction);
 }
 
@@ -224,6 +224,6 @@ export function listPhysicalActions(status?: string, limit = 50): PhysicalAction
  */
 export function getPhysicalAction(id: string): PhysicalAction | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM physical_actions WHERE id = ?').get(id) as any;
+  const row = db.prepare('SELECT * FROM physical_actions WHERE id = ?').get(id) as Record<string, unknown> | undefined;
   return row ? rowToAction(row) : null;
 }

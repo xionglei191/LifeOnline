@@ -21,9 +21,9 @@
         </div>
       </div>
 
-      <div class="chart-container" v-if="usageData.dailyUsage.length">
+      <div class="chart-container" v-if="usageData.dailyUsage?.length">
         <div class="chart-bars">
-          <div v-for="day in usageData.dailyUsage" :key="day.date" class="chart-col">
+          <div v-for="day in (usageData.dailyUsage ?? [])" :key="day.date" class="chart-col">
             <div class="bar-wrap" :title="`${day.date}\nTokens: ${day.totalTokens}\nRequests: ${day.requestCount}`" @click="console.log(day)">
               <div class="bar" :style="{ height: getBarHeight(day.totalTokens) + '%' }"></div>
             </div>
@@ -44,7 +44,7 @@ const error = ref('');
 const usageData = ref<AiUsageResponse | null>(null);
 
 const maxTokens = computed(() => {
-  if (!usageData.value?.dailyUsage.length) return 1;
+  if (!usageData.value?.dailyUsage?.length) return 1;
   return Math.max(...usageData.value.dailyUsage.map(d => d.totalTokens));
 });
 

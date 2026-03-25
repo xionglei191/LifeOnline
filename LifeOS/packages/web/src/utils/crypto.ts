@@ -17,16 +17,16 @@ export async function decryptContent(encryptedData: string, keyHex: string): Pro
 
     const key = await crypto.subtle.importKey(
       'raw',
-      hexToBuffer(keyHex),
+      hexToBuffer(keyHex).buffer as ArrayBuffer,
       { name: 'AES-GCM' },
       false,
       ['decrypt']
     );
 
     const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv, tagLength: 128 },
+      { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer, tagLength: 128 },
       key,
-      combined
+      combined.buffer as ArrayBuffer
     );
 
     return new TextDecoder().decode(decrypted);

@@ -28,15 +28,15 @@ export function getFailedPhysicalActions(limit = 20): FailedActionInsight[] {
     LIMIT ?
   `;
 
-  const rows = db.prepare(sql).all(limit) as any[];
+  const rows = db.prepare(sql).all(limit) as Array<Record<string, unknown>>;
 
   return rows.map(row => ({
-    id: row.id,
-    type: row.type,
-    title: row.title,
-    errorMessage: row.error_message,
-    executedAt: row.executed_at,
-    sourceNoteId: row.source_note_id,
+    id: row.id as string,
+    type: row.type as string,
+    title: row.title as string,
+    errorMessage: row.error_message as string | null,
+    executedAt: row.executed_at as string | null,
+    sourceNoteId: row.source_note_id as string | null,
   }));
 }
 
@@ -50,7 +50,7 @@ export function getTopFailingActionTypes(): { type: string, errorCount: number }
     ORDER BY errorCount DESC
   `;
   
-  const rows = db.prepare(sql).all() as any[];
+  const rows = db.prepare(sql).all() as Array<{ type: string; errorCount: number }>;
   return rows.map(row => ({
     type: row.type,
     errorCount: row.errorCount

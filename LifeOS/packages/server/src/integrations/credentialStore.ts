@@ -43,17 +43,17 @@ export function upsertCredential(
 
 export function getCredential(provider: string): StoredCredential | null {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM integration_credentials WHERE provider = ?').get(provider) as any;
+  const row = db.prepare('SELECT * FROM integration_credentials WHERE provider = ?').get(provider) as Record<string, unknown> | undefined;
   if (!row) return null;
   return {
-    provider: row.provider,
-    accessToken: row.access_token,
-    refreshToken: row.refresh_token,
-    tokenExpiry: row.token_expiry,
-    scopes: row.scopes,
-    metadata: JSON.parse(row.metadata_json || '{}'),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    provider: row.provider as string,
+    accessToken: row.access_token as string | null,
+    refreshToken: row.refresh_token as string | null,
+    tokenExpiry: row.token_expiry as string | null,
+    scopes: row.scopes as string | null,
+    metadata: JSON.parse((row.metadata_json as string) || '{}'),
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 
@@ -65,6 +65,6 @@ export function deleteCredential(provider: string): void {
 
 export function listCredentialProviders(): string[] {
   const db = getDb();
-  const rows = db.prepare('SELECT provider FROM integration_credentials').all() as any[];
+  const rows = db.prepare('SELECT provider FROM integration_credentials').all() as Array<{ provider: string }>;
   return rows.map(r => r.provider);
 }

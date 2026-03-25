@@ -76,7 +76,7 @@ export function buildSoulActionGroups(
       pendingCount: group.actions.filter((action) => action.governanceStatus === 'pending_review').length,
       dispatchReadyCount: group.actions.filter((action) => action.governanceStatus === 'approved' && action.executionStatus === 'not_dispatched').length,
       recentActivityAt: recentActivityUsesReintegration ? recentReintegrationAt : recentActionAt,
-      recentActivityKind: recentActivityUsesReintegration ? 'reintegration' : 'action',
+      recentActivityKind: (recentActivityUsesReintegration ? 'reintegration' : 'action') as 'reintegration' | 'action',
       recentActivityLabel: recentActivityUsesReintegration
         ? '最近变更'
         : latestActionActivity?.activity.label === '最近创建'

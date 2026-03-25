@@ -118,7 +118,7 @@ import NoteDetail from './NoteDetail.vue';
 import WorkerTaskDetail from './WorkerTaskDetail.vue';
 import WorkerTaskCard from './WorkerTaskCard.vue';
 import { classifyInbox, createWorkerTask, fetchWorkerTasks, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks } from '../api/client';
-import type { WorkerTask, WorkerTaskOutputNote, WsEvent } from '@lifeos/shared';
+import type { WorkerTask, WorkerTaskOutputNote, WsEvent, WorkerTaskType, WorkerTaskStatus } from '@lifeos/shared';
 import { workerTaskActionMessage } from '../utils/workerTaskLabels';
 import { isIndexRefreshEvent } from '../composables/useWebSocket';
 
@@ -143,8 +143,8 @@ const aiMessageType = ref<'success' | 'error'>('success');
 async function loadWorkerTasks() {
   try {
     workerTasks.value = await fetchWorkerTasks(8, {
-      status: (workerFilterStatus.value || undefined) as any,
-      taskType: (workerFilterTaskType.value || undefined) as any,
+      status: (workerFilterStatus.value || undefined) as WorkerTaskStatus | undefined,
+      taskType: (workerFilterTaskType.value || undefined) as WorkerTaskType | undefined,
     });
   } catch (_) { /* ignore */ }
 }

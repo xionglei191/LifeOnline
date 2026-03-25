@@ -48,9 +48,16 @@ const localTranscript = ref('');
 
 let recognition: any = null;
 
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 onMounted(() => {
   // Check for Web Speech API support
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SpeechRecognition) {
     isSupported.value = true;
     recognition = new SpeechRecognition();

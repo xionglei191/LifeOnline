@@ -219,7 +219,7 @@ describe('WorkerTaskDetail', () => {
       .mockResolvedValueOnce(createTask({
         id: 'worker-task-1',
         resultSummary: '输出笔记已就绪',
-        outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md' }],
+        outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md', filePath: '/output-note-1.md' }],
       }));
 
     const wrapper = mount(WorkerTaskDetail, {
@@ -316,7 +316,7 @@ describe('WorkerTaskDetail', () => {
 
   it('opens output note from the output list', async () => {
     apiMocks.fetchWorkerTask.mockResolvedValue(createTask({
-      outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md' }],
+      outputNotes: [{ id: 'output-note-1', title: 'Output Note', fileName: 'output-note-1.md', filePath: '/output-note-1.md' }],
     }));
 
     const wrapper = mount(WorkerTaskDetail, {

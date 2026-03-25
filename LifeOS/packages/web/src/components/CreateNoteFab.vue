@@ -99,7 +99,13 @@ async function handleSubmit() {
   saving.value = true;
   error.value = '';
   try {
-    await createNote(form.value as any);
+    await createNote({
+      title: form.value.title,
+      dimension: form.value.dimension as SelectableDimension,
+      type: form.value.type as any,
+      priority: form.value.priority as any,
+      content: form.value.content,
+    });
     emit('created');
     handleClose();
     resetForm();

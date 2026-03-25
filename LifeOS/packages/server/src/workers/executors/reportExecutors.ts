@@ -16,12 +16,12 @@ function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dat
   for (const dim of REPORT_DIMENSION_KEYS) {
     const where = dateEnd ? `dimension = ? AND date BETWEEN ? AND ?` : `dimension = ? AND date = ?`;
     const params = dateEnd ? [dim, dateFilter, dateEnd] : [dim, dateFilter];
-    const row = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE ${where}`).get(...params) as any;
-    if (row?.total > 0) {
+    const row = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE ${where}`).get(...params) as { total: number } | undefined;
+    if (row && row.total > 0) {
       lines.push(`- ${getDimensionDisplayLabel(dim)}: ${row.total} 条`);
     }
   }
-  return lines.length ? lines.join('\n') : '- 今日暂无记录';
+  return lines.length ? lines.join('\\n') : '- 今日暂无记录';
 }
 
 // ── Daily Report ──
@@ -33,9 +33,9 @@ export async function runDailyReport(
   const date = input.date || getTodayDateString();
   const db = getDb();
 
-  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date = ?').get(date) as any;
-  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'task' AND status = 'done'").get(date) as any;
-  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'milestone'").get(date) as any;
+  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date = ?').get(date) as { total: number } | undefined;
+  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'task' AND status = 'done'").get(date) as { total: number } | undefined;
+  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date = ? AND type = 'milestone'").get(date) as { total: number } | undefined;
 
   const totalNotes = totalRow?.total || 0;
   const doneTasks = doneRow?.total || 0;
@@ -104,9 +104,9 @@ export async function runWeeklyReport(
   const weekEnd = getWeekEndDateString(weekStart);
 
   const db = getDb();
-  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ?').get(weekStart, weekEnd) as any;
-  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'task' AND status = 'done'").get(weekStart, weekEnd) as any;
-  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'milestone'").get(weekStart, weekEnd) as any;
+  const totalRow = db.prepare('SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ?').get(weekStart, weekEnd) as { total: number } | undefined;
+  const doneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'task' AND status = 'done'").get(weekStart, weekEnd) as { total: number } | undefined;
+  const milestoneRow = db.prepare("SELECT COUNT(*) as total FROM notes WHERE date BETWEEN ? AND ? AND type = 'milestone'").get(weekStart, weekEnd) as { total: number } | undefined;
 
   const totalNotes = totalRow?.total || 0;
   const doneTasks = doneRow?.total || 0;

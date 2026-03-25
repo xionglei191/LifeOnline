@@ -45,7 +45,7 @@
               <span>发生于 {{ formatTime(eventNode.occurredAt) }}</span>
             </div>
             <div v-if="getProjectionExplanationSummary(eventNode)" class="projection-inline-summary">
-              <span class="worker-pill subtle">{{ formatProjectionExplanationSummary(eventNode) ?? 'review-backed projection' }}</span>
+              <span class="worker-pill subtle">{{ getProjectionExplanationSummary(eventNode) ?? 'review-backed projection' }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
@@ -93,7 +93,7 @@
             </div>
             <div v-if="formatProjectionContinuitySummary(continuity) || getProjectionExplanationSummary(continuity)" class="projection-inline-summary">
               <span v-if="formatProjectionContinuitySummary(continuity)" class="worker-pill subtle">{{ formatProjectionContinuitySummary(continuity) }}</span>
-              <span v-if="formatProjectionExplanationSummary(continuity)" class="worker-pill subtle">{{ formatProjectionExplanationSummary(continuity) }}</span>
+              <span v-if="getProjectionExplanationSummary(continuity)" class="worker-pill subtle">{{ getProjectionExplanationSummary(continuity) }}</span>
             </div>
             <div class="projection-detail-grid">
               <div class="projection-detail-block">
@@ -143,8 +143,7 @@ import {
   formatEventNodeThresholdLabel,
   formatProjectionContinuityDetails,
   formatProjectionContinuitySummary,
-  formatProjectionExplanationSummary,
-  getProjectionContinuitySummary,
+  
   getProjectionExplanationRows,
   getProjectionExplanationSummary,
 } from '@lifeos/shared';
@@ -163,7 +162,7 @@ const emit = defineEmits<{
   (event: 'refresh'): void;
 }>();
 
-function formatJson(value: Record<string, unknown>) {
+function formatJson(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 

@@ -56,15 +56,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { DimensionStat, SelectableDimension } from '@lifeos/shared';
+import type { DimensionStat, Dimension } from '@lifeos/shared';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
 
 const props = defineProps<{ stats: DimensionStat[] }>();
 
-const dimensionLabel = (dim: SelectableDimension) => getDimensionLabel(dim);
-const dimensionColor = (dim: SelectableDimension) => getDimensionColor(dim);
-const dimensionRoute = (dim: SelectableDimension) => dim === '_inbox' ? '/inbox' : `/dimension/${dim}`;
-const panelTitle = computed(() => props.stats.some((stat) => stat.dimension === '_inbox') ? '生命矩阵与 Inbox 入口' : '八维度生命矩阵');
+const dimensionLabel = (dim: string) => getDimensionLabel(dim as Dimension);
+const dimensionColor = (dim: string) => getDimensionColor(dim as Dimension);
+const dimensionRoute = (dim: string) => dim === '_inbox' ? '/inbox' : `/dimension/${dim}`;
+const panelTitle = computed(() => props.stats.some((stat) => (stat.dimension as string) === '_inbox') ? '生命矩阵与 Inbox 入口' : '八维度生命矩阵');
 </script>
 
 <style scoped>

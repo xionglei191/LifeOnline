@@ -20,35 +20,22 @@ export type WorkerTaskType = typeof SUPPORTED_WORKER_TASK_TYPES[number];
 export type WorkerTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 export type TerminalWorkerTaskStatus = Extract<WorkerTaskStatus, 'succeeded' | 'failed' | 'cancelled'>;
 
-export interface WorkerTaskInputMap {
-  openclaw_task: {
-    instruction: string;
-    outputDimension?: string;
-  };
-  summarize_note: {
-    noteId: string;
-    language?: string;
-    maxLength?: number;
-  };
-  classify_inbox: {
-    dryRun?: boolean;
-  };
-  extract_tasks: {
-    noteId: string;
-  };
-  update_persona_snapshot: {
-    noteId: string;
-  };
-  daily_report: {
-    date?: string;
-  };
-  weekly_report: {
-    weekStart?: string;
-  };
-  execute_physical_action: {
-    actionId: string;
-  };
-}
+export type WorkerTaskInput =
+  | { taskType: 'openclaw_task'; instruction: string; outputDimension?: string }
+  | { taskType: 'summarize_note'; noteId: string; language?: string; maxLength?: number }
+  | { taskType: 'classify_inbox'; dryRun?: boolean }
+  | { taskType: 'extract_tasks'; noteId: string }
+  | { taskType: 'update_persona_snapshot'; noteId: string }
+  | { taskType: 'daily_report'; date?: string }
+  | { taskType: 'weekly_report'; weekStart?: string }
+  | { taskType: 'execute_physical_action'; actionId: string };
+
+export type WorkerTaskInputMap = {
+  [K in WorkerTaskType]: Extract<WorkerTaskInput, { taskType: K }> extends never 
+    ? unknown 
+    : Omit<Extract<WorkerTaskInput, { taskType: K }>, 'taskType'>
+};
+
 
 export interface WorkerTaskResultMap {
   openclaw_task: {

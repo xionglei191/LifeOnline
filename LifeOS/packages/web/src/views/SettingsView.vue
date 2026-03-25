@@ -380,7 +380,7 @@ import PrivacyMask from '../components/PrivacyMask.vue';
 import AICostPanel from '../components/AICostPanel.vue';
 import IntegrationCard from '../components/IntegrationCard.vue';
 import { fetchConfig, updateConfig, triggerIndex, fetchIndexStatus, fetchIndexErrors, fetchAiPrompts, updateAiPrompt, resetAiPrompt, fetchAiProviderSettings, updateAiProviderSettings, testAiProviderConnection, fetchIntegrations, type Config, type IndexResult, type IndexStatus, type IndexError } from '../api/client';
-import type { PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse, WsEvent } from '@lifeos/shared';
+import type { PromptKey, PromptRecord, AiProviderSettings, TestAiProviderConnectionResponse } from '@lifeos/shared';
 import { useWebSocket } from '../composables/useWebSocket';
 import { usePrivacy } from '../composables/usePrivacy';
 

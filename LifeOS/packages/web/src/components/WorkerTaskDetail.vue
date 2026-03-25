@@ -91,7 +91,7 @@
           </div>
 
           <div class="detail-actions">
-            <button class="btn-inline" @click="loadTask" :disabled="loading || actionTaskId === task.id">刷新</button>
+            <button class="btn-inline" @click="() => loadTask()" :disabled="loading || actionTaskId === task.id">刷新</button>
             <button
               v-if="task.status === 'pending' || task.status === 'running'"
               class="btn-inline btn-cancel-inline"
@@ -121,7 +121,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
-import type { WorkerTask, WsEvent } from '@lifeos/shared';
+import type { WorkerTask } from '@lifeos/shared';
 import { fetchWorkerTask, retryWorkerTask, cancelWorkerTask } from '../api/client';
 import NoteDetail from './NoteDetail.vue';
 import { workerTaskActionMessage, workerTaskResultFacts, workerTaskStatusLabel, workerTaskTypeLabel, workerTaskWorkerLabel } from '../utils/workerTaskLabels';
@@ -214,7 +214,7 @@ function openSourceNote(noteId: string) {
 }
 
 function handleWsUpdate(event: Event) {
-  const wsEvent = (event as CustomEvent<WsEvent>).detail;
+  const wsEvent = (event as CustomEvent).detail;
   if (!props.taskId) return;
   if (wsEvent.type === 'worker-task-updated' && wsEvent.data.id === props.taskId) {
     void loadTask();

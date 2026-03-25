@@ -82,7 +82,7 @@ export async function mapSoulActionToPhysicalAction(
 
   try {
     const resString = await callClaude(prompt, 1500);
-    const parsed = parseJSON(resString) as any;
+    const parsed = parseJSON(resString) as Record<string, unknown> | null;
 
     if (!parsed) {
       logger.error('Invalid mapper response format:', resString);
@@ -109,14 +109,18 @@ export async function mapSoulActionToPhysicalAction(
 
     // Quick validation for calendar
     if (parsed.type === 'calendar_event') {
-      const p = parsed.payload as any;
+      const p = parsed.payload as Record<string, unknown>;
       if (!p.title || !p.startTime || !p.endTime) {
          logger.error('Missing required calendar fields', p);
          return null;
       }
     }
 
-    return { kind: 'single', type: parsed.type, payload: parsed.payload };
+    return { 
+      kind: 'single', 
+      type: parsed.type as PhysicalActionType, 
+      payload: parsed.payload as PhysicalActionPayload 
+    };
   } catch (error) {
     logger.error('Failed to map physical action:', error);
     return null;

@@ -39,13 +39,13 @@ export async function persistWorkerGeneratedMarkdownNote(
   return persistGeneratedNote(filePath, markdown);
 }
 
-export function getRequiredWorkerNote(noteId: string): any {
+export function getRequiredWorkerNote(noteId: string): { title?: string, file_name?: string, content?: string } {
   const db = getDb();
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any;
+  const note = db.prepare('SELECT title, file_name, content FROM notes WHERE id = ?').get(noteId) as { title?: string, file_name?: string, content?: string } | undefined;
   if (!note) throw new Error(`笔记不存在: ${noteId}`);
   return note;
 }
 
-export function getWorkerNoteTitle(note: any): string {
+export function getWorkerNoteTitle(note: { title?: string, file_name?: string }): string {
   return note.title || note.file_name || '未命名笔记';
 }

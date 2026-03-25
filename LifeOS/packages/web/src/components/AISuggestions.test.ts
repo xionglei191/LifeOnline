@@ -8,7 +8,7 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 const websocketMocks = vi.hoisted(() => ({
-  isIndexRefreshEvent: vi.fn(() => false),
+  isIndexRefreshEvent: vi.fn((_wsEvent: any) => false),
 }));
 
 vi.mock('../api/client', () => ({
@@ -22,10 +22,10 @@ import AISuggestions from './AISuggestions.vue';
 function createSuggestion(overrides: Partial<AISuggestion> = {}): AISuggestion {
   return {
     id: overrides.id ?? 'suggestion-1',
-    type: overrides.type ?? 'overload',
+    type: overrides.type ?? ('overload' as any),
     title: overrides.title ?? '事业负载偏高',
     content: overrides.content ?? '先收敛到一个最重要推进项。',
-    dimension: overrides.dimension ?? 'career',
+    dimension: overrides.dimension ?? ('career' as any),
     createdAt: overrides.createdAt ?? '2026-03-21T10:00:00.000Z',
   };
 }
@@ -97,7 +97,7 @@ describe('AISuggestions', () => {
       .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-worker', title: '任务回流洞察' })])
       .mockResolvedValueOnce([createSuggestion({ id: 'suggestion-index', title: '索引后洞察' })]);
 
-    websocketMocks.isIndexRefreshEvent.mockImplementation((wsEvent) => wsEvent.type === 'index-complete');
+    websocketMocks.isIndexRefreshEvent.mockImplementation((wsEvent: any) => wsEvent.type === 'index-complete');
 
     const wrapper = mount(AISuggestions);
     await flushPromises();
@@ -183,10 +183,10 @@ describe('AISuggestions', () => {
       createSuggestion(),
       createSuggestion({
         id: 'suggestion-2',
-        type: 'goal',
+        type: 'goal' as any,
         title: '学习势能正在形成',
         content: '补一条明确下一步动作。',
-        dimension: 'learning',
+        dimension: 'learning' as any,
       }),
     ]);
 

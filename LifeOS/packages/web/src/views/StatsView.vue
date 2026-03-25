@@ -89,7 +89,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, WsEvent } from '@lifeos/shared';
+import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, WsEvent, Dimension } from '@lifeos/shared';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
 import StateDisplay from '../components/StateDisplay.vue';
@@ -193,7 +193,7 @@ async function loadRadar(data: StatsRadarPoint[]) {
       textStyle: { color: '#e2edf8' },
     },
     radar: {
-      indicator: data.map((d) => ({ name: getDimensionLabel(d.dimension), max: 100 })),
+      indicator: data.map((d) => ({ name: getDimensionLabel(d.dimension as Dimension), max: 100 })),
       radius: '68%',
       splitNumber: 4,
       axisName: { color: chartText },

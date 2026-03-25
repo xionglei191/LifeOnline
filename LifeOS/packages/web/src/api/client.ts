@@ -1,5 +1,6 @@
-import { normalizeSoulActionSourceFilters, type ApiErrorResponse, type ApiResponse, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse, type BrainstormSession } from '@lifeos/shared';
+import { normalizeSoulActionSourceFilters, type ApiResponse, type DashboardData, type Note, type TimelineData, type CalendarData, type WorkerTask, type CreateWorkerTaskRequest, type WorkerTaskListFilters, type TaskSchedule, type CreateTaskScheduleRequest, type UpdateTaskScheduleRequest, type PromptRecord, type PromptKey, type ListAiPromptsResponse, type AiPromptResponse, type ResetAiPromptResponse, type UpdatePromptRequest, type AiProviderSettings, type UpdateAiProviderSettingsRequest, type TestAiProviderConnectionRequest, type TestAiProviderConnectionResponse, type AISuggestion, type ListAiSuggestionsResponse, type ReintegrationRecord, type ListReintegrationRecordsResponse, type ReintegrationReviewRequest, type AcceptReintegrationRecordResponse, type RejectReintegrationRecordResponse, type PlanReintegrationPromotionsResponse, type SoulAction, type ListSoulActionsResponse, type SoulActionResponse, type DispatchSoulActionResponse, type SoulActionGovernanceStatus, type SoulActionExecutionStatus, type SoulActionKind, type EventNode, type ListEventNodesResponse, type ContinuityRecord, type ListContinuityRecordsResponse, type CreateNoteRequest, type CreateNoteResponse, type UpdateNoteRequest, type UpdateNoteResponse, type SearchResult, type Config, type UpdateConfigRequest, type UpdateConfigResponse, type IndexStatus, type IndexErrorEventData, type IndexResult, type ScheduleHealth, type StatsTrendPoint, type StatsRadarPoint, type StatsMonthlyPoint, type StatsTagPoint, type CreateWorkerTaskResponse, type WorkerTaskListResponse, type WorkerTaskResponse, type ClearFinishedWorkerTasksResponse, type TaskScheduleResponse, type TaskScheduleListResponse, type DeleteTaskScheduleResponse, type PersonaSnapshot, type PersonaSnapshotResponse, type BrainstormSession } from '@lifeos/shared';
 
+export type { Config, IndexResult, IndexStatus } from '@lifeos/shared';
 export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
@@ -63,6 +64,10 @@ function normalizeSoulActionFilters(
     executionStatus: filters?.executionStatus,
     actionKind: filters?.actionKind,
   };
+}
+
+export interface ApiErrorLike {
+  error?: string;
 }
 
 async function readApiResponse<T>(res: Response): Promise<ApiResponse<T> & ApiErrorLike> {
@@ -782,7 +787,34 @@ export async function fetchAiUsage(days: number = 7): Promise<AiUsageResponse> {
     }
     throw new Error('Failed to fetch AI usage');
   }
-  return res.json();
+  const raw = await res.json();
+  // Server returns { report: [{ date, endpoint, inputTokens, outputTokens }] }
+  // Aggregate into the AiUsageResponse shape the component expects
+  const report: Array<{ date: string; endpoint: string; inputTokens: number; outputTokens: number }> =
+    raw.report ?? raw.dailyUsage ?? [];
+  // Group by date
+  const byDate = new Map<string, AiUsageDaily>();
+  for (const row of report) {
+    const date = row.date ?? '';
+    if (!date) continue;
+    const tokens = (row.inputTokens ?? 0) + (row.outputTokens ?? 0);
+    // Rough cost estimate: $0.002 per 1K tokens → 0.2 cents / 1K tokens
+    const costCents = Math.round(tokens / 1000 * 0.2);
+    if (!byDate.has(date)) {
+      byDate.set(date, { date, totalTokens: 0, totalCostInCents: 0, requestCount: 0 });
+    }
+    const entry = byDate.get(date)!;
+    entry.totalTokens += tokens;
+    entry.totalCostInCents += costCents;
+    entry.requestCount += 1;
+  }
+  const dailyUsage = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    totalTokens: dailyUsage.reduce((s, d) => s + d.totalTokens, 0),
+    totalCostInCents: dailyUsage.reduce((s, d) => s + d.totalCostInCents, 0),
+    totalRequests: dailyUsage.reduce((s, d) => s + d.requestCount, 0),
+    dailyUsage,
+  };
 }
 
 // ── PhysicalAction APIs ────────────────────────────────

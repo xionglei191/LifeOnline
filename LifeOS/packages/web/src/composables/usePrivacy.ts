@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 
 // ── Layer 1: Privacy Mode (screen-sharing protection) ──────────────────────
 const privacyMode = ref(sessionStorage.getItem('privacyMode') === '1');

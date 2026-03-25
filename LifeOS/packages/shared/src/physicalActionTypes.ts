@@ -54,7 +54,7 @@ export interface WebhookCallPayload {
   url: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
 }
 
 export interface IoTCommandPayload {

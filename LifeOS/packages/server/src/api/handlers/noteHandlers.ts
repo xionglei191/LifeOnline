@@ -104,7 +104,7 @@ export async function updateNote(req: Request<{ id: string }, ApiResponse<Update
     const { id } = req.params;
     const { status, priority, tags, approval_status } = req.body;
     const db = getDb();
-    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
+    const note = db.prepare('SELECT file_path FROM notes WHERE id = ?').get(id) as { file_path: string } | undefined;
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
     const updates: Record<string, unknown> = {};
     if (status !== undefined) updates.status = status;
@@ -127,7 +127,7 @@ export async function appendNote(req: Request, res: Response): Promise<void> {
     const { text } = req.body;
     if (!text) { res.status(400).json({ error: 'text is required' }); return; }
     const db = getDb();
-    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
+    const note = db.prepare('SELECT file_path FROM notes WHERE id = ?').get(id) as { file_path: string } | undefined;
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
     const timestamp = new Date().toLocaleString('zh-CN');
     await rewriteMarkdownContent(note.file_path, (content) => (
@@ -146,7 +146,7 @@ export async function deleteNote(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const db = getDb();
-    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(id) as any;
+    const note = db.prepare('SELECT file_path FROM notes WHERE id = ?').get(id) as { file_path: string } | undefined;
     if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
     await deleteFile(note.file_path);
     broadcastUpdate({ type: 'note-deleted', data: { noteId: id, filePath: note.file_path } });

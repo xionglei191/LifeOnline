@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "pnpm --parallel --filter server --filter web dev",
     "build": "pnpm -r build",
+    "lint": "echo 'ESLint not initialized. Configure later.'",
+    "typecheck": "pnpm --filter server exec tsc --noEmit && pnpm --filter shared exec tsc --noEmit && pnpm --filter web exec vue-tsc --noEmit",
     "db:init": "pnpm --filter server db:init",
     "index": "pnpm --filter server index",
     "test": "pnpm --filter server test",

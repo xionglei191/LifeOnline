@@ -53,7 +53,11 @@ export async function semanticSearchHandler(req: Request, res: Response) {
                  emotional_tone, distilled_insights_json, actionability,
                  status, created_at, updated_at
           FROM brainstorm_sessions WHERE id = ?
-        `).get(objectId) as any;
+        `).get(objectId) as {
+          id: string; source_note_id: string; raw_input_preview: string; themes_json: string;
+          emotional_tone: string; distilled_insights_json: string; actionability: string;
+          status: string; created_at: string; updated_at: string;
+        } | undefined;
         if (row) {
           data = {
             id: row.id,
@@ -70,7 +74,7 @@ export async function semanticSearchHandler(req: Request, res: Response) {
         }
       } else if (prefix === 'cr') {
         objectType = 'continuity_record';
-        data = db.prepare('SELECT * FROM continuity_records WHERE id = ?').get(objectId) as any;
+        data = db.prepare('SELECT * FROM continuity_records WHERE id = ?').get(objectId) as Record<string, unknown> | null;
       }
 
       return {

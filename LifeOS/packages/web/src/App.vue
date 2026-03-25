@@ -132,7 +132,7 @@ function handleNoteCreated() {
 
 function handleCommandPaletteAction(actionName: string) {
   if (actionName === 'create-note' && createNoteFabRef.value) {
-    createNoteFabRef.value.open();
+    (createNoteFabRef.value as any).open();
   }
 }
 
