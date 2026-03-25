@@ -5,6 +5,7 @@ import type { Request, Response } from 'express';
 import { getGoogleAuthUrl, handleGoogleOAuthCallback, isGoogleCalendarConnected, listCalendarEvents } from '../../integrations/calendarProtocol.js';
 import { listCredentialProviders } from '../../integrations/credentialStore.js';
 import { getExecutionInsights } from '../../integrations/insightEngine.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 
 export function googleAuthHandler(_req: Request, res: Response) {
   const url = getGoogleAuthUrl();
@@ -13,13 +14,14 @@ export function googleAuthHandler(_req: Request, res: Response) {
 
 export async function googleCallbackHandler(req: Request, res: Response) {
   const code = req.query.code as string;
-  if (!code) return res.status(400).json({ error: 'Missing authorization code' });
+  if (!code) return sendError(res, 'Missing authorization code', 400);
 
   try {
     await handleGoogleOAuthCallback(code);
-    res.json({ success: true, message: 'Google Calendar connected successfully' });
-  } catch (error: any) {
-    res.status(500).json({ error: error?.message || 'OAuth callback failed' });
+    sendSuccess(res, { success: true, message: 'Google Calendar connected successfully' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'OAuth callback failed';
+    sendError(res, message);
   }
 }
 
@@ -29,9 +31,10 @@ export async function googleCalendarEventsHandler(req: Request, res: Response) {
 
   try {
     const events = await listCalendarEvents(timeMin, timeMax);
-    res.json({ events, total: events.length });
-  } catch (error: any) {
-    res.status(500).json({ error: error?.message || 'Failed to fetch calendar events' });
+    sendSuccess(res, { events, total: events.length });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch calendar events';
+    sendError(res, message);
   }
 }
 
@@ -44,14 +47,15 @@ export function integrationStatusHandler(_req: Request, res: Response) {
       lastSyncAt: null,
     },
   ];
-  res.json({ integrations });
+  sendSuccess(res, { integrations });
 }
 
 export function integrationInsightsHandler(_req: Request, res: Response) {
   try {
     const insights = getExecutionInsights(7);
-    res.json(insights);
-  } catch (error: any) {
-    res.status(500).json({ error: error?.message || 'Failed to fetch execution insights' });
+    sendSuccess(res, insights);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch execution insights';
+    sendError(res, message);
   }
 }

@@ -31,7 +31,7 @@ export async function persistOpenClawResult(
   const filePath = path.join(dir, fileName);
   const frontmatterInput = {
     title: result.title,
-    dimension: (dimensionKey as any) || 'learning',
+    dimension: dimensionKey || 'learning',
     type: 'note',
     date,
     tags: ['openclaw'],

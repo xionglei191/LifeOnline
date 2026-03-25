@@ -7,6 +7,7 @@ import { loadConfig } from '../../config/configManager.js';
 import { updateStoredVaultPath, InvalidVaultPathError } from '../../config/configUpdateService.js';
 import { indexVault } from '../../indexer/indexer.js';
 import { Logger } from '../../utils/logger.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 import type { ApiResponse, Config, UpdateConfigRequest, UpdateConfigResponse, IndexStatus, IndexErrorEventData, IndexResult } from '@lifeos/shared';
 
 const logger = new Logger('configHandlers');
@@ -14,27 +15,26 @@ const logger = new Logger('configHandlers');
 export async function getConfig(_req: Request<Record<string, never>, ApiResponse<Config>>, res: Response<ApiResponse<Config>>): Promise<void> {
   try {
     const config = await loadConfig();
-    res.json(config);
+    sendSuccess(res, config);
   } catch (error) {
     logger.error('Get config error:', error);
-    res.status(500).json({ error: 'Failed to fetch config' });
+    sendError(res, 'Failed to fetch config');
   }
 }
 
 export async function updateConfig(req: Request<Record<string, never>, ApiResponse<UpdateConfigResponse>, UpdateConfigRequest>, res: Response<ApiResponse<UpdateConfigResponse>>): Promise<void> {
   try {
     const { vaultPath } = req.body;
-    if (!vaultPath) { res.status(400).json({ error: 'vaultPath is required' }); return; }
+    if (!vaultPath) { sendError(res, 'vaultPath is required', 400); return; }
     const result = await updateStoredVaultPath(vaultPath);
     if (result.indexResult) {
       broadcastUpdate({ type: 'index-complete', data: result.indexResult });
     }
-    const response: UpdateConfigResponse = { success: true, indexResult: result.indexResult };
-    res.json(response);
+    sendSuccess(res, { success: true, indexResult: result.indexResult } as UpdateConfigResponse);
   } catch (error) {
-    if (error instanceof InvalidVaultPathError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof InvalidVaultPathError) { sendError(res, error.message, 400); return; }
     logger.error('Update config error:', error);
-    res.status(500).json({ error: 'Failed to update config' });
+    sendError(res, 'Failed to update config');
   }
 }
 
@@ -43,10 +43,10 @@ export async function triggerIndex(_req: Request<Record<string, never>, ApiRespo
     const config = await loadConfig();
     const result = await indexVault(config.vaultPath);
     broadcastUpdate({ type: 'index-complete', data: result });
-    res.json(result);
+    sendSuccess(res, result);
   } catch (error) {
     logger.error('Index error:', error);
-    res.status(500).json({ error: 'Indexing failed' });
+    sendError(res, 'Indexing failed');
   }
 }
 

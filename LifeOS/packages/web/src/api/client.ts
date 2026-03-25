@@ -5,6 +5,15 @@ export type IndexError = IndexErrorEventData;
 
 const API_BASE = '/api';
 
+async function unwrapPayload<T>(res: Response): Promise<T> {
+  const payload = await res.json().catch(() => ({}));
+  if (payload.success === true && 'data' in payload) {
+    return payload.data;
+  }
+  return payload;
+}
+
+
 type ScopedListResponse<TItem, TFilters> = {
   items: TItem[];
   filters: TFilters;
@@ -70,16 +79,17 @@ export interface ApiErrorLike {
   error?: string;
 }
 
-async function readApiResponse<T>(res: Response): Promise<ApiResponse<T> & ApiErrorLike> {
-  return res.json().catch(() => ({} as ApiResponse<T> & ApiErrorLike));
-}
-
 async function expectApiSuccess<T>(res: Response, fallbackMessage: string): Promise<T> {
-  const data = await readApiResponse<T>(res);
-  if (!res.ok) {
-    throw new Error(data.error || fallbackMessage);
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) {
+    throw new Error(payload.error || payload.message || fallbackMessage);
   }
-  return data as T;
+  // Auto-unwrap standard ApiResponse<T> envelope
+  if (payload.success === true && 'data' in payload) {
+    return payload.data as T;
+  }
+  // Fallback for unpatched endpoints returning naked JSON
+  return payload as T;
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
@@ -191,7 +201,7 @@ export interface ExtractTasksResult {
 
 export async function fetchAiPrompts(): Promise<PromptRecord[]> {
   const res = await fetch(`${API_BASE}/ai/prompts`);
-  const data = await res.json().catch(() => ({} as Partial<ListAiPromptsResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListAiPromptsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch AI prompts');
   }
@@ -204,7 +214,7 @@ export async function updateAiPrompt(key: PromptKey, payload: UpdatePromptReques
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<AiPromptResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<AiPromptResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to update AI prompt');
   }
@@ -215,7 +225,7 @@ export async function resetAiPrompt(key: PromptKey): Promise<ResetAiPromptRespon
   const res = await fetch(`${API_BASE}/ai/prompts/${encodeURIComponent(key)}`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({} as Partial<ResetAiPromptResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ResetAiPromptResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to reset AI prompt');
   }
@@ -224,7 +234,7 @@ export async function resetAiPrompt(key: PromptKey): Promise<ResetAiPromptRespon
 
 export async function fetchAiProviderSettings(): Promise<AiProviderSettings> {
   const res = await fetch(`${API_BASE}/ai/provider`);
-  const data = await res.json().catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch AI provider settings');
   }
@@ -237,7 +247,7 @@ export async function updateAiProviderSettings(payload: UpdateAiProviderSettings
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<AiProviderSettings> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to update AI provider settings');
   }
@@ -250,7 +260,7 @@ export async function testAiProviderConnection(payload: TestAiProviderConnection
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<TestAiProviderConnectionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<TestAiProviderConnectionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to test AI provider connection');
   }
@@ -263,7 +273,7 @@ export async function createWorkerTask(request: CreateWorkerTaskRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
-  const data = await res.json().catch(() => ({} as Partial<CreateWorkerTaskResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<CreateWorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to create worker task');
   }
@@ -288,7 +298,7 @@ export async function fetchWorkerTaskList(
     params.set('worker', options.worker);
   }
   const res = await fetch(`${API_BASE}/worker-tasks?${params}`);
-  const data = await res.json().catch(() => ({} as Partial<WorkerTaskListResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<WorkerTaskListResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch worker tasks');
   }
@@ -319,7 +329,7 @@ export async function fetchReintegrationRecordList(filters?: {
   }
   const query = params.toString();
   const res = await fetch(`${API_BASE}/reintegration-records${query ? `?${query}` : ''}`);
-  const data = await res.json().catch(() => ({} as Partial<ListReintegrationRecordsResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListReintegrationRecordsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch reintegration records');
   }
@@ -358,7 +368,7 @@ export async function acceptReintegrationRecord(id: string, payload: Reintegrati
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<AcceptReintegrationRecordResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<AcceptReintegrationRecordResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to accept reintegration record');
   }
@@ -371,7 +381,7 @@ export async function rejectReintegrationRecord(id: string, payload: Reintegrati
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<RejectReintegrationRecordResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<RejectReintegrationRecordResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to reject reintegration record');
   }
@@ -410,7 +420,7 @@ export async function fetchSoulActionList(filters?: {
   if (filters?.actionKind) params.set('actionKind', filters.actionKind);
   const query = params.toString();
   const res = await fetch(`${API_BASE}/soul-actions${query ? `?${query}` : ''}`);
-  const data = await res.json().catch(() => ({} as Partial<ListSoulActionsResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListSoulActionsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch soul actions');
   }
@@ -433,7 +443,7 @@ export async function fetchSoulActions(filters?: {
 
 export async function fetchSoulAction(id: string): Promise<SoulAction> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}`);
-  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch soul action');
   }
@@ -446,7 +456,7 @@ export async function approveSoulAction(id: string, payload: ReintegrationReview
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to approve soul action');
   }
@@ -457,7 +467,7 @@ export async function dispatchSoulAction(id: string): Promise<DispatchSoulAction
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/dispatch`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({} as Partial<DispatchSoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<DispatchSoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to dispatch soul action');
   }
@@ -470,7 +480,7 @@ export async function deferSoulAction(id: string, payload: ReintegrationReviewRe
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to defer soul action');
   }
@@ -483,7 +493,7 @@ export async function discardSoulAction(id: string, payload: ReintegrationReview
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to discard soul action');
   }
@@ -496,7 +506,7 @@ export async function answerFollowupQuestion(id: string, answer: string): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ answer }),
   });
-  const data = await res.json().catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<SoulActionResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to answer followup question');
   }
@@ -505,21 +515,21 @@ export async function answerFollowupQuestion(id: string, answer: string): Promis
 
 export async function fetchBrainstormSessions(limit = 50, offset = 0): Promise<{ sessions: BrainstormSession[]; total: number }> {
   const res = await fetch(`${API_BASE}/brainstorm-sessions?limit=${limit}&offset=${offset}`);
-  const data = await res.json().catch(() => ({ sessions: [], total: 0 }));
+  const data = await unwrapPayload<any>(res).catch(() => ({ sessions: [], total: 0 }));
   if (!res.ok) throw new Error(data.error || 'Failed to fetch brainstorm sessions');
   return data as { sessions: BrainstormSession[]; total: number };
 }
 
 export async function fetchBrainstormSession(id: string): Promise<BrainstormSession> {
   const res = await fetch(`${API_BASE}/brainstorm-sessions/${encodeURIComponent(id)}`);
-  const data = await res.json().catch(() => ({} as { session?: BrainstormSession; error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as { session?: BrainstormSession; error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to fetch brainstorm session');
   return data.session as BrainstormSession;
 }
 
 export async function fetchWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}`);
-  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch worker task');
   }
@@ -530,7 +540,7 @@ export async function retryWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/retry`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to retry worker task');
   }
@@ -541,7 +551,7 @@ export async function cancelWorkerTask(id: string): Promise<WorkerTask> {
   const res = await fetch(`${API_BASE}/worker-tasks/${encodeURIComponent(id)}/cancel`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<WorkerTaskResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to cancel worker task');
   }
@@ -552,7 +562,7 @@ export async function clearFinishedWorkerTasks(): Promise<number> {
   const res = await fetch(`${API_BASE}/worker-tasks/finished`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({} as Partial<ClearFinishedWorkerTasksResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ClearFinishedWorkerTasksResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to clear worker tasks');
   }
@@ -576,7 +586,7 @@ export async function extractTasks(noteId: string): Promise<WorkerTask> {
 
 export async function fetchAISuggestions(): Promise<AISuggestion[]> {
   const res = await fetch(`${API_BASE}/ai/suggestions`);
-  const data = await res.json().catch(() => ({} as Partial<ListAiSuggestionsResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListAiSuggestionsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch AI suggestions');
   }
@@ -589,7 +599,7 @@ export async function fetchEventNodeProjectionList(sourceReintegrationIds?: stri
     ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
     : '';
   const res = await fetch(`${API_BASE}/event-nodes${query}`);
-  const data = await res.json().catch(() => ({} as Partial<ListEventNodesResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListEventNodesResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch event nodes');
   }
@@ -610,7 +620,7 @@ export async function fetchContinuityProjectionList(sourceReintegrationIds?: str
     ? `?sourceReintegrationIds=${encodeURIComponent(normalizedSourceReintegrationIds.join(','))}`
     : '';
   const res = await fetch(`${API_BASE}/continuity-records${query}`);
-  const data = await res.json().catch(() => ({} as Partial<ListContinuityRecordsResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<ListContinuityRecordsResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch continuity records');
   }
@@ -632,7 +642,7 @@ export async function updateNote(id: string, updates: UpdateNoteRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
-  const data = await res.json().catch(() => ({} as Partial<UpdateNoteResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<UpdateNoteResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to update note');
   }
@@ -645,7 +655,7 @@ export async function appendNote(id: string, text: string): Promise<{ success: t
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
-  const data = await res.json().catch(() => ({} as { success?: true; error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as { success?: true; error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to append note');
   }
@@ -656,7 +666,7 @@ export async function deleteNote(id: string): Promise<{ success: true }> {
   const res = await fetch(`${API_BASE}/notes/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({} as { success?: true; error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as { success?: true; error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to delete note');
   }
@@ -704,14 +714,14 @@ export async function createTaskSchedule(req: CreateTaskScheduleRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   });
-  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to create schedule');
   return data.schedule as TaskSchedule;
 }
 
 export async function fetchTaskSchedules(): Promise<TaskSchedule[]> {
   const res = await fetch(`${API_BASE}/schedules`);
-  const data = await res.json().catch(() => ({} as Partial<TaskScheduleListResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<TaskScheduleListResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to fetch schedules');
   return data.schedules || [];
 }
@@ -722,7 +732,7 @@ export async function updateTaskSchedule(id: string, updates: UpdateTaskSchedule
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
-  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) throw new Error(data.error || 'Failed to update schedule');
   return data.schedule as TaskSchedule;
 }
@@ -731,7 +741,7 @@ export async function deleteTaskSchedule(id: string): Promise<DeleteTaskSchedule
   const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
-  const data = await res.json().catch(() => ({} as Partial<DeleteTaskScheduleResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<DeleteTaskScheduleResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to delete schedule');
   }
@@ -742,7 +752,7 @@ export async function runTaskScheduleNow(id: string): Promise<TaskSchedule> {
   const res = await fetch(`${API_BASE}/schedules/${encodeURIComponent(id)}/run`, {
     method: 'POST',
   });
-  const data = await res.json().catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<TaskScheduleResponse> & { error?: string }));
   if (!res.ok) {
     throw new Error(data.error || 'Failed to run schedule');
   }
@@ -787,7 +797,7 @@ export async function fetchAiUsage(days: number = 7): Promise<AiUsageResponse> {
     }
     throw new Error('Failed to fetch AI usage');
   }
-  const raw = await res.json();
+  const raw = await unwrapPayload<any>(res);
   // Server returns { report: [{ date, endpoint, inputTokens, outputTokens }] }
   // Aggregate into the AiUsageResponse shape the component expects
   const report: Array<{ date: string; endpoint: string; inputTokens: number; outputTokens: number }> =
@@ -851,7 +861,7 @@ export async function fetchPendingPhysicalActions(): Promise<PhysicalAction[]> {
     if (res.status === 404) return MOCK_PHYSICAL_ACTIONS;
     throw new Error('Failed to fetch physical actions');
   }
-  const data: ListPhysicalActionsResponse = await res.json();
+  const data: ListPhysicalActionsResponse = await unwrapPayload<any>(res);
   return data.actions;
 }
 
@@ -867,7 +877,7 @@ export async function approvePhysicalAction(id: string, autoApproveNext: boolean
     }
     throw new Error('Failed to approve physical action');
   }
-  return (await res.json() as { action: PhysicalAction }).action;
+  return (await unwrapPayload<any>(res) as { action: PhysicalAction }).action;
 }
 
 export async function rejectPhysicalAction(id: string, reason?: string): Promise<PhysicalAction> {
@@ -882,7 +892,7 @@ export async function rejectPhysicalAction(id: string, reason?: string): Promise
     }
     throw new Error('Failed to reject physical action');
   }
-  return (await res.json() as { action: PhysicalAction }).action;
+  return (await unwrapPayload<any>(res) as { action: PhysicalAction }).action;
 }
 
 // ── Integration APIs ───────────────────────────────────
@@ -899,7 +909,7 @@ export async function fetchIntegrations(): Promise<IntegrationStatus[]> {
     if (res.status === 404) return MOCK_INTEGRATIONS;
     throw new Error('Failed to fetch integrations');
   }
-  const data: ListIntegrationsResponse = await res.json();
+  const data: ListIntegrationsResponse = await unwrapPayload<any>(res);
   return data.integrations;
 }
 
@@ -947,7 +957,7 @@ export async function fetchPhysicalActionHistory(): Promise<PhysicalAction[]> {
     if (res.status === 404) return MOCK_PHYSICAL_ACTION_HISTORY;
     throw new Error('Failed to fetch physical action history');
   }
-  const data: ListPhysicalActionsResponse = await res.json();
+  const data: ListPhysicalActionsResponse = await unwrapPayload<any>(res);
   return data.actions;
 }
 
@@ -963,7 +973,7 @@ export interface ConflictEvent {
 export async function fetchConflictsForAction(actionId: string): Promise<ConflictEvent[]> {
   const res = await fetch(`${API_BASE}/physical-actions/${encodeURIComponent(actionId)}/conflicts`);
   if (!res.ok) return [];
-  const data = await res.json();
+  const data = await unwrapPayload<any>(res);
   return data.conflicts || [];
 }
 
@@ -987,14 +997,14 @@ export interface FailingType {
 export async function fetchInsightStats(): Promise<InsightStats> {
   const res = await fetch(`${API_BASE}/insight/stats`);
   if (!res.ok) return { total: 0, completed: 0, failed: 0, rejected: 0, pending: 0, successRate: 0, failRate: 0 };
-  const data = await res.json();
+  const data = await unwrapPayload<any>(res);
   return data.stats;
 }
 
 export async function fetchTopFailingTypes(): Promise<FailingType[]> {
   const res = await fetch(`${API_BASE}/insight/top-failing-types`);
   if (!res.ok) return [];
-  const data = await res.json();
+  const data = await unwrapPayload<any>(res);
   return data.types || [];
 }
 
@@ -1019,7 +1029,7 @@ export async function fetchBreakerStates(): Promise<BreakerStateEntry[]> {
     if (res.status === 404) return MOCK_BREAKER_STATES;
     return [];
   }
-  const data = await res.json();
+  const data = await unwrapPayload<any>(res);
   return data.breakers || [];
 }
 
@@ -1044,7 +1054,7 @@ export async function fetchExecutingActions(): Promise<PhysicalAction[]> {
     if (res.status === 404) return MOCK_EXECUTING_ACTIONS;
     return [];
   }
-  const data: ListPhysicalActionsResponse = await res.json();
+  const data: ListPhysicalActionsResponse = await unwrapPayload<any>(res);
   return data.actions;
 }
 

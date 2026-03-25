@@ -1,0 +1,55 @@
+<section class="chapter" id="software-engineering">
+  <div class="chapter-no">04</div>
+  <div class="chapter-body">
+    <h2>什么是软件工程（Software Engineering）？</h2>
+    <p>很多人有一种很深切但错位的认知，他们以为“会用键盘敲打出一行代码”就等于“会从零做出一套软件”。这就如同掌握了如何使用铁锤敲击铁钉，却依然无法盖起一栋摩天大楼。会写代码，只是意味着你拥有了操纵原材料的微观工具；而“软件工程（Software Engineering）”，则是如何组织、调度一整个宏大的工程建造全生命周期过程。</p>
+    <div class="callout">
+      <h3>软件工程在真正关心什么？</h3>
+      <ul>
+        <li><strong>需求锚定（Requirement）：</strong> 拨开表象迷雾，确认业务上到底要解决哪一个绝对痛点，避免打造出华丽但无人问津的“屠龙刀”。</li>
+        <li><strong>架构分层（Architecture）：</strong> 系统这棵大树该如何从根部（存储）一直生长到枝叶（页面），上下游之间应该如何切分，以便日后能随时替换老朽的枝节。</li>
+        <li><strong>模块边界（Module）：</strong> 每个代码组件该管到哪里停止，它的输入和输出契约（Contract）是什么。绝不能越界去干涉它不该懂的其他模块。</li>
+        <li><strong>协作与流程（Process）：</strong> 当代码演化为百人大开发时，如何利用流水线（Pipeline）、代码审查（Review）保证工程不混乱冲突。就算你现在是一个人带一个 AI，这套审批隔离原则也是同等适用的。</li>
+        <li><strong>自动化测试（Testing）：</strong> 随着时间的推移，为了防止“今天刚写的新功能，明天由于某些联动而忽然崩溃失效”，如何编写能够每次自我扫描体检的试纸（测试用例）。</li>
+        <li><strong>部署与运维（Deployment）：</strong> 怎样把一堆静态的代码脚本平稳地送到能够提供全天候运转的远程服务器上，且在发生网络断裂时能做到优雅降级（Graceful Degradation）。</li>
+        <li><strong>维护治理（Maintenance）：</strong> 如何面对日积月累的技术债务，通过重构（Refactor）来为将来的继续远航卸下枷锁。</li>
+      </ul>
+    </div>
+    <p>软件工程的终极目标，是为了抵抗复杂系统随着时间推移自然而然走向的熵增与死亡。写代码像是一时兴起创作一首短诗，软件工程则像是为了修建通往拉萨的青藏铁路去铺设千年基岩。</p>
+    <p>这就是为什么在大模型如同井喷般爆发、“AI自动写代码”满天飞的时代，软件工程这四个字非但没有退役，反而由于代码的高光生产效率，显得前所未有的紧急和重要！AI 的长处是在瞬间写出 500 行没有任何美感的冗长代码块（Spaghetti Code），但当你将百万行的机器代码随意堆叠在项目里，没有边界感，没有任何状态机审查的约束，只要随便动哪怕一个小小的改动，就会爆发链式污染——这便是“耦合（Coupling）”最直观的可怖画面。</p>
+    <p>对于架构设计师而言，真正高级的工作是承担那个清醒的组织者。你需要建立防波堤（比如 LifeOnline 在 `soulActionDispatcher` 中对未被许可动作进行粗暴的抛弃拦截），定义何种信号该进出数据库。你不再是一名普通的搬砖工，但你成了整个图纸的总指挥。</p>
+    
+    <h3>架构设计入门：为什么要"分层" (Layered Architecture)</h3>
+    <p>架构听起来虚无缥缈，但初学时最实用的一种思维方法就是经典的分层结构（Level / Tiering）。<strong>一言以蔽之：把系统按各自负责的职责切薄，夹心饼干一样叠起来，每一层只允许和相邻的上下层通信打交道。</strong></p>
+    <p>最经典也是流传最广的四层架构分层，可以这样看待：</p>
+    <ol>
+      <li><strong>表现层（Presentation Layer / Frontend）</strong>—— 手机屏幕和电脑屏幕。任何只为了给肉眼看得清楚、滑动丝顺的排版都在这层解决。坚决不允许这层直接去动数据库的数据。</li>
+      <li><strong>业务逻辑核心层（Business Logic Layer / Controller & Service）</strong>—— 最核心的大脑运算区。判断某用户有没有资格执行高风险任务？如果余额不足是否拒绝交易？LifeOnline 中对于 `dispatch_physical_action` 的是否越权判定就在这层。</li>
+      <li><strong>数据访问层（Data Access Layer / DAO / ORM）</strong>—— 这就是一个精密的翻译官。上层的业务逻辑并不懂何为 `SELECT * FROM tbl` 的枯燥数据库语法，这层负责用高级代码语言封装数据库读写黑盒。</li>
+      <li><strong>数据存储层（Data Storage Layer / DB）</strong>—— 系统地底深处真正的保险柜。它可以是关系型的 SQLite，也可以是文档型库，这里保存着整个应用存活的基础命脉底座。</li>
+    </ol>
+    <p>如果切分好清晰且不相互僭越的层级，会获得怎样的高级质变？很简单：<strong>未来当你想要把 Web 界面全部换成 iOS App 端或者微信小程序时，你由于表现层和业务层的隔绝，后端无需更改哪怕一个字母！</strong></p>
+    <p>不要再对大段晦涩难懂的代码望而却步，第一眼，去通过目录（文件夹）去看它所在的“层”。这就是资深工程师降服巨大繁杂项目的秘密。</p>
+
+    <div class="chapter-summary">
+      <h3>本章小结</h3>
+      <p>软件工程不是单纯的“把一堆功能代码罗列在一起”，而是保证一整套庞大的系统在不断加入新创意时，能够被严谨设计、被安全落地、被自动监控测试维护，以便让这个作品能够长期强壮生长。在这个领域，懂得该说“不”并拒绝烂代码入侵，远比一味索取功能更具价值。</p>
+    </div>
+  </div>
+</section>
+<section class="figure-block">
+  <figure class="figure-card">
+    <div class="figure-badge">图 2</div>
+    <h3>分层架构 Layered Architecture</h3>
+    <img src="../assets/images/layered-architecture.svg" alt="分层架构图" class="book-figure" />
+    <figcaption>图 2：最经典的解耦架构模式——每一层各司其职且只和相邻层进行“协议契约”通信。上层建筑更换时，底部的基石毫不动摇。</figcaption>
+  </figure>
+</section>
+<section class="figure-block">
+  <figure class="figure-card">
+    <div class="figure-badge">图 3</div>
+    <h3>写代码 vs 软件工程</h3>
+    <img src="../assets/images/code-vs-engineering.svg" alt="写代码 vs 软件工程" class="book-figure" />
+    <figcaption>图 3：左图是只会关注眼前那一段算法的写代码视角；右图是关注整个项目全周期从诞生到入土的全盘系统生命视角的软件工程思维。</figcaption>
+  </figure>
+</section>

@@ -164,7 +164,7 @@ onUnmounted(() => {
   chart = null;
 });
 
-watch(() => [props.notes, activeTab.value], renderChart, { deep: true });
+watch(() => [props.notes, props.notes.length, activeTab.value], renderChart);
 </script>
 
 <style scoped>

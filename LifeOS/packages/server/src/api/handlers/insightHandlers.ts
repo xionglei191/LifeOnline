@@ -5,16 +5,17 @@ import type { Request, Response } from 'express';
 import { getFailedPhysicalActions, getTopFailingActionTypes } from '../../integrations/insightEngine.js';
 import { listPhysicalActions } from '../../integrations/executionEngine.js';
 import { getAllBreakerStates } from '../../integrations/circuitBreaker.js';
+import { sendSuccess } from '../responseHelper.js';
 
 export function getFailedActionsHandler(_req: Request, res: Response) {
   const limit = parseInt(_req.query.limit as string) || 20;
   const actions = getFailedPhysicalActions(limit);
-  res.json({ actions, total: actions.length });
+  sendSuccess(res, { actions, total: actions.length });
 }
 
 export function getTopFailingTypesHandler(_req: Request, res: Response) {
   const types = getTopFailingActionTypes();
-  res.json({ types });
+  sendSuccess(res, { types });
 }
 
 export function getInsightStatsHandler(_req: Request, res: Response) {
@@ -25,7 +26,7 @@ export function getInsightStatsHandler(_req: Request, res: Response) {
   const rejected = all.filter(a => a.status === 'rejected').length;
   const pending = all.filter(a => a.status === 'pending').length;
 
-  res.json({
+  sendSuccess(res, {
     stats: {
       total,
       completed,
@@ -40,5 +41,5 @@ export function getInsightStatsHandler(_req: Request, res: Response) {
 
 export function getBreakerStatesHandler(_req: Request, res: Response) {
   const breakers = getAllBreakerStates();
-  res.json({ breakers });
+  sendSuccess(res, { breakers });
 }

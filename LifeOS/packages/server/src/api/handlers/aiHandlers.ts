@@ -8,6 +8,7 @@ import { listAiSuggestions } from '../../ai/suggestions.js';
 import { generateLongTermPortrait } from '../../soul/longTermMemory.js';
 import { generateInsightsReport } from '../../soul/insightsReport.js';
 import { Logger } from '../../utils/logger.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 
 const logger = new Logger('aiHandlers');
 
@@ -18,11 +19,11 @@ export async function listAiPrompts(
   res: Response<ApiResponse<ListAiPromptsResponse>>,
 ): Promise<void> {
   try {
-    const response: ListAiPromptsResponse = { prompts: listPromptRecords() };
-    res.json(response);
+    const data: ListAiPromptsResponse = { prompts: listPromptRecords() };
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('List AI prompts error:', error);
-    res.status(500).json({ error: 'Failed to list AI prompts' });
+    sendError(res, 'Failed to list AI prompts');
   }
 }
 
@@ -32,17 +33,16 @@ export async function updateAiPrompt(
 ): Promise<void> {
   try {
     const { key } = req.params;
-    if (!isValidPromptKey(key)) { res.status(400).json({ error: 'Invalid prompt key' }); return; }
+    if (!isValidPromptKey(key)) { sendError(res, 'Invalid prompt key', 400); return; }
     const body = req.body;
-    if (typeof body?.content !== 'string') { res.status(400).json({ error: 'content is required' }); return; }
+    if (typeof body?.content !== 'string') { sendError(res, 'content is required', 400); return; }
     const record = upsertPromptOverride(key, body.content, body.enabled ?? true, body.notes ?? null);
-    const response: AiPromptResponse = { prompt: record };
-    res.json(response);
-  } catch (error: any) {
-    const message = error?.message || 'Failed to update AI prompt';
-    if (message.includes('Prompt content') || message.includes('placeholder')) { res.status(400).json({ error: message }); return; }
+    sendSuccess(res, { prompt: record });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update AI prompt';
+    if (message.includes('Prompt content') || message.includes('placeholder')) { sendError(res, message, 400); return; }
     logger.error('Update AI prompt error:', error);
-    res.status(500).json({ error: message });
+    sendError(res, message);
   }
 }
 
@@ -52,13 +52,12 @@ export async function resetAiPrompt(
 ): Promise<void> {
   try {
     const { key } = req.params;
-    if (!isValidPromptKey(key)) { res.status(400).json({ error: 'Invalid prompt key' }); return; }
+    if (!isValidPromptKey(key)) { sendError(res, 'Invalid prompt key', 400); return; }
     resetPromptOverride(key);
-    const response: ResetAiPromptResponse = { success: true };
-    res.json(response);
+    sendSuccess(res, { success: true } as ResetAiPromptResponse);
   } catch (error) {
     logger.error('Reset AI prompt error:', error);
-    res.status(500).json({ error: 'Failed to reset AI prompt' });
+    sendError(res, 'Failed to reset AI prompt');
   }
 }
 
@@ -67,11 +66,11 @@ export async function getAiProviderHandler(
   res: Response<ApiResponse<AiProviderSettings>>,
 ): Promise<void> {
   try {
-    const response: AiProviderSettings = getAiProviderSettings();
-    res.json(response);
+    const data: AiProviderSettings = getAiProviderSettings();
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('Get AI provider settings error:', error);
-    res.status(500).json({ error: 'Failed to fetch AI provider settings' });
+    sendError(res, 'Failed to fetch AI provider settings');
   }
 }
 
@@ -82,15 +81,15 @@ export async function updateAiProviderHandler(
   try {
     const body = req.body;
     validateAiProviderSettings(body || {});
-    const response: AiProviderSettings = upsertAiProviderSettings(body || {});
-    res.json(response);
-  } catch (error: any) {
-    const message = error?.message || 'Failed to update AI provider settings';
+    const data: AiProviderSettings = upsertAiProviderSettings(body || {});
+    sendSuccess(res, data);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update AI provider settings';
     if (message.includes('baseUrl') || message.includes('model') || message.includes('enabled') || message.includes('apiKey') || message.includes('clearApiKey')) {
-      res.status(400).json({ error: message }); return;
+      sendError(res, message, 400); return;
     }
     logger.error('Update AI provider settings error:', error);
-    res.status(500).json({ error: message });
+    sendError(res, message);
   }
 }
 
@@ -101,15 +100,15 @@ export async function testAiProviderHandler(
   try {
     const body = req.body || {};
     validateAiProviderSettings(body);
-    const response: TestAiProviderConnectionResponse = await testAiProviderConnection(body);
-    res.json(response);
-  } catch (error: any) {
-    const message = error?.message || 'Failed to test AI provider connection';
+    const data: TestAiProviderConnectionResponse = await testAiProviderConnection(body);
+    sendSuccess(res, data);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to test AI provider connection';
     if (message.includes('baseUrl') || message.includes('model') || message.includes('enabled') || message.includes('apiKey') || message.includes('clearApiKey')) {
-      res.status(400).json({ error: message }); return;
+      sendError(res, message, 400); return;
     }
     logger.error('Test AI provider connection error:', error);
-    res.status(500).json({ error: message });
+    sendError(res, message);
   }
 }
 
@@ -118,11 +117,11 @@ export async function listAiSuggestionsHandler(
   res: Response<ApiResponse<ListAiSuggestionsResponse>>,
 ): Promise<void> {
   try {
-    const response: ListAiSuggestionsResponse = { suggestions: await listAiSuggestions() };
-    res.json(response);
+    const data: ListAiSuggestionsResponse = { suggestions: await listAiSuggestions() };
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('List AI suggestions error:', error);
-    res.status(500).json({ error: 'Failed to fetch AI suggestions' });
+    sendError(res, 'Failed to fetch AI suggestions');
   }
 }
 
@@ -133,18 +132,18 @@ export async function getLongTermMemoryHandler(
   try {
     const { dimension } = req.query;
     if (!dimension || typeof dimension !== 'string') {
-      res.status(400).json({ error: 'Missing or invalid query parameter: dimension' });
+      sendError(res, 'Missing or invalid query parameter: dimension', 400);
       return;
     }
     const portrait = await generateLongTermPortrait(dimension);
     if (!portrait) {
-      res.status(404).json({ error: `No long term memory found for dimension: ${dimension}` });
+      sendError(res, `No long term memory found for dimension: ${dimension}`, 404);
       return;
     }
-    res.json({ portrait });
+    sendSuccess(res, { portrait });
   } catch (error) {
     logger.error('Get long term memory error:', error);
-    res.status(500).json({ error: 'Failed to generate long term memory' });
+    sendError(res, 'Failed to generate long term memory');
   }
 }
 
@@ -159,9 +158,9 @@ export async function getInsightsReportHandler(
       days = Number(timeframeDays);
     }
     const reportMarkdown = await generateInsightsReport(days);
-    res.json({ reportMarkdown });
+    sendSuccess(res, { reportMarkdown });
   } catch (error) {
     logger.error('Get insights report error:', error);
-    res.status(500).json({ error: 'Failed to generate insights report' });
+    sendError(res, 'Failed to generate insights report');
   }
 }

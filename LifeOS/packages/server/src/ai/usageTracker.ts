@@ -50,7 +50,7 @@ export function getAiUsageReport(days: number = 7): AiUsageRecord[] {
       FROM ai_usage
       WHERE date >= date('now', ?)
       ORDER BY date ASC
-    `).all(`-${days} days`) as any[];
+    `).all(`-${days} days`) as Array<{ date: string; endpoint: string; input_tokens: number; output_tokens: number }>;
 
     return rows.map(r => ({
       date: r.date,

@@ -14,9 +14,9 @@ import { persistWorkerGeneratedMarkdownNote } from './shared.js';
 function getDimensionStats(db: ReturnType<typeof getDb>, dateFilter: string, dateEnd?: string): string {
   const lines: string[] = [];
   for (const dim of REPORT_DIMENSION_KEYS) {
-    const where = dateEnd ? `dimension = ? AND date BETWEEN ? AND ?` : `dimension = ? AND date = ?`;
-    const params = dateEnd ? [dim, dateFilter, dateEnd] : [dim, dateFilter];
-    const row = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE ${where}`).get(...params) as { total: number } | undefined;
+    const row = dateEnd
+      ? db.prepare('SELECT COUNT(*) as total FROM notes WHERE dimension = ? AND date BETWEEN ? AND ?').get(dim, dateFilter, dateEnd) as { total: number } | undefined
+      : db.prepare('SELECT COUNT(*) as total FROM notes WHERE dimension = ? AND date = ?').get(dim, dateFilter) as { total: number } | undefined;
     if (row && row.total > 0) {
       lines.push(`- ${getDimensionDisplayLabel(dim)}: ${row.total} 条`);
     }

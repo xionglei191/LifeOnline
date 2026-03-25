@@ -433,7 +433,7 @@ const MIGRATIONS: Migration[] = [
         );
       `);
       // Populate from existing notes
-      const rows = db.prepare('SELECT id, title, content, tags FROM notes').all() as any[];
+      const rows = db.prepare('SELECT id, title, content, tags FROM notes').all() as { id: string; title: string; content: string; tags: string }[];
       const insert = db.prepare('INSERT INTO notes_fts(note_id, title, content, tags) VALUES (?, ?, ?, ?)');
       for (const row of rows) {
         insert.run(row.id, row.title || '', row.content || '', row.tags || '');

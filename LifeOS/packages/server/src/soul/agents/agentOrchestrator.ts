@@ -448,7 +448,7 @@ function normalizeContinuitySignals(raw?: RawAnalysisResponse['continuitySignals
         ? s.type as ContinuitySignalType
         : 'recurring_theme',
       pattern: s.pattern!,
-      strength: validStrengths.includes(s.strength as any) ? s.strength as ContinuitySignal['strength'] : 'weak',
+      strength: validStrengths.includes(s.strength as ContinuitySignal['strength']) ? s.strength as ContinuitySignal['strength'] : 'weak',
       ...(typeof s.evidence === 'string' && s.evidence.trim() ? { evidence: s.evidence.trim() } : {}),
     }));
 }

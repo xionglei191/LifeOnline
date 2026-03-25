@@ -9,6 +9,7 @@ import { getDb } from '../../db/client.js';
 import { getEmbedding } from '../../ai/embedding.js';
 import { searchSimilar, isVectorStoreReady } from '../../db/vectorStore.js';
 import { Logger } from '../../utils/logger.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 
 const logger = new Logger('semanticSearch');
 
@@ -23,11 +24,11 @@ export async function semanticSearchHandler(req: Request, res: Response) {
   const topK = Math.min(Math.max(parseInt(req.query.topK as string) || 5, 1), 50);
 
   if (!query?.trim()) {
-    return res.status(400).json({ error: 'Query parameter "q" is required' });
+    return sendError(res, 'Query parameter "q" is required', 400);
   }
 
   if (!isVectorStoreReady()) {
-    return res.status(503).json({ error: 'Vector store is not initialized' });
+    return sendError(res, 'Vector store is not initialized', 503);
   }
 
   try {
@@ -87,15 +88,16 @@ export async function semanticSearchHandler(req: Request, res: Response) {
       };
     }).filter(r => r.data !== null);
 
-    res.json({
+    sendSuccess(res, {
       query: query.trim(),
       topK,
       results: enrichedResults,
       total: enrichedResults.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Semantic search failed:', error);
-    res.status(500).json({ error: error?.message || 'Semantic search failed' });
+    const message = error instanceof Error ? error.message : 'Semantic search failed';
+    sendError(res, message);
   }
 }
 

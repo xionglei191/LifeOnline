@@ -65,14 +65,34 @@ function insertAction(action: PhysicalAction): void {
 
 function updateActionStatus(id: string, status: string, extra: Record<string, string | null> = {}): void {
   const db = getDb();
-  const sets = ['status = ?', 'updated_at = ?'];
-  const vals: (string | null)[] = [status, new Date().toISOString()];
-  for (const [k, v] of Object.entries(extra)) {
-    sets.push(`${k} = ?`);
-    vals.push(v);
-  }
-  vals.push(id);
-  db.prepare(`UPDATE physical_actions SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  
+  // To avoid dynamic SQL construction that triggers static analyzers,
+  // we use a static prepare and COALESCE-like logic or coalesce the old row.
+  // Actually, physical_actions is simple enough to fetch and full-update, but
+  // since we only ever update specific columns, we can just do individual statically defined updates 
+  // or a single full update.
+  const existing = db.prepare('SELECT * FROM physical_actions WHERE id = ?').get(id) as Record<string, any>;
+  if (!existing) return;
+
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE physical_actions SET 
+      status = ?, 
+      updated_at = ?,
+      approved_at = ?,
+      executed_at = ?,
+      external_id = ?,
+      error_message = ?
+    WHERE id = ?
+  `).run(
+    status,
+    now,
+    'approved_at' in extra ? extra.approved_at : existing.approved_at,
+    'executed_at' in extra ? extra.executed_at : existing.executed_at,
+    'external_id' in extra ? extra.external_id : existing.external_id,
+    'error_message' in extra ? extra.error_message : existing.error_message,
+    id
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -328,7 +328,7 @@ export async function dispatchApprovedSoulAction(soulActionId: string): Promise<
         throw new Error('未找到可同步的 continuity 文件');
       }
 
-      fileContent = fs.readFileSync(filePath, 'utf-8');
+      fileContent = await fs.promises.readFile(filePath, 'utf-8');
     } catch (e) {
       getDb().prepare(`
         UPDATE soul_actions SET execution_status = 'failed', error = ?, updated_at = ?, finished_at = ? WHERE id = ?

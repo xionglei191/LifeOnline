@@ -19,6 +19,17 @@ interface ConflictEvent {
   endTime: string;
 }
 
+interface GoogleCalendarEvent {
+  id: string;
+  summary?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+}
+
+interface GoogleCalendarListResponse {
+  items?: GoogleCalendarEvent[];
+}
+
 export async function getConflictsForActionHandler(req: Request, res: Response) {
   const actionId = req.params.id;
   const action = getPhysicalAction(actionId);
@@ -39,7 +50,7 @@ export async function getConflictsForActionHandler(req: Request, res: Response) 
   try {
     const conflicts = await fetchCalendarConflicts(payload.startTime, payload.endTime);
     res.json({ conflicts });
-  } catch (err: any) {
+  } catch (err: unknown) {
     logger.error('Failed to fetch calendar conflicts:', err);
     // Graceful degradation — return empty on failure
     res.json({ conflicts: [], error: 'Calendar query failed' });
@@ -77,14 +88,14 @@ async function fetchCalendarConflicts(startTime: string, endTime: string): Promi
     throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json() as any;
+  const data = await response.json() as GoogleCalendarListResponse;
   const events: ConflictEvent[] = (data.items || [])
-    .filter((item: any) => item.start?.dateTime && item.end?.dateTime)
-    .map((item: any) => ({
+    .filter((item: GoogleCalendarEvent) => item.start?.dateTime && item.end?.dateTime)
+    .map((item: GoogleCalendarEvent) => ({
       id: item.id,
       title: item.summary || '(无标题)',
-      startTime: item.start.dateTime,
-      endTime: item.end.dateTime,
+      startTime: item.start!.dateTime!,
+      endTime: item.end!.dateTime!,
     }));
 
   // Filter to only overlapping events

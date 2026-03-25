@@ -133,7 +133,7 @@ export async function hybridSearch(query: string, topK: number = 10): Promise<Hy
   const noteStmt = db.prepare('SELECT id, title, content, dimension, date FROM notes WHERE id = ?');
   const results: HybridSearchResult[] = [];
   for (const item of topResults) {
-    const note = noteStmt.get(item.noteId) as any;
+    const note = noteStmt.get(item.noteId) as { id: string; title: string; content: string; dimension: string; date: string } | undefined;
     if (note) {
       results.push({
         noteId: note.id,

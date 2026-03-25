@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { hybridSearch } from '../../db/hybridSearch.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 
 /**
  * GET /api/search?q=query&topK=10
@@ -10,18 +11,19 @@ export async function searchHandler(req: Request, res: Response) {
   const topK = Math.min(Math.max(parseInt(req.query.topK as string) || 10, 1), 50);
 
   if (!query?.trim()) {
-    return res.status(400).json({ error: 'Query parameter "q" is required' });
+    return sendError(res, 'Query parameter "q" is required', 400);
   }
 
   try {
     const results = await hybridSearch(query.trim(), topK);
-    res.json({
+    sendSuccess(res, {
       query: query.trim(),
       topK,
       results,
       total: results.length,
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error?.message || 'Search failed' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Search failed';
+    sendError(res, message);
   }
 }

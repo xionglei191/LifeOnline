@@ -3,102 +3,68 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>前端 / 后端 / 数据库｜从零开始用大模型开发软件</title>
+  <title>前端（Frontend）、后端（Backend）和数据库（Database）到底是什么？ | 书稿单章</title>
   <link rel="stylesheet" href="../assets/styles.css" />
 </head>
 <body>
-  <div class="chapter-page-shell">
-    <main class="content chapter-page">
-      <header class="hero chapter-hero">
-        <p class="hero-kicker">Chapter 05</p>
-        <h1>前端 / 后端 / 数据库：建立软件世界的第一张技术地图</h1>
-        <p class="lead">如果你不先分清前端、后端和数据库，后面很多技术概念都会混在一起。这一章的任务，就是帮你建立一张最基础但最关键的系统地图。</p>
-      </header>
-
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>前端（Frontend）、后端（Backend）和数据库（Database）到底是什么？</h1>
+        <p class="subtitle">第 05 章</p>
+      </div>
+      <div class="directory-actions">
+        <a class="directory-button" href="../contents.html">目录</a>
+        <a class="directory-button" href="../index.html">总览页</a>
+      </div>
+    </aside>
+    <main class="content">
       <section class="chapter-lead-card">
-        <div class="lead-chip">Chapter Guide</div>
-        <h3>这一章的核心任务</h3>
-        <p>让读者第一次清楚地看到：前端不是全部，后端不是神秘黑箱，数据库不是抽象名词。它们分别在系统中承担不同角色。</p>
-      </section>
+  <div class="lead-chip">Chapter Guide</div>
+  <h3>这一章的关键任务</h3>
+  <p>帮零基础小白建立探索系统的第一张基础宏图地标：扫清名词障碍，看懂前端仅仅是呈现的外衣，后端是思考发号施令的中枢，而数据库是不竭的记忆命池。</p>
+</section>
 
-      <section class="chapter">
-        <div class="chapter-no">01</div>
-        <div class="chapter-body">
-          <h2>前端（Frontend）是什么？</h2>
-          <p>前端，就是用户直接看到和操作的那一层。网页、按钮、输入框、菜单、列表、卡片、图表、页面跳转，这些都属于前端世界。</p>
-          <p>前端的核心职责不是“代表业务真相”，而是：</p>
-          <ul>
-            <li>展示信息</li>
-            <li>接收用户操作</li>
-            <li>把状态变成可见界面</li>
-            <li>与后端通信</li>
-          </ul>
-          <p>这意味着前端更像“系统和用户之间的接触面”。它很重要，但它不是系统全部。</p>
-        </div>
-      </section>
+<section class="chapter" id="frontend-backend">
+  <div class="chapter-no">05</div>
+  <div class="chapter-body">
+    <h2>前端（Frontend）、后端（Backend）和数据库（Database）到底是什么？</h2>
+    <p>这是一个无论你如何绕跃都必须要建立的最底色的技术认知宏观地图。或许这辈子这部分代码都不是你亲手从零写的第一行 `div` 或 `controller`，但与 AI 一同探讨甚至对峙架构前，你绝不容许连这些词汇所在的时空坐标系都不清楚。</p>
+    <p><strong>前端（Frontend） —— 感知器、显示器、用户交互表面</strong></p>
+    <p>用户直接用肉眼看到、用手指触碰划过、用鼠标进行点击悬停的那一层，全是前端的世界。网页上色彩渐变的圆角按钮、滑动的提示窗、折线图表动态的铺陈，所有为了“更好地把系统里面的枯燥数据转化为人类可消化易读视图”的交互展现，就是它的首要职责任务。在真实的团队里，这帮人天天追逐着浏览器渲染引擎的平滑度以及如何减少零点几秒的首屏页面加载时间而努力厮杀。在 LifeOnline 系统里，用 Vue3 构筑的这套监控所有联合认知体指标走势的仪表展现控制台就是那显山露水的“前端”。</p>
+    <p><strong>后端（Backend） —— 规则判别器、隐藏的大脑、指挥调度中枢</strong></p>
+    <p>绝大多数真正对世界产生干预与判决的系统核心，都被冷酷地藏在这个黑箱当中。当你在前端点击了一个提交订单“保存”的绿按钮后，前端自己不能说了算，必须携带暗号将提单的请求包裹发出，给那千里之外深暗的服务器。这台后端主脑在这毫秒间处理着无数的验证：判断这个人身份信誉度如何？业务执行到这一步还有权限配额吗？这个动作允许被触发物理外设执行这般危险的请求吗（比如 LifeOnline 里的 dispatch_physical_action 必须过门槛审核）？只有后端允许，事情才能成。</p>
+    <p><strong>数据库（Database） —— 浩瀚档案室、系统的最终记忆仓库</strong></p>
+    <p>再强大的后端大脑，如果不配合一具无边无涯的记忆池，那不过也就是一台关机即丧失灵魂的普通加法计算器。系统只有把有价值的历史、走过的事件节点、甚至每一个状态变更的断口进行永久保存并锁定后，它才拥有一种能够对抗断电与时间推移的“生命史资产”。没有它，软件每一次冷开机都是零重置。在我们的项目 LifeOnline 这个超大工程域当中，存在两种极具特色的“记忆”。一个是 Vault（里面有着一篇篇人类原生态手工撰写和排版的最具原汁原味的、未经打磨粗颗粒全量信息 markdown 库）；另一个是 SQLite 的关系大结构（这是一块系统用来检索和高频驱动的高速计算硬盘）。但它们殊途同归地撑起了整个项目的运行底座。</p>
+    
+    <p>请在大脑中时刻预演下面这样一个最经典的生命完整链路：</p>
+    <ol>
+      <li>【触发起始】用户在前端视图里打入了一串带有疑问的心思内容；</li>
+      <li>【路途投递】前端利用其网络模块将包含这串心思的请求包快速包裹好并抛出网络，瞄准了远在云端的后端接口；</li>
+      <li>【裁切规则】后端在接到这串请求后进行权限清查，随后经过一套被称为算法和业务规则的精密机器切割；</li>
+      <li>【记忆落存】随后，系统大将挥斥方遒指出“将提炼好的 EventNode 认知资产和提问流存入下方深沉的数据库”；</li>
+      <li>【确认盖章】当数据库这头沉重的巨兽默默吐出了“落地确认 OK”的神圣契约返回时，后端才能安心；</li>
+      <li>【终局呈现】于是，再由后端轻快地回复包飞跃网络回归，从而触发前方前端组件在界面里刷出一抹愉悦的绿色弹框——“操作成功保存”。</li>
+    </ol>
+    <p>这张被完全梳理清晰的流转蓝图可以使这世界上极其庞杂难懂的名词全都失去伪装的面纱。在这样的高视角里，无论你接洽哪一个不知名的云服务抑或前端新奇脚手架，你自然都明确它到底附着在这个庞大骨架的哪一块功能软骨上。</p>
+    <div class="chapter-summary">
+      <h3>本章小结</h3>
+      <p>前端主管呈现视觉以及发起第一声接触；后端用黑箱运算铁律主管着不可违背规则及操作控制分配；而数据库正是所有业务能够拥有生命痕迹与横跨生命周期跨度存储的记忆仓库。这三大极轴定位出了软件生命的核心三角基架。</p>
+    </div>
+  </div>
+</section>
+<section class="figure-block">
+  <figure class="figure-card">
+    <div class="figure-badge">图 4</div>
+    <h3>前端 / 后端 / 数据库的关系图</h3>
+    <img src="../assets/images/frontend-backend-database.svg" alt="前端、后端和数据库关系图" class="book-figure" />
+    <figcaption>图 4：先给零基础读者建立一张立体的剖面图“系统远不止是一张二维页面”。它是这三层循环往复不息交织着吞吐数据的综合体。</figcaption>
+  </figure>
+</section>
 
-      <section class="chapter">
-        <div class="chapter-no">02</div>
-        <div class="chapter-body">
-          <h2>后端（Backend）是什么？</h2>
-          <p>后端是系统真正处理数据、规则、权限和业务逻辑的地方。你在页面上点“保存”，真正决定这件事能不能成立、如何成立、数据怎么变的，是后端。</p>
-          <p>后端通常负责：</p>
-          <ul>
-            <li>接收请求</li>
-            <li>校验输入</li>
-            <li>执行业务规则</li>
-            <li>查数据库</li>
-            <li>写数据库</li>
-            <li>调用外部服务</li>
-            <li>返回结果</li>
-          </ul>
-          <p>所以，如果前端像店面，后端更像店面背后的厨房、库存、规则和调度系统。</p>
-        </div>
-      </section>
-
-      <section class="chapter">
-        <div class="chapter-no">03</div>
-        <div class="chapter-body">
-          <h2>数据库（Database）是什么？</h2>
-          <p>数据库是系统长期保存数据的地方。你可以把它理解成系统的记忆仓库。</p>
-          <p>为什么数据库重要？因为如果没有它，系统就只能“瞬时运行”，无法真正记住：</p>
-          <ul>
-            <li>用户是谁</li>
-            <li>历史发生过什么</li>
-            <li>系统当前处于什么状态</li>
-            <li>未来要从哪里接着走</li>
-          </ul>
-          <p>在 LifeOnline 这样的系统里，数据库和事实源尤其重要。因为一旦事实源不稳，整个系统的理解、动作、治理和回流都会跟着漂。</p>
-        </div>
-      </section>
-
-      <section class="chapter">
-        <div class="chapter-no">04</div>
-        <div class="chapter-body">
-          <h2>三者是怎么协作的？</h2>
-          <p>一个最简单的交互过程通常是这样的：</p>
-          <ol>
-            <li>用户在前端操作</li>
-            <li>前端把请求发给后端</li>
-            <li>后端检查规则并处理逻辑</li>
-            <li>后端读写数据库</li>
-            <li>后端把结果返回给前端</li>
-            <li>前端把结果展示给用户</li>
-          </ol>
-          <p>这套协作听起来简单，但它其实就是大多数软件的最基础骨架。</p>
-          <p>一旦你看清这条链，后面很多“框架”“接口”“状态管理”之类的词就不再是雾，而开始长出位置。</p>
-          <div class="chapter-summary">
-            <h3>本章小结</h3>
-            <p>前端负责呈现与交互，后端负责规则与处理，数据库负责长期记忆。理解这三层，是建立技术地图最重要的一步。</p>
-          </div>
-        </div>
-      </section>
-
-      <nav class="chapter-pager">
-        <a class="pager-link" href="chapter-04.html">← 什么是软件工程</a>
-        <a class="pager-link" href="../index.html">总书稿首页</a>
-        <a class="pager-link" href="../contents.html">目录页</a>
-        <a class="pager-link" href="chapter-06.html">平台是什么 →</a>
+      <nav class="chapter-nav" style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="flex:1;"><a href="chapter-04.html" class="nav-prev">← 上一章</a></div>
+        <div style="flex:1; text-align:right;"><a href="chapter-06.html" class="nav-next">下一章 →</a></div>
       </nav>
     </main>
   </div>

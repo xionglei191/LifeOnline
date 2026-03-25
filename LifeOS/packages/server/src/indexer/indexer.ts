@@ -150,7 +150,7 @@ export async function indexVault(vaultPath: string): Promise<IndexResult> {
   for (const file of files) {
     existingFiles.add(file.filePath);
 
-    const row = db.prepare('SELECT file_modified_at FROM notes WHERE file_path = ?').get(file.filePath) as any;
+    const row = db.prepare('SELECT file_modified_at FROM notes WHERE file_path = ?').get(file.filePath) as { file_modified_at: string } | undefined;
     if (row && new Date(row.file_modified_at).getTime() === file.mtime.getTime()) {
       result.skipped++;
       continue;

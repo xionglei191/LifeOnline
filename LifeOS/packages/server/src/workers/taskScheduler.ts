@@ -185,32 +185,24 @@ export function updateSchedule(id: string, updates: UpdateTaskScheduleRequest): 
   if (!existing) throw new Error('Schedule not found');
 
   const now = new Date().toISOString();
-  const sets: string[] = ['updated_at = ?'];
-  const params: Array<string | number> = [now];
-
-  if (updates.enabled !== undefined) {
-    sets.push('enabled = ?');
-    params.push(updates.enabled ? 1 : 0);
-  }
-  if (updates.cronExpression !== undefined) {
-    sets.push('cron_expression = ?');
-    params.push(updates.cronExpression);
-  }
-  if (updates.label !== undefined) {
-    sets.push('label = ?');
-    params.push(normalizeOptionalScheduleLabel(updates.label)!);
-  }
+  const nextEnabled = updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : (existing.enabled ? 1 : 0);
+  const nextCron = updates.cronExpression !== undefined ? updates.cronExpression : existing.cronExpression;
+  const nextLabel = updates.label !== undefined ? normalizeOptionalScheduleLabel(updates.label)! : existing.label;
+  
+  let nextInputStr = JSON.stringify(existing.input);
   if (updates.input !== undefined) {
     const normalizedInput = normalizeTaskInput({
       taskType: existing.taskType,
       input: updates.input,
     });
-    sets.push('input_json = ?');
-    params.push(JSON.stringify(normalizedInput));
+    nextInputStr = JSON.stringify(normalizedInput);
   }
 
-  params.push(id);
-  db.prepare(`UPDATE task_schedules SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+  db.prepare(`
+    UPDATE task_schedules 
+    SET enabled = ?, cron_expression = ?, label = ?, input_json = ?, updated_at = ? 
+    WHERE id = ?
+  `).run(nextEnabled, nextCron, nextLabel, nextInputStr, now, id);
 
   const updated = getSchedule(id)!;
   registerCronJob(updated);

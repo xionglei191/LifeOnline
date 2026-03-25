@@ -350,7 +350,7 @@ const decryptedContent = ref<string | null>(null);
 const projection = useNoteProjection(currentNoteId);
 
 const isApprovalNote = computed(() => {
-  return note.value && note.value.approval_status != null && note.value.approval_status !== '' as any;
+  return note.value && note.value.approval_status != null && note.value.approval_status !== '';
 });
 
 const renderedContent = computed(() => {

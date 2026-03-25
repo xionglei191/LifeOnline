@@ -102,8 +102,8 @@ async function handleSubmit() {
     await createNote({
       title: form.value.title,
       dimension: form.value.dimension as SelectableDimension,
-      type: form.value.type as any,
-      priority: form.value.priority as any,
+      type: form.value.type as CreateNoteRequest['type'],
+      priority: form.value.priority as CreateNoteRequest['priority'],
       content: form.value.content,
     });
     emit('created');

@@ -6,6 +6,7 @@ import { getDb } from '../../db/client.js';
 import { getMonthDateRange, getMonthDateStrings, getTodayDateString, getWeekEndDateString, getWeekStartDateString } from '../../utils/date.js';
 import { getPersonaSnapshotBySourceNoteId } from '../../soul/personaSnapshots.js';
 import { parseNote } from './noteHandlers.js';
+import { sendSuccess, sendError } from '../responseHelper.js';
 import type { ApiResponse, DashboardData, Note, DimensionStat, Dimension, TimelineData, TimelineTrack, CalendarData, CalendarDay, PersonaSnapshotResponse } from '@lifeos/shared';
 import { Logger } from '../../utils/logger.js';
 
@@ -32,12 +33,6 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
 
     const dimensions: Dimension[] = ['_inbox', 'health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
     const dimensionStats: DimensionStat[] = [];
-    const statsStmt = db.prepare(`
-      SELECT COUNT(*) as total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-        SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done
-      FROM notes WHERE dimension = ?
-    `);
     for (const dimension of dimensions) {
       const stats = db.prepare(`
         SELECT COUNT(*) as total, SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -62,16 +57,16 @@ export async function getDashboard(_req: Request<Record<string, never>, ApiRespo
     }
 
     const inboxStats = db.prepare(`SELECT COUNT(*) as total FROM notes WHERE dimension = '_inbox' AND status != 'done'`).get() as { total: number } | undefined;
-    const response: DashboardData = {
-      todayTodos: todayTodos.map(parseNote),
-      weeklyHighlights: weeklyHighlights.map(parseNote),
+    const data: DashboardData = {
+      todayTodos: todayTodos.map(r => parseNote(r as Record<string, unknown>)),
+      weeklyHighlights: weeklyHighlights.map(r => parseNote(r as Record<string, unknown>)),
       dimensionStats,
       inboxCount: inboxStats?.total ?? 0
     };
-    res.json(response);
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('Dashboard error:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    sendError(res, 'Failed to fetch dashboard data');
   }
 }
 
@@ -81,16 +76,16 @@ export async function getTimeline(
 ): Promise<void> {
   try {
     const { start, end } = req.query;
-    if (!start || !end) { res.status(400).json({ error: 'start and end date required' }); return; }
+    if (!start || !end) { sendError(res, 'start and end date required', 400); return; }
     const db = getDb();
-    const notes = db.prepare(`SELECT * FROM notes WHERE date BETWEEN ? AND ? ORDER BY date ASC`).all(start, end).map(parseNote);
+    const notes = db.prepare(`SELECT * FROM notes WHERE date BETWEEN ? AND ? ORDER BY date ASC`).all(start, end).map(r => parseNote(r as Record<string, unknown>));
     const dimensions: Dimension[] = ['health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth'];
     const tracks: TimelineTrack[] = dimensions.map(dimension => ({ dimension, notes: notes.filter(note => note.dimension === dimension) }));
-    const response: TimelineData = { startDate: start, endDate: end, tracks };
-    res.json(response);
+    const data: TimelineData = { startDate: start, endDate: end, tracks };
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('Timeline error:', error);
-    res.status(500).json({ error: 'Failed to fetch timeline data' });
+    sendError(res, 'Failed to fetch timeline data');
   }
 }
 
@@ -100,12 +95,12 @@ export async function getCalendar(
 ): Promise<void> {
   try {
     const { year, month } = req.query;
-    if (!year || !month) { res.status(400).json({ error: 'year and month required' }); return; }
+    if (!year || !month) { sendError(res, 'year and month required', 400); return; }
     const y = parseInt(year as string);
     const m = parseInt(month as string);
     const { start, end } = getMonthDateRange(y, m);
     const db = getDb();
-    const notes = db.prepare(`SELECT * FROM notes WHERE date BETWEEN ? AND ? ORDER BY date ASC`).all(start, end).map(parseNote);
+    const notes = db.prepare(`SELECT * FROM notes WHERE date BETWEEN ? AND ? ORDER BY date ASC`).all(start, end).map(r => parseNote(r as Record<string, unknown>));
     const dayMap = new Map<string, Note[]>();
     notes.forEach(note => {
       const noteDate = note.date.split('T')[0];
@@ -116,11 +111,11 @@ export async function getCalendar(
       const dayNotes = dayMap.get(date) || [];
       return { date, notes: dayNotes, count: dayNotes.length };
     });
-    const response: CalendarData = { year: y, month: m, days };
-    res.json(response);
+    const data: CalendarData = { year: y, month: m, days };
+    sendSuccess(res, data);
   } catch (error) {
     logger.error('Calendar error:', error);
-    res.status(500).json({ error: 'Failed to fetch calendar data' });
+    sendError(res, 'Failed to fetch calendar data');
   }
 }
 
@@ -131,10 +126,10 @@ export async function getPersonaSnapshotHandler(
   try {
     const { sourceNoteId } = req.params;
     const snapshot = getPersonaSnapshotBySourceNoteId(sourceNoteId);
-    res.json({ snapshot });
+    sendSuccess(res, { snapshot });
   } catch (error) {
     logger.error('Get persona snapshot error:', error);
-    res.status(500).json({ error: 'Failed to fetch persona snapshot' });
+    sendError(res, 'Failed to fetch persona snapshot');
   }
 }
 
@@ -145,9 +140,9 @@ export async function getCognitiveHealthHandler(
   try {
     const { getCognitiveHealth } = await import('../../soul/cognitiveHealth.js');
     const report = getCognitiveHealth();
-    res.json(report);
+    sendSuccess(res, report);
   } catch (error) {
     logger.error('Cognitive health error:', error);
-    res.status(500).json({ error: 'Failed to fetch cognitive health' });
+    sendError(res, 'Failed to fetch cognitive health');
   }
 }

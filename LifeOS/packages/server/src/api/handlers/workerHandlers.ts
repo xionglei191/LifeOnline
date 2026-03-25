@@ -8,6 +8,7 @@ import { broadcastUpdate } from '../../index.js';
 import { createWorkerTask, getWorkerTask, listWorkerTasks, startWorkerTaskExecution, retryWorkerTask, cancelWorkerTask, clearFinishedWorkerTasks, isSupportedWorkerTaskType, WorkerTaskValidationError } from '../../workers/workerTasks.js';
 import { createSchedule, listSchedules, getSchedule, updateSchedule, deleteSchedule, runScheduleNow, getScheduleHealth } from '../../workers/taskScheduler.js';
 import { isSupportedWorkerName } from '@lifeos/shared';
+import { sendSuccess, sendError } from '../responseHelper.js';
 import type { ApiResponse, CreateWorkerTaskRequest, CreateWorkerTaskResponse, WorkerTaskListFilters, WorkerTaskListResponse, WorkerTaskResponse, ClearFinishedWorkerTasksResponse, WorkerName, WorkerTaskStatus, WorkerTaskType, CreateTaskScheduleRequest, UpdateTaskScheduleRequest, ScheduleHealth, StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, TaskScheduleResponse, TaskScheduleListResponse, DeleteTaskScheduleResponse } from '@lifeos/shared';
 
 function parseWorkerTaskStatus(value: unknown): WorkerTaskStatus | undefined {
@@ -41,20 +42,19 @@ export async function createWorkerTaskHandler(
 ): Promise<void> {
   try {
     const body = req.body;
-    if (!body?.taskType) { res.status(400).json({ error: 'taskType is required' }); return; }
-    if (!isSupportedWorkerTaskType(body.taskType)) { res.status(400).json({ error: 'Unsupported taskType' }); return; }
+    if (!body?.taskType) { sendError(res, 'taskType is required', 400); return; }
+    if (!isSupportedWorkerTaskType(body.taskType)) { sendError(res, 'Unsupported taskType', 400); return; }
     const task = createWorkerTask({ ...body, taskType: body.taskType });
     broadcastUpdate({ type: 'worker-task-updated', data: task });
     if (task.sourceNoteId) {
       broadcastUpdate({ type: 'note-worker-tasks-updated', data: { sourceNoteId: task.sourceNoteId, task } });
     }
     startWorkerTaskExecution(task.id);
-    const response: CreateWorkerTaskResponse = { task };
-    res.status(202).json(response);
+    sendSuccess(res, { task } as CreateWorkerTaskResponse, 202);
   } catch (error) {
-    if (isTaskInputValidationError(error)) { res.status(400).json({ error: error instanceof Error ? error.message : String(error) }); return; }
+    if (isTaskInputValidationError(error)) { sendError(res, error instanceof Error ? error.message : String(error), 400); return; }
     console.error('Create worker task error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -72,47 +72,44 @@ export async function listWorkerTasksHandler(
       taskType: parseWorkerTaskType(req.query.taskType),
       worker: parseWorkerName(req.query.worker),
     };
-    const response: WorkerTaskListResponse = { tasks: listWorkerTasks(limit, filters), filters };
-    res.json(response);
+    const data: WorkerTaskListResponse = { tasks: listWorkerTasks(limit, filters), filters };
+    sendSuccess(res, data);
   } catch (error) {
     console.error('List worker tasks error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function getWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = getWorkerTask(req.params.id);
-    if (!task) { res.status(404).json({ error: 'Worker task not found' }); return; }
-    const response: WorkerTaskResponse = { task };
-    res.json(response);
+    if (!task) { sendError(res, 'Worker task not found', 404); return; }
+    sendSuccess(res, { task } as WorkerTaskResponse);
   } catch (error) {
     console.error('Get worker task error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function retryWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = retryWorkerTask(req.params.id);
-    const response: WorkerTaskResponse = { task };
-    res.status(202).json(response);
-  } catch (error: any) {
-    const message = error?.message || String(error);
-    if (message === 'Worker task not found') { res.status(404).json({ error: message }); return; }
-    res.status(400).json({ error: message });
+    sendSuccess(res, { task } as WorkerTaskResponse, 202);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Worker task not found') { sendError(res, message, 404); return; }
+    sendError(res, message, 400);
   }
 }
 
 export async function cancelWorkerTaskHandler(req: Request<{ id: string }, ApiResponse<WorkerTaskResponse>>, res: Response<ApiResponse<WorkerTaskResponse>>): Promise<void> {
   try {
     const task = cancelWorkerTask(req.params.id);
-    const response: WorkerTaskResponse = { task };
-    res.json(response);
-  } catch (error: any) {
-    const message = error?.message || String(error);
-    if (message === 'Worker task not found') { res.status(404).json({ error: message }); return; }
-    res.status(400).json({ error: message });
+    sendSuccess(res, { task } as WorkerTaskResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Worker task not found') { sendError(res, message, 404); return; }
+    sendError(res, message, 400);
   }
 }
 
@@ -122,10 +119,9 @@ export async function clearFinishedWorkerTasksHandler(
 ): Promise<void> {
   try {
     const deleted = clearFinishedWorkerTasks();
-    const response: ClearFinishedWorkerTasksResponse = { success: true, deleted };
-    res.json(response);
+    sendSuccess(res, { success: true, deleted } as ClearFinishedWorkerTasksResponse);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -134,81 +130,77 @@ export async function clearFinishedWorkerTasksHandler(
 export async function createScheduleHandler(req: Request<Record<string, never>, ApiResponse<TaskScheduleResponse>, CreateTaskScheduleRequest>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const body = req.body;
-    if (!body?.taskType || !isSupportedWorkerTaskType(body.taskType)) { res.status(400).json({ error: 'Invalid or missing taskType' }); return; }
-    if (!body.cronExpression || !cronValidate(body.cronExpression)) { res.status(400).json({ error: 'Invalid cron expression' }); return; }
-    if (!body.label?.trim()) { res.status(400).json({ error: 'label is required' }); return; }
+    if (!body?.taskType || !isSupportedWorkerTaskType(body.taskType)) { sendError(res, 'Invalid or missing taskType', 400); return; }
+    if (!body.cronExpression || !cronValidate(body.cronExpression)) { sendError(res, 'Invalid cron expression', 400); return; }
+    if (!body.label?.trim()) { sendError(res, 'label is required', 400); return; }
     const schedule = createSchedule({ ...body, taskType: body.taskType });
-    const response: TaskScheduleResponse = { schedule };
-    res.status(201).json(response);
+    sendSuccess(res, { schedule } as TaskScheduleResponse, 201);
   } catch (error) {
-    if (isTaskInputValidationError(error)) { res.status(400).json({ error: error instanceof Error ? error.message : String(error) }); return; }
+    if (isTaskInputValidationError(error)) { sendError(res, error instanceof Error ? error.message : String(error), 400); return; }
     console.error('Create schedule error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function listSchedulesHandler(_req: Request<Record<string, never>, ApiResponse<TaskScheduleListResponse>>, res: Response<ApiResponse<TaskScheduleListResponse>>): Promise<void> {
   try {
-    const response: TaskScheduleListResponse = { schedules: listSchedules() };
-    res.json(response);
+    sendSuccess(res, { schedules: listSchedules() } as TaskScheduleListResponse);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function getScheduleHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const schedule = getSchedule(req.params.id);
-    if (!schedule) { res.status(404).json({ error: 'Schedule not found' }); return; }
-    const response: TaskScheduleResponse = { schedule };
-    res.json(response);
+    if (!schedule) { sendError(res, 'Schedule not found', 404); return; }
+    sendSuccess(res, { schedule } as TaskScheduleResponse);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function updateScheduleHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>, UpdateTaskScheduleRequest>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const body = req.body;
-    if (body.cronExpression !== undefined && !cronValidate(body.cronExpression)) { res.status(400).json({ error: 'Invalid cron expression' }); return; }
-    if (body.label !== undefined && !body.label.trim()) { res.status(400).json({ error: 'label cannot be empty' }); return; }
+    if (body.cronExpression !== undefined && !cronValidate(body.cronExpression)) { sendError(res, 'Invalid cron expression', 400); return; }
+    if (body.label !== undefined && !body.label.trim()) { sendError(res, 'label cannot be empty', 400); return; }
     const schedule = updateSchedule(req.params.id, body);
-    const response: TaskScheduleResponse = { schedule };
-    res.json(response);
-  } catch (error: any) {
-    if (error?.message === 'Schedule not found') { res.status(404).json({ error: error.message }); return; }
-    if (isTaskInputValidationError(error)) { res.status(400).json({ error: error instanceof Error ? error.message : String(error) }); return; }
-    res.status(500).json({ error: String(error) });
+    sendSuccess(res, { schedule } as TaskScheduleResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Schedule not found') { sendError(res, message, 404); return; }
+    if (isTaskInputValidationError(error)) { sendError(res, message, 400); return; }
+    sendError(res, message);
   }
 }
 
 export async function deleteScheduleHandler(req: Request<{ id: string }, ApiResponse<DeleteTaskScheduleResponse>>, res: Response<ApiResponse<DeleteTaskScheduleResponse>>): Promise<void> {
   try {
     deleteSchedule(req.params.id);
-    const response: DeleteTaskScheduleResponse = { success: true };
-    res.json(response);
+    sendSuccess(res, { success: true } as DeleteTaskScheduleResponse);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function runScheduleNowHandler(req: Request<{ id: string }, ApiResponse<TaskScheduleResponse>>, res: Response<ApiResponse<TaskScheduleResponse>>): Promise<void> {
   try {
     const schedule = runScheduleNow(req.params.id);
-    const response: TaskScheduleResponse = { schedule };
-    res.json(response);
-  } catch (error: any) {
-    if (error?.message === 'Schedule not found') { res.status(404).json({ error: error.message }); return; }
-    res.status(500).json({ error: String(error) });
+    sendSuccess(res, { schedule } as TaskScheduleResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === 'Schedule not found') { sendError(res, message, 404); return; }
+    sendError(res, message);
   }
 }
 
 export async function scheduleHealthHandler(_req: Request<Record<string, never>, ApiResponse<ScheduleHealth>>, res: Response<ApiResponse<ScheduleHealth>>): Promise<void> {
   try {
     const health = getScheduleHealth();
-    res.json(health);
+    sendSuccess(res, health);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -224,9 +216,9 @@ export async function getStatsTrend(req: Request<Record<string, never>, ApiRespo
       FROM notes WHERE date >= date('now', '-' || ? || ' days')
       GROUP BY day ORDER BY day ASC
     `).all(days) as StatsTrendPoint[];
-    res.json(rows);
+    sendSuccess(res, rows);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -240,9 +232,9 @@ export async function getStatsRadar(_req: Request<Record<string, never>, ApiResp
       const rate = row.total > 0 ? Math.round((row.done / row.total) * 100) : 0;
       return { dimension: dim, rate, total: row.total, done: row.done };
     });
-    res.json(data);
+    sendSuccess(res, data);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -255,16 +247,16 @@ export async function getStatsMonthly(_req: Request<Record<string, never>, ApiRe
       FROM notes WHERE date >= date('now', '-6 months')
       GROUP BY month ORDER BY month ASC
     `).all() as StatsMonthlyPoint[];
-    res.json(rows);
+    sendSuccess(res, rows);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function getStatsTags(_req: Request<Record<string, never>, ApiResponse<StatsTagPoint[]>>, res: Response<ApiResponse<StatsTagPoint[]>>): Promise<void> {
   try {
     const db = getDb();
-    const notes = db.prepare('SELECT tags FROM notes WHERE tags IS NOT NULL').all() as any[];
+    const notes = db.prepare('SELECT tags FROM notes WHERE tags IS NOT NULL').all() as { tags: string }[];
     const tagCount: Record<string, number> = {};
     notes.forEach(n => {
       try { const tags = JSON.parse(n.tags) as string[]; tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }); } catch {}
@@ -272,8 +264,8 @@ export async function getStatsTags(_req: Request<Record<string, never>, ApiRespo
     const sorted: StatsTagPoint[] = Object.entries(tagCount)
       .sort((a, b) => b[1] - a[1]).slice(0, 30)
       .map(([tag, count]) => ({ tag, count }));
-    res.json(sorted);
+    sendSuccess(res, sorted);
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }

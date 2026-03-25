@@ -12,6 +12,7 @@ import { planPromotionSoulActions } from '../../soul/reintegrationPromotionPlann
 import { listEventNodes, getEventNodeBySourceReintegrationId, type EventNode } from '../../soul/eventNodes.js';
 import { listContinuityRecords, getContinuityRecordBySourceReintegrationId, type ContinuityRecord } from '../../soul/continuityRecords.js';
 import { buildProjectionExplanationSummary, getProjectionContinuitySummary, getReintegrationOutcomeDisplaySummary, getSoulActionPromotionSummary, type SoulActionDispatchExecutionSummary } from '@lifeos/shared';
+import { sendSuccess, sendError } from '../responseHelper.js';
 import type { ApiResponse, ListSoulActionsResponse, SoulActionResponse, DispatchSoulActionResponse, ListEventNodesResponse, ListContinuityRecordsResponse, ListReintegrationRecordsResponse, ReintegrationReviewRequest, AcceptReintegrationRecordResponse, RejectReintegrationRecordResponse, PlanReintegrationPromotionsResponse, ReintegrationRecord } from '@lifeos/shared';
 
 // ── Shared Helpers ─────────────────────────────────────
@@ -38,8 +39,8 @@ function parseSoulActionKind(value: unknown) {
   return isSupportedSoulActionKind(normalized) ? normalized : undefined;
 }
 
-function getGovernanceReason(body: any): string | null {
-  return typeof body?.reason === 'string' && body.reason.trim() ? body.reason.trim() : null;
+function getGovernanceReason(body: Record<string, unknown> | undefined): string | null {
+  return typeof body?.reason === 'string' && (body.reason as string).trim() ? (body.reason as string).trim() : null;
 }
 
 function getPersistedSoulActionExecutionSummary(soulAction: ReturnType<typeof getSoulAction> | null | undefined): SoulActionDispatchExecutionSummary | null {
@@ -221,14 +222,14 @@ export async function listSoulActionsHandler(
     const soulActions = listSoulActions(filters);
     const normalizedSourceFilters = normalizeSoulActionSourceFilters(filters, soulActions);
 
-    const response: ListSoulActionsResponse = {
+    const data: ListSoulActionsResponse = {
       soulActions: soulActions.map((soulAction) => attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)).filter((soulAction): soulAction is NonNullable<ReturnType<typeof attachSoulActionExecutionSummaryAndPromotionSummary>> => !!soulAction),
       filters: { ...filters, ...normalizedSourceFilters },
     };
-    res.json(response);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('List soul actions error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -238,12 +239,11 @@ export async function getSoulActionHandler(
 ): Promise<void> {
   try {
     const soulAction = getSoulAction(req.params.id);
-    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
-    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
-    res.json(response);
+    if (!soulAction) { sendError(res, 'Soul action not found', 404); return; }
+    sendSuccess(res, { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! } as SoulActionResponse);
   } catch (error) {
     console.error('Get soul action error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -252,13 +252,13 @@ export async function approveSoulActionHandler(
   res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
-    const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body));
-    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
+    const soulAction = approveSoulAction(req.params.id, getGovernanceReason(req.body as Record<string, unknown>));
+    if (!soulAction) { sendError(res, 'Soul action not found', 404); return; }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! } as SoulActionResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -267,13 +267,13 @@ export async function deferSoulActionHandler(
   res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
-    const soulAction = deferSoulAction(req.params.id, getGovernanceReason(req.body));
-    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
+    const soulAction = deferSoulAction(req.params.id, getGovernanceReason(req.body as Record<string, unknown>));
+    if (!soulAction) { sendError(res, 'Soul action not found', 404); return; }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! } as SoulActionResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -282,13 +282,13 @@ export async function discardSoulActionHandler(
   res: Response<ApiResponse<SoulActionResponse>>,
 ): Promise<void> {
   try {
-    const soulAction = discardSoulAction(req.params.id, getGovernanceReason(req.body));
-    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
+    const soulAction = discardSoulAction(req.params.id, getGovernanceReason(req.body as Record<string, unknown>));
+    if (!soulAction) { sendError(res, 'Soul action not found', 404); return; }
     broadcastSoulActionUpdate(soulAction);
-    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(soulAction)! } as SoulActionResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -298,8 +298,8 @@ export async function dispatchSoulActionHandler(
 ): Promise<void> {
   try {
     const result = await dispatchApprovedSoulAction(req.params.id);
-    if (!result.soulActionId) { res.status(404).json({ error: result.reason }); return; }
-    if (!result.dispatched) { res.status(400).json({ error: result.reason, result }); return; }
+    if (!result.soulActionId) { sendError(res, result.reason, 404); return; }
+    if (!result.dispatched) { sendError(res, result.reason, 400); return; }
 
     const soulAction = getSoulAction(result.soulActionId);
     const task = result.workerTaskId ? (await import('../../workers/workerTasks.js')).getWorkerTask(result.workerTaskId) : null;
@@ -314,17 +314,17 @@ export async function dispatchSoulActionHandler(
     broadcastSoulActionUpdate(soulAction);
     broadcastEventNodeUpdate(result.eventNode);
     broadcastContinuityRecordUpdate(result.continuityRecord);
-    const response: DispatchSoulActionResponse = {
+    const data: DispatchSoulActionResponse = {
       result: responseResult,
       soulAction: responseSoulAction ?? null,
       task,
       eventNode: responseEventNode,
       continuityRecord: responseContinuityRecord,
     };
-    res.status(202).json(response);
+    sendSuccess(res, data, 202);
   } catch (error) {
     console.error('Dispatch soul action error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -334,15 +334,15 @@ export async function answerFollowupHandler(
 ): Promise<void> {
   try {
     const answer = req.body?.answer?.trim();
-    if (!answer) { res.status(400).json({ error: 'answer is required' }); return; }
+    if (!answer) { sendError(res, 'answer is required', 400); return; }
 
     const soulAction = getSoulAction(req.params.id);
-    if (!soulAction) { res.status(404).json({ error: 'Soul action not found' }); return; }
+    if (!soulAction) { sendError(res, 'Soul action not found', 404); return; }
     if (soulAction.actionKind !== 'ask_followup_question') {
-      res.status(400).json({ error: 'only ask_followup_question actions can be answered' }); return;
+      sendError(res, 'only ask_followup_question actions can be answered', 400); return;
     }
     if (soulAction.executionStatus !== 'pending') {
-      res.status(400).json({ error: 'only pending followup questions can be answered' }); return;
+      sendError(res, 'only pending followup questions can be answered', 400); return;
     }
 
     // Append answer to source note
@@ -374,11 +374,10 @@ export async function answerFollowupHandler(
 
     const updated = getSoulAction(soulAction.id);
     broadcastSoulActionUpdate(updated);
-    const response: SoulActionResponse = { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(updated)! };
-    res.json(response);
+    sendSuccess(res, { soulAction: attachSoulActionExecutionSummaryAndPromotionSummary(updated)! } as SoulActionResponse);
   } catch (error) {
     console.error('Answer followup error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -393,14 +392,14 @@ export async function listReintegrationRecordsHandler(
     const sourceNoteId = typeof req.query.sourceNoteId === 'string' && req.query.sourceNoteId.trim()
       ? req.query.sourceNoteId.trim()
       : undefined;
-    const response: ListReintegrationRecordsResponse = {
+    const data: ListReintegrationRecordsResponse = {
       reintegrationRecords: listReintegrationRecords({ reviewStatus, sourceNoteId }).map((record) => attachReintegrationRecordDisplaySummary(record)).filter((record): record is NonNullable<ReturnType<typeof attachReintegrationRecordDisplaySummary>> => !!record),
       filters: { reviewStatus, sourceNoteId },
     };
-    res.json(response);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('List reintegration records error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -409,20 +408,21 @@ export async function acceptReintegrationRecordHandler(
   res: Response<ApiResponse<AcceptReintegrationRecordResponse>>,
 ): Promise<void> {
   try {
-    const result = acceptReintegrationRecordAndPlanPromotions(req.params.id, getGovernanceReason(req.body));
-    if (!result) { res.status(404).json({ error: 'Reintegration record not found' }); return; }
+    const result = acceptReintegrationRecordAndPlanPromotions(req.params.id, getGovernanceReason(req.body as Record<string, unknown>));
+    if (!result) { sendError(res, 'Reintegration record not found', 404); return; }
     broadcastReintegrationRecordUpdate(result.reintegrationRecord, result.soulActions);
     result.soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
     const planningResponse = buildReintegrationPlanningResponse(result.reintegrationRecord, result.soulActions);
-    const response: AcceptReintegrationRecordResponse = {
+    const data: AcceptReintegrationRecordResponse = {
       reintegrationRecord: planningResponse.reintegrationRecord,
       soulActions: planningResponse.soulActions,
       nextActionSummary: planningResponse.nextActionSummary,
       displaySummary: planningResponse.displaySummary,
     };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, data);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -431,14 +431,14 @@ export async function rejectReintegrationRecordHandler(
   res: Response<ApiResponse<RejectReintegrationRecordResponse>>,
 ): Promise<void> {
   try {
-    const record = rejectReintegrationRecord(req.params.id, getGovernanceReason(req.body));
-    if (!record) { res.status(404).json({ error: 'Reintegration record not found' }); return; }
+    const record = rejectReintegrationRecord(req.params.id, getGovernanceReason(req.body as Record<string, unknown>));
+    if (!record) { sendError(res, 'Reintegration record not found', 404); return; }
     const responseRecord = attachReintegrationRecordDisplaySummary(record);
     broadcastReintegrationRecordUpdate(record);
-    const response: RejectReintegrationRecordResponse = { reintegrationRecord: responseRecord ?? record };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, { reintegrationRecord: responseRecord ?? record } as RejectReintegrationRecordResponse);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -448,20 +448,21 @@ export async function planPromotionsHandler(
 ): Promise<void> {
   try {
     const record = getReintegrationRecord(req.params.id);
-    if (!record) { res.status(404).json({ error: 'Reintegration record not found' }); return; }
+    if (!record) { sendError(res, 'Reintegration record not found', 404); return; }
     const soulActions = planPromotionSoulActions(record);
     const planningResponse = buildReintegrationPlanningResponse(record, soulActions);
     broadcastReintegrationRecordUpdate(record, soulActions);
     soulActions.forEach((soulAction) => broadcastSoulActionUpdate(soulAction));
-    const response: PlanReintegrationPromotionsResponse = {
+    const data: PlanReintegrationPromotionsResponse = {
       reintegrationRecord: planningResponse.reintegrationRecord,
       soulActions: planningResponse.soulActions,
       nextActionSummary: planningResponse.nextActionSummary,
       displaySummary: planningResponse.displaySummary,
     };
-    res.json(response);
-  } catch (error: any) {
-    res.status(400).json({ error: error?.message || String(error) });
+    sendSuccess(res, data);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
@@ -474,7 +475,7 @@ export async function listEventNodesHandler(
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const visibleSourceReintegrationIds = getVisibleProjectionReintegrationIds(sourceReintegrationIds);
-    const response: ListEventNodesResponse = {
+    const data: ListEventNodesResponse = {
       eventNodes: visibleSourceReintegrationIds.length === 0
         ? []
         : listEventNodes(visibleSourceReintegrationIds)
@@ -482,10 +483,10 @@ export async function listEventNodesHandler(
             .filter((eventNode): eventNode is NonNullable<ReturnType<typeof attachEventNodeProjectionSummary>> => !!eventNode),
       filters: { sourceReintegrationIds },
     };
-    res.json(response);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('List event nodes error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -496,7 +497,7 @@ export async function listContinuityRecordsHandler(
   try {
     const sourceReintegrationIds = getSourceReintegrationIds(req.query);
     const visibleSourceReintegrationIds = getVisibleProjectionReintegrationIds(sourceReintegrationIds);
-    const response: ListContinuityRecordsResponse = {
+    const data: ListContinuityRecordsResponse = {
       continuityRecords: visibleSourceReintegrationIds.length === 0
         ? []
         : listContinuityRecords(visibleSourceReintegrationIds)
@@ -504,17 +505,17 @@ export async function listContinuityRecordsHandler(
             .filter((continuityRecord): continuityRecord is NonNullable<ReturnType<typeof attachContinuityRecordProjectionSummary>> => !!continuityRecord),
       filters: { sourceReintegrationIds },
     };
-    res.json(response);
+    sendSuccess(res, data);
   } catch (error) {
     console.error('List continuity records error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 // ── BrainstormSession Handlers ─────────────────────────
 
 export async function listBrainstormSessionsHandler(
-  req: Request<Record<string, never>, any, Record<string, never>, { limit?: string; offset?: string }>,
+  req: Request<Record<string, never>, unknown, Record<string, never>, { limit?: string; offset?: string }>,
   res: Response,
 ): Promise<void> {
   try {
@@ -522,10 +523,10 @@ export async function listBrainstormSessionsHandler(
     const limit = Math.min(parseInt(req.query.limit ?? '50', 10) || 50, 100);
     const offset = parseInt(req.query.offset ?? '0', 10) || 0;
     const result = listBrainstormSessions(limit, offset);
-    res.json(result);
+    sendSuccess(res, result);
   } catch (error) {
     console.error('List brainstorm sessions error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
@@ -536,25 +537,25 @@ export async function getBrainstormSessionHandler(
   try {
     const { getBrainstormSession } = await import('../../soul/brainstormSessions.js');
     const session = getBrainstormSession(req.params.id);
-    if (!session) { res.status(404).json({ error: 'Brainstorm session not found' }); return; }
-    res.json({ session });
+    if (!session) { sendError(res, 'Brainstorm session not found', 404); return; }
+    sendSuccess(res, { session });
   } catch (error) {
     console.error('Get brainstorm session error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }
 
 export async function getBrainstormSessionRelatedHandler(
-  req: Request<{ id: string }, any, any, { limit?: string }>,
+  req: Request<{ id: string }, unknown, unknown, { limit?: string }>,
   res: Response,
 ): Promise<void> {
   try {
     const { findRelatedBrainstormSessions } = await import('../../soul/brainstormSessions.js');
     const limit = Math.min(parseInt(req.query.limit ?? '5', 10) || 5, 20);
     const related = findRelatedBrainstormSessions(req.params.id, limit);
-    res.json({ sessions: related });
+    sendSuccess(res, { sessions: related });
   } catch (error) {
     console.error('Get related brainstorm sessions error:', error);
-    res.status(500).json({ error: String(error) });
+    sendError(res, String(error));
   }
 }

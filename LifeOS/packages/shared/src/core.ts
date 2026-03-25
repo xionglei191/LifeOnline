@@ -63,7 +63,11 @@ export type ReintegrationSignalKind =
   | 'physical_action_reintegration';
 
 export interface ApiErrorResponse {
+  success: false;
   error: string;
 }
 
-export type ApiResponse<T> = T | ApiErrorResponse;
+export type ApiResponse<T> = {
+  success: true;
+  data: T;
+} | ApiErrorResponse;
