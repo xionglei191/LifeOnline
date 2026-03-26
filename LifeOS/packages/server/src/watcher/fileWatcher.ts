@@ -33,7 +33,10 @@ export class FileWatcher extends EventEmitter {
 
     // Watch the directory, not a glob pattern
     this.watcher = chokidar.watch(this.vaultPath, {
-      ignored: /(^|[\/\\])\../,
+      ignored: [
+        /(^|[\/\\])\../, // Dotfiles like .obsidian, .git
+        /(^|[\/\\])(_Templates|Templates|_scripts|Scripts|assets)($|[\/\\])/ 
+      ],
       persistent: true,
       ignoreInitial: true,
       depth: 99,  // Watch subdirectories
