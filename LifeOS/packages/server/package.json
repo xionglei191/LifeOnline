@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "build": "tsc",
     "db:init": "tsx scripts/init-db.ts",
     "index": "tsx -e \"import('./src/indexer/indexer.js').then(m => m.indexVault(process.env.VAULT_PATH || '../../mock-vault'))\"",

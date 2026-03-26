@@ -84,6 +84,7 @@ if [ "$DO_RESTART" = true ]; then
   # 强制要求使用 systemd services
   if ssh "${REMOTE_USER}@${REMOTE_HOST}" "systemctl --user is-enabled lifeos-server.service 2>/dev/null"; then
     echo "   Using systemd user services..."
+    ssh "${REMOTE_USER}@${REMOTE_HOST}" "systemctl --user daemon-reload"
     ssh "${REMOTE_USER}@${REMOTE_HOST}" "systemctl --user restart lifeos-server.service"
     echo "   ✅ lifeos-server restarted"
     sleep 2

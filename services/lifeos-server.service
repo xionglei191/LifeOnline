@@ -7,7 +7,7 @@ Type=simple
 WorkingDirectory=/home/xionglei/LifeOnline/LifeOS/packages/server
 Environment=PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=/home/xionglei/LifeOnline/LifeOS/packages/server/.env.production
-ExecStart=/home/linuxbrew/.linuxbrew/bin/pnpm dev
+ExecStart=/home/linuxbrew/.linuxbrew/bin/pnpm start
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

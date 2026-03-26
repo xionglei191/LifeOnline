@@ -55,3 +55,9 @@
 - **规则**：
   1. **状态(State)与产物(Artifact)隔离**：机器自动化任务的进行中状态、心跳日志、报错详情必须落盘在关系型数据库（如 SQLite 表），绝对禁止污染属于“人类知识库”范畴的 Vault 笔记文件夹。
   2. **构建认知触发免疫门控 (Immunity Gate)**：在事件驱动触发 AI 认知识别前，必须设置坚固的“免疫黑名单”。（A）建立目录隔离，拦截对如 `/assets/`，`/soul/continuity/` 和 `/system/` 目录下文件的分析；（B）在解析器 `parser.ts` 层级必须承认并放行机器产生的标识字段（如 `continuity_insight`, `agent_report` 等 `type`），以便触发器从元数据层面 `currentNote.type !== 'note'` 干净利落地完成拦截。
+
+## 2026-03-26
+
+### 11. 生产环境绝不可使用带有热重载机制的启动脚本
+- **问题**：部署系统中的 systemd 服务配置（`lifeos-server.service`）错误地使用了 `pnpm dev`（绑定了 `tsx watch src/index.ts`）。当业务逻辑（如智体存储）或文件同步系统（如 Syncthing）触及后端文件系统时，`watch` 进程捕获到变动便立即重启服务端，导致生产环境出现无限退出的“重启死循环”，前端断连无法服务。
+- **规则**：生产环境统一部署必须显式指向静态执行（如 `pnpm start` 引用的 `tsx src/index.ts` 或 `node dist/index.js`），严禁挂在任何带 `watch` / `nodemon` 参数的开发脚本上。
