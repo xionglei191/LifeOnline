@@ -233,6 +233,13 @@ async function performProviderRequest(baseUrl: string, model: string, apiKey: st
     }
 
     const data = await response.json();
+    
+    // Check for OpenAI format
+    if (data?.choices?.[0]?.message?.content != null) {
+      return;
+    }
+    
+    // Fallback to Anthropic format
     const block = data?.content?.[0];
     if (!block || block.type !== 'text') {
       throw new Error('AI provider returned an unexpected response');
