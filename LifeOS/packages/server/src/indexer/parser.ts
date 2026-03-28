@@ -21,7 +21,7 @@ export interface ParseResult {
 }
 
 const VALID_VALUES = {
-  type: ['schedule', 'task', 'note', 'record', 'milestone', 'review', 'article', 'continuity_insight', 'system_report', 'agent_report'],
+  type: ['schedule', 'task', 'note', 'record', 'milestone', 'review'],
   dimension: ['health', 'career', 'finance', 'learning', 'relationship', 'life', 'hobby', 'growth', '_inbox'],
   status: ['pending', 'in_progress', 'done', 'cancelled'],
   priority: ['high', 'medium', 'low'],

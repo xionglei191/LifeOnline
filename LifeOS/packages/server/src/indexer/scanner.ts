@@ -7,7 +7,7 @@ export interface FileInfo {
   mtime: Date;
 }
 
-const IGNORED_DIRS = new Set(['.trash', '.obsidian', '.git', 'node_modules', '_Templates', '_scripts', 'Templates', 'Scripts', 'assets']);
+const IGNORED_DIRS = new Set(['.trash', '.obsidian', '.git', 'node_modules', '_Templates', '_scripts', 'Templates', 'Scripts', 'assets', 'soul', 'system']);
 
 export async function scanVault(vaultPath: string): Promise<FileInfo[]> {
   const files: FileInfo[] = [];
