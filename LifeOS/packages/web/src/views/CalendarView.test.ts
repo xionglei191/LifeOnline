@@ -12,6 +12,7 @@ vi.mock('../composables/useCalendar', () => ({
 }));
 
 import CalendarView from './CalendarView.vue';
+import { togglePrivacyMode, usePrivacy } from '../composables/usePrivacy';
 
 const calendarData: CalendarData = {
   year: 2026,
@@ -111,6 +112,10 @@ describe('CalendarView', () => {
   });
 
   it('hides protected content in selected-day detail cards while keeping public content visible', async () => {
+    // Ensure privacyMode is active via the singleton ref
+    const { privacyMode } = usePrivacy();
+    if (!privacyMode.value) togglePrivacyMode();
+
     const load = vi.fn();
     composableMocks.useCalendar.mockReturnValue({
       data: ref({
@@ -151,6 +156,9 @@ describe('CalendarView', () => {
     expect(wrapper.text()).toContain('public body');
     expect(wrapper.text()).not.toContain('private body');
     expect(wrapper.text()).not.toContain('encrypted body');
+
+    // Cleanup: restore privacyMode to off
+    if (privacyMode.value) togglePrivacyMode();
   });
 
   it('clears the selected note when the month window changes', async () => {

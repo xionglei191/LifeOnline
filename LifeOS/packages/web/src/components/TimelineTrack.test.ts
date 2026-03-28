@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import type { Note, TimelineTrack as TimelineTrackContract } from '@lifeos/shared';
 import TimelineTrack from './TimelineTrack.vue';
+import { togglePrivacyMode, usePrivacy } from '../composables/usePrivacy';
 
 function createNote(overrides: Partial<Note> = {}): Note {
   return {
@@ -117,6 +118,9 @@ describe('TimelineTrack', () => {
   });
 
   it('hides protected content in the multi-note picker while keeping public content visible', async () => {
+    const { privacyMode } = usePrivacy();
+    if (!privacyMode.value) togglePrivacyMode();
+
     const wrapper = mount(TimelineTrack, {
       props: {
         tracks: [
@@ -152,9 +156,13 @@ describe('TimelineTrack', () => {
     expect(pickerText).not.toContain('encrypted body');
 
     wrapper.unmount();
+    if (privacyMode.value) togglePrivacyMode();
   });
 
   it('orders multi-note picker entries by visible shared titles', async () => {
+    // Clean up DOM from previous Teleport renders
+    document.body.innerHTML = '';
+
     const wrapper = mount(TimelineTrack, {
       props: {
         tracks: [

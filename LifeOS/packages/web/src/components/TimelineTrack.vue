@@ -98,6 +98,7 @@ import type { TimelineTrack, Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
 import { formatLocalDate, parseLocalDate } from '../utils/date';
 import { getDimensionColor, getDimensionLabel } from '../utils/dimensions';
+import { usePrivacy } from '../composables/usePrivacy';
 
 const props = defineProps<{
   tracks: TimelineTrack[];
@@ -304,11 +305,13 @@ function truncateContent(text: string, len: number) {
   return clean.length > len ? clean.slice(0, len) + '…' : clean;
 }
 
+const { privacyMode } = usePrivacy();
+
 function pickerBodyPreview(note: Note) {
   if (note.encrypted) {
     return '🔒 内容已加密，预览已隐藏';
   }
-  if (note.privacy === 'private' || note.privacy === 'sensitive') {
+  if (privacyMode.value && (note.privacy === 'private' || note.privacy === 'sensitive')) {
     return '🔒 当前内容受隐私保护，预览已隐藏';
   }
   if (!note.content) {

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import type { Note } from '@lifeos/shared';
 import NotePreview from './NotePreview.vue';
+import { togglePrivacyMode, usePrivacy } from '../composables/usePrivacy';
 
 function createNote(overrides: Partial<Note> = {}): Note {
   return {
@@ -86,7 +87,8 @@ describe('NotePreview', () => {
   });
 
   it('hides protected content in the single-note preview path', () => {
-    sessionStorage.setItem('privacyMode', '1');
+    const { privacyMode } = usePrivacy();
+    if (!privacyMode.value) togglePrivacyMode();
 
     const wrapper = mount(NotePreview, {
       props: {
@@ -110,6 +112,7 @@ describe('NotePreview', () => {
     expect(document.body.textContent).not.toContain('top secret preview content');
 
     wrapper.unmount();
+    if (privacyMode.value) togglePrivacyMode();
   });
 
   it('hides encrypted content in multi-note previews', () => {

@@ -62,6 +62,7 @@ import CalendarGrid from '../components/CalendarGrid.vue';
 import NoteDetail from '../components/NoteDetail.vue';
 import StateDisplay from '../components/StateDisplay.vue';
 import { sortCalendarNotes } from '../utils/noteOrdering';
+import { usePrivacy } from '../composables/usePrivacy';
 
 const { data, loading, error, selectedDay, load } = useCalendar();
 
@@ -112,11 +113,13 @@ function getDayNotes(date: string) {
   return sortCalendarNotes(notes);
 }
 
+const { privacyMode } = usePrivacy();
+
 function noteBodyPreview(note: { content?: string; privacy?: string; encrypted?: boolean }) {
   if (note.encrypted) {
     return '🔒 内容已加密，预览已隐藏';
   }
-  if (note.privacy === 'private' || note.privacy === 'sensitive') {
+  if (privacyMode.value && (note.privacy === 'private' || note.privacy === 'sensitive')) {
     return '🔒 当前内容受隐私保护，预览已隐藏';
   }
   if (!note.content) {
