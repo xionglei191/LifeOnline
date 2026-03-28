@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue';
 import type { StatsTrendPoint, StatsRadarPoint, StatsMonthlyPoint, StatsTagPoint, WsEvent, Dimension } from '@lifeos/shared';
 import { echarts } from '../lib/echarts';
 import { fetchStatsTrend, fetchStatsRadar, fetchStatsMonthly, fetchStatsTags } from '../api/client';
@@ -289,7 +289,6 @@ async function refreshTrend() {
 }
 
 async function loadAllCharts() {
-  loading.value = true;
   error.value = null;
   const trendRequestId = ++activeTrendRequestId;
   try {
@@ -309,10 +308,6 @@ async function loadAllCharts() {
   } catch (e) {
     if (trendRequestId !== activeTrendRequestId) return;
     error.value = e as Error;
-  } finally {
-    if (trendRequestId === activeTrendRequestId) {
-      loading.value = false;
-    }
   }
 }
 
@@ -331,13 +326,49 @@ function handleWsUpdate(event: Event) {
 }
 
 onMounted(async () => {
+  // Fetch data first while loading spinner is showing
+  loading.value = true;
+  error.value = null;
+  const trendRequestId = ++activeTrendRequestId;
+  let trendData: StatsTrendPoint[] = [];
+  let radarData: StatsRadarPoint[] = [];
+  let monthlyData: StatsMonthlyPoint[] = [];
+  let tagData: StatsTagPoint[] = [];
+  try {
+    [trendData, radarData, monthlyData, tagData] = await Promise.all([
+      fetchStatsTrend(trendDays.value),
+      fetchStatsRadar(),
+      fetchStatsMonthly(),
+      fetchStatsTags(),
+    ]);
+  } catch (e) {
+    error.value = e as Error;
+  }
+  if (trendRequestId !== activeTrendRequestId) return;
+
+  // Now show charts (remove loading spinner, add chart containers to DOM)
+  loading.value = false;
+
+  // Wait for DOM to render the chart containers
+  await nextTick();
   await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Initialize ECharts on the now-stable DOM elements
   charts.push(initChart(trendEl.value)!);
   charts.push(initChart(radarEl.value)!);
   charts.push(initChart(monthlyEl.value)!);
   charts.push(initChart(tagsEl.value)!);
   charts = charts.filter(Boolean);
-  await loadAllCharts();
+
+  // Populate charts with data
+  if (!error.value) {
+    await Promise.all([
+      loadTrend(trendData),
+      loadRadar(radarData),
+      loadMonthly(monthlyData),
+      loadTags(tagData),
+    ]);
+  }
 
   resizeHandler = () => {
     charts.forEach((chart) => chart?.resize());
