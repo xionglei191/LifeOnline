@@ -52,10 +52,12 @@ import {
   // Webhooks
   openclawCallbackHandler,
 } from './handlers.js';
+import { vaultAssetHandler } from './handlers/vaultAssetHandler.js';
 
 export const router = Router();
 
 router.get('/health', healthHandler);
+router.get('/vault-assets/:filename', vaultAssetHandler);
 router.get('/semantic-search', semanticSearchHandler);
 router.get('/vector-search', vectorSearchHandler); // backwards-compat alias
 router.get('/ai-usage', getAiUsageHandler);

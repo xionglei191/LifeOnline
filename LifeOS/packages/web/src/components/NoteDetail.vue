@@ -355,10 +355,15 @@ const isApprovalNote = computed(() => {
 
 const renderedContent = computed(() => {
   if (!note.value?.content) return '<p>暂无正文内容。</p>';
-  const content = decryptedContent.value || note.value.content;
+  let content = decryptedContent.value || note.value.content;
   if (note.value.encrypted && !decryptedContent.value) {
     return '<p class="encrypted-placeholder">🔒 内容已加密，需要解锁后查看</p>';
   }
+  // Convert Obsidian-style image embeds ![[filename.ext]] → standard Markdown
+  content = content.replace(/!\[\[([^\]]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp))\]\]/gi, (_, filename) => {
+    const encodedName = encodeURIComponent(filename);
+    return `![${filename}](/api/vault-assets/${encodedName})`;
+  });
   const html = marked.parse(content) as string;
   return DOMPurify.sanitize(html);
 });
@@ -700,6 +705,7 @@ function showMsg(msg: string, type: 'success' | 'error') {
 .markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { color: var(--text); }
 .markdown-body :deep(pre) { overflow-x: auto; padding: 14px; border-radius: 14px; background: rgba(8, 17, 28, 0.9); color: #e2edf8; }
 .markdown-body :deep(code) { font-family: "SFMono-Regular", Consolas, monospace; }
+.markdown-body :deep(img) { max-width: 100%; height: auto; border-radius: 14px; margin: 12px 0; box-shadow: 0 4px 18px -6px var(--shadow-strong); }
 
 .confirm-overlay { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; background: rgba(4, 11, 20, 0.6); backdrop-filter: blur(8px); }
 .confirm-card { padding: 28px; border: 1px solid var(--border-strong); border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 96%, transparent); box-shadow: 0 32px 64px -28px var(--shadow-strong); width: min(380px, 90vw); display: grid; gap: 14px; }
