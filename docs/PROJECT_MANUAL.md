@@ -597,6 +597,88 @@ pnpm dev         # 启动 server(3000) + web(5173)
 | `GET /api/health` | 系统健康检查 |
 | `GET /api/config` | 配置信息 |
 
+### 15.5 当前本机运行方式（2026-03-28 更新）
+
+当前 246 就是本机，LifeOS 采用 `systemd --user` 常驻运行：
+
+| 服务 | systemd unit | 工作目录 | 启动命令 | 默认端口 |
+|------|--------------|----------|----------|----------|
+| LifeOS Backend | `lifeos-server.service` | `LifeOS/packages/server` | `pnpm start` | `3000` |
+| LifeOS Web | `lifeos-web.service` | `LifeOS/packages/web` | `pnpm dev --host` | `5173` |
+
+后端通过 `services/lifeos-server.service` 加载 `LifeOS/packages/server/.env.production`，当前主要用于注入 `VAULT_PATH=/home/xionglei/Vault_OS`。
+
+### 15.6 Web 访问、代理与 Tunnel 说明
+
+#### Web 入口
+- 本机/LAN 入口：`http://192.168.31.246:5173`
+- Tunnel 域名入口：`https://os.xionglei.online`
+
+#### Web → Backend 代理
+Web 前端代码使用相对路径：
+- API：`/api`
+- WebSocket：`/ws`
+
+这些请求由 Vite dev server 代理到后端。当前默认策略是：
+- 默认代理目标：`localhost:3000`
+- 可通过 `LifeOS/packages/web/.env.production` 覆盖：
+  - `LIFEOS_API_HOST`
+  - `LIFEOS_API_PORT`
+
+这意味着：
+- 浏览器可以通过域名或 IP 打开前端页面
+- 但前端代理到后端时，默认走本机 `localhost:3000`
+- 不再依赖历史上的默认 IP `192.168.31.246:3000`
+
+#### Web systemd 环境文件
+`services/lifeos-web.service` 现已支持加载：
+- `LifeOS/packages/web/.env.production`
+
+示例见：
+- `LifeOS/packages/web/.env.example`
+
+本机模式示例：
+```env
+LIFEOS_API_HOST=localhost
+LIFEOS_API_PORT=3000
+```
+
+如需切换到显式 LAN/Tunnel 目标，再通过该文件覆盖即可。
+
+### 15.7 Cloudflare Tunnel 访问注意事项
+
+- `os.xionglei.online` 用于暴露 Web 前端。
+- 如果要给后端单独配域名，手机端必须使用 `https://...`，不能用 `http://...` 访问 Cloudflare Tunnel 提供的 HTTPS 入口。
+- 域名应使用标准主机名，优先使用 `lifeos-server.xionglei.online` 这种连字符形式，不要使用带下划线 `_` 的主机名。
+- 如果手机端目标是稳定优先、且处于局域网内，直接使用 `http://192.168.31.246:3000` 仍然是最稳妥的方案。
+
+### 15.8 运维速查
+
+#### 常见入口
+- Web（Tunnel）：`https://os.xionglei.online`
+- Web（LAN）：`http://192.168.31.246:5173`
+- Backend（LAN）：`http://192.168.31.246:3000`
+- 健康检查：`http://127.0.0.1:3000/api/health`
+
+#### systemd 服务
+```bash
+systemctl --user status lifeos-server lifeos-web --no-pager
+journalctl --user -u lifeos-server -f
+journalctl --user -u lifeos-web -f
+systemctl --user restart lifeos-server lifeos-web
+```
+
+#### 当前默认代理规则
+- 浏览器访问前端页面时，可使用域名或 IP。
+- Vite 代理后端时，默认走 `localhost:3000`。
+- 如需改为显式 IP / 域名，在 `LifeOS/packages/web/.env.production` 中覆盖：
+  - `LIFEOS_API_HOST`
+  - `LIFEOS_API_PORT`
+
+#### 手机端建议
+- 局域网稳定优先：`http://192.168.31.246:3000`
+- 若走 Cloudflare Tunnel：使用 `https://...` 域名，不要使用 `http://...`
+
 ---
 
 ## 十六、完整 API 端点汇总

@@ -72,3 +72,11 @@
 ## 增量优化步骤
 - [x] **隐藏默认输出**：在 `PromotionProjectionPanel.vue` 引入 `expandedEvidenceIds` 状态，改为默认隐藏，点击后展开。
 - [x] **视觉层级梳理**：通过增加细微的 Toggle 按钮，提升“判定说明 (Explanation)” 的优先级位置。
+
+## 2026-03-28 inspection note
+- Static inspection shows the OpenClaw worker path is already implemented end-to-end in source: OpsView / worker task registry → `openclawExecutor` → `openclawClient` → `POST /api/webhooks/openclaw-callback` → persistence + task completion.
+- No safe code fix was required from source review alone.
+- Local validation: `pnpm --filter server test -- --runInBand` passed (4/4).
+- Runtime validation remains blocked in this environment because the required OpenClaw env vars are not injected here, so a real external task cannot be safely launched yet.
+- Remaining next step: run a real OpenClaw task once the execution environment exposes the needed config, then verify callback persistence end-to-end.
+- 2026-03-28 rolling resume: re-checked the same chain; source still looks end-to-end, but this workspace still lacks injected OpenClaw runtime config / real callback target, so no further safe code change was made in this round.
