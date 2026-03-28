@@ -6,6 +6,7 @@ data class SoulAction(
     override val id: String,
     val actionKind: String,
     val governanceStatus: String,
+    val governanceReason: String?,
     val resultSummary: String?,
     val sourceNoteId: String,
     val createdAt: String
@@ -15,7 +16,7 @@ data class SoulAction(
         get() = getActionKindLabel()
         
     override val displaySummary: String
-        get() = resultSummary ?: "暂无描述"
+        get() = governanceReason ?: resultSummary ?: "暂无描述"
         
     override val displayBadge: String
         get() = "认知重塑"
@@ -45,6 +46,7 @@ data class SoulAction(
                 id = json.optString("id", ""),
                 actionKind = json.optString("actionKind", ""),
                 governanceStatus = json.optString("governanceStatus", ""),
+                governanceReason = if (json.has("governanceReason") && !json.isNull("governanceReason")) json.getString("governanceReason") else null,
                 resultSummary = if (json.has("resultSummary") && !json.isNull("resultSummary")) json.getString("resultSummary") else null,
                 sourceNoteId = json.optString("sourceNoteId", ""),
                 createdAt = json.optString("createdAt", "")

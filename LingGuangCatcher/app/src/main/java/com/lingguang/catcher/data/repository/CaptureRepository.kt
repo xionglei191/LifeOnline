@@ -160,8 +160,12 @@ class CaptureRepository(private val context: Context? = null) {
                     aiService.processVoiceText(record.rawContent)
                 }
                 CaptureType.IMAGE -> {
-                    rawSectionData = null
                     val voiceNote = record.metadata["voice_note"]
+                    rawSectionData = if (!voiceNote.isNullOrBlank()) {
+                        RawSectionData("原始转写", voiceNote)
+                    } else {
+                        null
+                    }
                     Log.d(TAG, "处理图片，语音指令: $voiceNote")
                     aiService.processImage(record.rawContent, voiceNote)
                 }
