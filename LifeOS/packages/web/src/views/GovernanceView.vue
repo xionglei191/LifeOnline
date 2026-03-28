@@ -97,6 +97,7 @@
         @defer-action="handleDeferSoulAction"
         @discard-action="handleDiscardSoulAction"
         @dispatch-action="handleDispatchSoulAction"
+        @retry-action="handleRetrySoulAction"
         @answer-followup="handleAnswerFollowup"
       />
     </div>
@@ -142,7 +143,7 @@ const ReintegrationReviewPanel = defineAsyncComponent(() => import('../component
 const SoulActionGovernancePanel = defineAsyncComponent(() => import('../components/SoulActionGovernancePanel.vue'));
 const PromotionProjectionPanel = defineAsyncComponent(() => import('../components/PromotionProjectionPanel.vue'));
 const BrainstormSessionPanel = defineAsyncComponent(() => import('../components/BrainstormSessionPanel.vue'));
-import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions, fetchPendingPhysicalActions, approvePhysicalAction, rejectPhysicalAction } from '../api/client';
+import { fetchReintegrationRecords, acceptReintegrationRecord, rejectReintegrationRecord, planReintegrationPromotions, fetchSoulActions, approveSoulAction, deferSoulAction, discardSoulAction, dispatchSoulAction, retrySoulAction, answerFollowupQuestion, fetchEventNodeProjectionList, fetchContinuityProjectionList, fetchBrainstormSessions, fetchPendingPhysicalActions, approvePhysicalAction, rejectPhysicalAction } from '../api/client';
 import type { ReintegrationRecord, SoulAction, EventNode, ContinuityRecord, WsEvent, BrainstormSession, PhysicalAction } from '@lifeos/shared';
 import PhysicalActionCard from '../components/PhysicalActionCard.vue';
 import { formatSoulActionKindLabel, formatSoulActionSourceLabel, getDispatchExecutionMessage, getReintegrationReviewMessage, getSoulActionGovernanceMessage } from '@lifeos/shared';
@@ -533,6 +534,24 @@ async function handleDispatchSoulAction(action: SoulAction) {
     await loadReintegrationRecords();
   } catch (e: any) {
     soulActionMessage.value = e.message || '派发 soul action 失败';
+    soulActionMessageType.value = 'error';
+  } finally {
+    soulActionActionId.value = null;
+  }
+}
+
+async function handleRetrySoulAction(action: SoulAction) {
+  soulActionActionId.value = action.id;
+  soulActionMessage.value = '';
+  try {
+    const result = await retrySoulAction(action.id);
+    const suffix = buildDispatchedWorkerTaskSuffix(result);
+    soulActionMessage.value = `🔄 已重试 · ${getDispatchExecutionMessage(result.result)}${suffix}`;
+    soulActionMessageType.value = result.result.dispatched ? 'success' : 'error';
+    await loadSoulActions({ preserveMessage: true });
+    await loadReintegrationRecords();
+  } catch (e: any) {
+    soulActionMessage.value = e.message || '重试 soul action 失败';
     soulActionMessageType.value = 'error';
   } finally {
     soulActionActionId.value = null;

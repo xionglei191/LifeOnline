@@ -357,6 +357,25 @@ export function discardSoulAction(id: string, governanceReason?: string | null, 
   return result;
 }
 
+export function resetSoulActionForRetry(id: string, now = new Date().toISOString()): SoulAction | null {
+  const action = getSoulAction(id);
+  if (!action) return null;
+  if (action.executionStatus !== 'failed') {
+    throw new Error('Only failed soul actions can be retried');
+  }
+  if (action.governanceStatus !== 'approved') {
+    throw new Error('Only approved soul actions can be retried');
+  }
+
+  getDb().prepare(`
+    UPDATE soul_actions
+    SET execution_status = 'not_dispatched', worker_task_id = NULL, started_at = NULL, finished_at = NULL, error = NULL, result_summary = NULL, updated_at = ?
+    WHERE id = ?
+  `).run(now, id);
+
+  return getSoulAction(id);
+}
+
 export function attachWorkerTaskToSoulAction(soulActionId: string, workerTaskId: string, now = new Date().toISOString()): SoulAction | null {
   getDb().prepare(`
     UPDATE soul_actions

@@ -474,6 +474,17 @@ export async function dispatchSoulAction(id: string): Promise<DispatchSoulAction
   return data as DispatchSoulActionResponse;
 }
 
+export async function retrySoulAction(id: string): Promise<DispatchSoulActionResponse> {
+  const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/retry`, {
+    method: 'POST',
+  });
+  const data = await unwrapPayload<any>(res).catch(() => ({} as Partial<DispatchSoulActionResponse> & { error?: string }));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to retry soul action');
+  }
+  return data as DispatchSoulActionResponse;
+}
+
 export async function deferSoulAction(id: string, payload: ReintegrationReviewRequest = {}): Promise<SoulActionResponse['soulAction']> {
   const res = await fetch(`${API_BASE}/soul-actions/${encodeURIComponent(id)}/defer`, {
     method: 'POST',

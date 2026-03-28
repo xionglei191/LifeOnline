@@ -196,6 +196,13 @@
               >
                 {{ actionId === action.id ? '处理中...' : '派发执行' }}
               </button>
+              <button
+                class="btn-worker"
+                :disabled="actionId === action.id || action.executionStatus !== 'failed'"
+                @click="emit('retry-action', action)"
+              >
+                {{ actionId === action.id ? '处理中...' : '🔄 重试' }}
+              </button>
             </div>
 
             <!-- ask_followup_question answer UI -->
@@ -285,6 +292,7 @@ const emit = defineEmits<{
   (event: 'defer-action', action: SoulAction): void;
   (event: 'discard-action', action: SoulAction): void;
   (event: 'dispatch-action', action: SoulAction): void;
+  (event: 'retry-action', action: SoulAction): void;
   (event: 'answer-followup', action: SoulAction, answer: string): void;
 }>();
 

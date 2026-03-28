@@ -18,7 +18,7 @@ import {
   retryWorkerTaskHandler, cancelWorkerTaskHandler, clearFinishedWorkerTasksHandler,
   // Soul Actions
   listSoulActionsHandler, getSoulActionHandler,
-  approveSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, dispatchSoulActionHandler, answerFollowupHandler,
+  approveSoulActionHandler, deferSoulActionHandler, discardSoulActionHandler, dispatchSoulActionHandler, retrySoulActionHandler, answerFollowupHandler,
   // Reintegration & Promotion
   listReintegrationRecordsHandler,
   acceptReintegrationRecordHandler, rejectReintegrationRecordHandler,
@@ -117,6 +117,7 @@ router.get('/soul-actions', listSoulActionsHandler);
 router.get('/soul-actions/:id', getSoulActionHandler);
 router.post('/soul-actions/:id/approve', approveSoulActionHandler);
 router.post('/soul-actions/:id/dispatch', dispatchSoulActionHandler);
+router.post('/soul-actions/:id/retry', retrySoulActionHandler);
 router.post('/soul-actions/:id/defer', deferSoulActionHandler);
 router.post('/soul-actions/:id/discard', discardSoulActionHandler);
 router.post('/soul-actions/:id/answer', answerFollowupHandler);

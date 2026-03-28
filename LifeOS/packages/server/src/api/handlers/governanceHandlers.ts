@@ -4,7 +4,7 @@
 import { Request, Response } from 'express';
 import { getDb } from '../../db/client.js';
 import { broadcastUpdate } from '../../index.js';
-import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions } from '../../soul/soulActions.js';
+import { approveSoulAction, deferSoulAction, discardSoulAction, getSoulAction, isSupportedSoulActionKind, listSoulActions, resetSoulActionForRetry } from '../../soul/soulActions.js';
 import { normalizeSoulActionSourceFilters } from '../../soul/types.js';
 import { dispatchApprovedSoulAction } from '../../soul/soulActionDispatcher.js';
 import { listReintegrationRecords, acceptReintegrationRecordAndPlanPromotions, rejectReintegrationRecord, getReintegrationRecord, getReintegrationNextActionSummary, filterAcceptedProjectionReintegrationIds, hasAcceptedProjectionVisibility, listAcceptedProjectionReintegrationIds } from '../../soul/reintegrationReview.js';
@@ -325,6 +325,42 @@ export async function dispatchSoulActionHandler(
   } catch (error) {
     console.error('Dispatch soul action error:', error);
     sendError(res, String(error));
+  }
+}
+
+export async function retrySoulActionHandler(
+  req: Request<{ id: string }, ApiResponse<DispatchSoulActionResponse>>,
+  res: Response<ApiResponse<DispatchSoulActionResponse>>,
+): Promise<void> {
+  try {
+    const reset = resetSoulActionForRetry(req.params.id);
+    if (!reset) { sendError(res, 'Soul action not found', 404); return; }
+
+    // Now dispatch (status is back to approved + not_dispatched)
+    const result = await dispatchApprovedSoulAction(req.params.id);
+    if (!result.soulActionId) { sendError(res, result.reason, 404); return; }
+    if (!result.dispatched) { sendError(res, result.reason, 400); return; }
+
+    const soulAction = getSoulAction(result.soulActionId);
+    const task = result.workerTaskId ? (await import('../../workers/workerTasks.js')).getWorkerTask(result.workerTaskId) : null;
+    const responseSoulAction = attachSoulActionExecutionSummaryAndPromotionSummary(soulAction);
+    const responseResult: DispatchSoulActionResponse['result'] = {
+      ...result,
+      reason: responseSoulAction?.resultSummary ?? task?.error ?? result.reason,
+      executionSummary: responseSoulAction?.executionSummary ?? result.executionSummary ?? null,
+    };
+    broadcastSoulActionUpdate(soulAction);
+    const data: DispatchSoulActionResponse = {
+      result: responseResult,
+      soulAction: responseSoulAction ?? null,
+      task,
+      eventNode: null,
+      continuityRecord: null,
+    };
+    sendSuccess(res, data, 202);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    sendError(res, message, 400);
   }
 }
 
