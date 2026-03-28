@@ -145,7 +145,7 @@ async function loadTrend(data: StatsTrendPoint[]) {
   c.setOption({
     tooltip: baseTooltip(),
     legend: { data: ['记录总量', '完成'], bottom: 0, textStyle: { color: chartText } },
-    grid: { left: 24, right: 18, top: 26, bottom: 42, containLabel: true },
+    grid: { left: 24, right: 18, top: 26, bottom: 42 },
     xAxis: {
       type: 'category',
       data: data.map((d) => d.day.slice(5)),
@@ -221,7 +221,7 @@ async function loadMonthly(data: StatsMonthlyPoint[]) {
   c.setOption({
     tooltip: baseTooltip(),
     legend: { data: ['记录总量', '完成'], bottom: 0, textStyle: { color: chartText } },
-    grid: { left: 24, right: 18, top: 26, bottom: 42, containLabel: true },
+    grid: { left: 24, right: 18, top: 26, bottom: 42 },
     xAxis: {
       type: 'category',
       data: data.map((d) => d.month),
@@ -254,7 +254,7 @@ async function loadTags(data: StatsTagPoint[]) {
   if (!c) return;
   c.setOption({
     tooltip: baseTooltip(),
-    grid: { left: 24, right: 24, top: 16, bottom: 24, containLabel: true },
+    grid: { left: 24, right: 24, top: 16, bottom: 24 },
     xAxis: { type: 'value', ...baseAxis() },
     yAxis: {
       type: 'category',
