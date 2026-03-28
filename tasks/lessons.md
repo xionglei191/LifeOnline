@@ -76,3 +76,6 @@
 - **问题**：在本地开发机执行代码同步（`git push` 到 GitHub）时，命令直接挂起并报出 `gnutls_handshake() failed: The TLS connection was non-properly terminated.`，此时浏览器却能正常秒开 GitHub，导致了对网络状态的误判。
 - **原因**：Linux/Unix 终端环境（Terminal）与浏览器的网络链路是默认隔离的。科学上网客户端（如 Clash/V2ray）绝大多数情况下只接管了系统主代理（或被浏览器插件捕捉），但并不会自动代理终端命令行发出的请求。此外，命令行 `git` 编译时强依赖古板的 `gnutls` 库，在面对防火墙基于 SNI 的主动重置（RST）阻断时，几乎毫无韧性，直接报错阻断；而浏览器通常配有现代版的 SSL/QUIC 机制能智能重连接绕过。
 - **规则**：**凡是遇到 git clone/push、npm install 报 TLS 握手断开、Socket 超时挂起等网络隔离特征时，第一时间确认代理端口，并在命令前精确注入环境变量**。绝对不要浪费时间盲目祈祷重试，应显式将命令行这列“绿皮火车”挂载到代理轨道上，例如：`https_proxy=http://192.168.31.1:7890 git push`。
+### 15. 多层校验白名单必须严格对齐（Parser ↔ DB Schema）
+- **问题**：`parser.ts` 中的 `VALID_VALUES.type` 白名单包含了 `continuity_insight`、`agent_report` 等扩展类型，但 `schema.ts` 中 `notes` 表的 `CHECK(type IN (...))` 约束只接受 6 种基础类型。Parser 允许通过的 `continuity_insight` 类型在 `upsertNote` 时被 SQLite 的 CHECK 约束直接拒绝（`CHECK constraint failed`），由于 `indexVault` 在服务启动时被调用且未做逐文件 try-catch，**单条插入异常直接导致整个服务端崩溃退出**，进入 systemd 重启死循环。
+- **规则**：在任何涉及"数据流经多层验证"的系统中（解析器 → 业务逻辑 → 数据库），**所有层的白名单/约束必须严格对齐**。新增枚举值时，必须同步修改：(1) 解析器白名单，(2) TypeScript 类型定义，(3) 数据库 CHECK 约束，(4) 前端展示映射。任何一层的遗漏都会形成"悬崖断裂"，导致数据在某一层被静默丢弃或直接引发崩溃。
