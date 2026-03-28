@@ -93,7 +93,7 @@ function getTrendOption() {
   const sorted = [...monthMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   return {
     tooltip: { ...tooltipBase(), trigger: 'axis' },
-    grid: { left: 24, right: 18, top: 20, bottom: 32 },
+    grid: { left: 24, right: 18, top: 20, bottom: 32, containLabel: true },
     xAxis: {
       type: 'category',
       data: sorted.map(([m]) => m),
