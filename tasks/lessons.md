@@ -69,3 +69,10 @@
 ### 13. 本地缓存/文件系统的防抖与强制刷新（Memoization Bypass）
 - **问题**：在远程调试 `FileWatcher -> Indexer -> AI DAG` 链路时，为了引发重试，习惯性地使用 Linux 的 `touch` 命令更新文件修改时间（`mtime`）。但 LifeOS 的文件系统索引（Indexer）中有极强的防测漏节流判断：`previousNote.content === currentNote.content`。由于 `touch` 未改变文件文本，系统直接阻断了 AI 调用，造成“为何代码已更新却不见 AI 执行日志”的幻觉。
 - **规则**：在带有内容哈希（Content Hash）或文本级相等判断的成熟系统中构造触发测试时，**不要仅更新时间戳**。必须物理性地往文件末尾注入真实的、非不可见空白符的文字（如 `echo '\nTRIGGER' >> file.md`），以此穿透所有层级的缓存拦截器。
+
+## 2026-03-28
+
+### 14. 终端环境的网络代理隔离与 TLS 握手问题
+- **问题**：在本地开发机执行代码同步（`git push` 到 GitHub）时，命令直接挂起并报出 `gnutls_handshake() failed: The TLS connection was non-properly terminated.`，此时浏览器却能正常秒开 GitHub，导致了对网络状态的误判。
+- **原因**：Linux/Unix 终端环境（Terminal）与浏览器的网络链路是默认隔离的。科学上网客户端（如 Clash/V2ray）绝大多数情况下只接管了系统主代理（或被浏览器插件捕捉），但并不会自动代理终端命令行发出的请求。此外，命令行 `git` 编译时强依赖古板的 `gnutls` 库，在面对防火墙基于 SNI 的主动重置（RST）阻断时，几乎毫无韧性，直接报错阻断；而浏览器通常配有现代版的 SSL/QUIC 机制能智能重连接绕过。
+- **规则**：**凡是遇到 git clone/push、npm install 报 TLS 握手断开、Socket 超时挂起等网络隔离特征时，第一时间确认代理端口，并在命令前精确注入环境变量**。绝对不要浪费时间盲目祈祷重试，应显式将命令行这列“绿皮火车”挂载到代理轨道上，例如：`https_proxy=http://192.168.31.1:7890 git push`。
